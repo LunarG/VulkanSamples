@@ -29,7 +29,8 @@ typedef enum _DYNAMIC_STATE_BIND_POINT
     VK_STATE_BIND_POINT_RASTER_LINE,
     VK_STATE_BIND_POINT_RASTER_DEPTH_BIAS,
     VK_STATE_BIND_POINT_COLOR_BLEND,
-    VK_STATE_BIND_POINT_DEPTH_STENCIL,
+    VK_STATE_BIND_POINT_DEPTH,
+    VK_STATE_BIND_POINT_STENCIL,
     VK_NUM_STATE_BIND_POINT // Used for array sizing
 } DYNAMIC_STATE_BIND_POINT;
 
@@ -45,8 +46,10 @@ static string string_DYNAMIC_STATE_BIND_POINT(DYNAMIC_STATE_BIND_POINT sbp)
             return "RASTER_DEPTH_BIAS";
         case VK_STATE_BIND_POINT_COLOR_BLEND:
             return "COLOR_BLEND";
-        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-            return "DEPTH_STENCIL";
+        case VK_STATE_BIND_POINT_DEPTH:
+            return "DEPTH";
+        case VK_STATE_BIND_POINT_STENCIL:
+            return "STENCIL";
         default:
             return "UNKNOWN_DYNAMIC_STATE_BIND_POINT";
     }
@@ -64,8 +67,10 @@ static VkDbgObjectType dynamicStateBindPointToObjType(DYNAMIC_STATE_BIND_POINT s
             return VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE;
         case VK_STATE_BIND_POINT_COLOR_BLEND:
             return VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE;
-        case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-            return VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE;
+        case VK_STATE_BIND_POINT_DEPTH:
+            return VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE;
+        case VK_STATE_BIND_POINT_STENCIL:
+            return VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE;
         default:
             return VK_OBJECT_TYPE_MAX_ENUM;
     }

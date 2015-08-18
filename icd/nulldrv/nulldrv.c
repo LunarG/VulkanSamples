@@ -566,14 +566,14 @@ static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_ds_state_create(struct nulldrv_dev *dev,
-                                 const VkDynamicDepthStencilStateCreateInfo *info,
-                                 struct nulldrv_dynamic_ds **state_ret)
+static VkResult nulldrv_depth_state_create(struct nulldrv_dev *dev,
+                                 const VkDynamicDepthStateCreateInfo *info,
+                                 struct nulldrv_dynamic_depth **state_ret)
 {
-    struct nulldrv_dynamic_ds *state;
+    struct nulldrv_dynamic_depth *state;
 
-    state = (struct nulldrv_dynamic_ds *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE);
+    state = (struct nulldrv_dynamic_depth *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -582,6 +582,22 @@ static VkResult nulldrv_ds_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
+static VkResult nulldrv_stencil_state_create(struct nulldrv_dev *dev,
+                                 const VkDynamicStencilStateCreateInfo *infoFront,
+                                 const VkDynamicStencilStateCreateInfo *infoBack,
+                                 struct nulldrv_dynamic_stencil **state_ret)
+{
+    struct nulldrv_dynamic_stencil *state;
+
+    state = (struct nulldrv_dynamic_stencil *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
+    if (!state)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    *state_ret = state;
+
+    return VK_SUCCESS;
+}
 
 static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
                             const VkCmdBufferCreateInfo *info,
@@ -1215,9 +1231,16 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicDepthState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicDepthStencilState                    state)
+    VkDynamicDepthState                       state)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicStencilState(
+    VkCmdBuffer                               cmdBuffer,
+    VkDynamicStencilState                     state)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -2152,21 +2175,42 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthState(
     VkDevice                                     device,
-    const VkDynamicDepthStencilStateCreateInfo*  pCreateInfo,
-    VkDynamicDepthStencilState*                  pState)
+    const VkDynamicDepthStateCreateInfo*         pCreateInfo,
+    VkDynamicDepthState*                         pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_ds_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_ds **) pState);
+    return nulldrv_depth_state_create(dev, pCreateInfo,
+            (struct nulldrv_dynamic_depth **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(
     VkDevice                                  device,
-    VkDynamicDepthStencilState                dynamicDepthStencilState)
+    VkDynamicDepthState                       dynamicDepthState)
+{
+    NULLDRV_LOG_FUNC;
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
+    VkDevice                                     device,
+    const VkDynamicStencilStateCreateInfo*       pCreateInfoFront,
+    const VkDynamicStencilStateCreateInfo*       pCreateInfoBack,
+    VkDynamicStencilState*                       pState)
+{
+    NULLDRV_LOG_FUNC;
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+
+    return nulldrv_stencil_state_create(dev, pCreateInfoFront, pCreateInfoBack,
+            (struct nulldrv_dynamic_stencil **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(
+    VkDevice                                  device,
+    VkDynamicStencilState                     dynamicStencilState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

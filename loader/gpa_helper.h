@@ -227,10 +227,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDynamicColorBlendState;
     if (!strcmp(name, "DestroyDynamicColorBlendState"))
         return (void*) vkDestroyDynamicColorBlendState;
-    if (!strcmp(name, "CreateDynamicDepthStencilState"))
-        return (void*) vkCreateDynamicDepthStencilState;
-    if (!strcmp(name, "DestroyDynamicDepthStencilState"))
-        return (void*) vkDestroyDynamicDepthStencilState;
+    if (!strcmp(name, "CreateDynamicDepthState"))
+        return (void*) vkCreateDynamicDepthState;
+    if (!strcmp(name, "DestroyDynamicDepthState"))
+        return (void*) vkDestroyDynamicDepthState;
+    if (!strcmp(name, "CreateDynamicStencilState"))
+        return (void*) vkCreateDynamicStencilState;
+    if (!strcmp(name, "DestroyDynamicStencilState"))
+        return (void*) vkDestroyDynamicStencilState;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void*) vkCreateFramebuffer;
     if (!strcmp(name, "DestroyFramebuffer"))
@@ -267,8 +271,10 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdBindDynamicRasterDepthBiasState;
     if (!strcmp(name, "CmdBindDynamicColorBlendState"))
         return (void*) vkCmdBindDynamicColorBlendState;
-    if (!strcmp(name, "CmdBindDynamicDepthStencilState"))
-        return (void*) vkCmdBindDynamicDepthStencilState;
+    if (!strcmp(name, "CmdBindDynamicDepthState"))
+        return (void*) vkCmdBindDynamicDepthState;
+    if (!strcmp(name, "CmdBindDynamicStencilState"))
+        return (void*) vkCmdBindDynamicStencilState;
     if (!strcmp(name, "CmdBindDescriptorSets"))
         return (void*) vkCmdBindDescriptorSets;
     if (!strcmp(name, "CmdBindIndexBuffer"))

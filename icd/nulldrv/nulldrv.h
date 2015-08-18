@@ -160,7 +160,11 @@ struct nulldrv_dynamic_cb {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_ds {
+struct nulldrv_dynamic_depth {
+    struct nulldrv_obj obj;
+};
+
+struct nulldrv_dynamic_stencil {
     struct nulldrv_obj obj;
 };
 

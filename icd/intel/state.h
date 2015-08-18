@@ -60,9 +60,16 @@ struct intel_dynamic_color_blend {
     VkDynamicColorBlendStateCreateInfo color_blend_info;
 };
 
-struct intel_dynamic_depth_stencil {
+struct intel_dynamic_depth {
     struct intel_obj obj;
-    VkDynamicDepthStencilStateCreateInfo depth_stencil_info;
+    VkDynamicDepthStateCreateInfo depth_info;
+};
+
+struct intel_dynamic_stencil {
+    struct intel_obj obj;
+    VkDynamicStencilStateCreateInfo stencil_info_front;
+    /* TODO: enable back facing stencil state */
+    /*VkDynamicStencilStateCreateInfo stencil_info_back;*/
 };
 
 static inline struct intel_dynamic_viewport *intel_dynamic_viewport(VkDynamicViewportState state)
@@ -105,14 +112,24 @@ static inline struct intel_dynamic_color_blend *intel_blend_state_from_obj(struc
     return (struct intel_dynamic_color_blend *) obj;
 }
 
-static inline struct intel_dynamic_depth_stencil *intel_dynamic_depth_stencil(VkDynamicDepthStencilState state)
+static inline struct intel_dynamic_depth *intel_dynamic_depth(VkDynamicDepthState state)
 {
-    return *(struct intel_dynamic_depth_stencil **) &state;
+    return *(struct intel_dynamic_depth **) &state;
 }
 
-static inline struct intel_dynamic_depth_stencil *intel_depth_stencil_state_from_obj(struct intel_obj *obj)
+static inline struct intel_dynamic_depth *intel_depth_state_from_obj(struct intel_obj *obj)
 {
-    return (struct intel_dynamic_depth_stencil *) obj;
+    return (struct intel_dynamic_depth *) obj;
+}
+
+static inline struct intel_dynamic_stencil *intel_dynamic_stencil(VkDynamicStencilState state)
+{
+    return *(struct intel_dynamic_stencil **) &state;
+}
+
+static inline struct intel_dynamic_stencil *intel_stencil_state_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_dynamic_stencil *) obj;
 }
 
 VkResult intel_viewport_state_create(struct intel_dev *dev,
@@ -133,9 +150,14 @@ VkResult intel_blend_state_create(struct intel_dev *dev,
                                     struct intel_dynamic_color_blend **state_ret);
 void intel_blend_state_destroy(struct intel_dynamic_color_blend *state);
 
-VkResult intel_depth_stencil_state_create(struct intel_dev *dev,
-                                 const VkDynamicDepthStencilStateCreateInfo *info,
-                                 struct intel_dynamic_depth_stencil **state_ret);
-void intel_depth_stencil_state_destroy(struct intel_dynamic_depth_stencil *state);
+VkResult intel_depth_state_create(struct intel_dev *dev,
+                                 const VkDynamicDepthStateCreateInfo *info,
+                                 struct intel_dynamic_depth **state_ret);
+void intel_depth_state_destroy(struct intel_dynamic_depth *state);
 
+VkResult intel_stencil_state_create(struct intel_dev *dev,
+                                 const VkDynamicStencilStateCreateInfo *info_front,
+                                 const VkDynamicStencilStateCreateInfo *info_back,
+                                 struct intel_dynamic_stencil **state_ret);
+void intel_stencil_state_destroy(struct intel_dynamic_stencil *state);
 #endif /* STATE_H */

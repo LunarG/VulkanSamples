@@ -1070,22 +1070,40 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(VkDevice device, Vk
     return disp->DestroyDynamicColorBlendState(device, dynamicColorBlendState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState)
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthState(VkDevice device, const VkDynamicDepthStateCreateInfo* pCreateInfo, VkDynamicDepthState* pState)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    return disp->CreateDynamicDepthState(device, pCreateInfo, pState);
 }
 
-LOADER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(VkDevice device, VkDynamicDepthStencilState dynamicDepthStencilState)
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(VkDevice device, VkDynamicDepthState dynamicDepthState)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->DestroyDynamicDepthStencilState(device, dynamicDepthStencilState);
+    return disp->DestroyDynamicDepthState(device, dynamicDepthState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(VkDevice device, const VkDynamicStencilStateCreateInfo* pCreateInfoFront, const VkDynamicStencilStateCreateInfo* pCreateInfoBack, VkDynamicStencilState* pState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
+}
+
+LOADER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(device);
+
+    return disp->DestroyDynamicStencilState(device, dynamicStencilState);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
@@ -1256,13 +1274,22 @@ LOADER_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(VkCmdBuffer cmdBuffer, 
     disp->CmdBindDynamicColorBlendState(cmdBuffer, state);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(VkCmdBuffer cmdBuffer, VkDynamicDepthStencilState state)
+LOADER_EXPORT void VKAPI vkCmdBindDynamicDepthState(VkCmdBuffer cmdBuffer, VkDynamicDepthState state)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicDepthStencilState(cmdBuffer, state);
+    disp->CmdBindDynamicDepthState(cmdBuffer, state);
+}
+
+LOADER_EXPORT void VKAPI vkCmdBindDynamicStencilState(VkCmdBuffer cmdBuffer, VkDynamicStencilState state)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdBindDynamicStencilState(cmdBuffer, state);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)

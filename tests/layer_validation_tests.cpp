@@ -31,7 +31,8 @@ typedef enum _BsoFailSelect {
     BsoFailRasterDepthBias          = 0x00000002,
     BsoFailViewport                 = 0x00000004,
     BsoFailColorBlend               = 0x00000008,
-    BsoFailDepthStencil             = 0x00000010,
+    BsoFailDepth                    = 0x00000010,
+    BsoFailStencil                  = 0x00000020,
 } BsoFailSelect;
 
 struct vktriangle_vs_uniform {
@@ -320,10 +321,14 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     if ((failMask & BsoFailColorBlend) != BsoFailColorBlend) {
         cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
     }
-    if ((failMask & BsoFailDepthStencil) != BsoFailDepthStencil) {
-        cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
+    if ((failMask & BsoFailDepth) != BsoFailDepth) {
+        cmdBuffer->BindDynamicDepthState(m_stateDepth);
     }
-    // Make sure depthWriteEnable is set so that DepthStencil fail test will work correctly
+    if ((failMask & BsoFailStencil) != BsoFailStencil) {
+        cmdBuffer->BindDynamicStencilState(m_stateStencil);
+    }
+    // Make sure depthWriteEnable is set so that Depth fail test will work correctly
+    // Make sure stencilTestEnable is set so that Stencil fail test will work correctly
     VkStencilOpState stencil = {};
     stencil.stencilFailOp = VK_STENCIL_OP_KEEP;
         stencil.stencilPassOp = VK_STENCIL_OP_KEEP;
@@ -337,7 +342,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
         ds_ci.depthWriteEnable = VK_TRUE;
         ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
         ds_ci.depthBoundsEnable = VK_FALSE;
-        ds_ci.stencilTestEnable = VK_FALSE;
+        ds_ci.stencilTestEnable = VK_TRUE;
         ds_ci.front = stencil;
         ds_ci.back = stencil;
 
@@ -966,20 +971,37 @@ TEST_F(VkLayerTest, ColorBlendStateNotBound)
     }
 }
 
-TEST_F(VkLayerTest, DepthStencilStateNotBound)
+TEST_F(VkLayerTest, DepthStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth-stencil state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthStencil);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepth);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a DepthStencil State Object";
-    if (!strstr(msgString.c_str(),"Depth-stencil object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Depth-stencil object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Depth State Object";
+    if (!strstr(msgString.c_str(),"Depth object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Depth object not bound to this command buffer'";
+    }
+}
+
+TEST_F(VkLayerTest, StencilStateNotBound)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil state object is not bound beforehand");
+
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailStencil);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Stencil State Object";
+    if (!strstr(msgString.c_str(),"Stencil object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Stencil object not bound to this command buffer'";
     }
 }
 #endif

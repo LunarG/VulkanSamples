@@ -110,8 +110,10 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDestroyDynamicRasterDepthBiasState DestroyDynamicRasterDepthBiasState;
     PFN_vkCreateDynamicColorBlendState CreateDynamicColorBlendState;
     PFN_vkDestroyDynamicColorBlendState DestroyDynamicColorBlendState;
-    PFN_vkCreateDynamicDepthStencilState CreateDynamicDepthStencilState;
-    PFN_vkDestroyDynamicDepthStencilState DestroyDynamicDepthStencilState;
+    PFN_vkCreateDynamicDepthState CreateDynamicDepthState;
+    PFN_vkDestroyDynamicDepthState DestroyDynamicDepthState;
+    PFN_vkCreateDynamicStencilState CreateDynamicStencilState;
+    PFN_vkDestroyDynamicStencilState DestroyDynamicStencilState;
     PFN_vkCreateFramebuffer CreateFramebuffer;
     PFN_vkDestroyFramebuffer DestroyFramebuffer;
     PFN_vkCreateRenderPass CreateRenderPass;
@@ -130,7 +132,8 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBindDynamicRasterLineState CmdBindDynamicRasterLineState;
     PFN_vkCmdBindDynamicRasterDepthBiasState CmdBindDynamicRasterDepthBiasState;
     PFN_vkCmdBindDynamicColorBlendState CmdBindDynamicColorBlendState;
-    PFN_vkCmdBindDynamicDepthStencilState CmdBindDynamicDepthStencilState;
+    PFN_vkCmdBindDynamicDepthState CmdBindDynamicDepthState;
+    PFN_vkCmdBindDynamicStencilState CmdBindDynamicStencilState;
     PFN_vkCmdBindDescriptorSets CmdBindDescriptorSets;
     PFN_vkCmdBindVertexBuffers CmdBindVertexBuffers;
     PFN_vkCmdBindIndexBuffer CmdBindIndexBuffer;

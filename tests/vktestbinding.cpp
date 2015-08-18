@@ -812,11 +812,18 @@ void DynamicColorBlendState::init(const Device &dev, const VkDynamicColorBlendSt
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicColorBlendState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthStencilState, vkDestroyDynamicDepthStencilState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthState, vkDestroyDynamicDepthState)
 
-void DynamicDepthStencilState::init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info)
+void DynamicDepthState::init(const Device &dev, const VkDynamicDepthStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthStencilState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthState, dev, &info);
+}
+
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicStencilState, vkDestroyDynamicStencilState)
+
+void DynamicStencilState::init(const Device &dev, const VkDynamicStencilStateCreateInfo &frontInfo, const VkDynamicStencilStateCreateInfo &backInfo)
+{
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicStencilState, dev, &frontInfo, &backInfo);
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(CmdPool, vkDestroyCommandPool)

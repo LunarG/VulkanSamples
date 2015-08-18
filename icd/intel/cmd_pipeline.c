@@ -1109,7 +1109,7 @@ static uint32_t gen6_BLEND_STATE(struct intel_cmd *cmd)
 }
 
 static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
-                                         const struct intel_dynamic_depth_stencil *state)
+                                         const struct intel_dynamic_stencil *stencil_state)
 {
     const struct intel_pipeline *pipeline = cmd->bind.pipeline.graphics;
     const uint8_t cmd_align = GEN6_ALIGNMENT_DEPTH_STENCIL_STATE;
@@ -1117,16 +1117,18 @@ static uint32_t gen6_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
     uint32_t dw[3];
 
     dw[0] = pipeline->cmd_depth_stencil;
+
+    /* TODO: enable back facing stencil state */
     /* same read and write masks for both front and back faces */
-    dw[1] = (state->depth_stencil_info.stencilReadMask & 0xff) << 24 |
-            (state->depth_stencil_info.stencilWriteMask & 0xff) << 16 |
-            (state->depth_stencil_info.stencilReadMask & 0xff) << 8 |
-            (state->depth_stencil_info.stencilWriteMask & 0xff);
+    dw[1] = (stencil_state->stencil_info_front.stencilReadMask & 0xff) << 24 |
+            (stencil_state->stencil_info_front.stencilWriteMask & 0xff) << 16 |
+            (stencil_state->stencil_info_front.stencilReadMask & 0xff) << 8 |
+            (stencil_state->stencil_info_front.stencilWriteMask & 0xff);
     dw[2] = pipeline->cmd_depth_test;
 
     CMD_ASSERT(cmd, 6, 7.5);
 
-    if (state->depth_stencil_info.stencilWriteMask && pipeline->stencilTestEnable)
+    if (stencil_state->stencil_info_front.stencilWriteMask && pipeline->stencilTestEnable)
        dw[0] |= 1 << 18;
 
     return cmd_state_write(cmd, INTEL_CMD_ITEM_DEPTH_STENCIL,
@@ -1475,7 +1477,8 @@ void cmd_batch_immediate(struct intel_cmd *cmd,
 static void gen6_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_dynamic_color_blend *blend = cmd->bind.state.blend;
-    const struct intel_dynamic_depth_stencil *ds = cmd->bind.state.depth;
+    const struct intel_dynamic_depth *ds = cmd->bind.state.depth;
+    const struct intel_dynamic_stencil *ss = cmd->bind.state.stencil;
     uint32_t blend_offset, ds_offset, cc_offset;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
@@ -1489,10 +1492,12 @@ static void gen6_cc_states(struct intel_cmd *cmd)
     else
         memset(blend_color, 0, sizeof(blend_color));
 
-    if (ds) {
-        ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
+    if (ss) {
+        ds_offset = gen6_DEPTH_STENCIL_STATE(cmd, ss);
+        /* TODO: enable back facing stencil state */
+        /* same reference for both front and back faces */
+        stencil_ref = (ss->stencil_info_front.stencilReference & 0xff) << 24 |
+                      (ss->stencil_info_front.stencilReference & 0xff) << 16;
     } else {
         ds_offset = 0;
         stencil_ref = 0;
@@ -1539,7 +1544,8 @@ static void gen6_viewport_states(struct intel_cmd *cmd)
 static void gen7_cc_states(struct intel_cmd *cmd)
 {
     const struct intel_dynamic_color_blend *blend = cmd->bind.state.blend;
-    const struct intel_dynamic_depth_stencil *ds = cmd->bind.state.depth;
+    const struct intel_dynamic_depth *ds = cmd->bind.state.depth;
+    const struct intel_dynamic_stencil *ss = cmd->bind.state.stencil;
     uint32_t stencil_ref;
     uint32_t blend_color[4];
     uint32_t offset;
@@ -1558,15 +1564,17 @@ static void gen7_cc_states(struct intel_cmd *cmd)
     else
         memset(blend_color, 0, sizeof(blend_color));
 
-    if (ds) {
-        offset = gen6_DEPTH_STENCIL_STATE(cmd, ds);
-        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
+    if (ss) {
+        offset = gen6_DEPTH_STENCIL_STATE(cmd, ss);
+        /* TODO: enable back facing stencil state */
+        /* same reference for both front and back faces */
+        stencil_ref = (ss->stencil_info_front.stencilReference & 0xff) << 24 |
+                      (ss->stencil_info_front.stencilReference & 0xff) << 16;
         gen7_3dstate_pointer(cmd,
                 GEN7_RENDER_OPCODE_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
                 offset);
-        stencil_ref = (ds->depth_stencil_info.stencilFrontRef & 0xff) << 24 |
-                      (ds->depth_stencil_info.stencilBackRef & 0xff) << 16;
+        stencil_ref = (ss->stencil_info_front.stencilReference & 0xff) << 24 |
+                      (ss->stencil_info_front.stencilReference & 0xff) << 16;
     } else {
         stencil_ref = 0;
     }
@@ -3230,10 +3238,16 @@ static void cmd_bind_raster_depth_bias_state(struct intel_cmd *cmd,
     cmd->bind.state.raster_depth_bias = state;
 }
 
-static void cmd_bind_depth_stencil_state(struct intel_cmd *cmd,
-                              const struct intel_dynamic_depth_stencil *state)
+static void cmd_bind_depth_state(struct intel_cmd *cmd,
+                              const struct intel_dynamic_depth*state)
 {
     cmd->bind.state.depth = state;
+}
+
+static void cmd_bind_stencil_state(struct intel_cmd *cmd,
+                              const struct intel_dynamic_stencil *state)
+{
+    cmd->bind.state.stencil = state;
 }
 
 static void cmd_bind_blend_state(struct intel_cmd *cmd,
@@ -3502,14 +3516,24 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(
             intel_dynamic_color_blend(state));
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicDepthStencilState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicDepthState(
     VkCmdBuffer                              cmdBuffer,
-    VkDynamicDepthStencilState                   state)
+    VkDynamicDepthState                      state)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    cmd_bind_depth_stencil_state(cmd,
-            intel_dynamic_depth_stencil(state));
+    cmd_bind_depth_state(cmd,
+            intel_dynamic_depth(state));
+}
+
+ICD_EXPORT void VKAPI vkCmdBindDynamicStencilState(
+    VkCmdBuffer                              cmdBuffer,
+    VkDynamicStencilState                    state)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd_bind_stencil_state(cmd,
+            intel_dynamic_stencil(state));
 }
 
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(

@@ -98,7 +98,8 @@ unordered_map<uint64_t, VkDynamicViewportStateCreateInfo>     dynamicViewportSta
 unordered_map<uint64_t, VkDynamicRasterLineStateCreateInfo>   dynamicRasterLineStateMap;
 unordered_map<uint64_t, VkDynamicRasterDepthBiasStateCreateInfo> dynamicRasterDepthBiasStateMap;
 unordered_map<uint64_t, VkDynamicColorBlendStateCreateInfo>   dynamicColorBlendStateMap;
-unordered_map<uint64_t, VkDynamicDepthStencilStateCreateInfo> dynamicDepthStencilStateMap;
+unordered_map<uint64_t, VkDynamicDepthStateCreateInfo> dynamicDepthStateMap;
+unordered_map<uint64_t, VkDynamicStencilStateCreateInfo> dynamicStencilStateMap;
 
 // For a given handle and object type, return a ptr to its CreateInfo struct, or NULL if not found
 static void* get_object_create_info(uint64_t handle, VkDbgObjectType type)
@@ -246,10 +247,17 @@ static void* get_object_create_info(uint64_t handle, VkDbgObjectType type)
                 return (void*)&(*it).second;
             break;
         }
-        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE:
+        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE:
         {
-            auto it = dynamicDepthStencilStateMap.find(handle);
-            if (it != dynamicDepthStencilStateMap.end())
+            auto it = dynamicDepthStateMap.find(handle);
+            if (it != dynamicDepthStateMap.end())
+                return (void*)&(*it).second;
+            break;
+        }
+        case VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE:
+        {
+            auto it = dynamicStencilStateMap.find(handle);
+            if (it != dynamicStencilStateMap.end())
                 return (void*)&(*it).second;
             break;
         }
@@ -537,10 +545,16 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
             memcpy(pCI, pCreateInfo, sizeof(VkDynamicColorBlendStateCreateInfo));
             break;
         }
-        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE:
+        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE:
         {
-            auto pCI = &dynamicDepthStencilStateMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkDynamicDepthStencilStateCreateInfo));
+            auto pCI = &dynamicDepthStateMap[handle];
+            memcpy(pCI, pCreateInfo, sizeof(VkDynamicDepthStateCreateInfo));
+            break;
+        }
+        case VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE:
+        {
+            auto pCI = &dynamicStencilStateMap[handle];
+            memcpy(pCI, pCreateInfo, sizeof(VkDynamicStencilStateCreateInfo));
             break;
         }
         default:
@@ -1153,7 +1167,8 @@ static void print_object_list(
     print_object_map_members(dispObj, dynamicRasterLineStateMap,   VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE,   "DynamicRasterLineState");
     print_object_map_members(dispObj, dynamicRasterDepthBiasStateMap, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE, "DynamicRasterDepthBiasState");
     print_object_map_members(dispObj, dynamicColorBlendStateMap,   VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE,   "DynamicColorBlendState");
-    print_object_map_members(dispObj, dynamicDepthStencilStateMap, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE, "DynamicDepthStencilState");
+    print_object_map_members(dispObj, dynamicDepthStateMap,        VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE,         "DynamicDepthState");
+    print_object_map_members(dispObj, dynamicStencilStateMap,      VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE,       "DynamicStencilState");
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "*** End of Object lists ***");
 }
 
@@ -1873,15 +1888,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(VkDevice device, 
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(VkDevice device, VkDynamicDepthStencilState dynamicDepthStencilState)
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(VkDevice device, VkDynamicDepthState dynamicDepthState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    auto item = dynamicDepthStencilStateMap.find(dynamicDepthStencilState.handle);
-    if (item != dynamicDepthStencilStateMap.end()) {
-        dynamicDepthStencilStateMap.erase(item);
+    auto item = dynamicDepthStateMap.find(dynamicDepthState.handle);
+    if (item != dynamicDepthStateMap.end()) {
+        dynamicDepthStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthStencilState(device, dynamicDepthStencilState);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthState(device, dynamicDepthState);
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto item = dynamicStencilStateMap.find(dynamicStencilState.handle);
+    if (item != dynamicStencilStateMap.end()) {
+        dynamicStencilStateMap.erase(item);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
     return result;
 }
 
@@ -2353,15 +2380,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthState(
     VkDevice                          device,
-    const VkDynamicDepthStencilStateCreateInfo *pCreateInfo,
-    VkDynamicDepthStencilState       *pState)
+    const VkDynamicDepthStateCreateInfo *pCreateInfo,
+    VkDynamicDepthState       *pState)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateDynamicDepthState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pState->handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE, pCreateInfo);
+        add_object_create_info(pState->handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE, pCreateInfo);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
+    VkDevice                          device,
+    const VkDynamicStencilStateCreateInfo *pCreateInfoFront,
+    const VkDynamicStencilStateCreateInfo *pCreateInfoBack,
+    VkDynamicStencilState       *pState)
+{
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
+    if (result == VK_SUCCESS && pCreateInfoFront != nullptr) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        add_object_create_info(pState->handle, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE, pCreateInfoFront);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    if (result == VK_SUCCESS && pCreateInfoBack != nullptr && pCreateInfoBack != pCreateInfoFront) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        add_object_create_info(pState->handle, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE, pCreateInfoBack);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2542,11 +2589,11 @@ void VKAPI vkCmdBindDynamicColorBlendState(
     get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDynamicColorBlendState(cmdBuffer, dynamicColorBlendState);
 }
 
-void VKAPI vkCmdBindDynamicDepthStencilState(
+void VKAPI vkCmdBindDynamicDepthState(
      VkCmdBuffer                                 cmdBuffer,
-     VkDynamicDepthStencilState                  dynamicDepthStencilState)
+     VkDynamicDepthState                  dynamicDepthState)
 {
-    VkDynamicDepthStencilStateCreateInfo* pCI;
+    VkDynamicDepthStateCreateInfo* pCI;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
@@ -2554,14 +2601,36 @@ void VKAPI vkCmdBindDynamicDepthStencilState(
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
                 "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
-    pCI = (VkDynamicDepthStencilStateCreateInfo*)get_object_create_info(dynamicDepthStencilState.handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE);
+    pCI = (VkDynamicDepthStateCreateInfo*)get_object_create_info(dynamicDepthState.handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
     if (!pCI) {
-         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE, dynamicDepthStencilState.handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
-                "Unable to find dynamic raster state object %#" PRIxLEAST64 ", was it ever created?", dynamicDepthStencilState.handle);
+         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE, dynamicDepthState.handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
+                "Unable to find dynamic raster state object %#" PRIxLEAST64 ", was it ever created?", dynamicDepthState.handle);
     }
-    pCmdBuf->pLastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_STENCIL] = dynamicDepthStencilState.handle;
+    pCmdBuf->pLastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH] = dynamicDepthState.handle;
     loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDynamicDepthStencilState(cmdBuffer, dynamicDepthStencilState);
+    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDynamicDepthState(cmdBuffer, dynamicDepthState);
+}
+
+void VKAPI vkCmdBindDynamicStencilState(
+     VkCmdBuffer                                 cmdBuffer,
+     VkDynamicStencilState                       dynamicStencilState)
+{
+    VkDynamicStencilStateCreateInfo* pCI;
+    loader_platform_thread_lock_mutex(&globalLock);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    if (!pCmdBuf) {
+        // TODO : Want cmdBuffer to be srcObj here
+        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
+                "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+    }
+    pCI = (VkDynamicStencilStateCreateInfo*)get_object_create_info(dynamicStencilState.handle, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
+    if (!pCI) {
+         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE, dynamicStencilState.handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
+                "Unable to find dynamic raster state object %#" PRIxLEAST64 ", was it ever created?", dynamicStencilState.handle);
+    }
+    pCmdBuf->pLastBoundDynamicState[VK_STATE_BIND_POINT_STENCIL] = dynamicStencilState.handle;
+    loader_platform_thread_unlock_mutex(&globalLock);
+    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDynamicStencilState(cmdBuffer, dynamicStencilState);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
@@ -3137,8 +3206,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkDestroyDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkDestroyDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkDestroyDynamicColorBlendState;
-    if (!strcmp(funcName, "vkDestroyDynamicDepthStencilState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicDepthStencilState;
+    if (!strcmp(funcName, "vkDestroyDynamicDepthState"))
+        return (PFN_vkVoidFunction) vkDestroyDynamicDepthState;
+    if (!strcmp(funcName, "vkDestroyDynamicStencilState"))
+        return (PFN_vkVoidFunction) vkDestroyDynamicStencilState;
     if (!strcmp(funcName, "vkBindBufferMemory"))
         return (PFN_vkVoidFunction) vkBindBufferMemory;
     if (!strcmp(funcName, "vkBindImageMemory"))
@@ -3195,8 +3266,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkCreateDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkCreateDynamicColorBlendState;
-    if (!strcmp(funcName, "vkCreateDynamicDepthStencilState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicDepthStencilState;
+    if (!strcmp(funcName, "vkCreateDynamicDepthState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicDepthState;
+    if (!strcmp(funcName, "vkCreateDynamicStencilState"))
+        return (PFN_vkVoidFunction) vkCreateDynamicStencilState;
     if (!strcmp(funcName, "vkCreateCommandBuffer"))
         return (PFN_vkVoidFunction) vkCreateCommandBuffer;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
@@ -3215,8 +3288,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCmdBindDynamicRasterDepthBiasState;
     if (!strcmp(funcName, "vkCmdBindDynamicColorBlendState"))
         return (PFN_vkVoidFunction) vkCmdBindDynamicColorBlendState;
-    if (!strcmp(funcName, "vkCmdBindDynamicDepthStencilState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicDepthStencilState;
+    if (!strcmp(funcName, "vkCmdBindDynamicDepthState"))
+        return (PFN_vkVoidFunction) vkCmdBindDynamicDepthState;
+    if (!strcmp(funcName, "vkCmdBindDynamicStencilState"))
+        return (PFN_vkVoidFunction) vkCmdBindDynamicStencilState;
     if (!strcmp(funcName, "vkCmdBindDescriptorSets"))
         return (PFN_vkVoidFunction) vkCmdBindDescriptorSets;
     if (!strcmp(funcName, "vkCmdBindVertexBuffers"))

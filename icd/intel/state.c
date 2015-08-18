@@ -349,26 +349,26 @@ void intel_blend_state_destroy(struct intel_dynamic_color_blend *state)
     intel_base_destroy(&state->obj.base);
 }
 
-static void depth_stencil_state_destroy(struct intel_obj *obj)
+static void depth_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_depth_stencil *state = intel_depth_stencil_state_from_obj(obj);
+    struct intel_dynamic_depth *state = intel_depth_state_from_obj(obj);
 
-    intel_depth_stencil_state_destroy(state);
+    intel_depth_state_destroy(state);
 }
 
-VkResult intel_depth_stencil_state_create(struct intel_dev *dev,
-                                 const VkDynamicDepthStencilStateCreateInfo *info,
-                                 struct intel_dynamic_depth_stencil **state_ret)
+VkResult intel_depth_state_create(struct intel_dev *dev,
+                                 const VkDynamicDepthStateCreateInfo *info,
+                                 struct intel_dynamic_depth **state_ret)
 {
-    struct intel_dynamic_depth_stencil *state;
+    struct intel_dynamic_depth *state;
 
-    state = (struct intel_dynamic_depth_stencil *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE,
+    state = (struct intel_dynamic_depth *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = depth_stencil_state_destroy;
+    state->obj.destroy = depth_state_destroy;
 
     /*
      * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -385,14 +385,70 @@ VkResult intel_depth_stencil_state_create(struct intel_dev *dev,
      * TODO We do not check these yet.
      */
 
-    state->depth_stencil_info = *info;
+    state->depth_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_depth_stencil_state_destroy(struct intel_dynamic_depth_stencil *state)
+void intel_depth_state_destroy(struct intel_dynamic_depth *state)
+{
+    intel_base_destroy(&state->obj.base);
+}
+
+static void stencil_state_destroy(struct intel_obj *obj)
+{
+    struct intel_dynamic_stencil *state = intel_stencil_state_from_obj(obj);
+
+    intel_stencil_state_destroy(state);
+}
+
+VkResult intel_stencil_state_create(struct intel_dev *dev,
+                                 const VkDynamicStencilStateCreateInfo *info_front,
+                                 const VkDynamicStencilStateCreateInfo *info_back,
+                                 struct intel_dynamic_stencil **state_ret)
+{
+    struct intel_dynamic_stencil *state;
+
+    /* TODO: enable back facing stencil state */
+    /* Some plumbing needs to be done if we want to support info_back.
+     * In the meantime, catch that back facing info has been submitted. */
+    assert(info_front == info_back || info_back == NULL);
+
+    state = (struct intel_dynamic_stencil *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE,
+            info_front, 0);
+    if (!state)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    state->obj.destroy = stencil_state_destroy;
+
+    /*
+     * From the Sandy Bridge PRM, volume 2 part 1, page 359:
+     *
+     *     "If the Depth Buffer is either undefined or does not have a surface
+     *      format of D32_FLOAT_S8X24_UINT or D24_UNORM_S8_UINT and separate
+     *      stencil buffer is disabled, Stencil Test Enable must be DISABLED"
+     *
+     * From the Sandy Bridge PRM, volume 2 part 1, page 370:
+     *
+     *     "This field (Stencil Test Enable) cannot be enabled if
+     *      Surface Format in 3DSTATE_DEPTH_BUFFER is set to D16_UNORM."
+     *
+     * TODO We do not check these yet.
+     */
+
+    state->stencil_info_front = *info_front;
+    /* TODO: enable back facing stencil state */
+    /*state->stencil_info_back  = *info_back;*/
+
+    *state_ret = state;
+
+    return VK_SUCCESS;
+}
+
+void intel_stencil_state_destroy(struct intel_dynamic_stencil *state)
 {
     intel_base_destroy(&state->obj.base);
 }
@@ -485,23 +541,46 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthState(
     VkDevice                                        device,
-    const VkDynamicDepthStencilStateCreateInfo*     pCreateInfo,
-    VkDynamicDepthStencilState*                     pState)
+    const VkDynamicDepthStateCreateInfo*            pCreateInfo,
+    VkDynamicDepthState*                            pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_depth_stencil_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_depth_stencil **) pState);
+    return intel_depth_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_depth **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthStencilState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(
     VkDevice                                device,
-    VkDynamicDepthStencilState              dynamicDepthStencilState)
+    VkDynamicDepthState                     dynamicDepthState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicDepthStencilState.handle);
+    struct intel_obj *obj = intel_obj(dynamicDepthState.handle);
+
+    obj->destroy(obj);
+    return VK_SUCCESS;
+}
+
+ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
+    VkDevice                                        device,
+    const VkDynamicStencilStateCreateInfo*          pCreateInfoFront,
+    const VkDynamicStencilStateCreateInfo*          pCreateInfoBack,
+    VkDynamicStencilState*                          pState)
+{
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_stencil_state_create(dev, pCreateInfoFront, pCreateInfoBack,
+            (struct intel_dynamic_stencil **) pState);
+}
+
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(
+    VkDevice                                device,
+    VkDynamicStencilState                   dynamicStencilState)
+
+{
+    struct intel_obj *obj = intel_obj(dynamicStencilState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;

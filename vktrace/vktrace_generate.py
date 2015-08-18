@@ -487,6 +487,7 @@ class Subcommand(object):
                                          'CreateSwapChainWSI',
                                          'GetSwapChainImagesWSI',
                                          'QueuePresentWSI',
+                                         'CreateDynamicStencilState',
                                          ]
 
         # validate the manually_written_hooked_funcs list

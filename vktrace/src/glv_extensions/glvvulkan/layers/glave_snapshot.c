@@ -1287,16 +1287,32 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, c
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthStencilState(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthState(VkDevice device, const VkDynamicDepthStateCreateInfo* pCreateInfo, VkDynamicDepthState* pState)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicDepthStencilState(device, pCreateInfo, pState);
+    VkResult result = nextTable.CreateDynamicDepthState(device, pCreateInfo, pState);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_DS_STATE);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
+        pNode->obj.pStruct = NULL;
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(VkDevice device, const VkDynamicStencilStateCreateInfo* pCreateInfo, VkDynamicStencilState* pState)
+{
+    loader_platform_thread_lock_mutex(&objLock);
+    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
+    loader_platform_thread_unlock_mutex(&objLock);
+    VkResult result = nextTable.CreateDynamicStencilState(device, pCreateInfo, pState);
+    if (result == VK_SUCCESS)
+    {
+        loader_platform_thread_lock_mutex(&objLock);
+        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }

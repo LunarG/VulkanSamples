@@ -44,7 +44,8 @@ VkRenderFramework::VkRenderFramework() :
     m_stateRasterDepthBias( VK_NULL_HANDLE ),
     m_colorBlend( VK_NULL_HANDLE ),
     m_stateViewport( VK_NULL_HANDLE ),
-    m_stateDepthStencil( VK_NULL_HANDLE ),
+    m_stateDepth( VK_NULL_HANDLE ),
+    m_stateStencil( VK_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 ),                  // default window height
     m_render_target_fmt( VK_FORMAT_R8G8B8A8_UNORM ),
@@ -155,7 +156,8 @@ void VkRenderFramework::InitFramework(
 void VkRenderFramework::ShutdownFramework()
 {
     if (m_colorBlend) vkDestroyDynamicColorBlendState(device(), m_colorBlend);
-    if (m_stateDepthStencil) vkDestroyDynamicDepthStencilState(device(), m_stateDepthStencil);
+    if (m_stateDepth) vkDestroyDynamicDepthState(device(), m_stateDepth);
+    if (m_stateStencil) vkDestroyDynamicStencilState(device(), m_stateStencil);
     if (m_stateRasterLine) vkDestroyDynamicRasterLineState(device(), m_stateRasterLine);
     if (m_stateRasterDepthBias) vkDestroyDynamicRasterDepthBiasState(device(), m_stateRasterDepthBias);
     if (m_cmdBuffer)
@@ -236,16 +238,19 @@ void VkRenderFramework::InitState()
     err = vkCreateDynamicColorBlendState(device(), &blend, &m_colorBlend);
     ASSERT_VK_SUCCESS( err );
 
-    VkDynamicDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.minDepthBounds = 0.f;
-    depthStencil.maxDepthBounds = 1.f;
-    depthStencil.stencilFrontRef = 0;
-    depthStencil.stencilBackRef = 0;
-    depthStencil.stencilReadMask = 0xff;
-    depthStencil.stencilWriteMask = 0xff;
+    VkDynamicDepthStateCreateInfo depth = {};
+    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STATE_CREATE_INFO;
+    depth.minDepthBounds = 0.f;
+    depth.maxDepthBounds = 1.f;
+    err = vkCreateDynamicDepthState( device(), &depth, &m_stateDepth );
+    ASSERT_VK_SUCCESS( err );
 
-    err = vkCreateDynamicDepthStencilState( device(), &depthStencil, &m_stateDepthStencil );
+    VkDynamicStencilStateCreateInfo stencil = {};
+    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
+    stencil.stencilReadMask = 0xff;
+    stencil.stencilWriteMask = 0xff;
+    stencil.stencilReference = 0;
+    err = vkCreateDynamicStencilState( device(), &stencil, &stencil, &m_stateStencil );
     ASSERT_VK_SUCCESS( err );
 
     VkCmdPoolCreateInfo cmd_pool_info;
@@ -1491,9 +1496,14 @@ void VkCommandBufferObj::BindDynamicColorBlendState(VkDynamicColorBlendState col
     vkCmdBindDynamicColorBlendState( handle(), colorBlendState);
 }
 
-void VkCommandBufferObj::BindDynamicDepthStencilState(VkDynamicDepthStencilState depthStencilState)
+void VkCommandBufferObj::BindDynamicDepthState(VkDynamicDepthState depthState)
 {
-    vkCmdBindDynamicDepthStencilState( handle(), depthStencilState);
+    vkCmdBindDynamicDepthState( handle(), depthState);
+}
+
+void VkCommandBufferObj::BindDynamicStencilState(VkDynamicStencilState stencilState)
+{
+    vkCmdBindDynamicStencilState( handle(), stencilState);
 }
 
 void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)

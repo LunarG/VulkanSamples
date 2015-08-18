@@ -368,7 +368,8 @@ struct demo {
     VkDynamicRasterLineState raster_line;
     VkDynamicRasterDepthBiasState raster_depth_bias;
     VkDynamicColorBlendState color_blend;
-    VkDynamicDepthStencilState depth_stencil;
+    VkDynamicDepthState dynamic_depth;
+    VkDynamicStencilState dynamic_stencil;
 
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
@@ -544,7 +545,8 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDynamicRasterLineState(cmd_buf,  demo->raster_line);
     vkCmdBindDynamicRasterDepthBiasState(cmd_buf,  demo->raster_depth_bias);
     vkCmdBindDynamicColorBlendState(cmd_buf, demo->color_blend);
-    vkCmdBindDynamicDepthStencilState(cmd_buf, demo->depth_stencil);
+    vkCmdBindDynamicDepthState(cmd_buf, demo->dynamic_depth);
+    vkCmdBindDynamicStencilState(cmd_buf, demo->dynamic_stencil);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
@@ -1669,7 +1671,8 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     VkDynamicRasterLineStateCreateInfo raster_line;
     VkDynamicRasterDepthBiasStateCreateInfo raster_depth_bias;
     VkDynamicColorBlendStateCreateInfo color_blend;
-    VkDynamicDepthStencilStateCreateInfo depth_stencil;
+    VkDynamicDepthStateCreateInfo depth;
+    VkDynamicStencilStateCreateInfo stencil;
     VkResult U_ASSERT_ONLY err;
 
     memset(&viewport_create, 0, sizeof(viewport_create));
@@ -1707,14 +1710,16 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     color_blend.blendConst[2] = 1.0f;
     color_blend.blendConst[3] = 1.0f;
 
-    memset(&depth_stencil, 0, sizeof(depth_stencil));
-    depth_stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.minDepthBounds = 0.0f;
-    depth_stencil.maxDepthBounds = 1.0f;
-    depth_stencil.stencilBackRef = 0;
-    depth_stencil.stencilFrontRef = 0;
-    depth_stencil.stencilReadMask = 0xff;
-    depth_stencil.stencilWriteMask = 0xff;
+    memset(&depth, 0, sizeof(depth));
+    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STATE_CREATE_INFO;
+    depth.minDepthBounds = 0.0f;
+    depth.maxDepthBounds = 1.0f;
+
+    memset(&stencil, 0, sizeof(stencil));
+    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
+    stencil.stencilReference = 0;
+    stencil.stencilReadMask = 0xff;
+    stencil.stencilWriteMask = 0xff;
 
     err = vkCreateDynamicViewportState(demo->device, &viewport_create, &demo->viewport);
     assert(!err);
@@ -1729,8 +1734,12 @@ static void demo_prepare_dynamic_states(struct demo *demo)
             &color_blend, &demo->color_blend);
     assert(!err);
 
-    err = vkCreateDynamicDepthStencilState(demo->device,
-            &depth_stencil, &demo->depth_stencil);
+    err = vkCreateDynamicDepthState(demo->device,
+            &depth, &demo->dynamic_depth);
+    assert(!err);
+
+    err = vkCreateDynamicStencilState(demo->device,
+            &stencil, &stencil, &demo->dynamic_stencil);
     assert(!err);
 }
 
@@ -1896,7 +1905,8 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyDynamicRasterLineState(demo->device, demo->raster_line);
     vkDestroyDynamicRasterDepthBiasState(demo->device, demo->raster_depth_bias);
     vkDestroyDynamicColorBlendState(demo->device, demo->color_blend);
-    vkDestroyDynamicDepthStencilState(demo->device, demo->depth_stencil);
+    vkDestroyDynamicDepthState(demo->device, demo->dynamic_depth);
+    vkDestroyDynamicStencilState(demo->device, demo->dynamic_stencil);
 
     vkDestroyPipeline(demo->device, demo->pipeline);
     vkDestroyPipelineCache(demo->device, demo->pipelineCache);

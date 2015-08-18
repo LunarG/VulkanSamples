@@ -1215,6 +1215,37 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentWSI(
     return result;
 }
 
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicStencilState(
+    VkDevice device,
+    const VkDynamicStencilStateCreateInfo* pCreateInfoFront,
+    const VkDynamicStencilStateCreateInfo* pCreateInfoBack,
+    VkDynamicStencilState* pState)
+{
+    glv_trace_packet_header* pHeader;
+    VkResult result;
+    packet_vkCreateDynamicStencilState* pPacket = NULL;
+
+    /* If front and back pointers are the same, only track front */
+    const VkDynamicStencilStateCreateInfo* pLocalCreateInfoBack = (pCreateInfoFront == pCreateInfoBack) ? NULL : pCreateInfoBack;
+    uint32_t createInfoMultiplier = (pLocalCreateInfoBack != NULL) ? 2 : 1;
+
+    CREATE_TRACE_PACKET(vkCreateDynamicStencilState, createInfoMultiplier * sizeof(VkDynamicStencilStateCreateInfo) + sizeof(VkDynamicStencilState));
+    result = real_vkCreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
+    glv_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkCreateDynamicStencilState(pHeader);
+    pPacket->device = device;
+
+
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfoFront), sizeof(VkDynamicStencilStateCreateInfo), pCreateInfoFront);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfoBack), sizeof(VkDynamicStencilStateCreateInfo), pLocalCreateInfoBack);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pState), sizeof(VkDynamicStencilState), pState);
+    pPacket->result = result;
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfoFront));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfoBack));
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pState));
+    FINISH_TRACE_PACKET();
+    return result;
+}
 
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
 GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportWSI(

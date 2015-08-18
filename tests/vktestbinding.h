@@ -59,7 +59,8 @@ class DynamicViewportState;
 class DynamicRasterLineState;
 class DynamicRasterDepthBiasState;
 class DynamicColorBlendState;
-class DynamicDepthStencilState;
+class DynamicDepthState;
+class DynamicStencilState;
 class CmdBuffer;
 class CmdPool;
 
@@ -584,12 +585,20 @@ public:
     void init(const Device &dev, const VkDynamicColorBlendStateCreateInfo &info);
 };
 
-class DynamicDepthStencilState : public internal::NonDispHandle<VkDynamicDepthStencilState> {
+class DynamicDepthState : public internal::NonDispHandle<VkDynamicDepthState> {
 public:
-    ~DynamicDepthStencilState();
+    ~DynamicDepthState();
 
-    // vkCreateDynamicDepthStencilState()
-    void init(const Device &dev, const VkDynamicDepthStencilStateCreateInfo &info);
+    // vkCreateDynamicDepthState()
+    void init(const Device &dev, const VkDynamicDepthStateCreateInfo &info);
+};
+
+class DynamicStencilState : public internal::NonDispHandle<VkDynamicStencilState> {
+public:
+    ~DynamicStencilState();
+
+    // vkCreateDynamicStencilState()
+    void init(const Device &dev, const VkDynamicStencilStateCreateInfo &frontInfo, const VkDynamicStencilStateCreateInfo &backInfo);
 };
 
 class CmdPool : public internal::NonDispHandle<VkCmdPool> {
@@ -599,7 +608,6 @@ public:
     explicit CmdPool() : NonDispHandle() {}
     explicit CmdPool(const Device &dev, const VkCmdPoolCreateInfo &info) { init(dev, info); }
 
-    // vkCreateDynamicDepthStencilState()
     void init(const Device &dev, const VkCmdPoolCreateInfo &info);
 
     static VkCmdPoolCreateInfo create_info(uint32_t queue_family_index);

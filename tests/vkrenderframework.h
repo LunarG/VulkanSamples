@@ -116,7 +116,8 @@ protected:
     VkDynamicRasterDepthBiasState       m_stateRasterDepthBias;
     VkDynamicColorBlendState            m_colorBlend;
     VkDynamicViewportState              m_stateViewport;
-    VkDynamicDepthStencilState          m_stateDepthStencil;
+    VkDynamicDepthState                 m_stateDepth;
+    VkDynamicStencilState               m_stateStencil;
     vector<VkImageObj*>                 m_renderTargets;
     float                               m_width, m_height;
     VkFormat                            m_render_target_fmt;
@@ -180,7 +181,8 @@ public:
     void BindDynamicRasterLineState(VkDynamicRasterLineState rasterLineState);
     void BindDynamicRasterDepthBiasState(VkDynamicRasterDepthBiasState rasterStateDepthBias);
     void BindDynamicColorBlendState(VkDynamicColorBlendState colorBlendState);
-    void BindDynamicDepthStencilState(VkDynamicDepthStencilState depthStencilState);
+    void BindDynamicDepthState(VkDynamicDepthState depthState);
+    void BindDynamicStencilState(VkDynamicStencilState stencilState);
     void EndRenderPass();
     void FillBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize fill_size, uint32_t data);
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);

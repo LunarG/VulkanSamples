@@ -55,7 +55,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_RASTER_LINE_NOT_BOUND,            // Draw submitted with no raster line state object bound
     DRAWSTATE_RASTER_DEPTH_BIAS_NOT_BOUND,      // Draw submitted with no raster depth bias state object bound
     DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
-    DRAWSTATE_DEPTH_STENCIL_NOT_BOUND,          // Draw submitted with no depth-stencil state object bound when depth write enabled
+    DRAWSTATE_DEPTH_NOT_BOUND,                  // Draw submitted with no depth state object bound when depth enabled
+    DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state object bound when stencil enabled
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
     DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
@@ -168,7 +169,8 @@ typedef enum _CMD_TYPE
     CMD_BINDDYNAMICRASTERLINESTATE,
     CMD_BINDDYNAMICRASTERDEPTHBIASSTATE,
     CMD_BINDDYNAMICCOLORBLENDSTATE,
-    CMD_BINDDYNAMICDEPTHSTENCILSTATE,
+    CMD_BINDDYNAMICDEPTHSTATE,
+    CMD_BINDDYNAMICSTENCILSTATE,
     CMD_BINDDESCRIPTORSETS,
     CMD_BINDINDEXBUFFER,
     CMD_BINDVERTEXBUFFER,
@@ -231,9 +233,11 @@ typedef enum _CBStatusFlagBits
     CBSTATUS_RASTER_DEPTH_BIAS_BOUND           = 0x00000004, // Raster state object has been bound
     CBSTATUS_COLOR_BLEND_WRITE_ENABLE          = 0x00000008, // PSO w/ CB Enable set has been bound
     CBSTATUS_COLOR_BLEND_BOUND                 = 0x00000010, // CB state object has been bound
-    CBSTATUS_DEPTH_STENCIL_WRITE_ENABLE        = 0x00000020, // PSO w/ DS Enable set has been bound
-    CBSTATUS_DEPTH_STENCIL_BOUND               = 0x00000040, // DS state object has been bound
-    CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000080, // Index buffer has been bound
+    CBSTATUS_DEPTH_WRITE_ENABLE                = 0x00000020, // PSO w/ Depth Enable set has been bound
+    CBSTATUS_STENCIL_TEST_ENABLE               = 0x00000040, // PSO w/ Stencil Enable set has been bound
+    CBSTATUS_DEPTH_BOUND                       = 0x00000080, // Depth state object has been bound
+    CBSTATUS_STENCIL_BOUND                     = 0x00000100, // Stencil state object has been bound
+    CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000200, // Index buffer has been bound
 } CBStatusFlagBits;
 
 // Cmd Buffer Wrapper Struct

@@ -388,7 +388,8 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     cmdBuffer->BindDynamicRasterDepthBiasState(m_stateRasterDepthBias);
     cmdBuffer->BindDynamicViewportState(m_stateViewport);
     cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
-    cmdBuffer->BindDynamicDepthStencilState(m_stateDepthStencil);
+    cmdBuffer->BindDynamicDepthState(m_stateDepth);
+    cmdBuffer->BindDynamicStencilState(m_stateStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     cmdBuffer->BindPipeline(pipelineobj);
