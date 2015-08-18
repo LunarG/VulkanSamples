@@ -997,7 +997,7 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after re-submitting Command Buffer that was created with one-time submit flag";
-    if (!strstr(msgString.c_str(),"was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
+    if (!strstr(msgString.c_str(),"was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
         FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set...'";
     }
 }

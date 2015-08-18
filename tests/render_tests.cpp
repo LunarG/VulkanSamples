@@ -274,9 +274,11 @@ public:
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
     VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer, VkCmdBufferBeginInfo *beginInfo);
     VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
     /* Convenience functions that use built-in command buffer */
     VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
+    VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *beginInfo) { return BeginCommandBuffer(*m_cmdBuffer, beginInfo); }
     VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
     void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
         { m_cmdBuffer->Draw(firstVertex, vertexCount, firstInstance, instanceCount); }
@@ -328,6 +330,23 @@ VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
     VkResult result;
 
     result = cmdBuffer.BeginCommandBuffer();
+
+    /*
+     * For render test all drawing happens in a single render pass
+     * on a single command buffer.
+     */
+    if (VK_SUCCESS == result && renderPass()) {
+        cmdBuffer.BeginRenderPass(renderPassBeginInfo());
+    }
+
+    return result;
+}
+
+VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer, VkCmdBufferBeginInfo *beginInfo)
+{
+    VkResult result;
+
+    result = cmdBuffer.BeginCommandBuffer(beginInfo);
 
     /*
      * For render test all drawing happens in a single render pass
@@ -486,7 +505,12 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ASSERT_VK_SUCCESS(BeginCommandBuffer());
+
+    VkCmdBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);
 #ifdef DUMP_STATE_DOT
@@ -1401,7 +1425,12 @@ TEST_F(VkRenderTest, TriangleVSUniform)
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MVPBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ASSERT_VK_SUCCESS(BeginCommandBuffer());
+
+    VkCmdBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
@@ -2773,7 +2802,12 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pipelineobj.SetDepthStencil(&ds_state);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
-    ASSERT_VK_SUCCESS(BeginCommandBuffer());
+
+    VkCmdBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);
 

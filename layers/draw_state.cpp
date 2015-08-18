@@ -1469,7 +1469,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
         pCB->submitCount++; // increment submit count
         if ((pCB->beginInfo.flags & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
             log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                    "CB %#" PRIxLEAST64 " was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<VkUintPtrLeast64>(pCB->cmdBuffer), pCB->submitCount);
+                    "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<VkUintPtrLeast64>(pCB->cmdBuffer), pCB->submitCount);
         }
         if (CB_UPDATE_COMPLETE != pCB->state) {
             // Flag error for using CB w/o vkEndCommandBuffer() called
