@@ -201,6 +201,7 @@ int main(int argc, char **argv)
         assert(!err);
 
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
+        /* Side effect is that this will create info.cmd                                       */
         set_image_layout(info, mappableImage,
                           VK_IMAGE_ASPECT_COLOR,
                           VK_IMAGE_LAYOUT_UNDEFINED,
@@ -253,8 +254,8 @@ int main(int argc, char **argv)
         res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
         assert(!res);
 
-        res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for
-        assert(!res);                       * using command buffers                            */
+        res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
+        assert(!res);                      /* using command buffers                             */
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
