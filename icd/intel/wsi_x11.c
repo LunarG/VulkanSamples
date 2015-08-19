@@ -873,13 +873,14 @@ VkResult VKAPI vkGetSurfaceFormatsWSI(
         return VK_ERROR_INVALID_POINTER;
     }
 
-    *pCount = ARRAY_SIZE(x11_presentable_formats);
     if (pSurfaceFormats) {
         uint32_t i;
         for (i = 0; i < *pCount; i++) {
             pSurfaceFormats[i].format = x11_presentable_formats[i];
             pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_WSI;
         }
+    } else {
+        *pCount = ARRAY_SIZE(x11_presentable_formats);
     }
 
     return ret;
@@ -899,11 +900,12 @@ VkResult VKAPI vkGetSurfacePresentModesWSI(
         return VK_ERROR_INVALID_POINTER;
     }
 
-    *pCount = 2;
     if (pPresentModes) {
         pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_WSI;
         pPresentModes[1] = VK_PRESENT_MODE_FIFO_WSI;
         // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_WSI sometime
+    } else {
+        *pCount = 2;
     }
 
     return ret;
@@ -955,12 +957,13 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
         return VK_ERROR_INVALID_POINTER;
     }
 
-    *pCount = sc->persistent_image_count;
     if (pSwapChainImages) {
         uint32_t i;
-        for (i = 0; i < sc->persistent_image_count; i++) {
+        for (i = 0; i < *pCount; i++) {
             pSwapChainImages[i].handle = (uint64_t) sc->persistent_images[i];
         }
+    } else {
+        *pCount = sc->persistent_image_count;
     }
 
     return ret;
