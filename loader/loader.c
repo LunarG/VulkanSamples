@@ -105,7 +105,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
 
-LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_icd);
+LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
 
 void* loader_heap_alloc(
     struct loader_instance     *instance,
@@ -794,22 +794,22 @@ static VkExtensionProperties *get_extension_property(
  * linked directly with the loader.
  */
 
-void loader_get_icd_loader_instance_extensions(struct loader_extension_list *inst_exts)
+void loader_get_icd_loader_instance_extensions(
+                                        struct loader_icd_libs *icd_libs,
+                                        struct loader_extension_list *inst_exts)
 {
-    struct loader_scanned_icds *icd_list = loader.scanned_icd_list;
     struct loader_extension_list icd_exts;
     loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Build ICD instance extension list");
     // traverse scanned icd list adding non-duplicate extensions to the list
-    while (icd_list != NULL) {
+    for (uint32_t i = 0; i < icd_libs->count; i++) {
         loader_init_ext_list(&icd_exts);
-        loader_add_global_extensions(icd_list->GetGlobalExtensionProperties,
-                                     icd_list->lib_name,
+        loader_add_global_extensions(icd_libs->list[i].GetGlobalExtensionProperties,
+                                     icd_libs->list[i].lib_name,
                                      &icd_exts);
         loader_add_to_ext_list(inst_exts,
                                icd_exts.count,
                                icd_exts.list);
         loader_destroy_ext_list(&icd_exts);
-        icd_list = icd_list->next;
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
@@ -931,7 +931,31 @@ static struct loader_icd *loader_icd_add(
     return icd;
 }
 
-static void loader_scanned_icd_add(const char *filename)
+void loader_scanned_icd_clear(struct loader_icd_libs *icd_libs)
+{
+    if (icd_libs->capacity == 0)
+        return;
+    for (uint32_t i = 0; i < icd_libs->count; i++) {
+        loader_platform_close_library(icd_libs->list[i].handle);
+        free(icd_libs->list[i].lib_name);
+    }
+    free(icd_libs->list);
+    icd_libs->capacity = 0;
+    icd_libs->count = 0;
+    icd_libs->list = NULL;
+}
+
+static void loader_scanned_icd_init(struct loader_icd_libs *icd_libs)
+{
+    loader_scanned_icd_clear(icd_libs);
+    icd_libs->capacity = 8 * sizeof(struct loader_scanned_icds);
+    icd_libs->list = malloc(icd_libs->capacity);
+
+}
+
+static void loader_scanned_icd_add(
+                            struct loader_icd_libs *icd_libs,
+                            const char *filename)
 {
     loader_platform_dl_handle handle;
     PFN_vkCreateInstance fp_create_inst;
@@ -939,6 +963,8 @@ static void loader_scanned_icd_add(const char *filename)
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
+    /* TODO implement ref counting of libraries, for now this function leaves
+       libraries open and the scanned_icd_clear closes them */
     // Used to call: dlopen(filename, RTLD_LAZY);
     handle = loader_platform_open_library(filename);
     if (!handle) {
@@ -960,28 +986,26 @@ static void loader_scanned_icd_add(const char *filename)
 
 #undef LOOKUP_LD
 
-    new_node = (struct loader_scanned_icds *) malloc(sizeof(struct loader_scanned_icds)
-                                                     + strlen(filename) + 1);
-    if (!new_node) {
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Out of memory can't add icd");
-        return;
+    // check for enough capacity
+    if ((icd_libs->count * sizeof(struct loader_scanned_icds)) >= icd_libs->capacity) {
+            // double capacity
+            icd_libs->capacity *= 2;
+            icd_libs->list = realloc(icd_libs->list, icd_libs->capacity);
     }
+    new_node = &(icd_libs->list[icd_libs->count]);
 
     new_node->handle = handle;
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
     new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
-    new_node->next = loader.scanned_icd_list;
 
-    new_node->lib_name = (char *) (new_node + 1);
+    new_node->lib_name = (char *) malloc(strlen(filename) + 1);
     if (!new_node->lib_name) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Out of memory can't add icd");
         return;
     }
     strcpy(new_node->lib_name, filename);
-
-    loader.scanned_icd_list = new_node;
-
+    icd_libs->count++;
 }
 
 static bool loader_icd_init_entrys(struct loader_icd *icd,
@@ -1065,6 +1089,15 @@ static void loader_debug_init(void)
 
         env = p + 1;
     }
+}
+
+void loader_initialize(void)
+{
+    // initialize a mutex
+    loader_platform_thread_create_mutex(&loader_lock);
+
+    // initialize logging
+    loader_debug_init();
 }
 
 struct loader_manifest_files {
@@ -1598,6 +1631,15 @@ static void loader_get_manifest_files(const char *env_override,
     return;
 }
 
+void loader_init_icd_lib_list()
+{
+
+}
+
+void loader_destroy_icd_lib_list()
+{
+
+}
 /**
  * Try to find the Vulkan ICD driver(s).
  *
@@ -1607,20 +1649,14 @@ static void loader_get_manifest_files(const char *env_override,
  * manifest files it finds the ICD libraries.
  *
  * \returns
- * void
+ * a list of icds that were discovered
  */
-void loader_icd_scan(void)
+void loader_icd_scan(struct loader_icd_libs *icds)
 {
     char *file_str;
     struct loader_manifest_files manifest_files;
 
-
-    // convenient place to initialize a mutex
-    loader_platform_thread_create_mutex(&loader_lock);
-
-    // convenient place to initialize logging
-    loader_debug_init();
-
+    loader_scanned_icd_init(icds);
     // Get a list of manifest files for ICDs
     loader_get_manifest_files("VK_ICD_FILENAMES", false, DEFAULT_VK_DRIVERS_INFO,
                               &manifest_files);
@@ -1654,7 +1690,7 @@ void loader_icd_scan(void)
                     char *dir = def_dir;
 
                     // Print out the paths being searched if debugging is enabled
-                    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s at %s\n", icd_file, dir);
+                    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s default dir %s\n", icd_file, dir);
 
                     // strip off extra quotes
                     if (icd_filename[strlen(icd_filename)  - 1] == '"')
@@ -1664,9 +1700,9 @@ void loader_icd_scan(void)
 #if defined(__linux__)
                     char full_path[2048];
                     loader_get_fullpath(icd_filename, dir, sizeof(full_path), full_path);
-                    loader_scanned_icd_add(full_path);
+                    loader_scanned_icd_add(icds, full_path);
 #else // WIN32
-                    loader_scanned_icd_add(icd_filename);
+                    loader_scanned_icd_add(icds, icd_filename);
 #endif
                     free(icd_file);
                 }
@@ -2329,7 +2365,6 @@ VkResult VKAPI loader_CreateInstance(
         VkInstance*                     pInstance)
 {
     struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
-    struct loader_scanned_icds *scanned_icds;
     struct loader_icd *icd;
     VkExtensionProperties *prop;
     char **filtered_extension_names = NULL;
@@ -2357,9 +2392,8 @@ VkResult VKAPI loader_CreateInstance(
     }
     icd_create_info.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
 
-    scanned_icds = loader.scanned_icd_list;
-    while (scanned_icds) {
-        icd = loader_icd_add(ptr_instance, scanned_icds);
+    for (uint32_t i = 0; i < ptr_instance->icd_libs.count; i++) {
+        icd = loader_icd_add(ptr_instance, &ptr_instance->icd_libs.list[i]);
         if (icd) {
             icd_create_info.extensionCount = 0;
             for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
@@ -2371,12 +2405,12 @@ VkResult VKAPI loader_CreateInstance(
                 }
             }
 
-            res = scanned_icds->CreateInstance(&icd_create_info,
+            res = ptr_instance->icd_libs.list[i].CreateInstance(&icd_create_info,
                                            &(icd->instance));
             success = loader_icd_init_entrys(
                                 icd,
                                 icd->instance,
-                                scanned_icds->GetInstanceProcAddr);
+                                ptr_instance->icd_libs.list[i].GetInstanceProcAddr);
 
             if (res != VK_SUCCESS || !success)
             {
@@ -2387,7 +2421,6 @@ VkResult VKAPI loader_CreateInstance(
                         "ICD ignored: failed to CreateInstance and find entrypoints with ICD");
             }
         }
-        scanned_icds = scanned_icds->next;
     }
 
     /*
@@ -2448,7 +2481,7 @@ VkResult VKAPI loader_DestroyInstance(
         icds = next_icd;
     }
 
-
+    loader_scanned_icd_clear(&ptr_instance->icd_libs);
     loader_destroy_ext_list(&ptr_instance->ext_list);
     return VK_SUCCESS;
 }
@@ -2862,6 +2895,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     struct loader_extension_list *global_ext_list;
     struct loader_layer_list instance_layers;
     struct loader_extension_list icd_extensions;
+    struct loader_icd_libs icd_libs;
     uint32_t copy_size;
 
     if (pCount == NULL) {
@@ -2869,8 +2903,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     }
 
     memset(&icd_extensions, 0, sizeof(icd_extensions));
-    /* Scan/discover all ICD libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_icd, loader_icd_scan);
+    loader_platform_thread_once(&once_init, loader_initialize);
 
     //TODO do we still need to lock? for loader.global_extensions
     loader_platform_thread_lock_mutex(&loader_lock);
@@ -2886,8 +2919,12 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
         }
     }
     else {
+        /* Scan/discover all ICD libraries */
+        memset(&icd_libs, 0 , sizeof(struct loader_icd_libs));
+        loader_icd_scan(&icd_libs);
         /* get extensions from all ICD's, merge so no duplicates */
-        loader_get_icd_loader_instance_extensions(&icd_extensions);
+        loader_get_icd_loader_instance_extensions(&icd_libs, &icd_extensions);
+        loader_scanned_icd_clear(&icd_libs);
         global_ext_list = &icd_extensions;
     }
 
@@ -2927,8 +2964,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
 
     struct loader_layer_list instance_layer_list;
 
-    /* Scan/discover all ICD libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_icd, loader_icd_scan);
+    loader_platform_thread_once(&once_init, loader_initialize);
 
     uint32_t copy_size;
 

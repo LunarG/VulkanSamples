@@ -145,12 +145,19 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
 
     /*
-     * Fill in the cache of available global extensions that operate
-     * with this physical device. This cache will be used to satisfy
+     * Fill in the cache of available device extensions from
+     * this physical device. This cache will be used to satisfy
      * calls to GetPhysicalDeviceExtensionProperties
      */
     struct loader_extension_list device_extension_cache[MAX_GPUS_PER_ICD];
     struct loader_icd *next;
+};
+
+/* per ICD library structure */
+struct loader_icd_libs {
+    size_t capacity;
+    uint32_t count;
+    struct loader_scanned_icds *list;
 };
 
 /* per instance structure */
@@ -162,6 +169,7 @@ struct loader_instance {
     struct loader_icd *icds;
     struct loader_instance *next;
     struct loader_extension_list ext_list;   // icds and loaders extensions
+    struct loader_icd_libs icd_libs;
     /* TODO: Should keep track of application provided allocation functions */
 
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
@@ -178,14 +186,14 @@ struct loader_instance {
 
 struct loader_struct {
     struct loader_instance *instances;
-    struct loader_scanned_icds *scanned_icd_list;
 
     unsigned int loaded_layer_lib_count;
     struct loader_lib_info *loaded_layer_lib_list;
-
+    // TODO add ref counting of ICD libraries
     char *layer_dirs;
 
     // TODO use this struct loader_layer_library_list scanned_layer_libraries;
+    // TODO add list of icd libraries for ref counting them for closure
 };
 
 struct loader_scanned_icds {
@@ -195,8 +203,6 @@ struct loader_scanned_icds {
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
-    struct loader_scanned_icds *next;
-
 };
 
 static inline struct loader_instance *loader_instance(VkInstance instance) {
@@ -230,8 +236,7 @@ static inline void loader_init_dispatch(void* obj, const void *data)
 
 /* global variables used across files */
 extern struct loader_struct loader;
-extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_icd);
-extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_exts);
+extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_init);
 extern loader_platform_thread_mutex loader_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
 
@@ -322,6 +327,7 @@ VkResult VKAPI loader_CreateDevice(
         VkDevice*                               pDevice);
 
 /* helper function definitions */
+void loader_initialize(void);
 bool has_vk_extension_property_array(
         const VkExtensionProperties *vk_ext_prop,
         const uint32_t count,
@@ -340,11 +346,14 @@ void loader_add_to_layer_list(
         struct loader_layer_list *list,
         uint32_t prop_list_count,
         const struct loader_layer_properties *props);
-void loader_icd_scan(void);
+void loader_scanned_icd_clear(struct loader_icd_libs *icd_libs);
+void loader_icd_scan(struct loader_icd_libs *icds);
 void loader_layer_scan(
         struct loader_layer_list *instance_layers,
         struct loader_layer_list *device_layers);
-void loader_get_icd_loader_instance_extensions(struct loader_extension_list *inst_exts);
+void loader_get_icd_loader_instance_extensions(
+        struct loader_icd_libs *icd_libs,
+        struct loader_extension_list *inst_exts);
 
 struct loader_icd * loader_get_icd(
         const VkPhysicalDevice gpu,

@@ -42,12 +42,10 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         VkInstance* pInstance)
 {
     struct loader_instance *ptr_instance = NULL;
-
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     struct loader_layer_list instance_layer_list;
 
-    /* Scan/discover all ICD libraries in a single-threaded manner */
-    loader_platform_thread_once(&once_icd, loader_icd_scan);
+    loader_platform_thread_once(&once_init, loader_initialize);
 
     /* Due to implicit layers might still need to get layer list even if
      * layerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
@@ -91,10 +89,15 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         ptr_instance->alloc_callbacks.pfnFree = pCreateInfo->pAllocCb->pfnFree;
     }
 
+    /* Scan/discover all ICD libraries */
+    memset(&ptr_instance->icd_libs, 0, sizeof(ptr_instance->icd_libs));
+    loader_icd_scan(&ptr_instance->icd_libs);
+
     /* get extensions from all ICD's, merge so no duplicates, then validate */
-    loader_get_icd_loader_instance_extensions(&ptr_instance->ext_list);
+    loader_get_icd_loader_instance_extensions(&ptr_instance->icd_libs, &ptr_instance->ext_list);
     res = loader_validate_instance_extensions(&ptr_instance->ext_list, &instance_layer_list, pCreateInfo);
     if (res != VK_SUCCESS) {
+        loader_scanned_icd_clear(&ptr_instance->icd_libs);
         loader_destroy_ext_list(&ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -106,6 +109,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
                              sizeof(VkLayerInstanceDispatchTable),
                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (ptr_instance->disp == NULL) {
+        loader_scanned_icd_clear(&ptr_instance->icd_libs);
         loader_destroy_ext_list(&ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -118,6 +122,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     /* activate any layers on instance chain */
     res = loader_enable_instance_layers(ptr_instance, pCreateInfo, &instance_layer_list);
     if (res != VK_SUCCESS) {
+        loader_scanned_icd_clear(&ptr_instance->icd_libs);
         loader_destroy_ext_list(&ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
         loader_platform_thread_unlock_mutex(&loader_lock);
