@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 {
     VkResult res;
     struct sample_info info = {};
-    char test_title[] = "Depth Buffer Test";
+    char sample_title[] = "Depth Buffer Sample";
 
     /*
      * Make a depth buffer:
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
      */
 
     init_global_layer_properties(info);
-    init_instance(info, test_title);
+    init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
     res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
