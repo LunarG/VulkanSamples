@@ -107,6 +107,8 @@ int main(int argc, char **argv)
         std::cout << '\n';
     }
 
+    delete [] gpu;
+
 /* VULKAN_KEY_END */
 
     vkDestroyInstance(info.inst);
