@@ -71,7 +71,7 @@ struct loader_name_value {
 };
 
 struct loader_lib_info {
-    char *lib_name;
+    char lib_name[MAX_STRING_SIZE];
     uint32_t ref_count;
     loader_platform_dl_handle lib_handle;
 };
@@ -86,7 +86,7 @@ struct loader_layer_functions {
 struct loader_layer_properties {
     VkLayerProperties info;
     enum layer_type type;
-    struct loader_lib_info lib_info;
+    char lib_name[MAX_STRING_SIZE];
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
     struct loader_extension_list device_extension_list;
@@ -121,7 +121,9 @@ struct loader_device {
 
 /* per ICD structure */
 struct loader_icd {
-    const struct loader_scanned_icds *scanned_icds;
+    // pointers to find other structs
+    const struct loader_scanned_icds *this_icd_lib;
+    const struct loader_instance *this_instance;
 
     struct loader_device *logical_device_list;
     uint32_t gpu_count;
@@ -170,6 +172,9 @@ struct loader_instance {
     struct loader_instance *next;
     struct loader_extension_list ext_list;   // icds and loaders extensions
     struct loader_icd_libs icd_libs;
+    struct loader_layer_list instance_layer_list;
+    struct loader_layer_list device_layer_list;
+
     /* TODO: Should keep track of application provided allocation functions */
 
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
@@ -249,7 +254,10 @@ bool compare_vk_extension_properties(
         const VkExtensionProperties*            op1,
         const VkExtensionProperties*            op2);
 
-VkResult loader_validate_layers(const uint32_t layer_count, const char * const *ppEnabledLayerNames, struct loader_layer_list *list);
+VkResult loader_validate_layers(
+        const uint32_t layer_count,
+        const char * const *ppEnabledLayerNames,
+        const struct loader_layer_list *list);
 
 VkResult loader_validate_instance_extensions(
         const struct loader_extension_list *icd_exts,
@@ -341,7 +349,7 @@ void loader_add_to_ext_list(
         uint32_t prop_list_count,
         const VkExtensionProperties *props);
 void loader_destroy_ext_list(struct loader_extension_list *ext_info);
-
+void loader_delete_layer_properties(struct loader_layer_list *layer_list);
 void loader_add_to_layer_list(
         struct loader_layer_list *list,
         uint32_t prop_list_count,
