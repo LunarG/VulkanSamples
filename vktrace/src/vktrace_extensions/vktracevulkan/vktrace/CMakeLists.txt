@@ -7,10 +7,10 @@ include("${SRC_DIR}/build_options.cmake")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.c)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_wsi_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_wsi_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_wsi_swapchain.c)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_wsi_device_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_wsi_device_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.c)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.c)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.h)
@@ -30,11 +30,11 @@ set(SRC_LIST
     codegen/vktrace_vk_vk.c
     codegen/vktrace_vk_vk_debug_report_lunarg.c
     codegen/vktrace_vk_vk_debug_marker_lunarg.c
-    codegen/vktrace_vk_vk_wsi_swapchain.c
-    codegen/vktrace_vk_vk_wsi_device_swapchain.c
+    codegen/vktrace_vk_vk_ext_khr_swapchain.c
+    codegen/vktrace_vk_vk_ext_khr_device_swapchain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_ext_khr_swapchain_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_ext_khr_device_swapchain_struct_size_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_marker_lunarg_struct_size_helper.c
 )
@@ -46,17 +46,17 @@ set (HDR_LIST
     codegen/vktrace_vk_vk.h
     codegen/vktrace_vk_vk_debug_report_lunarg.h
     codegen/vktrace_vk_vk_debug_marker_lunarg.h
-    codegen/vktrace_vk_vk_wsi_swapchain.h
-    codegen/vktrace_vk_vk_wsi_device_swapchain.h
+    codegen/vktrace_vk_vk_ext_khr_swapchain.h
+    codegen/vktrace_vk_vk_ext_khr_device_swapchain.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_debug_report_lunarg_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_debug_marker_lunarg_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_wsi_swapchain_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_wsi_device_swapchain_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_ext_khr_swapchain_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_ext_khr_device_swapchain_struct_size_helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_marker_lunarg_struct_size_helper.h
 )

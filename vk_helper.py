@@ -122,7 +122,7 @@ class HeaderFileParser:
         # TODO : Comment parsing is very fragile but handles 2 known files
         block_comment = False
         prev_count_name = ''
-        exclude_struct_list = ['VkPlatformHandleXcbWSI', 'VkPlatformHandleX11WSI']
+        exclude_struct_list = ['VkPlatformHandleXcbKHR', 'VkPlatformHandleX11KHR']
         with open(self.header_file) as f:
             for line in f:
                 if block_comment:
@@ -172,6 +172,9 @@ class HeaderFileParser:
                         (cur_char, targ_type) = line.strip().split(None, 1)
                         if 'tmp_struct' == base_type:
                             base_type = targ_type.strip(';')
+                            if True in [ex_type in base_type for ex_type in exclude_struct_list]:
+                                del self.struct_dict['tmp_struct']
+                                continue
                             #print("Found Actual Struct type %s" % base_type)
                             self.struct_dict[base_type] = self.struct_dict['tmp_struct']
                             self.struct_dict.pop('tmp_struct', 0)
@@ -996,20 +999,20 @@ class StructWrapperGen:
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
         #### TODO: Get the following function moved to be in "vk_enum_string_helper.h"
-        # Add function to return a string value for input VkSurfaceFormatWSI*
-        sh_funcs.append("static inline const char* string_VkColorSpaceWSI(VkColorSpaceWSI input_value)\n{")
-        sh_funcs.append("    switch ((VkColorSpaceWSI)input_value)")
+        # Add function to return a string value for input VkSurfaceFormatKHR*
+        sh_funcs.append("static inline const char* string_VkColorSpaceKHR(VkColorSpaceKHR input_value)\n{")
+        sh_funcs.append("    switch ((VkColorSpaceKHR)input_value)")
         sh_funcs.append("    {")
-        sh_funcs.append("        case VK_COLORSPACE_SRGB_NONLINEAR_WSI:")
-        sh_funcs.append("            return \"VK_COLORSPACE_SRGB_NONLINEAR_WSI\";")
+        sh_funcs.append("        case VK_COLORSPACE_SRGB_NONLINEAR_KHR:")
+        sh_funcs.append("            return \"VK_COLORSPACE_SRGB_NONLINEAR_KHR\";")
         sh_funcs.append("        default:")
-        sh_funcs.append("            return \"Unhandled VkColorSpaceWSI\";")
+        sh_funcs.append("            return \"Unhandled VkColorSpaceKHR\";")
         sh_funcs.append("    }")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
-        # Add function to return a string value for input VkSurfaceFormatWSI*
-        sh_funcs.append("string string_convert_helper(VkSurfaceFormatWSI toString, const string prefix)\n{")
-        sh_funcs.append('    string final_str = prefix + "format = " + string_VkFormat(toString.format) + "format = " + string_VkColorSpaceWSI(toString.colorSpace);')
+        # Add function to return a string value for input VkSurfaceFormatKHR*
+        sh_funcs.append("string string_convert_helper(VkSurfaceFormatKHR toString, const string prefix)\n{")
+        sh_funcs.append('    string final_str = prefix + "format = " + string_VkFormat(toString.format) + "format = " + string_VkColorSpaceKHR(toString.colorSpace);')
         sh_funcs.append("    return final_str;")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
@@ -1277,7 +1280,7 @@ class StructWrapperGen:
             sh_funcs.append('%s}' % (indent))
             sh_funcs.append("%sreturn structSize;\n}" % (indent))
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        if 'wsi' not in self.header_filename and '_debug_' not in self.header_filename:
+        if 'khr' not in self.header_filename and '_debug_' not in self.header_filename:
             for follow_chain in [True, False]:
                 sh_funcs.append('%s' % self.lineinfo.get())
                 if follow_chain:
@@ -1331,8 +1334,8 @@ class StructWrapperGen:
     def _generateSizeHelperHeaderC(self):
         header = []
         header.append('#include "vk_struct_size_helper.h"')
-        header.append('#include "vk_wsi_swapchain.h"')
-        header.append('#include "vk_wsi_device_swapchain.h"')
+        header.append('#include "vk_ext_khr_swapchain.h"')
+        header.append('#include "vk_ext_khr_device_swapchain.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')

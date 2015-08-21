@@ -136,7 +136,7 @@ struct MT_QUEUE_INFO {
 };
 
 struct MT_SWAP_CHAIN_INFO {
-    VkSwapChainCreateInfoWSI             createInfo;
+    VkSwapchainCreateInfoKHR             createInfo;
     std::vector<VkImage> images;
 };
 

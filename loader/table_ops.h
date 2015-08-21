@@ -178,14 +178,14 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
 //TODO move into it's own table
 //TODO also consider dropping trampoline code for these device level extensions entirely
 // then don't need loader to know about these at all but then not queryable via GIPA
-    table->AcquireNextImageWSI = (PFN_vkAcquireNextImageWSI) gpa(dev, "vkAcquireNextImageWSI");
-    table->CreateSwapChainWSI = (PFN_vkCreateSwapChainWSI) gpa(dev, "vkCreateSwapChainWSI");
-    table->DestroySwapChainWSI = (PFN_vkDestroySwapChainWSI) gpa(dev, "vkDestroySwapChainWSI");
-    table->GetSurfacePropertiesWSI = (PFN_vkGetSurfacePropertiesWSI) gpa(dev, "vkGetSurfacePropertiesWSI");
-    table->GetSurfaceFormatsWSI = (PFN_vkGetSurfaceFormatsWSI) gpa(dev, "vkGetSurfaceFormatsWSI");
-    table->GetSurfacePresentModesWSI = (PFN_vkGetSurfacePresentModesWSI) gpa(dev, "vkGetSurfacePresentModesWSI");
-    table->GetSwapChainImagesWSI = (PFN_vkGetSwapChainImagesWSI) gpa(dev, "vkGetSwapChainImagesWSI");
-    table->QueuePresentWSI = (PFN_vkQueuePresentWSI) gpa(dev, "vkQueuePresentWSI");
+    table->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(dev, "vkAcquireNextImageKHR");
+    table->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(dev, "vkCreateSwapchainKHR");
+    table->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(dev, "vkDestroySwapchainKHR");
+    table->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(dev, "vkGetSurfacePropertiesKHR");
+    table->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(dev, "vkGetSurfaceFormatsKHR");
+    table->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(dev, "vkGetSurfacePresentModesKHR");
+    table->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(dev, "vkGetSwapchainImagesKHR");
+    table->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(dev, "vkQueuePresentKHR");
 }
 
 static inline void *loader_lookup_device_dispatch_table(
@@ -547,8 +547,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceExtensionProperties;
     if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
         return (void *) table->GetPhysicalDeviceLayerProperties;
-    if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportWSI"))
-        return (void *) table->GetPhysicalDeviceSurfaceSupportWSI;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR"))
+        return (void *) table->GetPhysicalDeviceSurfaceSupportKHR;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

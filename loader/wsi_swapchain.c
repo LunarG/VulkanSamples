@@ -35,8 +35,8 @@
 #include "wsi_swapchain.h"
 
 static const VkExtensionProperties wsi_swapchain_extension_info = {
-        .extName = VK_WSI_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_WSI_SWAPCHAIN_REVISION,
+        .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_EXT_KHR_SWAPCHAIN_VERSION,
 };
 
 void wsi_swapchain_add_instance_extensions(
@@ -52,7 +52,7 @@ void wsi_swapchain_create_instance(
     ptr_instance->wsi_swapchain_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_swapchain_enabled = true;
             return;
         }
@@ -61,19 +61,19 @@ void wsi_swapchain_create_instance(
 
 /*
  * This is the trampoline entrypoint
- * for GetPhysicalDeviceSurfaceSupportWSI
+ * for GetPhysicalDeviceSurfaceSupportKHR
  */
-VkResult wsi_swapchain_GetPhysicalDeviceSurfaceSupportWSI(
+VkResult wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
         VkBool32*                               pSupported)
 {
     const VkLayerInstanceDispatchTable *disp;
 // TBD/TODO: DO WE NEED TO DO LOCKING FOR THIS FUNCTION?
     disp = loader_get_instance_dispatch(physicalDevice);
     loader_platform_thread_lock_mutex(&loader_lock);
-    VkResult res = disp->GetPhysicalDeviceSurfaceSupportWSI(
+    VkResult res = disp->GetPhysicalDeviceSurfaceSupportKHR(
                                                       physicalDevice,
                                                       queueNodeIndex,
                                                       pSurfaceDescription,
@@ -84,12 +84,12 @@ VkResult wsi_swapchain_GetPhysicalDeviceSurfaceSupportWSI(
 
 /*
  * This is the instance chain terminator function
- * for GetPhysicalDeviceSurfaceSupportWSI
+ * for GetPhysicalDeviceSurfaceSupportKHR
  */
-VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportWSI(
+VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
         VkBool32*                               pSupported)
 {
     uint32_t gpu_index;
@@ -97,8 +97,8 @@ VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportWSI(
     VkResult res = VK_ERROR_UNAVAILABLE;
     *pSupported = false;
 
-    if (icd->GetPhysicalDeviceSurfaceSupportWSI) {
-        res = icd->GetPhysicalDeviceSurfaceSupportWSI(physicalDevice,
+    if (icd->GetPhysicalDeviceSurfaceSupportKHR) {
+        res = icd->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice,
                                                       queueNodeIndex,
                                                       pSurfaceDescription,
                                                       pSupported);
@@ -116,8 +116,8 @@ void *wsi_swapchain_GetInstanceProcAddr(
         return NULL;
     }
 
-    if (!strcmp(pName, "vkGetPhysicalDeviceSurfaceSupportWSI")) {
-        return (void*) wsi_swapchain_GetPhysicalDeviceSurfaceSupportWSI;
+    if (!strcmp(pName, "vkGetPhysicalDeviceSurfaceSupportKHR")) {
+        return (void*) wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR;
     }
 
     return NULL;

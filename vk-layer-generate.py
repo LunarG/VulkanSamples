@@ -288,7 +288,7 @@ class Subcommand(object):
 
                 if intercept is not None:
                     funcs.append(intercept)
-                    if not "WSI" in proto.name:
+                    if not "KHR" in proto.name:
                         intercepted.append(proto)
 
         prefix="vk"
@@ -600,7 +600,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
         gen_header.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)')
         gen_header.append('            deviceExtMap[pDisp].wsi_enabled = true;')
         gen_header.append('')
         gen_header.append('    }')
@@ -682,8 +682,8 @@ class GenericLayerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "Generic"
         extensions=[('wsi_enabled', 
-                     ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                      'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
+                     ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
+                      'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
         body = [self._generate_layer_initialization(True),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
@@ -782,7 +782,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
         header_txt.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
-        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)')
         header_txt.append('            deviceExtMap[pDisp].wsi_enabled = true;')
         header_txt.append('')
         header_txt.append('    }')
@@ -935,9 +935,9 @@ class APIDumpSubcommand(Subcommand):
                     if p.name == proto.params[y].name:
                         cp = True
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-            if p.name == "pSwapChain":
+            if p.name == "pSwapchain":
                 log_func += '%s = " << %s->handle << ", ' % (p.name, p.name)
-            elif p.name == "swapChain":
+            elif p.name == "swapchain":
                 log_func += '%s = " << %s.handle << ", ' % (p.name, p.name)
             else:
                 log_func += '%s = " << %s << ", ' % (p.name, pfi)
@@ -1092,8 +1092,8 @@ class APIDumpSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDump"
         extensions=[('wsi_enabled',
-                    ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                    'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
+                    ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
+                    'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions)]
@@ -1133,7 +1133,7 @@ class ObjectTrackerSubcommand(Subcommand):
         maps_txt = []
         for o in vulkan.core.objects:
             maps_txt.append('unordered_map<const void*, OBJTRACK_NODE*> %sMap;' % (o))
-        maps_txt.append('unordered_map<const void*, OBJTRACK_NODE*> VkSwapChainWSIMap;')
+        maps_txt.append('unordered_map<const void*, OBJTRACK_NODE*> VkSwapchainKHRMap;')
         return "\n".join(maps_txt)
 
     def generate_procs(self):
@@ -1457,7 +1457,7 @@ class ObjectTrackerSubcommand(Subcommand):
             "MapMemory",
             "UnmapMemory",
             "FreeMemory",
-            "DestroySwapChainWSI"
+            "DestroySwapchainKHR"
         ]
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name
@@ -1584,8 +1584,8 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "ObjectTracker"
         extensions=[('wsi_enabled',
-                    ['vkCreateSwapChainWSI', 'vkDestroySwapChainWSI',
-                     'vkGetSwapChainImagesWSI', 'vkQueuePresentWSI'])]
+                    ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
+                     'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),
@@ -1770,7 +1770,7 @@ class ThreadingSubcommand(Subcommand):
         if 'Get' in proto.name:
             return None
         # All WSI functions are thread safe
-        if 'WSI' in proto.name:
+        if 'KHR' in proto.name:
             return None
         # Initialize in early calls
         if proto.name == "CreateDevice":

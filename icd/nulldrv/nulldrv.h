@@ -33,8 +33,8 @@
 #include <vulkan.h>
 #include <vk_debug_report_lunarg.h>
 #include <vk_icd.h>
-#include "vk_wsi_swapchain.h"
-#include "vk_wsi_device_swapchain.h"
+#include "vk_ext_khr_swapchain.h"
+#include "vk_ext_khr_device_swapchain.h"
 
 #include "icd.h"
 
@@ -52,7 +52,7 @@ struct nulldrv_obj {
 };
 
 enum nulldrv_ext_type {
-   NULLDRV_EXT_WSI_SWAPCHAIN,
+   NULLDRV_EXT_KHR_SWAPCHAIN,
    NULLDRV_EXT_COUNT,
    NULLDRV_EXT_INVALID = NULLDRV_EXT_COUNT,
 };

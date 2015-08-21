@@ -37,7 +37,7 @@ public:
     int create_window(const unsigned int width, const unsigned int height);
     void resize_window(const unsigned int width, const unsigned int height);
     void process_event();
-    VkSurfaceDescriptionWindowWSI* get_surface_description() { return &m_SurfaceDescription; };
+    VkSurfaceDescriptionWindowKHR* get_surface_description() { return &m_SurfaceDescription; };
     // VK_DEVICE get_device() { return m_dev[m_gpuIdx];}
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xcb_window_t get_window_handle() { return m_XcbWindow; }
@@ -50,12 +50,12 @@ public:
 private:
     VkResult init_vk(const unsigned int gpu_idx);
     bool m_initedVK;
-    VkSurfaceDescriptionWindowWSI m_SurfaceDescription;
+    VkSurfaceDescriptionWindowKHR m_SurfaceDescription;
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xcb_connection_t *m_pXcbConnection;
     xcb_screen_t *m_pXcbScreen;
     xcb_window_t m_XcbWindow;
-    VkPlatformHandleXcbWSI m_XcbPlatformHandle;
+    VkPlatformHandleXcbKHR m_XcbPlatformHandle;
 #elif defined(WIN32)
     HWND m_windowHandle;
 	HINSTANCE m_connection;

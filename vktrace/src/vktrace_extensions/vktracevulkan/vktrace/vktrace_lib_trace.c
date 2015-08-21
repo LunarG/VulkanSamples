@@ -27,9 +27,9 @@
 #include "vulkan.h"
 #include "vktrace_platform.h"
 #include "vktrace_common.h"
-#include "vktrace_vk_vk_wsi_swapchain.h"
-#include "vktrace_vk_vk_wsi_device_swapchain.h"
-#include "vk_wsi_device_swapchain_struct_size_helper.h"
+#include "vktrace_vk_vk_ext_khr_swapchain.h"
+#include "vktrace_vk_vk_ext_khr_device_swapchain.h"
+#include "vk_ext_khr_device_swapchain_struct_size_helper.h"
 #include "vktrace_lib_helpers.h"
 #include "vktrace_vk_vk.h"
 #include "vktrace_interconnect.h"
@@ -1043,20 +1043,20 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeDescriptorSets(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesKHR(
     VkDevice device,
-    const VkSurfaceDescriptionWSI* pSurfaceDescription,
-    VkSurfacePropertiesWSI* pSurfaceProperties)
+    const VkSurfaceDescriptionKHR* pSurfaceDescription,
+    VkSurfacePropertiesKHR* pSurfaceProperties)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetSurfacePropertiesWSI* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkGetSurfacePropertiesWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(VkSurfacePropertiesWSI));
-    result = real_vkGetSurfacePropertiesWSI(device, pSurfaceDescription, pSurfaceProperties);
-    pPacket = interpret_body_as_vkGetSurfacePropertiesWSI(pHeader);
+    packet_vkGetSurfacePropertiesKHR* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetSurfacePropertiesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(VkSurfacePropertiesKHR));
+    result = real_vkGetSurfacePropertiesKHR(device, pSurfaceDescription, pSurfaceProperties);
+    pPacket = interpret_body_as_vkGetSurfacePropertiesKHR(pHeader);
     pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceProperties), sizeof(VkSurfacePropertiesWSI), pSurfaceProperties);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceProperties), sizeof(VkSurfacePropertiesKHR), pSurfaceProperties);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceProperties));
@@ -1064,30 +1064,30 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesWSI(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsKHR(
     VkDevice device,
-    const VkSurfaceDescriptionWSI* pSurfaceDescription,
+    const VkSurfaceDescriptionKHR* pSurfaceDescription,
     uint32_t* pCount,
-    VkSurfaceFormatWSI* pSurfaceFormats)
+    VkSurfaceFormatKHR* pSurfaceFormats)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSurfaceFormatsWSI* pPacket = NULL;
+    packet_vkGetSurfaceFormatsKHR* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSurfaceFormatsWSI(device, pSurfaceDescription, pCount, pSurfaceFormats);
+    result = real_vkGetSurfaceFormatsKHR(device, pSurfaceDescription, pCount, pSurfaceFormats);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pCount *sizeof(VkSurfaceFormatWSI));
-    CREATE_TRACE_PACKET(vkGetSurfaceFormatsWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
+    _dataSize = (pCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pCount *sizeof(VkSurfaceFormatKHR));
+    CREATE_TRACE_PACKET(vkGetSurfaceFormatsKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSurfaceFormatsWSI(pHeader);
+    pPacket = interpret_body_as_vkGetSurfaceFormatsKHR(pHeader);
     pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceFormats), _dataSize, pSurfaceFormats);
     pPacket->result = result;
@@ -1098,30 +1098,30 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsWSI(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesKHR(
     VkDevice device,
-    const VkSurfaceDescriptionWSI* pSurfaceDescription,
+    const VkSurfaceDescriptionKHR* pSurfaceDescription,
     uint32_t* pCount,
-    VkPresentModeWSI* pPresentModes)
+    VkPresentModeKHR* pPresentModes)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSurfacePresentModesWSI* pPacket = NULL;
+    packet_vkGetSurfacePresentModesKHR* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSurfacePresentModesWSI(device, pSurfaceDescription, pCount, pPresentModes);
+    result = real_vkGetSurfacePresentModesKHR(device, pSurfaceDescription, pCount, pPresentModes);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeWSI));
-    CREATE_TRACE_PACKET(vkGetSurfacePresentModesWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(uint32_t) + _dataSize);
+    _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeKHR));
+    CREATE_TRACE_PACKET(vkGetSurfacePresentModesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSurfacePresentModesWSI(pHeader);
+    pPacket = interpret_body_as_vkGetSurfacePresentModesKHR(pHeader);
     pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentModes), _dataSize, pPresentModes);
     pPacket->result = result;
@@ -1132,84 +1132,84 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesWSI(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapChainWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapchainKHR(
     VkDevice device,
-    const VkSwapChainCreateInfoWSI* pCreateInfo,
-    VkSwapChainWSI* pSwapChain)
+    const VkSwapchainCreateInfoKHR* pCreateInfo,
+    VkSwapchainKHR* pSwapchain)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkCreateSwapChainWSI* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkCreateSwapChainWSI, vk_wsi_device_swapchain_size_vkswapchaincreateinfowsi(pCreateInfo) + sizeof(VkSwapChainWSI));
-    result = real_vkCreateSwapChainWSI(device, pCreateInfo, pSwapChain);
-    pPacket = interpret_body_as_vkCreateSwapChainWSI(pHeader);
+    packet_vkCreateSwapchainKHR* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkCreateSwapchainKHR, vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo) + sizeof(VkSwapchainKHR));
+    result = real_vkCreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    pPacket = interpret_body_as_vkCreateSwapchainKHR(pHeader);
     pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapChainCreateInfoWSI), pCreateInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pCreateInfo->pSurfaceDescription);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapChain), sizeof(VkSwapChainWSI), pSwapChain);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapchainCreateInfoKHR), pCreateInfo);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pCreateInfo->pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapchain), sizeof(VkSwapchainKHR), pSwapchain);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices), pCreateInfo->queueFamilyCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapChain));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapchain));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapChainImagesWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapchainImagesKHR(
     VkDevice device,
-    VkSwapChainWSI swapChain,
+    VkSwapchainKHR swapchain,
     uint32_t* pCount,
-    VkImage* pSwapChainImages)
+    VkImage* pSwapchainImages)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSwapChainImagesWSI* pPacket = NULL;
+    packet_vkGetSwapchainImagesKHR* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
+    result = real_vkGetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pSwapChainImages == NULL) ? 0 : (*pCount *sizeof(VkImage));
-    CREATE_TRACE_PACKET(vkGetSwapChainImagesWSI, sizeof(uint32_t) + _dataSize);
+    _dataSize = (pCount == NULL || pSwapchainImages == NULL) ? 0 : (*pCount *sizeof(VkImage));
+    CREATE_TRACE_PACKET(vkGetSwapchainImagesKHR, sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSwapChainImagesWSI(pHeader);
+    pPacket = interpret_body_as_vkGetSwapchainImagesKHR(pHeader);
     pPacket->device = device;
-    pPacket->swapChain = swapChain;
+    pPacket->swapchain = swapchain;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapChainImages), _dataSize, pSwapChainImages);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapchainImages), _dataSize, pSwapchainImages);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapChainImages));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapchainImages));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentKHR(
     VkQueue queue,
-    VkPresentInfoWSI* pPresentInfo)
+    VkPresentInfoKHR* pPresentInfo)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkQueuePresentWSI* pPacket = NULL;
-    size_t swapChainSize = pPresentInfo->swapChainCount*sizeof(VkSwapChainWSI);
-    size_t indexSize = pPresentInfo->swapChainCount*sizeof(uint32_t);
-    CREATE_TRACE_PACKET(vkQueuePresentWSI, sizeof(VkPresentInfoWSI)+swapChainSize+indexSize);
-    result = real_vkQueuePresentWSI(queue, pPresentInfo);
+    packet_vkQueuePresentKHR* pPacket = NULL;
+    size_t swapchainSize = pPresentInfo->swapchainCount*sizeof(VkSwapchainKHR);
+    size_t indexSize = pPresentInfo->swapchainCount*sizeof(uint32_t);
+    CREATE_TRACE_PACKET(vkQueuePresentKHR, sizeof(VkPresentInfoKHR)+swapchainSize+indexSize);
+    result = real_vkQueuePresentKHR(queue, pPresentInfo);
     vktrace_set_packet_entrypoint_end_time(pHeader);
-    pPacket = interpret_body_as_vkQueuePresentWSI(pHeader);
+    pPacket = interpret_body_as_vkQueuePresentKHR(pHeader);
     pPacket->queue = queue;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo), sizeof(VkPresentInfoWSI), pPresentInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->swapChains), swapChainSize, pPresentInfo->swapChains);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo), sizeof(VkPresentInfoKHR), pPresentInfo);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->swapchains), swapchainSize, pPresentInfo->swapchains);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->imageIndices), indexSize, pPresentInfo->imageIndices);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->imageIndices));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->swapChains));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->swapchains));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo));
     FINISH_TRACE_PACKET();
     return result;
@@ -1248,22 +1248,22 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicStencilState(
 }
 
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportWSI(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice physicalDevice,
     uint32_t queueFamilyIndex,
-    const VkSurfaceDescriptionWSI* pSurfaceDescription,
+    const VkSurfaceDescriptionKHR* pSurfaceDescription,
     VkBool32* pSupported)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetPhysicalDeviceSurfaceSupportWSI* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfaceSupportWSI, sizeof(VkSurfaceDescriptionWSI) + sizeof(VkBool32));
-    result = real_vkGetPhysicalDeviceSurfaceSupportWSI(physicalDevice, queueFamilyIndex, pSurfaceDescription, pSupported);
+    packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfaceSupportKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(VkBool32));
+    result = real_vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, pSurfaceDescription, pSupported);
     vktrace_set_packet_entrypoint_end_time(pHeader);
-    pPacket = interpret_body_as_vkGetPhysicalDeviceSurfaceSupportWSI(pHeader);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceSurfaceSupportKHR(pHeader);
     pPacket->physicalDevice = physicalDevice;
     pPacket->queueFamilyIndex = queueFamilyIndex;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSupported), sizeof(VkBool32), pSupported);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));

@@ -26,8 +26,8 @@
  */
 
 #include "vkrenderframework.h"
-#include <vk_wsi_swapchain.h>
-#include <vk_wsi_device_swapchain.h>
+#include <vk_ext_khr_swapchain.h>
+#include <vk_ext_khr_device_swapchain.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
@@ -196,20 +196,20 @@ void VkRenderFramework::InitState()
     VkResult err;
 
     // Get the list of VkFormat's that are supported:
-    PFN_vkGetSurfaceFormatsWSI fpGetSurfaceFormatsWSI;
+    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
     uint32_t formatCount;
-    VkSurfaceDescriptionWSI surface_description;
-    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    VkSurfaceDescriptionKHR surface_description;
+    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     surface_description.pNext = NULL;
-    GET_DEVICE_PROC_ADDR(device(), GetSurfaceFormatsWSI);
-    err = fpGetSurfaceFormatsWSI(device(),
-                                    (VkSurfaceDescriptionWSI *) &surface_description,
+    GET_DEVICE_PROC_ADDR(device(), GetSurfaceFormatsKHR);
+    err = fpGetSurfaceFormatsKHR(device(),
+                                    (VkSurfaceDescriptionKHR *) &surface_description,
                                     &formatCount, NULL);
     ASSERT_VK_SUCCESS(err);
-    VkSurfaceFormatWSI *surfFormats =
-        (VkSurfaceFormatWSI *)malloc(formatCount * sizeof(VkSurfaceFormatWSI));
-    err = fpGetSurfaceFormatsWSI(device(),
-                                    (VkSurfaceDescriptionWSI *) &surface_description,
+    VkSurfaceFormatKHR *surfFormats =
+        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    err = fpGetSurfaceFormatsKHR(device(),
+                                    (VkSurfaceDescriptionKHR *) &surface_description,
                                     &formatCount, surfFormats);
     ASSERT_VK_SUCCESS(err);
     m_render_target_fmt = surfFormats[0].format;

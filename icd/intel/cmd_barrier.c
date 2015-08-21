@@ -51,7 +51,7 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
 
     switch ((int) layout) {
     case VK_IMAGE_LAYOUT_GENERAL:
-    case VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI:
+    case VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR:
         ops = READ_OP | WRITE_OP;
         break;
     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -88,7 +88,7 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
 
     switch ((int) layout) {
     case VK_IMAGE_LAYOUT_GENERAL:
-    case VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI:
+    case VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR:
         // General layout when image can be used for any kind of access
         caches = MEM_CACHE | DATA_READ_CACHE | DATA_WRITE_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;

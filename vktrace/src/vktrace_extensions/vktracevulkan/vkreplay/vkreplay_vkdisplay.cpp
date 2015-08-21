@@ -42,8 +42,8 @@ vkDisplay::vkDisplay()
     m_windowHandle = NULL;
 	m_connection = NULL;
 #endif
-    memset(&m_SurfaceDescription, 0, sizeof(VkSurfaceDescriptionWindowWSI));
-    m_SurfaceDescription.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    memset(&m_SurfaceDescription, 0, sizeof(VkSurfaceDescriptionWindowKHR));
+    m_SurfaceDescription.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
 }
 
 vkDisplay::~vkDisplay()
@@ -208,7 +208,7 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
     m_XcbPlatformHandle.connection = m_pXcbConnection;
     m_XcbPlatformHandle.root = m_pXcbScreen->root;
-    m_SurfaceDescription.platform = VK_PLATFORM_XCB_WSI;
+    m_SurfaceDescription.platform = VK_PLATFORM_XCB_KHR;
     m_SurfaceDescription.pPlatformHandle = &m_XcbPlatformHandle;
     m_SurfaceDescription.pPlatformWindow = &m_XcbWindow;
     return 0;
@@ -248,7 +248,7 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
         return -1;
     }
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
-    m_SurfaceDescription.platform = VK_PLATFORM_WIN32_WSI;
+    m_SurfaceDescription.platform = VK_PLATFORM_WIN32_KHR;
     m_SurfaceDescription.pPlatformHandle = wcex.hInstance;
     m_SurfaceDescription.pPlatformWindow = m_windowHandle;
     return 0;

@@ -70,7 +70,7 @@ unordered_map<VkCmdBuffer,    MT_CB_INFO>           cbMap;
 unordered_map<uint64_t,       MT_MEM_OBJ_INFO>      memObjMap;
 unordered_map<uint64_t,       MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
 unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
-unordered_map<uint64_t,       MT_SWAP_CHAIN_INFO*>  swapChainMap;
+unordered_map<uint64_t,       MT_SWAP_CHAIN_INFO*>  swapchainMap;
 
 // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
@@ -349,11 +349,11 @@ static void delete_queue_info_list(
 }
 
 static void add_swap_chain_info(
-    const VkSwapChainWSI swapChain, const VkSwapChainCreateInfoWSI* pCI)
+    const VkSwapchainKHR swapchain, const VkSwapchainCreateInfoKHR* pCI)
 {
     MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
-    memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapChainCreateInfoWSI));
-    swapChainMap[swapChain.handle] = pInfo;
+    memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapchainCreateInfoKHR));
+    swapchainMap[swapchain.handle] = pInfo;
 }
 
 // Add new CBInfo for this cb to map container
@@ -418,12 +418,12 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
         // Swap Chain is very unique, use imageMap, but copy in
         // SwapChainCreatInfo's usage flags. This is used by vkCreateImageView
         // to distinguish swap chain images
-        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+        case VK_OBJECT_TYPE_SWAPCHAIN_KHR:
         {
             auto pCI = &imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
             pCI->create_info.image.usage =
-                const_cast<VkSwapChainCreateInfoWSI*>(static_cast<const VkSwapChainCreateInfoWSI *>(pCreateInfo))->imageUsageFlags;
+                const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsageFlags;
             break;
         }
         // All other non-disp objects store their Create info struct as map value
@@ -1231,7 +1231,7 @@ static void print_mem_list(
                     "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
         } else {
             log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                    "    Mem Alloc info is NULL (alloc done by vkCreateSwapChainWSI())");
+                    "    Mem Alloc info is NULL (alloc done by vkCreateSwapchainKHR())");
         }
 
         log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
@@ -1378,7 +1378,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     my_device_data->wsi_enabled = false;
     for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             my_device_data->wsi_enabled = true;
     }
 }
@@ -3020,78 +3020,78 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     VkDevice                        device,
-    const VkSwapChainCreateInfoWSI *pCreateInfo,
-    VkSwapChainWSI                 *pSwapChain)
+    const VkSwapchainCreateInfoKHR *pCreateInfo,
+    VkSwapchainKHR                 *pSwapchain)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_swap_chain_info(*pSwapChain, pCreateInfo);
+        add_swap_chain_info(*pSwapchain, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkDevice                        device,
-    VkSwapChainWSI swapChain)
+    VkSwapchainKHR swapchain)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (swapChainMap.find(swapChain.handle) != swapChainMap.end()) {
-        MT_SWAP_CHAIN_INFO* pInfo = swapChainMap[swapChain.handle];
+    if (swapchainMap.find(swapchain.handle) != swapchainMap.end()) {
+        MT_SWAP_CHAIN_INFO* pInfo = swapchainMap[swapchain.handle];
 
         if (pInfo->images.size() > 0) {
             for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                clear_object_binding(device, it->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
+                clear_object_binding(device, it->handle, VK_OBJECT_TYPE_SWAPCHAIN_KHR);
                 auto image_item = imageMap.find(it->handle);
                 if (image_item != imageMap.end())
                     imageMap.erase(image_item);
             }
         }
         delete pInfo;
-        swapChainMap.erase(swapChain.handle);
+        swapchainMap.erase(swapchain.handle);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return get_dispatch_table(mem_tracker_device_table_map, device)->DestroySwapChainWSI(device, swapChain);
+    return get_dispatch_table(mem_tracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     VkDevice                device,
-    VkSwapChainWSI          swapChain,
+    VkSwapchainKHR          swapchain,
     uint32_t*               pCount,
-    VkImage*                pSwapChainImages)
+    VkImage*                pSwapchainImages)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
-    if (result == VK_SUCCESS && pSwapChainImages != NULL) {
+    if (result == VK_SUCCESS && pSwapchainImages != NULL) {
         const size_t count = *pCount;
-        MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
+        MT_SWAP_CHAIN_INFO *pInfo = swapchainMap[swapchain.handle];
 
         if (pInfo->images.empty()) {
             pInfo->images.resize(count);
-            memcpy(&pInfo->images[0], pSwapChainImages, sizeof(pInfo->images[0]) * count);
+            memcpy(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count);
 
             if (pInfo->images.size() > 0) {
                 for (std::vector<VkImage>::const_iterator it = pInfo->images.begin();
                      it != pInfo->images.end(); it++) {
                     // Add image object binding, then insert the new Mem Object and then bind it to created image
-                    add_object_create_info(it->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, &pInfo->createInfo);
+                    add_object_create_info(it->handle, VK_OBJECT_TYPE_SWAPCHAIN_KHR, &pInfo->createInfo);
                 }
             }
         } else {
             const size_t count = *pCount;
-            MT_SWAP_CHAIN_INFO *pInfo = swapChainMap[swapChain.handle];
+            MT_SWAP_CHAIN_INFO *pInfo = swapchainMap[swapchain.handle];
             const bool mismatch = (pInfo->images.size() != count ||
-                    memcmp(&pInfo->images[0], pSwapChainImages, sizeof(pInfo->images[0]) * count));
+                    memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
-                // TODO : Want swapChain to be srcObj here
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
-                        "vkGetSwapChainInfoWSI(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI) returned mismatching data", swapChain);
+                // TODO : Want swapchain to be srcObj here
+                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
+                        "vkGetSwapchainInfoKHR(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", swapchain);
             }
         }
     }
@@ -3293,16 +3293,16 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     if (my_device_data->wsi_enabled)
     {
-        if (!strcmp(funcName, "vkCreateSwapChainWSI"))
-            return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
-        if (!strcmp(funcName, "vkDestroySwapChainWSI"))
-            return (PFN_vkVoidFunction) vkDestroySwapChainWSI;
-        if (!strcmp(funcName, "vkGetSwapChainImagesWSI"))
-            return (PFN_vkVoidFunction) vkGetSwapChainImagesWSI;
-//        if (!strcmp(funcName, "vkAcquireNextImageWSI"))
-//            return (PFN_vkVoidFunction) vkAcquireNextImageWSI;
-//        if (!strcmp(funcName, "vkQueuePresentWSI"))
-//            return (PFN_vkVoidFunction) vkQueuePresentWSI;
+        if (!strcmp(funcName, "vkCreateSwapchainKHR"))
+            return (PFN_vkVoidFunction) vkCreateSwapchainKHR;
+        if (!strcmp(funcName, "vkDestroySwapchainKHR"))
+            return (PFN_vkVoidFunction) vkDestroySwapchainKHR;
+        if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
+            return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
+//        if (!strcmp(funcName, "vkAcquireNextImageKHR"))
+//            return (PFN_vkVoidFunction) vkAcquireNextImageKHR;
+//        if (!strcmp(funcName, "vkQueuePresentKHR"))
+//            return (PFN_vkVoidFunction) vkQueuePresentKHR;
     }
 
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);

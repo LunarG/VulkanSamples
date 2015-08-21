@@ -30,7 +30,7 @@
 
 #include <vulkan.h>
 #include <vk_debug_report_lunarg.h>
-#include <vk_wsi_swapchain.h>
+#include <vk_ext_khr_swapchain.h>
 #include <vk_layer.h>
 #include <vk_icd.h>
 #include <assert.h>
@@ -144,7 +144,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
-    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
 
     /*
      * Fill in the cache of available device extensions from

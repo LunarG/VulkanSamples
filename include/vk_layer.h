@@ -7,8 +7,8 @@
 #include "vulkan.h"
 #include "vk_debug_report_lunarg.h"
 #include "vk_debug_marker_lunarg.h"
-#include "vk_wsi_swapchain.h"
-#include "vk_wsi_device_swapchain.h"
+#include "vk_ext_khr_swapchain.h"
+#include "vk_ext_khr_device_swapchain.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
@@ -167,14 +167,14 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdNextSubpass CmdNextSubpass;
     PFN_vkCmdEndRenderPass CmdEndRenderPass;
     PFN_vkCmdExecuteCommands CmdExecuteCommands;
-    PFN_vkGetSurfacePropertiesWSI GetSurfacePropertiesWSI;
-    PFN_vkGetSurfaceFormatsWSI GetSurfaceFormatsWSI;
-    PFN_vkGetSurfacePresentModesWSI GetSurfacePresentModesWSI;
-    PFN_vkCreateSwapChainWSI CreateSwapChainWSI;
-    PFN_vkDestroySwapChainWSI DestroySwapChainWSI;
-    PFN_vkGetSwapChainImagesWSI GetSwapChainImagesWSI;
-    PFN_vkAcquireNextImageWSI AcquireNextImageWSI;
-    PFN_vkQueuePresentWSI QueuePresentWSI;
+    PFN_vkGetSurfacePropertiesKHR GetSurfacePropertiesKHR;
+    PFN_vkGetSurfaceFormatsKHR GetSurfaceFormatsKHR;
+    PFN_vkGetSurfacePresentModesKHR GetSurfacePresentModesKHR;
+    PFN_vkCreateSwapchainKHR CreateSwapchainKHR;
+    PFN_vkDestroySwapchainKHR DestroySwapchainKHR;
+    PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR;
+    PFN_vkAcquireNextImageKHR AcquireNextImageKHR;
+    PFN_vkQueuePresentKHR QueuePresentKHR;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 } VkLayerDispatchTable;
@@ -195,7 +195,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceLayerProperties GetPhysicalDeviceLayerProperties;
-    PFN_vkGetPhysicalDeviceSurfaceSupportWSI GetPhysicalDeviceSurfaceSupportWSI;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 } VkLayerInstanceDispatchTable;

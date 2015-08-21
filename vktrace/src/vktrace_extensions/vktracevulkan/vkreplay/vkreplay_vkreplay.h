@@ -38,16 +38,16 @@
 
 extern "C" {
 #include "vktrace_vk_vk_packets.h"
-#include "vktrace_vk_vk_wsi_swapchain_packets.h"
-#include "vktrace_vk_vk_wsi_device_swapchain_packets.h"
+#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"
+#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"
 #include "vktrace_vk_vk_debug_report_lunarg_packets.h"
 // TODO138 : Need to add packets files for new wsi headers
 }
 
 #include "vulkan.h"
 #include "vk_debug_report_lunarg.h"
-#include "vk_wsi_swapchain.h"
-#include "vk_wsi_device_swapchain.h"
+#include "vk_ext_khr_swapchain.h"
+#include "vk_ext_khr_device_swapchain.h"
 #include "vkreplay_vkdisplay.h"
 #include "vkreplay_vk_func_ptrs.h"
 #include "vkreplay_vk_objmapper.h"
@@ -129,13 +129,13 @@ private:
     VkResult manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket);
     VkResult manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket);
     // TODO138: Update these functions for new WSI
-    VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportWSI(packet_vkGetPhysicalDeviceSurfaceSupportWSI* pPacket);
-    VkResult manually_replay_vkGetSurfacePropertiesWSI(packet_vkGetSurfacePropertiesWSI* pPacket);
-    VkResult manually_replay_vkGetSurfaceFormatsWSI(packet_vkGetSurfaceFormatsWSI* pPacket);
-    VkResult manually_replay_vkGetSurfacePresentModesWSI(packet_vkGetSurfacePresentModesWSI* pPacket);
-    VkResult manually_replay_vkCreateSwapChainWSI(packet_vkCreateSwapChainWSI* pPacket);
-    VkResult manually_replay_vkGetSwapChainImagesWSI(packet_vkGetSwapChainImagesWSI* pPacket);
-    VkResult manually_replay_vkQueuePresentWSI(packet_vkQueuePresentWSI* pPacket);
+    VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket);
+    VkResult manually_replay_vkGetSurfacePropertiesKHR(packet_vkGetSurfacePropertiesKHR* pPacket);
+    VkResult manually_replay_vkGetSurfaceFormatsKHR(packet_vkGetSurfaceFormatsKHR* pPacket);
+    VkResult manually_replay_vkGetSurfacePresentModesKHR(packet_vkGetSurfacePresentModesKHR* pPacket);
+    VkResult manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchainKHR* pPacket);
+    VkResult manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchainImagesKHR* pPacket);
+    VkResult manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* pPacket);
     VkResult manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket);
     VkResult manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMsgCallback* pPacket);
 

@@ -48,7 +48,7 @@ class Subcommand(object):
     def _requires_special_trampoline_code(self, name):
         # Dont be cute trying to use a general rule to programmatically populate this list
         # it just obsfucates what is going on!
-        wsi_creates_dispatchable_object = ["CreateSwapChainWSI"]
+        wsi_creates_dispatchable_object = ["CreateSwapchainKHR"]
         creates_dispatchable_object = ["CreateDevice", "GetDeviceQueue", "CreateCommandBuffer"] + wsi_creates_dispatchable_object
         if name in creates_dispatchable_object:
             return True
@@ -136,13 +136,13 @@ class LoaderEntrypointsSubcommand(Subcommand):
         if "Get" in proto.name:
             method = "loader_set_dispatch"
 
-        if proto.name == "GetSwapChainInfoWSI":
+        if proto.name == "GetSwapchainInfoKHR":
             ptype = proto.params[-3].name
             psize = proto.params[-2].name
             pdata = proto.params[-1].name
-            cond = ("%s == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI && "
+            cond = ("%s == VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR && "
                     "%s && %s" % (ptype, pdata, cond))
-            setup.append("VkSwapChainImageInfoWSI *info = %s;" % pdata)
+            setup.append("VkSwapchainImageInfoKHR *info = %s;" % pdata)
             setup.append("size_t count = *%s / sizeof(*info), i;" % psize)
             setup.append("for (i = 0; i < count; i++) {")
             setup.append("    %s(info[i].image, disp);" % method)
@@ -342,7 +342,7 @@ class WinDefFileSubcommand(Subcommand):
         for proto in self.protos:
             if self.exports and proto.name not in self.exports:
                 continue
-            if proto.name.endswith("WSI"):
+            if proto.name.endswith("KHR"):
                 continue
             body.append("   vk" + proto.name)
 

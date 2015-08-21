@@ -317,7 +317,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
     deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
     }
 }
@@ -476,13 +476,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     VkDevice                        device,
-    const VkSwapChainCreateInfoWSI *pCreateInfo,
-    VkSwapChainWSI                 *pSwapChain)
+    const VkSwapchainCreateInfoKHR *pCreateInfo,
+    VkSwapchainKHR                 *pSwapchain)
 {
     VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateSwapChainWSI(device, pCreateInfo, pSwapChain);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -498,23 +498,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
         swapchainMapElem->device = device;
         swapchainMapElem->imageExtent = pCreateInfo->imageExtent;
         swapchainMapElem->format = pCreateInfo->imageFormat;
-        swapchainMap.insert(make_pair(pSwapChain->handle, swapchainMapElem));
+        swapchainMap.insert(make_pair(pSwapchain->handle, swapchainMapElem));
 
         // Create a mapping for the swapchain object into the dispatch table
-        screenshot_device_table_map.emplace((void *)pSwapChain->handle, pTable);
+        screenshot_device_table_map.emplace((void *)pSwapchain->handle, pTable);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     VkDevice                device,
-    VkSwapChainWSI          swapChain,
+    VkSwapchainKHR          swapchain,
     uint32_t*               pCount,
-    VkImage*                pSwapChainImages)
+    VkImage*                pSwapchainImages)
 {
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetSwapChainImagesWSI(device, swapChain, pCount, pSwapChainImages);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -524,33 +524,33 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     }
 
     if (result == VK_SUCCESS &&
-        pSwapChainImages &&
-        !swapchainMap.empty() && swapchainMap.find(swapChain.handle) != swapchainMap.end())
+        pSwapchainImages &&
+        !swapchainMap.empty() && swapchainMap.find(swapchain.handle) != swapchainMap.end())
     {
         unsigned i;
 
         for (i=0; i<*pCount; i++)
         {
             // Create a mapping for an image to a device, image extent, and format
-            if (imageMap[pSwapChainImages[i].handle] == NULL)
+            if (imageMap[pSwapchainImages[i].handle] == NULL)
             {
                 ImageMapStruct *imageMapElem = new ImageMapStruct;
-                imageMap[pSwapChainImages[i].handle] = imageMapElem;
+                imageMap[pSwapchainImages[i].handle] = imageMapElem;
             }
-            imageMap[pSwapChainImages[i].handle]->device = swapchainMap[swapChain.handle]->device;
-            imageMap[pSwapChainImages[i].handle]->imageExtent = swapchainMap[swapChain.handle]->imageExtent;
-            imageMap[pSwapChainImages[i].handle]->format = swapchainMap[swapChain.handle]->format;
+            imageMap[pSwapchainImages[i].handle]->device = swapchainMap[swapchain.handle]->device;
+            imageMap[pSwapchainImages[i].handle]->imageExtent = swapchainMap[swapchain.handle]->imageExtent;
+            imageMap[pSwapchainImages[i].handle]->format = swapchainMap[swapchain.handle]->format;
         }
 
         // Add list of images to swapchain to image map
-        SwapchainMapStruct *swapchainMapElem = swapchainMap[swapChain.handle];
+        SwapchainMapStruct *swapchainMapElem = swapchainMap[swapchain.handle];
         if (i >= 1 && swapchainMapElem)
         {
             VkImage *imageList = new VkImage[i];
             swapchainMapElem->imageList = imageList;
             for (unsigned j=0; j<i; j++)
             {
-                swapchainMapElem->imageList[j] = pSwapChainImages[j].handle;
+                swapchainMapElem->imageList[j] = pSwapchainImages[j].handle;
             }
         }
 
@@ -559,11 +559,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, VkPresentInfoWSI* pPresentInfo)
+VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
 {
     static int frameNumber = 0;
     if (frameNumber == 10) {fflush(stdout); /* *((int*)0)=0; */ }
-    VkResult result = get_dispatch_table(screenshot_device_table_map, queue)->QueuePresentWSI(queue, pPresentInfo);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, queue)->QueuePresentKHR(queue, pPresentInfo);
 
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -609,10 +609,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentWSI(VkQueue queue, VkPresentInfoWSI
             fileName = to_string(frameNumber) + ".ppm";
 
             VkImage image;
-            uint64_t swapChain;
+            uint64_t swapchain;
             // We'll dump only one image: the first
-            swapChain = pPresentInfo->swapChains[0].handle;
-            image = swapchainMap[swapChain]->imageList[pPresentInfo->imageIndices[0]];
+            swapchain = pPresentInfo->swapchains[0].handle;
+            image = swapchainMap[swapchain]->imageList[pPresentInfo->imageIndices[0]];
             writePPM(fileName.c_str(), image);
             screenshotFrames.erase(it);
 
@@ -676,12 +676,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
     {
-        if (!strcmp(funcName, "vkCreateSwapChainWSI"))
-            return (PFN_vkVoidFunction) vkCreateSwapChainWSI;
-        if (!strcmp(funcName, "vkGetSwapChainImagesWSI"))
-            return (PFN_vkVoidFunction) vkGetSwapChainImagesWSI;
-        if (!strcmp(funcName, "vkQueuePresentWSI"))
-            return (PFN_vkVoidFunction) vkQueuePresentWSI;
+        if (!strcmp(funcName, "vkCreateSwapchainKHR"))
+            return (PFN_vkVoidFunction) vkCreateSwapchainKHR;
+        if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
+            return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
+        if (!strcmp(funcName, "vkQueuePresentKHR"))
+            return (PFN_vkVoidFunction) vkQueuePresentKHR;
     }
 
     if (pDisp->GetDeviceProcAddr == NULL)

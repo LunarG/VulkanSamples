@@ -29,7 +29,7 @@
 
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "vk_wsi_swapchain.h"
+#include "vk_ext_khr_swapchain.h"
 
 void wsi_swapchain_add_instance_extensions(
         struct loader_extension_list *ext_list);
@@ -42,8 +42,8 @@ void *wsi_swapchain_GetInstanceProcAddr(
         struct loader_instance                  *ptr_instance,
         const char*                             pName);
 
-VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportWSI(
+VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
         VkBool32*                               pSupported);

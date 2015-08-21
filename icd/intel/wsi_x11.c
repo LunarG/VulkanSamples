@@ -74,7 +74,7 @@ struct intel_x11_swap_chain {
     xcb_connection_t *c;
     xcb_window_t window;
     bool force_copy;
-    VkPresentModeWSI present_mode;
+    VkPresentModeKHR present_mode;
 
     int dri3_major, dri3_minor;
     int present_major, present_minor;
@@ -118,7 +118,7 @@ static const VkFormat x11_presentable_formats[] = {
     VK_FORMAT_B5G6R5_UNORM,
 };
 
-static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapChainWSI sc)
+static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapchainKHR sc)
 {
     return (struct intel_x11_swap_chain *) sc.handle;
 }
@@ -215,12 +215,12 @@ static int x11_get_drawable_depth(xcb_connection_t *c,
 }
 
 static VkResult x11_get_surface_properties(
-    const VkSurfaceDescriptionWSI *pSurfaceDescription,
-    VkSurfacePropertiesWSI *pSurfaceProperties)
+    const VkSurfaceDescriptionKHR *pSurfaceDescription,
+    VkSurfacePropertiesKHR *pSurfaceProperties)
 {
-    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowWSI*) pSurfaceDescription;
-    VkPlatformHandleXcbWSI *pPlatformHandleXcb = (VkPlatformHandleXcbWSI *)
+    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowKHR*) pSurfaceDescription;
+    VkPlatformHandleXcbKHR *pPlatformHandleXcb = (VkPlatformHandleXcbKHR *)
         pSurfaceDescriptionWindow->pPlatformHandle;
     xcb_connection_t *c = (xcb_connection_t *)
         pPlatformHandleXcb->connection;
@@ -252,8 +252,8 @@ static VkResult x11_get_surface_properties(
         pSurfaceProperties->currentExtent.width;
     pSurfaceProperties->maxImageExtent.height =
         pSurfaceProperties->currentExtent.height;
-    pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_WSI;
-    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
     pSurfaceProperties->maxImageArraySize = 0;
     pSurfaceProperties->supportedUsageFlags =
         VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
@@ -437,7 +437,7 @@ static struct intel_img *x11_swap_chain_create_persistent_image(struct intel_x11
 
 static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain *sc,
                                                     struct intel_dev *dev,
-                                                    const VkSwapChainCreateInfoWSI *info)
+                                                    const VkSwapchainCreateInfoKHR *info)
 {
     struct intel_img **images;
     intel_x11_swap_chain_image_state *image_state;
@@ -536,7 +536,7 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
     target_msc = 0;
     divisor = 1;
     remainder = 0;
-    if (sc->present_mode == VK_PRESENT_MODE_IMMEDIATE_WSI) {
+    if (sc->present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
         options |= XCB_PRESENT_OPTION_ASYNC;
     }
 
@@ -708,13 +708,13 @@ static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
 }
 
 static VkResult x11_swap_chain_create(struct intel_dev *dev,
-                                      const VkSwapChainCreateInfoWSI *info,
+                                      const VkSwapchainCreateInfoKHR *info,
                                       struct intel_x11_swap_chain **sc_ret)
 {
     const xcb_randr_provider_t provider = 0;
-    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowWSI*) info->pSurfaceDescription;
-    VkPlatformHandleXcbWSI *pPlatformHandleXcb = (VkPlatformHandleXcbWSI *)
+    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowKHR*) info->pSurfaceDescription;
+    VkPlatformHandleXcbKHR *pPlatformHandleXcb = (VkPlatformHandleXcbKHR *)
         pSurfaceDescriptionWindow->pPlatformHandle;
     xcb_connection_t *c = (xcb_connection_t *)
         pPlatformHandleXcb->connection;
@@ -746,7 +746,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(sc, 0, sizeof(*sc));
-    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAP_CHAIN_WSI, dev->base.handle.instance);
+    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAPCHAIN_KHR, dev->base.handle.instance);
 
     sc->c = c;
     sc->window = window;
@@ -862,21 +862,21 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportWSI(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueNodeIndex,
-    const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+    const VkSurfaceDescriptionKHR*          pSurfaceDescription,
     VkBool32*                               pSupported)
 {
     VkResult ret = VK_SUCCESS;
-    const VkSurfaceDescriptionWindowWSI* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowWSI*) pSurfaceDescription;
+    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
+        (VkSurfaceDescriptionWindowKHR*) pSurfaceDescription;
 
     *pSupported = false;
 
     // TODO: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
-    if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI) {
+    if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR) {
         return VK_ERROR_INVALID_VALUE;
     }
 
@@ -884,17 +884,17 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportWSI(
     // - queueNodeIndex
     // - pSurfaceDescriptionWindow->pPlatformHandle (can try to use it)
     // - pSurfaceDescriptionWindow->pPlatformWindow (can try to use it)
-    if (pSurfaceDescriptionWindow->platform == VK_PLATFORM_XCB_WSI) {
+    if (pSurfaceDescriptionWindow->platform == VK_PLATFORM_XCB_KHR) {
         *pSupported = true;
     }
 
     return ret;
 }
 
-VkResult VKAPI vkGetSurfacePropertiesWSI(
+VkResult VKAPI vkGetSurfacePropertiesKHR(
     VkDevice                                 device,
-    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
-    VkSurfacePropertiesWSI*                  pSurfaceProperties)
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
+    VkSurfacePropertiesKHR*                  pSurfaceProperties)
 {
     // TODO: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
@@ -903,11 +903,11 @@ VkResult VKAPI vkGetSurfacePropertiesWSI(
     return x11_get_surface_properties(pSurfaceDescription, pSurfaceProperties);
 }
 
-VkResult VKAPI vkGetSurfaceFormatsWSI(
+VkResult VKAPI vkGetSurfaceFormatsKHR(
     VkDevice                                 device,
-    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
-    VkSurfaceFormatWSI*                      pSurfaceFormats)
+    VkSurfaceFormatKHR*                      pSurfaceFormats)
 {
     VkResult ret = VK_SUCCESS;
 
@@ -921,7 +921,7 @@ VkResult VKAPI vkGetSurfaceFormatsWSI(
         uint32_t i;
         for (i = 0; i < *pCount; i++) {
             pSurfaceFormats[i].format = x11_presentable_formats[i];
-            pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_WSI;
+            pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         }
     } else {
         *pCount = ARRAY_SIZE(x11_presentable_formats);
@@ -930,11 +930,11 @@ VkResult VKAPI vkGetSurfaceFormatsWSI(
     return ret;
 }
 
-VkResult VKAPI vkGetSurfacePresentModesWSI(
+VkResult VKAPI vkGetSurfacePresentModesKHR(
     VkDevice                                 device,
-    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
-    VkPresentModeWSI*                        pPresentModes)
+    VkPresentModeKHR*                        pPresentModes)
 {
     VkResult ret = VK_SUCCESS;
 
@@ -945,9 +945,9 @@ VkResult VKAPI vkGetSurfacePresentModesWSI(
     }
 
     if (pPresentModes) {
-        pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_WSI;
-        pPresentModes[1] = VK_PRESENT_MODE_FIFO_WSI;
-        // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_WSI sometime
+        pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        pPresentModes[1] = VK_PRESENT_MODE_FIFO_KHR;
+        // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_KHR sometime
     } else {
         *pCount = 2;
     }
@@ -955,44 +955,44 @@ VkResult VKAPI vkGetSurfacePresentModesWSI(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
+ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     VkDevice                                device,
-    const VkSwapChainCreateInfoWSI*         pCreateInfo,
-    VkSwapChainWSI*                         pSwapChain)
+    const VkSwapchainCreateInfoKHR*         pCreateInfo,
+    VkSwapchainKHR*                         pSwapchain)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    if (pCreateInfo->oldSwapChain.handle) {
+    if (pCreateInfo->oldSwapchain.handle) {
         // TODO: Eventually, do more than simply up-front destroy the
-        // oldSwapChain (but just do that for now):
+        // oldSwapchain (but just do that for now):
         struct intel_x11_swap_chain *sc =
-            x11_swap_chain(pCreateInfo->oldSwapChain);
+            x11_swap_chain(pCreateInfo->oldSwapchain);
 
         x11_swap_chain_destroy(sc);
     }
 
     return x11_swap_chain_create(dev, pCreateInfo,
-            (struct intel_x11_swap_chain **) pSwapChain);
+            (struct intel_x11_swap_chain **) pSwapchain);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroySwapChainWSI(
+ICD_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain)
+    VkSwapchainKHR                           swapchain)
 {
-    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
 
     x11_swap_chain_destroy(sc);
 
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
+ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain,
+    VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
-    VkImage*                                 pSwapChainImages)
+    VkImage*                                 pSwapchainImages)
 {
-    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
     VkResult ret = VK_SUCCESS;
 
     // TODO: Move this check to a validation layer (i.e. the driver should
@@ -1001,10 +1001,10 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
         return VK_ERROR_INVALID_POINTER;
     }
 
-    if (pSwapChainImages) {
+    if (pSwapchainImages) {
         uint32_t i;
         for (i = 0; i < *pCount; i++) {
-            pSwapChainImages[i].handle = (uint64_t) sc->persistent_images[i];
+            pSwapchainImages[i].handle = (uint64_t) sc->persistent_images[i];
         }
     } else {
         *pCount = sc->persistent_image_count;
@@ -1013,14 +1013,14 @@ ICD_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
+ICD_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain,
+    VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
     uint32_t*                                pImageIndex)
 {
-    struct intel_x11_swap_chain *sc = x11_swap_chain(swapChain);
+    struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
     VkResult ret = VK_SUCCESS;
 
     // Find an unused image to return:
@@ -1052,13 +1052,13 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
 }
 
 
-ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
+ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
     VkQueue                                  queue_,
-    VkPresentInfoWSI*                        pPresentInfo)
+    VkPresentInfoKHR*                        pPresentInfo)
 {
     struct intel_queue *queue = intel_queue(queue_);
     uint32_t i;
-    uint32_t num_swapchains = pPresentInfo->swapChainCount;
+    uint32_t num_swapchains = pPresentInfo->swapchainCount;
 
     // Wait for queue to idle before out-of-band xcb present operation.
     const VkResult r = intel_queue_wait(queue, -1);
@@ -1066,7 +1066,7 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
 
     for (i = 0; i < num_swapchains; i++) {
         struct intel_x11_swap_chain *sc =
-            x11_swap_chain(pPresentInfo->swapChains[i]);
+            x11_swap_chain(pPresentInfo->swapchains[i]);
         struct intel_img *img = 
             sc->persistent_images[pPresentInfo->imageIndices[i]];
         struct intel_x11_fence_data *data =

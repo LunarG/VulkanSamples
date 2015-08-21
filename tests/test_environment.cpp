@@ -1,8 +1,8 @@
 #include "test_common.h"
 #include "vktestbinding.h"
 #include "test_environment.h"
-#include "vk_wsi_swapchain.h"
-#include "vk_wsi_device_swapchain.h"
+#include "vk_ext_khr_swapchain.h"
+#include "vk_ext_khr_device_swapchain.h"
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -68,8 +68,8 @@ void Environment::SetUp()
     std::vector<const char *> device_extension_names;
     std::vector<const char *> device_layer_names;
 
-    instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
 
     VkBool32 extFound;
 
