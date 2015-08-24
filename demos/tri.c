@@ -1084,6 +1084,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
+        shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
         assert(!err);
     } else {
@@ -1107,6 +1108,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
+        shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
         assert(!err);
     }

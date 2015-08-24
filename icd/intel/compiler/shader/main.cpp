@@ -144,22 +144,24 @@ int main(int argc, char **argv)
 
            void *shaderCode;
            size_t size;
+           VkShaderStage stage = VK_SHADER_STAGE_VERTEX;
 
            if (checkFileExt(argv[1], ".spv")) {
                shaderCode = load_spv_file(argv[1], &size);
            } else if (checkFileExt(argv[1], ".vert")) {
-               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_VERTEX);
+               stage = VK_SHADER_STAGE_VERTEX;
            } else if (checkFileExt(argv[1], ".geom")) {
-               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_GEOMETRY);
+               stage = VK_SHADER_STAGE_GEOMETRY;
            } else if (checkFileExt(argv[1], ".frag")) {
-               shaderCode = load_glsl_file(argv[1], &size, VK_SHADER_STAGE_FRAGMENT);
+               stage = VK_SHADER_STAGE_FRAGMENT;
            } else {
                return EXIT_FAILURE;
            }
 
+           shaderCode = load_glsl_file(argv[1], &size, stage);
            assert(shaderCode);
 
-           struct intel_ir *shader_program = shader_create_ir(NULL, shaderCode, size);
+           struct intel_ir *shader_program = shader_create_ir(NULL, shaderCode, size, stage);
            assert(shader_program);
 
            // Set up only the fields needed for backend compile
@@ -212,14 +214,14 @@ int main(int argc, char **argv)
        shaderCode[0] = load_spv_file(argv[1], &size[0]);
        assert(shaderCode[0]);
        printf("Compiling %s\n", argv[1]);
-       result[0] = shader_create_ir(NULL, shaderCode[0], size[0]);
+       result[0] = shader_create_ir(NULL, shaderCode[0], size[0], VK_SHADER_STAGE_VERTEX);
        assert(result[0]);
 
        // Compile second shader
        shaderCode[1] = load_spv_file(argv[2], &size[1]);
        assert(shaderCode[1]);
        printf("Compiling %s\n", argv[2]);
-       result[1] = shader_create_ir(NULL, shaderCode[1], size[1]);
+       result[1] = shader_create_ir(NULL, shaderCode[1], size[1], VK_SHADER_STAGE_FRAGMENT);
        assert(result[1]);
 
 

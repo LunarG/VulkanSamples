@@ -343,7 +343,8 @@ extern "C" {
 // invoke front end compiler to generate an independently linked
 // program object that contains Mesa HIR
 struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
-                                  const void *code, size_t size)
+                                  const void *code, size_t size,
+                                  VkShaderStage stage)
 {
     // Wrap this path in a mutex until we can clean up initialization
     static mtx_t mutex = _MTX_INITIALIZER_NP;
@@ -399,32 +400,14 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Source = (const GLchar*)code;
         shader->Size   = size / sizeof(unsigned);  // size in SPV words
 
-        spv::ExecutionModel executionModel = spv::ExecutionModelVertex;
-
-        unsigned spvWord = 5;
-
-        while (spvWord < size) {
-            const unsigned    opWord = ((unsigned int*)code)[spvWord];
-            const spv::Op op     = spv::Op((opWord & 0xffff));
-
-            if (op == spv::OpEntryPoint) {
-                executionModel = spv::ExecutionModel(((unsigned int*)code)[spvWord+1]);
-                break;
-            }
-
-            spvWord += (opWord & 0xffff0000) >> 16;
-        }
-
-        // We should parse the glsl text out of spv right now, but
-        // instead we are just plopping down our glsl
-        switch(executionModel) {
-        case spv::ExecutionModelVertex:
+        switch (stage) {
+        case VK_SHADER_STAGE_VERTEX:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case spv::ExecutionModelGeometry:
+        case VK_SHADER_STAGE_GEOMETRY:
             shader->Type = GL_GEOMETRY_SHADER;
             break;
-        case spv::ExecutionModelFragment:
+        case VK_SHADER_STAGE_FRAGMENT:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:

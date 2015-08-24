@@ -73,7 +73,7 @@ public:
     void CreateCommandBufferTest();
     void CreatePipelineTest();
     void CreateShaderTest();
-    void CreateShader(VkShader *pshader);
+    void CreateShader(VkShader *pshader, VkShaderStage stage);
 
     VkDevice device() {return m_device->handle();}
 
@@ -528,7 +528,7 @@ TEST_F(VkTest, TestCommandBuffer) {
     CreateCommandBufferTest();
 }
 
-void VkTest::CreateShader(VkShader *pshader)
+void VkTest::CreateShader(VkShader *pshader, VkShaderStage stage)
 {
     void *code;
     uint32_t codeSize;
@@ -564,6 +564,7 @@ void VkTest::CreateShader(VkShader *pshader)
     createInfo.module = module;
     createInfo.pName = "main";
     createInfo.flags = 0;
+    createInfo.stage = stage;
     err = vkCreateShader(device(), &createInfo, &shader);
     ASSERT_VK_SUCCESS(err);
 

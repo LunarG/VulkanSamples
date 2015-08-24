@@ -1149,6 +1149,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
     createInfo.module = module->handle();
     createInfo.pName = "main";
     createInfo.flags = 0;
+    createInfo.stage = stage;
 
     err = init_try(*m_device, createInfo);
     assert(VK_SUCCESS == err);
