@@ -506,8 +506,7 @@ bool ValidateEnumerator(VkImageUsageFlagBits const& enumerator)
         VK_IMAGE_USAGE_SAMPLED_BIT |
         VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-        VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT |
-        VK_IMAGE_USAGE_GENERAL);
+        VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -556,10 +555,6 @@ std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
     if(enumerator & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT)
     {
         strings.push_back("VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
-    }
-    if(enumerator & VK_IMAGE_USAGE_GENERAL)
-    {
-        strings.push_back("VK_IMAGE_USAGE_GENERAL");
     }
 
     std::string enumeratorString;
@@ -1032,8 +1027,7 @@ bool ValidateEnumerator(VkBufferUsageFlagBits const& enumerator)
         VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT |
         VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
         VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT |
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-        VK_BUFFER_USAGE_GENERAL);
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1086,10 +1080,6 @@ std::string EnumeratorString(VkBufferUsageFlagBits const& enumerator)
     if(enumerator & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
     {
         strings.push_back("VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT");
-    }
-    if(enumerator & VK_BUFFER_USAGE_GENERAL)
-    {
-        strings.push_back("VK_BUFFER_USAGE_GENERAL");
     }
 
     std::string enumeratorString;

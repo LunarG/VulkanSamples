@@ -194,7 +194,6 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     //        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
     //typedef enum VkImageUsageFlags_
     //{
-    //    VK_IMAGE_USAGE_GENERAL                                  = 0x00000000,   // no special usage
     //    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = 0x00000001,   // Can be used as a source of transfer operations
     //    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                 = 0x00000002,   // Can be used as a destination of transfer operations
     //    VK_IMAGE_USAGE_SAMPLED_BIT                              = 0x00000004,   // Can be sampled from (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
