@@ -1,16 +1,14 @@
-
-
 [TOC]
 
-#Validation Layer Details
+# Validation Layer Details
 
-##DrawState
+## DrawState
 
-###DrawState Overview
+### DrawState Overview
 
 The DrawState layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, and descriptor set state. DrawState validates the consistency and correctness between and within these states.
 
-###DrawState Details Table
+### DrawState Details Table
 
 | Check | Overview | ENUM DRAWSTATE_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -45,7 +43,7 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | Correct Clear Use | Warn user if CmdClear for Color or DepthStencil issued to Cmd Buffer prior to a Draw Cmd. RenderPass LOAD_OP_CLEAR is preferred in this case. | CLEAR_CMD_BEFORE_DRAW | vkCmdClearColorImage(), vkCmdClearDepthStencil() | ClearCmdNoDraw | NA |
 
 
-###DrawState Pending Work
+### DrawState Pending Work
 Additional checks to be added to DrawState
 
  5. dynamicOffsetCount lists how many entries are present in pDynamicOffsets - account for this (not certain of what needs to be done here but we don't have any test cases for dynamicOffsets, so keeping this task around until we do)
@@ -71,20 +69,20 @@ Additional checks to be added to DrawState
  30. At PSO creation time, there is no case when NOT including a FS should flag an error since there exist dynamic state configurations that can be set to cause a FS to not be required. Instead, in the case when no FS is in the PSO, validation should detect at runtime if dynamic state will require a FS, and in those case issue a runtime warning about undefined behavior. (see bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14429)
  31. Error if a cmdbuffer is submitted on a queue whose family doesn't match the family of the pool from which it was created.
 
-##ParamChecker
+## ParamChecker
 
-###ParamChecker Overview
+### ParamChecker Overview
 
 The ParamChecker layer validates parameter values and flags errors for any values that are outside of acceptable values for the given parameter.
 
-###ParamChecker Details Table
+### ParamChecker Details Table
 
 | Check | Overview | ENUM | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
 | Input Parameters | Pointers in structures are recursively validated to be non-null. Enumerated types are validated against min and max enum values. Structure Types are verified to be correct. | NA | vkQueueSubmit vkAllocMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkQueueBindSparseBufferMemory vkQueueBindSparseImageOpaqueMemory vkQueueBindSparseImageMemory vkCreateFence vkResetFences vkWaitForFences vkCreateSemaphore vkCreateEvent vkCreateQueryPool vkCreateBuffer vkCreateBufferView vkCreateImage vkGetImageSubresourceLayout vkCreateImageView vkCreateAttachmentView vkCreateShader vkCreatePipelineCache vkMergePipelineCaches vkCreateGraphicsPipelines vkCreateComputePipelines vkCreatePipelineLayout vkCreateSampler vkCreateDescriptorSetLayout( vkCreateDescriptorPool vkAllocDescriptorSets vkFreeDescriptorSets vkUpdateDescriptorSets vkCreateDynamicViewportState vkCreateDynamicRasterState vkCreateDynamicColorBlendState vkCreateDynamicDepthStencilState vkCreateFramebuffer vkCreateRenderPass vkCreateCommandPool vkCreateCommandBuffer vkBeginCommandBuffer vkCmdBindDescriptorSets vkCmdBindVertexBuffers vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearColorAttachment vkCmdClearDepthStencilAttachment vkCmdResolveImage vkCmdWaitEvents vkCmdPipelineBarrier vkCmdPushConstants vkCmdBeginRenderPass vkCmdExecuteCommands | TBD | NA |
 | Call results, Output Parameters | Return values are checked for VK_SUCCESS, returned pointers are checked to be NON-NULL, enumerated types of return values are checked to be within the defined range. | NA | vkEnumeratePhysicalDevices vkGetPhysicalDeviceFeatures vkGetPhysicalDeviceFormatProperties vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceLimits vkGetPhysicalDeviceProperties vkGetPhysicalDeviceQueueCount vkGetPhysicalDeviceQueueProperties vkGetPhysicalDeviceMemoryProperties vkGetDeviceQueue vkQueueSubmit vkQueueWaitIdle vkDeviceWaitIdle vkAllocMemory vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkGetDeviceMemoryCommitment vkBindBufferMemory vkBindImageMemory vkGetBufferMemoryRequirements vkGetImageMemoryRequirements vkGetImageSparseMemoryRequirements vkGetPhysicalDeviceSparseImageFormatProperties vkQueueBindSparseBufferMemory vkQueueBindSparseImageOpaqueMemory vkQueueBindSparseImageMemory vkCreateFence vkDestroyFence vkResetFences vkGetFenceStatus vkWaitForFences vkCreateSemaphore vkDestroySemaphore vkQueueSignalSemaphore vkQueueWaitSemaphore vkCreateEvent vkDestroyEvent vkGetEventStatus vkSetEvent vkResetEvent vkCreateQueryPool vkDestroyQueryPool vkGetQueryPoolResults vkCreateBuffer vkDestroyBuffer vkCreateBufferView vkDestroyBufferView vkCreateImage vkDestroyImage vkGetImageSubresourceLayout vkCreateImageView vkDestroyImageView vkCreateAttachmentView vkDestroyAttachmentView vkDestroyShaderModule vkCreateShader vkDestroyShader vkCreatePipelineCache vkDestroyPipelineCache vkGetPipelineCacheSize vkGetPipelineCacheData vkMergePipelineCaches vkCreateGraphicsPipelines vkCreateComputePipelines vkDestroyPipeline vkCreatePipelineLayout vkDestroyPipelineLayout vkCreateSampler vkDestroySampler vkCreateDescriptorSetLayout vkDestroyDescriptorSetLayout vkCreateDescriptorPool vkDestroyDescriptorPool vkResetDescriptorPool vkAllocDescriptorSets vkFreeDescriptorSets vkUpdateDescriptorSets vkCreateDynamicViewportState vkDestroyDynamicViewportState vkCreateDynamicRasterState vkDestroyDynamicRasterState vkCreateDynamicColorBlendState vkDestroyDynamicColorBlendState vkCreateDynamicDepthStencilState vkDestroyDynamicDepthStencilState vkCreateFramebuffer vkDestroyFramebuffer vkCreateRenderPass vkDestroyRenderPass vkGetRenderAreaGranularity vkCreateCommandPool vkDestroyCommandPool vkResetCommandPool vkCreateCommandBuffer vkDestroyCommandBuffer vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdBindDynamicViewportState vkCmdBindDynamicRasterState vkCmdBindDynamicColorBlendState vkCmdBindDynamicDepthStencilState vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearColorAttachment vkCmdClearDepthStencilAttachment vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdPushConstants vkCmdBeginRenderPass vkCmdNextSubpass vkCmdEndRenderPass vkCmdExecuteCommands | TBD | NA |
 
-###ParamChecker Pending Work
+### ParamChecker Pending Work
 Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
@@ -94,13 +92,13 @@ Additional work to be done
  5. Flag error on VkBufferCreateInfo if buffer size is 0
  6. VkAttachmentViewCreateInfo.format must be set
 
-##Image
+## Image
 
-###Image Overview
+### Image Overview
 
 The Image layer is responsible for validating format-related information and enforcing format restrictions.
 
-###Image Details Table
+### Image Details Table
 
 DETAILS TABLE PENDING
 
@@ -109,16 +107,16 @@ DETAILS TABLE PENDING
 | Image Format | Verifies returned format to ensure that it is a supported Vulkan format | NA | vkCreateImage vkCreateRenderPass | TBD | NA |
 | Image Format | Validates that attachment image layouts, loadOps, and storeOps are valid Vulkan values; Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | NA | vkCreateRenderPass | TBD | NA |
 
-###Image Pending Work
+### Image Pending Work
 Additional work to be done
 
-##MemTracker
+## MemTracker
 
-###MemTracker Overview
+### MemTracker Overview
 
 The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes.. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping.
 
-###MemTracker Details Table
+### MemTracker Details Table
 
 | Check | Overview | ENUM MEMTRACK_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -137,9 +135,9 @@ The MemTracker layer tracks memory objects and references and validates that the
 | Objects Not Destroyed Warning | Warns if any memory objects have not been freed before their objects are destroyed | MEM_OBJ_CLEAR_EMPTY_BINDINGS | vkDestroyDevice | TBD | NA |
 
 
-###MemTracker Pending Work
+### MemTracker Pending Work
 
-####MemTracker Enhancements
+#### MemTracker Enhancements
 
 1.  Flag any memory hazards: Validate that the pipeline barriers for buffers are sufficient to avoid hazards
 2.  Make sure that the XGL_IMAGE_VIEW_ATTACH_INFO.layout matches the layout of the image as determined by the last IMAGE_MEMORY_BARRIER
@@ -155,15 +153,15 @@ need to be tracked for each subresource.
 12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 
 
-##ShaderChecker
+## ShaderChecker
 
-###ShaderChecker Overview
+### ShaderChecker Overview
 
 The ShaderChecker layer inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time.
 It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks
 depends on the pair of pipeline stages involved.
 
-###ShaderChecker Details Table
+### ShaderChecker Details Table
 
 | Check | Overview | ENUM SHADER_CHECKER_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -176,18 +174,18 @@ depends on the pair of pipeline stages involved.
 | VI Binding Descriptions | Validate that there is a single vertex input binding description for each binding | INCONSISTENT_VI | vkCreateGraphicsPipeline | CreatePipelineAttribBindingConflict | NA |
 | Shader Stage Check | Warns if shader stage is unsupported | UNKNOWN_STAGE | vkCreateGraphicsPipeline | TBD | NA |
 
-###ShaderChecker Pending Work
+### ShaderChecker Pending Work
 - Additional test cases for variously broken SPIRV images
 - Validation of a single SPIRV image in isolation (the spec describes many constraints)
 - Validation of SPIRV use of descriptors against the declared descriptor set layout
 
-##ObjectTracker
+## ObjectTracker
 
-###ObjectTracker Overview
+### ObjectTracker Overview
 
 The ObjectTracker layer maintains a record of all Vulkan objects. It flags errors when invalid objects are used and at DestroyInstance time it flags any objects that were not properly destroyed.
 
-###ObjectTracker Details Table
+### ObjectTracker Details Table
 
 | Check | Overview | ENUM OBJTRACK_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -199,14 +197,14 @@ The ObjectTracker layer maintains a record of all Vulkan objects. It flags error
 | Valid Fence for Wait | Flag error if waiting on unsubmitted fence object | INVALID_FENCE | vkGetFenceStatus | WaitForUnsubmittedFence | NA |
 | Valid Destroy Object | Validates that an object pass into a destroy function was properly created and is currently valid | NONE | vkDestroyInstance vkDestroyDevice vkDestroyFence vkDestroySemaphore vkDestroyEvent vkDestroyQueryPool vkDestroyBuffer vkDestroyBufferView vkDestroyImage vkDestroyImageView vkDestroyAttachmentView vkDestroyShaderModule vkDestroyShader vkDestroyPipelineCache vkDestroyPipeline vkDestroyPipelineLayout vkDestroySampler vkDestroyDescriptorSetLayout vkDestroyDescriptorPool vkDestroyDynamicViewportState vkDestroyDynamicRasterState vkDestroyDynamicColorBlendState vkDestroyDynamicDepthStencilState vkDestroyCommandPool vkDestroyCommandBuffer vkDestroyFramebuffer vkDestroyRenderPass vkDestroySwapChainWSI | TBD | These cases need to be moved to a more appropriate error enum |
 
-###ObjectTracker Pending Work
+### ObjectTracker Pending Work
 
  4. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
  6. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
 
-##Threading
+## Threading
 
-###Threading Overview
+### Threading Overview
 
 The Threading layer checks for simultaneous use of objects by calls from multiple threads.
 Application code is responsible for preventing simultaneous use of the same objects by certain calls that modify objects.
@@ -229,35 +227,35 @@ But the layer cannot prevent such a reentrant use of an object.
 The layer can only observe when a mutual exclusion rule is actually violated.
 It cannot insure that there is no latent race condition.
 
-###Threading Details Table
+### Threading Details Table
 
 | Check | Overview | ENUM THREADING_CHECKER_* | Relevant API |
 | ----- | -------- | ---------------- | ---------------- |
 | Thread Collision | Detects and notifies user if multiple threads are modifying thes same object | MULTIPLE_THREADS | vkQueueSubmit vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkBindBufferMemory vkBindImageMemory vkQueueBindSparseBufferMemory vkQueueBindSparseImageOpaqueMemory vkQueueBindSparseImageMemory vkDestroySemaphore vkQueueSignalSemaphore vkDestroyBuffer vkDestroyImage vkDestroyDescriptorPool vkResetDescriptorPool vkAllocDescriptorSets vkFreeDescriptorSets vkDestroyCommandBuffer vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdBindDynamicViewportState vkCmdBindDynamicRasterState vkCmdBindDynamicColorBlendState vkCmdBindDynamicDepthStencilState vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearColorAttachment vkCmdClearDepthStencilAttachment vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkCmdNextSubpass vkCmdPushConstants vkCmdEndRenderPass vkCmdExecuteCommands |
 | Thread Reentrancy | Detects cases of a single thread calling Vulkan reentrantly | SINGLE_THREAD_REUSE | vkQueueSubmit vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkBindBufferMemory vkBindImageMemory vkQueueBindSparseBufferMemory vkQueueBindSparseImageOpaqueMemory vkQueueBindSparseImageMemory vkDestroySemaphore vkQueueSignalSemaphore vkDestroyBuffer vkDestroyImage vkDestroyDescriptorPool vkResetDescriptorPool vkAllocDescriptorSets vkFreeDescriptorSets vkDestroyCommandBuffer vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdBindDynamicViewportState vkCmdBindDynamicRasterState vkCmdBindDynamicColorBlendState vkCmdBindDynamicDepthStencilState vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearColorAttachment vkCmdClearDepthStencilAttachment vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkCmdNextSubpass vkCmdPushConstants vkCmdEndRenderPass vkCmdExecuteCommands |
 
-###Threading Pending Work
+### Threading Pending Work
 Additional work to be done
 
-##General Pending Work
+## General Pending Work
 A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
 
-##Device Limitations
+## Device Limitations
 
-###Device Limitations Overview
+### Device Limitations Overview
 
 This layer does not yet exist. The general idea is that at the beginning of time this layer would query device limitations in terms of memory size, format and feature support, and so on. This entails making a complete set of vkGetPhysicalDevice* calls and storing the results. If, later on, the app violates these limitations, then this layer would flag those violations.
 
-###Device Limitations Pending Work
+### Device Limitations Pending Work
 
  1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors.
 
-#Non-validation Layer Details
+# Non-validation Layer Details
 
-##APIDump
+## APIDump
 
 APIDump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
 
-###APIDump Pending Work
+### APIDump Pending Work
 
  1. vkAllocDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
