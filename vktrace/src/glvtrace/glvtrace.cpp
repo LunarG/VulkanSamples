@@ -345,32 +345,10 @@ int main(int argc, char* argv[])
 
     if (g_settings.screenshotList)
     {
-        char *evar;
 
-        evar=glv_get_global_var(ENV_LAYERS_PATH);
-        if (!evar || !*evar) {
-            // TODO: Is this an absolute restriction? Remove this check?
-            glv_LogAlways(ENV_LAYERS_PATH " not set in enviroment, -s option will not work!");
-        } else {
-            // Export list to screenshot layer
-            glv_set_global_var("_VK_SCREENSHOT", g_settings.screenshotList);
+        // Export list to screenshot layer
+        glv_set_global_var("_VK_SCREENSHOT", g_settings.screenshotList);
 
-            // Make sure ScreenShot is in layer names
-            evar=glv_get_global_var(ENV_LAYER_NAMES);
-            if (!evar) {
-                glv_set_global_var(ENV_LAYER_NAMES, "ScreenShot");
-            } else if (!strstr(evar, "ScreenShot"))
-            {
-                // Add ScreenShot to layer names
-                char *lnString = GLV_NEW_ARRAY(char,strlen(evar)+strlen(LAYER_NAMES_SEPARATOR "ScreenShot")+1);
-                if(lnString) {
-                    strcpy(lnString, evar);
-                    strcat(lnString, LAYER_NAMES_SEPARATOR "ScreenShot");
-                    glv_set_global_var(ENV_LAYER_NAMES, lnString);
-                    GLV_DELETE(lnString);
-                }
-            }
-        }
     }
     else
     {

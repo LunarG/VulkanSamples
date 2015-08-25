@@ -169,29 +169,9 @@ int main(int argc, char **argv)
     // Set up environment for screenshot
     if (replaySettings.screenshotList != NULL)
     {
-        if (glv_get_global_var(ENV_LAYERS_PATH) == NULL) {
-            glv_LogAlways(ENV_LAYERS_PATH "not set in environment, -s option will not work!");
-        } else {
-            char *evar;
+        // Set env var that communicates list to ScreenShot layer
+        glv_set_global_var("_VK_SCREENSHOT", replaySettings.screenshotList);
 
-            // Set env var that communicates list to ScreenShot layer
-            glv_set_global_var("_VK_SCREENSHOT", replaySettings.screenshotList);
-
-            // Make sure ScreenShot is in layer names
-            evar = glv_get_global_var(ENV_LAYER_NAMES);
-            if (!evar) {
-                glv_set_global_var(ENV_LAYER_NAMES, "ScreenShot");
-            } else if (!strstr(evar, "ScreenShot")) {
-                // Add ScreenShot to layer names
-                char *lnString = GLV_NEW_ARRAY(char, strlen(evar)+strlen(LAYER_NAMES_SEPARATOR "ScreenShot")+1);
-                if (lnString) {
-                    strcpy(lnString, evar);
-                    strcat(lnString, LAYER_NAMES_SEPARATOR "ScreenShot");
-                    glv_set_global_var(ENV_LAYER_NAMES, lnString);
-                    GLV_DELETE(lnString);
-                }
-            }
-        }
     }
     else
     {

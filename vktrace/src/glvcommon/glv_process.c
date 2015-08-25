@@ -94,6 +94,14 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
             args[idx] = strtok(NULL, delim);
         }
         glv_LogDebug("exec process=%s argc=%u\n", pInfo->exeName, idx);
+#if 0  //uncoment to print out list of env vars
+        char *env = environ[0];
+        idx = 0;
+        while (env && strlen(env)) {
+            glv_LogDebug("env[%d] = %s", idx++, env);
+            env = environ[idx];
+        }
+#endif
         if (execv(pInfo->exeName, args) < 0)
         {
             glv_LogError("Failed to spawn process.");

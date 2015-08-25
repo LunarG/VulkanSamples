@@ -459,6 +459,7 @@ class Subcommand(object):
                                          'AllocDescriptorSets',
                                          'CreateDynamicViewportState',
                                          'CreateDescriptorPool',
+                                         'CreateDevice',
                                          'CreateFramebuffer',
                                          'CreateInstance',
                                          'CreateRenderPass',

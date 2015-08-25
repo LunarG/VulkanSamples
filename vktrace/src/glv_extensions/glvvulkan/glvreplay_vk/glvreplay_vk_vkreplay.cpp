@@ -293,11 +293,62 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
     {
         VkDevice device;
         VkPhysicalDevice remappedPhysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
+        VkDeviceCreateInfo *pCreateInfo;
+        char **ppEnabledLayerNames = NULL, **saved_ppLayers;
         if (remappedPhysicalDevice == VK_NULL_HANDLE)
         {
             return VK_ERROR_UNKNOWN;
         }
+        const char strScreenShot[] = "ScreenShot";
+        char *strScreenShotEnv = glv_get_global_var("_VK_SCREENSHOT");
+
+        pCreateInfo = (VkDeviceCreateInfo *) pPacket->pCreateInfo;
+        if (strScreenShotEnv && strlen(strScreenShotEnv) != 0) {
+            // enable screenshot layer if it is available and not already in list
+            bool found_ss = false;
+            for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
+                if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
+                    found_ss = true;
+                    break;
+                }
+            }
+            if (!found_ss) {
+                uint32_t count;
+
+                // query to find if ScreenShot layer is available
+                m_vkFuncs.real_vkGetPhysicalDeviceLayerProperties(remappedPhysicalDevice, &count, NULL);
+                VkLayerProperties *props = (VkLayerProperties *) glv_malloc(count * sizeof (VkLayerProperties));
+                if (props && count > 0)
+                    m_vkFuncs.real_vkGetPhysicalDeviceLayerProperties(remappedPhysicalDevice, &count, props);
+                for (uint32_t i = 0; i < count; i++) {
+                    if (!strcmp(props[i].layerName, strScreenShot)) {
+                        found_ss = true;
+                        break;
+                    }
+                }
+                if (found_ss) {
+                    // screenshot layer is available so enable it
+                    ppEnabledLayerNames = (char **) glv_malloc((pCreateInfo->layerCount+1) * sizeof(char *));
+                    for (uint32_t i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++)
+                    {
+                        ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
+                    }
+                    ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) glv_malloc(strlen(strScreenShot) + 1);
+                    strcpy(ppEnabledLayerNames[pCreateInfo->layerCount++], strScreenShot);
+                    saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
+                    pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
+                }
+                glv_free(props);
+            }
+        }
         replayResult = m_vkFuncs.real_vkCreateDevice(remappedPhysicalDevice, pPacket->pCreateInfo, &device);
+        if (ppEnabledLayerNames)
+        {
+            // restore the packets CreateInfo struct
+            glv_free(ppEnabledLayerNames[pCreateInfo->layerCount-1]);
+            glv_free(ppEnabledLayerNames);
+            pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
+        }
         if (replayResult == VK_SUCCESS)
         {
             m_objMapper.add_to_devices_map(*(pPacket->pDevice), device);

@@ -22,6 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <stdbool.h>
 
 #include "vulkan.h"
 #include "glv_platform.h"
@@ -256,6 +257,82 @@ GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
     glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorPool));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+GLVTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
+    VkPhysicalDevice physicalDevice,
+    const VkDeviceCreateInfo* pCreateInfo,
+    VkDevice* pDevice)
+{
+    glv_trace_packet_header* pHeader;
+    VkResult result;
+    uint32_t i, count;
+    const char strScreenShot[] = "ScreenShot";
+    char *strScreenShotEnv = glv_get_global_var("_VK_SCREENSHOT");
+    packet_vkCreateDevice* pPacket = NULL;
+    char **ppEnabledLayerNames = NULL, **saved_ppELN;
+    VkDeviceCreateInfo **ppCI;
+
+    if (strScreenShotEnv && strlen(strScreenShotEnv) != 0)
+    {
+        // enable screenshot layer if it is available and not already in list
+        bool found_ss = false;
+        for (i = 0; i < pCreateInfo->layerCount; i++)
+        {
+            if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], "ScreenShot"))
+            {
+                found_ss = true;
+                break;
+            }
+        }
+        if (!found_ss)
+        {
+            // query to find if ScreenShot layer is available
+            real_vkGetPhysicalDeviceLayerProperties(physicalDevice, &count, NULL);
+            VkLayerProperties *props = (VkLayerProperties *) glv_malloc(count * sizeof (VkLayerProperties));
+            if (props && count > 0)
+                real_vkGetPhysicalDeviceLayerProperties(physicalDevice, &count, props);
+            for (i = 0; i < count; i++) {
+                if (!strcmp(props[i].layerName, "ScreenShot"))
+                {
+                    found_ss = true;
+                    break;
+                }
+            }
+            if (found_ss)
+            {
+                // screenshot layer is available so enable it
+                ppEnabledLayerNames = (char **) glv_malloc((pCreateInfo->layerCount + 1) * sizeof (char *));
+                for (i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++) {
+                    ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
+                }
+                ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) glv_malloc(strlen(strScreenShot) + 1);
+                ppCI = (VkDeviceCreateInfo **) &pCreateInfo;
+                strcpy(ppEnabledLayerNames[pCreateInfo->layerCount], strScreenShot);
+                (*ppCI)->layerCount = pCreateInfo->layerCount + 1;
+                saved_ppELN = (char **) pCreateInfo->ppEnabledLayerNames;
+                (*ppCI)->ppEnabledLayerNames = (const char*const*) ppEnabledLayerNames;
+            }
+            glv_free(props);
+        }
+    }
+    CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
+    result = real_vkCreateDevice(physicalDevice, pCreateInfo, pDevice);
+    glv_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkCreateDevice(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), pCreateInfo);
+    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDevice), sizeof(VkDevice), pDevice);
+    pPacket->result = result;
+    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDevice));
+    if (ppEnabledLayerNames)
+    {
+        glv_free(ppEnabledLayerNames[pCreateInfo->layerCount-1]);
+        glv_free(ppEnabledLayerNames);
+        (*ppCI)->ppEnabledLayerNames = (const char*const*) saved_ppELN;
+    }
     FINISH_TRACE_PACKET();
     return result;
 }
