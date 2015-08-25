@@ -1696,32 +1696,58 @@ void loader_icd_scan(struct loader_icd_libs *icds)
         if (item != NULL) {
             item = cJSON_GetObjectItem(item, "library_path");
             if (item != NULL) {
-                char *icd_filename = cJSON_PrintUnformatted(item);
-                char *icd_file = icd_filename;
-                if (icd_filename != NULL) {
-                    char def_dir[] = DEFAULT_VK_DRIVERS_PATH;
-                    char *dir = def_dir;
-
-                    // Print out the paths being searched if debugging is enabled
-                    loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s default dir %s\n", icd_file, dir);
-
-                    // strip off extra quotes
-                    if (icd_filename[strlen(icd_filename)  - 1] == '"')
-                        icd_filename[strlen(icd_filename) - 1] = '\0';
-                    if (icd_filename[0] == '"')
-                        icd_filename++;
-#if defined(__linux__)
-                    char full_path[2048];
-                    loader_get_fullpath(icd_filename, dir, sizeof(full_path), full_path);
-                    loader_scanned_icd_add(icds, full_path);
-#else // WIN32
-                    loader_scanned_icd_add(icds, icd_filename);
-#endif
-                    free(icd_file);
+                char *temp= cJSON_Print(item);
+                if (!temp || strlen(temp) == 0) {
+                    loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
+                    free(temp);
+                    free(file_str);
+                    cJSON_Delete(json);
+                    continue;
                 }
+                //strip out extra quotes
+                temp[strlen(temp) - 1] = '\0';
+                char *library_path = loader_stack_alloc(strlen(temp) + 1);
+                strcpy(library_path, &temp[1]);
+                free(temp);
+                if (!library_path || strlen(library_path) == 0) {
+                    loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
+                    free(file_str);
+                    cJSON_Delete(json);
+                    continue;
+                }
+                char *fullpath;
+                uint32_t path_len;
+                char *rel_base;
+                // Print out the paths being searched if debugging is enabled
+                loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s default dir %s\n", library_path, DEFAULT_VK_DRIVERS_PATH);
+                if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
+                    // a filename which is assumed in the system directory
+                    char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_DRIVERS_PATH) + 1);
+                    strcpy(def_path, DEFAULT_VK_DRIVERS_PATH);
+                    path_len = strlen(DEFAULT_VK_DRIVERS_PATH) + strlen(library_path) + 2;
+                    fullpath = loader_stack_alloc(path_len);
+#if defined(__linux__)
+                    loader_get_fullpath(library_path, def_path, path_len, fullpath);
+#else // WIN32
+                    strncpy(fullpath, library_path, sizeof (fullpath));
+                    fullpath[sizeof (fullpath) - 1] = '\0';
+#endif
+                } else {
+                    // a relative or absolute path
+                    char *name_copy = loader_stack_alloc(strlen(file_str) + 2);
+                    size_t len;
+                    strcpy(name_copy, file_str);
+                    rel_base = loader_platform_dirname(name_copy);
+                    len = strlen(rel_base);
+                    rel_base[len] = DIRECTORY_SYMBOL;
+                    rel_base[len + 1] = '\0';
+                    path_len = strlen(rel_base) + strlen(library_path) + 2;
+                    fullpath = loader_stack_alloc(path_len);
+                    loader_expand_path(library_path, rel_base, path_len, fullpath);
+                }
+                loader_scanned_icd_add(icds, fullpath);
             }
-            else
-                loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
+
         }
         else
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"ICD\" object in ICD JSON file %s, skipping", file_str);
