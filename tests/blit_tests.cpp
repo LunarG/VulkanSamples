@@ -1168,16 +1168,16 @@ protected:
         // TODO support all formats
         switch (format) {
         case VK_FORMAT_R8G8B8A8_UNORM:
-            raw.push_back((uint8_t)(color.f32[0] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[1] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[2] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[3] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[0] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[1] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[2] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[3] * 255.0f));
             break;
         case VK_FORMAT_B8G8R8A8_UNORM:
-            raw.push_back((uint8_t)(color.f32[2] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[1] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[0] * 255.0f));
-            raw.push_back((uint8_t)(color.f32[3] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[2] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[1] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[0] * 255.0f));
+            raw.push_back((uint8_t)(color.float32[3] * 255.0f));
             break;
         default:
             break;
@@ -1265,7 +1265,7 @@ protected:
                                 const std::vector<VkImageSubresourceRange> &ranges)
     {
         VkClearColorValue c = {};
-        memcpy(c.f32, color, sizeof(c.f32));
+        memcpy(c.float32, color, sizeof(c.float32));
         test_clear_color_image(img_info, c, ranges);
     }
 };

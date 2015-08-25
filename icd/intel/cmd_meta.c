@@ -920,10 +920,10 @@ void cmd_meta_clear_color_image(
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
     meta.samples = img->samples;
 
-    meta.clear_val[0] = pClearColor->u32[0];
-    meta.clear_val[1] = pClearColor->u32[1];
-    meta.clear_val[2] = pClearColor->u32[2];
-    meta.clear_val[3] = pClearColor->u32[3];
+    meta.clear_val[0] = pClearColor->uint32[0];
+    meta.clear_val[1] = pClearColor->uint32[1];
+    meta.clear_val[2] = pClearColor->uint32[2];
+    meta.clear_val[3] = pClearColor->uint32[3];
     format = img->layout.format;
 
     for (i = 0; i < rangeCount; i++) {

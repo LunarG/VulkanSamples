@@ -64,10 +64,10 @@ VkRenderFramework::VkRenderFramework() :
     m_renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 
     // clear the back buffer to dark grey
-    m_clear_color.f32[0] = 0.25f;
-    m_clear_color.f32[1] = 0.25f;
-    m_clear_color.f32[2] = 0.25f;
-    m_clear_color.f32[3] = 0.0f;
+    m_clear_color.float32[0] = 0.25f;
+    m_clear_color.float32[1] = 0.25f;
+    m_clear_color.float32[2] = 0.25f;
+    m_clear_color.float32[3] = 0.0f;
 }
 
 VkRenderFramework::~VkRenderFramework()
@@ -396,8 +396,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
         att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments.push_back(att);
 
-        clear.ds.depth = m_depth_clear_color;
-        clear.ds.stencil = m_stencil_clear_color;
+        clear.depthStencil.depth = m_depth_clear_color;
+        clear.depthStencil.stencil = m_stencil_clear_color;
         m_renderPassClearValues.push_back(clear);
 
         bindings.push_back(*dsBinding);

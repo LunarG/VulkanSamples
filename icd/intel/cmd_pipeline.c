@@ -3745,7 +3745,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 
             cmd_meta_clear_depth_stencil_image(cmdBuffer,
                     view->img, att->initial_layout,
-                    clear_val->ds.depth, clear_val->ds.stencil,
+                    clear_val->depthStencil.depth, clear_val->depthStencil.stencil,
                     1, &range);
 
             if (att->stencil_clear_on_load) {
@@ -3753,7 +3753,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 
                 cmd_meta_clear_depth_stencil_image(cmdBuffer,
                         view->img, att->initial_layout,
-                        clear_val->ds.depth, clear_val->ds.stencil,
+                        clear_val->depthStencil.depth, clear_val->depthStencil.stencil,
                         1, &range);
             }
         }

@@ -2073,10 +2073,10 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     // Main thing we care about for this test is that the VkImage obj we're clearing matches Color Attachment of FB
     //  Also pass down other dummy params to keep driver and paramchecker happy
     VkClearColorValue cCV;
-    cCV.f32[0] = 1.0;
-    cCV.f32[1] = 1.0;
-    cCV.f32[2] = 1.0;
-    cCV.f32[3] = 1.0;
+    cCV.float32[0] = 1.0;
+    cCV.float32[1] = 1.0;
+    cCV.float32[2] = 1.0;
+    cCV.float32[3] = 1.0;
 
     vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
     msgFlags = m_errorMonitor->GetState(&msgString);

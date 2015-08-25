@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 154, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 155, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -2013,9 +2013,9 @@ typedef struct {
 } VkBufferImageCopy;
 
 typedef union {
-    float                                       f32[4];
-    int32_t                                     s32[4];
-    uint32_t                                    u32[4];
+    float                                       float32[4];
+    int32_t                                     int32[4];
+    uint32_t                                    uint32[4];
 } VkClearColorValue;
 
 typedef struct {
@@ -2038,7 +2038,7 @@ typedef struct {
 
 typedef union {
     VkClearColorValue                           color;
-    VkClearDepthStencilValue                    ds;
+    VkClearDepthStencilValue                    depthStencil;
 } VkClearValue;
 
 typedef struct {

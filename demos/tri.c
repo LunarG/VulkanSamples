@@ -357,8 +357,8 @@ static void demo_draw_build_cmd(struct demo *demo)
         .framebuffer = VK_NULL_HANDLE,
     };
     const VkClearValue clear_values[2] = {
-        [0] = { .color.f32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
-        [1] = { .ds = { 0.9f, 0 } },
+        [0] = { .color.float32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
+        [1] = { .depthStencil = { 0.9f, 0 } },
     };
     const VkRenderPassBeginInfo rp_begin = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

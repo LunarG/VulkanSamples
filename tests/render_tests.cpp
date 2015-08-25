@@ -4127,10 +4127,10 @@ TEST_F(VkRenderTest, RenderPassLoadOpClear)
 
     /* clear via load op to full green */
     m_clear_via_load_op = true;
-    m_clear_color.f32[0] = 0;
-    m_clear_color.f32[1] = 1;
-    m_clear_color.f32[2] = 0;
-    m_clear_color.f32[3] = 0;
+    m_clear_color.float32[0] = 0;
+    m_clear_color.float32[1] = 1;
+    m_clear_color.float32[2] = 0;
+    m_clear_color.float32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ASSERT_VK_SUCCESS(BeginCommandBuffer());
     /* This command buffer contains ONLY the load op! */
@@ -4147,10 +4147,10 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
 
     /* clear via load op to full red */
     m_clear_via_load_op = true;
-    m_clear_color.f32[0] = 1;
-    m_clear_color.f32[1] = 0;
-    m_clear_color.f32[2] = 0;
-    m_clear_color.f32[3] = 0;
+    m_clear_color.float32[0] = 1;
+    m_clear_color.float32[1] = 0;
+    m_clear_color.float32[2] = 0;
+    m_clear_color.float32[3] = 0;
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ASSERT_VK_SUCCESS(BeginCommandBuffer());
 
@@ -4162,10 +4162,10 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
      * attachment again, this time to green.
      */
     VkClearColorValue clear_color;
-    clear_color.f32[0] = 0;
-    clear_color.f32[1] = 1;
-    clear_color.f32[2] = 0;
-    clear_color.f32[3] = 0;
+    clear_color.float32[0] = 0;
+    clear_color.float32[1] = 1;
+    clear_color.float32[2] = 0;
+    clear_color.float32[3] = 0;
     VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
     vkCmdClearColorAttachment(m_cmdBuffer->handle(), 0,
                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
