@@ -37,6 +37,8 @@ VkResult init_device(struct sample_info &info);
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count = 1);
 void init_connection(struct sample_info &info);
 void init_window(struct sample_info &info);
+void init_wsi(struct sample_info &info);
+void init_swap_chain(struct sample_info &info);
 void init_depth_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info);
 

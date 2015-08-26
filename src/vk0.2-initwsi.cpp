@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 
 #define WORK_AROUND_CODE
 #ifdef WORK_AROUND_CODE
-    uint32_t desiredNumberOfSwapChainImages = 2;
+    uint32_t desiredNumberOfSwapChainImages = SAMPLE_BUFFER_COUNT;
 #else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
@@ -288,7 +288,7 @@ int main(int argc, char **argv)
     assert(!res);
 
 #ifdef WORK_AROUND_CODE
-    info.swapChainImageCount = 2;
+    info.swapChainImageCount = SAMPLE_BUFFER_COUNT;
 #else  // WORK_AROUND_CODE
     // The number of images within the swap chain is determined based on the size of the info returned
     info.swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
