@@ -34,6 +34,8 @@ echo "Descriptor and Pipeline Layouts"
 & $dPath\vk0.2-descriptor_pipeline_layouts
 echo "Vertex Buffer"
 & $dPath\vk0.2-vertexbuffer
+echo "Dynamic State"
+& $dPath\vk0.2-dynamicstate
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"
