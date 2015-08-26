@@ -40,17 +40,8 @@ extern "C"
 */
 
 #if defined(_WIN32)
-    // Ensure we don't pick up min/max macros from Winddef.h
-    #define NOMINMAX
-
     // On Windows, VKAPI should equate to the __stdcall convention
     #define VKAPI   __stdcall
-
-    // C99:
-#ifndef __cplusplus
-    #undef inline
-    #define inline __inline
-#endif // __cplusplus
 #elif defined(__GNUC__)
     // On other platforms using GCC, VKAPI stays undefined
     #define VKAPI
@@ -75,16 +66,6 @@ extern "C"
         #include <stdint.h>
     #endif
 #endif // !defined(VK_NO_STDINT_H)
-
-#if (UINTPTR_MAX >= UINT64_MAX)
-    #define VK_UINTPTRLEAST64_MAX UINTPTR_MAX
-
-    typedef uintptr_t VkUintPtrLeast64;
-#else
-    #define VK_UINTPTRLEAST64_MAX UINT64_MAX
-
-    typedef uint64_t  VkUintPtrLeast64;
-#endif
 
 #ifdef __cplusplus
 } // extern "C"

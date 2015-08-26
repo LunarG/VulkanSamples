@@ -183,7 +183,7 @@ addQueueInfo(
         g_pQueueInfo          = pQueueInfo;
     }
     else {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<VkUintPtrLeast64>(queue), 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK",
+        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(queue), 0, OBJTRACK_INTERNAL_ERROR, "OBJTRACK",
             "ERROR:  VK_ERROR_OUT_OF_HOST_MEMORY -- could not allocate memory for Queue Information");
     }
 }
@@ -232,10 +232,10 @@ validateQueueFlags(
     }
     if (pQueueInfo != NULL) {
         if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_MEMMGR_BIT) == 0) {
-            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<VkUintPtrLeast64>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
+            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
                 "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not set", function);
         } else {
-            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<VkUintPtrLeast64>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
+            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
                 "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not known", function);
         }
     }
@@ -261,7 +261,7 @@ validate_status(
             char str[1024];
             log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
                 "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkObjectType(objType),
-                 reinterpret_cast<VkUintPtrLeast64>(vkObj), fail_msg);
+                 reinterpret_cast<uint64_t>(vkObj), fail_msg);
             return VK_FALSE;
         }
         return VK_TRUE;
@@ -270,7 +270,7 @@ validate_status(
         // If we do not find it print an error
         log_msg(mdd(dispatchable_object), msg_flags, (VkObjectType) 0, vkObj, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
             "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-            reinterpret_cast<VkUintPtrLeast64>(vkObj), string_VkObjectType(objType));
+            reinterpret_cast<uint64_t>(vkObj), string_VkObjectType(objType));
         return VK_FALSE;
     }
 }
@@ -376,21 +376,21 @@ static void validate_object(VkQueue dispatchable_object, VkSemaphore object)
 static void validate_object(VkDevice dispatchable_object, VkCmdBuffer object)
 {
     if (VkCmdBufferMap.find(object) == VkCmdBufferMap.end()) {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkCmdBuffer Object %p",reinterpret_cast<VkUintPtrLeast64>(object));
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkCmdBuffer Object %p",reinterpret_cast<uint64_t>(object));
     }
 }
 
 static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObjectType objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
-        reinterpret_cast<VkUintPtrLeast64>(vkObj));
+        reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
     pNewObjNode->status  = OBJSTATUS_NONE;
-    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj);
+    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);
     VkCmdBufferMap[vkObj] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;

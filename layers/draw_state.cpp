@@ -354,7 +354,7 @@ static VkBool32 validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask
         if ((pNode->status & status_mask) != status_flag) {
             // TODO : How to pass dispatchable objects as srcObject? Here src obj should be cmd buffer
             log_msg(mdd(pNode->cmdBuffer), msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, error_code, "DS",
-                    "CB object %#" PRIxLEAST64 ": %s", reinterpret_cast<VkUintPtrLeast64>(pNode->cmdBuffer), fail_msg);
+                    "CB object %#" PRIxLEAST64 ": %s", reinterpret_cast<uint64_t>(pNode->cmdBuffer), fail_msg);
             return VK_FALSE;
         }
     }
@@ -1071,7 +1071,7 @@ static GLOBAL_CB_NODE* getCBNode(VkCmdBuffer cb)
         loader_platform_thread_unlock_mutex(&globalLock);
         // TODO : How to pass cb as srcObj here?
         log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
-                "Attempt to use CmdBuffer %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<VkUintPtrLeast64>(cb));
+                "Attempt to use CmdBuffer %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(cb));
         return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1112,7 +1112,7 @@ static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
     } else {
         // TODO : How to pass cb as srcObj here?
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %#" PRIxLEAST64, reinterpret_cast<VkUintPtrLeast64>(pCB->cmdBuffer));
+                "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %#" PRIxLEAST64, reinterpret_cast<uint64_t>(pCB->cmdBuffer));
     }
 }
 static void resetCB(const VkCmdBuffer cb)
@@ -1491,13 +1491,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
         pCB->submitCount++; // increment submit count
         if ((pCB->beginInfo.flags & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
             log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                    "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<VkUintPtrLeast64>(pCB->cmdBuffer), pCB->submitCount);
+                    "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<uint64_t>(pCB->cmdBuffer), pCB->submitCount);
         }
         if (CB_UPDATE_COMPLETE != pCB->state) {
             // Flag error for using CB w/o vkEndCommandBuffer() called
             // TODO : How to pass cb as srcObj?
             log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS",
-                    "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<VkUintPtrLeast64>(pCB->cmdBuffer));
+                    "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->cmdBuffer));
             loader_platform_thread_unlock_mutex(&globalLock);
             return VK_ERROR_UNKNOWN;
         }
@@ -2666,7 +2666,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
                 // TODO : cmdBuffer should be srcObj
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearColorAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
-                        " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<VkUintPtrLeast64>(cmdBuffer));
+                        " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             if (!pCB->activeRenderPass) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
@@ -2700,7 +2700,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
                 // TODO : cmdBuffer should be srcObj
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearDepthStencilAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
-                        " It is recommended you use RenderPass LOAD_OP_CLEAR on DS Attachment prior to any Draw.", reinterpret_cast<VkUintPtrLeast64>(cmdBuffer));
+                        " It is recommended you use RenderPass LOAD_OP_CLEAR on DS Attachment prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             if (!pCB->activeRenderPass) {
                 log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",

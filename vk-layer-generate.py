@@ -1137,9 +1137,9 @@ class ObjectTrackerSubcommand(Subcommand):
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
                 procs_txt.append('static void create_obj(%s dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o, o))
                 procs_txt.append('{')
-                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
-                procs_txt.append('        reinterpret_cast<VkUintPtrLeast64>(vkObj));')
+                procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
             else:
                 procs_txt.append('static void create_obj(VkDevice dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o))
                 procs_txt.append('{')
@@ -1151,7 +1151,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    pNewObjNode->objType = objType;')
             procs_txt.append('    pNewObjNode->status  = OBJSTATUS_NONE;')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<VkUintPtrLeast64>(vkObj);')
+                procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);')
                 procs_txt.append('    %sMap[vkObj] = pNewObjNode;' % (o))
             else:
                 procs_txt.append('    pNewObjNode->vkObj  = vkObj.handle;')
@@ -1169,8 +1169,8 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('{')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
                 procs_txt.append('    if (%sMap.find(object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<VkUintPtrLeast64>(object));' % o)
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<uint64_t>(object));' % o)
             else:
                 procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
@@ -1197,9 +1197,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
-                procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<VkUintPtrLeast64>(object), numTotalObjs, numObjs[objIndex],')
+                procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
             else:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
@@ -1209,9 +1209,9 @@ class ObjectTrackerSubcommand(Subcommand):
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
                 procs_txt.append('        %sMap.erase(object);' % (o))
                 procs_txt.append('    } else {')
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
-                procs_txt.append('           reinterpret_cast<VkUintPtrLeast64>(object));')
+                procs_txt.append('           reinterpret_cast<uint64_t>(object));')
                 procs_txt.append('    }')
             else:
                 procs_txt.append('        %sMap.erase((void*)object.handle);' % (o))
@@ -1241,9 +1241,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        else {')
             procs_txt.append('            // If we do not find it print an error')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+                procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('                reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+                procs_txt.append('                reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             else:
                 procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
@@ -1273,9 +1273,9 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
             procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
-                procs_txt.append('                 reinterpret_cast<VkUintPtrLeast64>(object), fail_msg);')
+                procs_txt.append('                 reinterpret_cast<uint64_t>(object), fail_msg);')
             else:
                 procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
@@ -1287,9 +1287,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+                procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             else:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
@@ -1315,9 +1315,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
             if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<VkUintPtrLeast64>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            reinterpret_cast<VkUintPtrLeast64>(object), string_VkDbgObjectType(objType));')
+                procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             else:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
@@ -1615,7 +1615,7 @@ class ThreadingSubcommand(Subcommand):
         obj_type = self.thread_check_object_types[ty]
         if ty in self.thread_check_dispatchable_objects:
             key = "object"
-            msg_object = "reinterpret_cast<VkUintPtrLeast64>(object)"
+            msg_object = "reinterpret_cast<uint64_t>(object)"
         else:
             key = "object.handle"
             msg_object = "object.handle"
