@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.11)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../LoaderAndTools/cmake")
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
 set(SHADER_FILES ${SHADER_FILES} "")
+include_directories( ${SAMPLES_DATA_DIR} )
 
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes VULKAN_VERSION set (i.e. vk0.2)
@@ -139,7 +140,7 @@ endif()
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate enumerate-adv depthbuffer initwsi initTexture uniformbuffer descriptor_pipeline_layouts initcommandbuffer initrenderpass initframebuffers)
+set (S_TARGETS instance device enumerate enumerate-adv depthbuffer initwsi initTexture uniformbuffer descriptor_pipeline_layouts initcommandbuffer initrenderpass initframebuffers vertexbuffer)
 sampleWithSingleFile()
 
 # targets that use spv shaders
