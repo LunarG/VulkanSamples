@@ -50,11 +50,12 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
+    info.width = info.height = 500;
+    init_connection(info);
+    init_window(info);
+    init_wsi(info);
     res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
     assert(!res);
-
-    /* HACK - Do this the right way once we have WSI code to call */
-    info.graphics_queue_family_index = 0;
 
     VkCmdPoolCreateInfo cmd_pool_info = {};
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
@@ -67,9 +68,6 @@ int main(int argc, char **argv)
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
     assert(!res);
-
-    info.width = info.height = 50;
-
 
     /* VULKAN_KEY_START */
     VkImageCreateInfo image_info = {};
