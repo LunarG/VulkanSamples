@@ -61,6 +61,17 @@ else()
     list(APPEND sources wsi_null.c)
 endif()
 
+if (NOT WIN32)
+    # extra setup for out-of-tree builds
+    # intel ICD not built on Windows
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+            add_custom_target(intel_icd-json ALL
+                COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/intel_icd.json
+                VERBATIM
+                )
+    endif()
+endif()
+
 add_library(VK_i965 SHARED ${sources})
 target_compile_definitions(VK_i965 PRIVATE ${definitions})
 target_include_directories(VK_i965 PRIVATE ${include_dirs})

@@ -1,7 +1,7 @@
 {
     "file_format_version": "1.0.0",
     "ICD": {
-        "library_path": "libVK_i965.so",
+        "library_path": "./libVK_i965.so",
         "abi_versions": "1.0.0"
     }
 }
