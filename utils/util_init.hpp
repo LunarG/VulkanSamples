@@ -45,6 +45,7 @@ void init_depth_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info);
 void init_renderpass(struct sample_info &info);
 void init_framebuffers(struct sample_info &info);
+void init_dynamic_state(struct sample_info &info);
 
 
 #endif // UTIL_INIT

@@ -911,3 +911,70 @@ void init_vertex_buffer(struct sample_info &info)
 
     info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
 }
+
+void init_dynamic_state(struct sample_info &info)
+{
+    VkResult res;
+
+    VkDynamicViewportStateCreateInfo viewport_create = {};
+    viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
+    viewport_create.pNext = NULL;
+    viewport_create.viewportAndScissorCount = 1;
+    VkViewport viewport = {};
+    viewport.height = (float) info.height;
+    viewport.width = (float) info.width;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
+    viewport.originX = 0;
+    viewport.originY = 0;
+    viewport_create.pViewports = &viewport;
+    VkRect2D scissor = {};
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    viewport_create.pScissors = &scissor;
+
+    res = vkCreateDynamicViewportState(info.device, &viewport_create, &info.dyn_viewport);
+    assert(!res);
+
+
+    VkDynamicRasterStateCreateInfo raster_create = {};
+    raster_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
+    raster_create.pNext = NULL;
+    raster_create.depthBias = 0;
+    raster_create.depthBiasClamp = 0;
+    raster_create.slopeScaledDepthBias = 0;
+    raster_create.lineWidth = 1.0;
+
+    res = vkCreateDynamicRasterState(info.device, &raster_create, &info.dyn_raster);
+    assert(!res);
+
+    VkDynamicColorBlendStateCreateInfo blend_create = {};
+    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
+    blend_create.pNext = NULL;
+    blend_create.blendConst[0] = 1.0f;
+    blend_create.blendConst[1] = 1.0f;
+    blend_create.blendConst[2] = 1.0f;
+    blend_create.blendConst[3] = 1.0f;
+
+    res = vkCreateDynamicColorBlendState(info.device,
+            &blend_create, &info.dyn_blend);
+    assert(!res);
+
+
+    VkDynamicDepthStencilStateCreateInfo depth_create = {};
+    depth_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_create.pNext = NULL;
+    depth_create.minDepthBounds = 0.0f;
+    depth_create.maxDepthBounds = 1.0f;
+    depth_create.stencilBackRef = 0;
+    depth_create.stencilFrontRef = 0;
+    depth_create.stencilReadMask = 0xff;
+    depth_create.stencilWriteMask = 0xff;
+
+    res = vkCreateDynamicDepthStencilState(info.device,
+            &depth_create, &info.dyn_depth);
+    assert(!res);
+
+}

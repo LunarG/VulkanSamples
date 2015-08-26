@@ -194,10 +194,10 @@ struct sample_info {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkDynamicViewportState viewport;
-    VkDynamicRasterState raster;
-    VkDynamicColorBlendState color_blend;
-    VkDynamicDepthStencilState depth_stencil;
+    VkDynamicViewportState dyn_viewport;
+    VkDynamicRasterState dyn_raster;
+    VkDynamicColorBlendState dyn_blend;
+    VkDynamicDepthStencilState dyn_depth;
 
     VkShaderModule vert_shader_module;
     VkShaderModule frag_shader_module;

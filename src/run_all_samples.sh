@@ -25,6 +25,8 @@ echo "Descriptor and Pipeline Layouts"
 ./vk0.2-descriptor_pipeline_layouts
 echo "Vertex Buffer"
 ./vk0.2-vertexbuffer
+echo "Dynamic State"
+./vk0.2-dynamicstate
 echo "Use GLSL Shader"
 ./vk0.2-useglslshader
 echo "Use SPIR-V Shader"
