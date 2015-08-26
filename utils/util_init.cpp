@@ -29,7 +29,9 @@ samples "init" utility functions
 
 #include <cstdlib>
 #include <assert.h>
+#include <string.h>
 #include "util_init.hpp"
+#include "cube_data.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -851,4 +853,61 @@ void init_device_queue(struct sample_info &info)
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
     assert(!res);
+}
+
+void init_vertex_buffer(struct sample_info &info)
+{
+    VkResult res;
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buf_info.size = sizeof(info.MVP);
+    res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
+    assert(!res);
+
+    VkMemoryRequirements mem_reqs;
+    res = vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
+    assert(!res);
+
+    VkMemoryAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    alloc_info.allocationSize = mem_reqs.size;
+    res = memory_type_from_properties(info,
+                                      mem_reqs.memoryTypeBits,
+                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                      &alloc_info.memoryTypeIndex);
+    assert(!res);
+
+    res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
+    assert(!res);
+
+    uint8_t *pData;
+    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, 0, 0, (void **) &pData);
+    assert(!res);
+
+    memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
+
+    res = vkUnmapMemory(info.device, info.vertex_buffer.mem);
+    assert(!res);
+
+    res = vkBindBufferMemory(info.device,
+            info.vertex_buffer.buf,
+            info.vertex_buffer.mem, 0);
+    assert(!res);
+
+    VkBufferViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.buffer = info.vertex_buffer.buf;
+    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
+    view_info.offset = 0;
+    view_info.range = sizeof(info.MVP);
+
+    res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
+    assert(!res);
+
+    info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
 }

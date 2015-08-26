@@ -175,6 +175,13 @@ struct sample_info {
         VkDescriptorInfo desc;
     } uniform_data;
 
+    struct {
+        VkBuffer buf;
+        VkDeviceMemory mem;
+        VkBufferView view;
+        VkDescriptorInfo desc;
+    } vertex_buffer;
+
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
