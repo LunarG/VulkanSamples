@@ -47,6 +47,8 @@
 #include <vulkan/vk_debug_report_lunarg.h>
 #endif // _WIN32
 
+#define SAMPLE_BUFFER_COUNT 2
+
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
     info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
@@ -90,7 +92,7 @@ typedef struct _swap_chain_buffers {
     VkImage image;
     VkCmdBuffer cmd;
     VkAttachmentView view;
-} swap_chain_buffers;
+} swap_chain_buffer;
 
 /*
  * A layer can expose extensions, keep track of those
@@ -139,7 +141,7 @@ struct sample_info {
     std::vector<VkPhysicalDeviceQueueProperties> queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
-    VkFramebuffer framebuffer;
+    VkFramebuffer framebuffers[SAMPLE_BUFFER_COUNT];
     int width, height;
     VkFormat format;
 
@@ -153,7 +155,7 @@ struct sample_info {
     VkSurfaceDescriptionWindowWSI surface_description;
     size_t swapChainImageCount;
     VkSwapChainWSI swap_chain;
-    std::vector<swap_chain_buffers> buffers;
+    std::vector<swap_chain_buffer> buffers;
 
     VkCmdPool cmd_pool;
 
@@ -196,8 +198,6 @@ struct sample_info {
 
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
-
-    std::vector<VkFramebuffer> framebuffers;
 
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
