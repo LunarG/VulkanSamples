@@ -253,122 +253,122 @@ void intel_viewport_state_destroy(struct intel_dynamic_viewport *state)
     intel_base_destroy(&state->obj.base);
 }
 
-static void raster_line_state_destroy(struct intel_obj *obj)
+static void line_width_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_raster_line *state = intel_raster_line_state_from_obj(obj);
+    struct intel_dynamic_line_width *state = intel_line_width_state_from_obj(obj);
 
-    intel_raster_line_state_destroy(state);
+    intel_line_width_state_destroy(state);
 }
 
-VkResult intel_raster_line_state_create(struct intel_dev *dev,
-                                        const VkDynamicRasterLineStateCreateInfo *info,
-                                        struct intel_dynamic_raster_line **state_ret)
+VkResult intel_line_width_state_create(struct intel_dev *dev,
+                                        const VkDynamicLineWidthStateCreateInfo *info,
+                                        struct intel_dynamic_line_width **state_ret)
 {
-    struct intel_dynamic_raster_line *state;
+    struct intel_dynamic_line_width *state;
 
-    state = (struct intel_dynamic_raster_line *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE,
+    state = (struct intel_dynamic_line_width *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = raster_line_state_destroy;
-    state->raster_line_info = *info;
+    state->obj.destroy = line_width_state_destroy;
+    state->line_width_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_raster_line_state_destroy(struct intel_dynamic_raster_line *state)
+void intel_line_width_state_destroy(struct intel_dynamic_line_width *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
-static void raster_depth_bias_state_destroy(struct intel_obj *obj)
+static void depth_bias_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_raster_depth_bias *state = intel_raster_depth_bias_state_from_obj(obj);
+    struct intel_dynamic_depth_bias *state = intel_depth_bias_state_from_obj(obj);
 
-    intel_raster_depth_bias_state_destroy(state);
+    intel_depth_bias_state_destroy(state);
 }
 
-VkResult intel_raster_depth_bias_state_create(struct intel_dev *dev,
-                                              const VkDynamicRasterDepthBiasStateCreateInfo *info,
-                                              struct intel_dynamic_raster_depth_bias **state_ret)
+VkResult intel_depth_bias_state_create(struct intel_dev *dev,
+                                              const VkDynamicDepthBiasStateCreateInfo *info,
+                                              struct intel_dynamic_depth_bias **state_ret)
 {
-    struct intel_dynamic_raster_depth_bias *state;
+    struct intel_dynamic_depth_bias *state;
 
-    state = (struct intel_dynamic_raster_depth_bias *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE,
+    state = (struct intel_dynamic_depth_bias *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = raster_depth_bias_state_destroy;
-    state->raster_depth_bias_info = *info;
+    state->obj.destroy = depth_bias_state_destroy;
+    state->depth_bias_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_raster_depth_bias_state_destroy(struct intel_dynamic_raster_depth_bias *state)
+void intel_depth_bias_state_destroy(struct intel_dynamic_depth_bias *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
 static void blend_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_color_blend *state = intel_blend_state_from_obj(obj);
+    struct intel_dynamic_blend *state = intel_blend_state_from_obj(obj);
 
     intel_blend_state_destroy(state);
 }
 
 VkResult intel_blend_state_create(struct intel_dev *dev,
-                                    const VkDynamicColorBlendStateCreateInfo *info,
-                                    struct intel_dynamic_color_blend **state_ret)
+                                    const VkDynamicBlendStateCreateInfo *info,
+                                    struct intel_dynamic_blend **state_ret)
 {
-    struct intel_dynamic_color_blend *state;
+    struct intel_dynamic_blend *state;
 
-    state = (struct intel_dynamic_color_blend *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE,
+    state = (struct intel_dynamic_blend *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     state->obj.destroy = blend_state_destroy;
-    state->color_blend_info = *info;
+    state->blend_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_blend_state_destroy(struct intel_dynamic_color_blend *state)
+void intel_blend_state_destroy(struct intel_dynamic_blend *state)
 {
     intel_base_destroy(&state->obj.base);
 }
 
-static void depth_state_destroy(struct intel_obj *obj)
+static void depth_bounds_state_destroy(struct intel_obj *obj)
 {
-    struct intel_dynamic_depth *state = intel_depth_state_from_obj(obj);
+    struct intel_dynamic_depth_bounds *state = intel_depth_bounds_state_from_obj(obj);
 
-    intel_depth_state_destroy(state);
+    intel_depth_bounds_state_destroy(state);
 }
 
-VkResult intel_depth_state_create(struct intel_dev *dev,
-                                 const VkDynamicDepthStateCreateInfo *info,
-                                 struct intel_dynamic_depth **state_ret)
+VkResult intel_depth_bounds_state_create(struct intel_dev *dev,
+                                 const VkDynamicDepthBoundsStateCreateInfo *info,
+                                 struct intel_dynamic_depth_bounds **state_ret)
 {
-    struct intel_dynamic_depth *state;
+    struct intel_dynamic_depth_bounds *state;
 
-    state = (struct intel_dynamic_depth *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE,
+    state = (struct intel_dynamic_depth_bounds *) intel_base_create(&dev->base.handle,
+            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE,
             info, 0);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    state->obj.destroy = depth_state_destroy;
+    state->obj.destroy = depth_bounds_state_destroy;
 
     /*
      * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -385,14 +385,14 @@ VkResult intel_depth_state_create(struct intel_dev *dev,
      * TODO We do not check these yet.
      */
 
-    state->depth_info = *info;
+    state->depth_bounds_info = *info;
 
     *state_ret = state;
 
     return VK_SUCCESS;
 }
 
-void intel_depth_state_destroy(struct intel_dynamic_depth *state)
+void intel_depth_bounds_state_destroy(struct intel_dynamic_depth_bounds *state)
 {
     intel_base_destroy(&state->obj.base);
 }
@@ -475,89 +475,89 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
     VkDevice                                  device,
-    const VkDynamicRasterLineStateCreateInfo* pCreateInfo,
-    VkDynamicRasterLineState*                 pState)
+    const VkDynamicLineWidthStateCreateInfo*  pCreateInfo,
+    VkDynamicLineWidthState*                  pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_raster_line_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_raster_line **) pState);
+    return intel_line_width_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_line_width **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterLineState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(
     VkDevice                                device,
-    VkDynamicRasterLineState                dynamicRasterLineState)
+    VkDynamicLineWidthState                 dynamicLineWidthState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicRasterLineState.handle);
+    struct intel_obj *obj = intel_obj(dynamicLineWidthState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
     VkDevice                                        device,
-    const VkDynamicRasterDepthBiasStateCreateInfo*  pCreateInfo,
-    VkDynamicRasterDepthBiasState*                  pState)
+    const VkDynamicDepthBiasStateCreateInfo*        pCreateInfo,
+    VkDynamicDepthBiasState*                        pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_raster_depth_bias_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_raster_depth_bias **) pState);
+    return intel_depth_bias_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_depth_bias **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(
     VkDevice                                device,
-    VkDynamicRasterDepthBiasState           dynamicRasterDepthBiasState)
+    VkDynamicDepthBiasState                 dynamicDepthBiasState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicRasterDepthBiasState.handle);
+    struct intel_obj *obj = intel_obj(dynamicDepthBiasState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
     VkDevice                                      device,
-    const VkDynamicColorBlendStateCreateInfo*     pCreateInfo,
-    VkDynamicColorBlendState*                     pState)
+    const VkDynamicBlendStateCreateInfo*          pCreateInfo,
+    VkDynamicBlendState*                          pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_blend_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_color_blend **) pState);
+            (struct intel_dynamic_blend **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(
     VkDevice                                device,
-    VkDynamicColorBlendState                dynamicColorBlendState)
+    VkDynamicBlendState                     dynamicBlendState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicColorBlendState.handle);
+    struct intel_obj *obj = intel_obj(dynamicBlendState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
     VkDevice                                        device,
-    const VkDynamicDepthStateCreateInfo*            pCreateInfo,
-    VkDynamicDepthState*                            pState)
+    const VkDynamicDepthBoundsStateCreateInfo*      pCreateInfo,
+    VkDynamicDepthBoundsState*                      pState)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_depth_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_depth **) pState);
+    return intel_depth_bounds_state_create(dev, pCreateInfo,
+            (struct intel_dynamic_depth_bounds **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(
     VkDevice                                device,
-    VkDynamicDepthState                     dynamicDepthState)
+    VkDynamicDepthBoundsState               dynamicDepthBoundsState)
 
 {
-    struct intel_obj *obj = intel_obj(dynamicDepthState.handle);
+    struct intel_obj *obj = intel_obj(dynamicDepthBoundsState.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;

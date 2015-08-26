@@ -148,19 +148,19 @@ struct nulldrv_dynamic_vp {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_rs_line {
+struct nulldrv_dynamic_line_width {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_rs_depth_bias {
+struct nulldrv_dynamic_depth_bias {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_cb {
+struct nulldrv_dynamic_blend {
     struct nulldrv_obj obj;
 };
 
-struct nulldrv_dynamic_depth {
+struct nulldrv_dynamic_depth_bounds {
     struct nulldrv_obj obj;
 };
 

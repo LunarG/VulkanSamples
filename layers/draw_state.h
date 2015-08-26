@@ -52,10 +52,10 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
     DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
-    DRAWSTATE_RASTER_LINE_NOT_BOUND,            // Draw submitted with no raster line state object bound
-    DRAWSTATE_RASTER_DEPTH_BIAS_NOT_BOUND,      // Draw submitted with no raster depth bias state object bound
-    DRAWSTATE_COLOR_BLEND_NOT_BOUND,            // Draw submitted with no color blend state object bound when color write enabled
-    DRAWSTATE_DEPTH_NOT_BOUND,                  // Draw submitted with no depth state object bound when depth enabled
+    DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state object bound
+    DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state object bound
+    DRAWSTATE_BLEND_NOT_BOUND,                  // Draw submitted with no blend state object bound when color write enabled
+    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds state object bound when depth enabled
     DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state object bound when stencil enabled
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
     DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
@@ -166,10 +166,10 @@ typedef enum _CMD_TYPE
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_BINDDYNAMICVIEWPORTSTATE,
-    CMD_BINDDYNAMICRASTERLINESTATE,
-    CMD_BINDDYNAMICRASTERDEPTHBIASSTATE,
-    CMD_BINDDYNAMICCOLORBLENDSTATE,
-    CMD_BINDDYNAMICDEPTHSTATE,
+    CMD_BINDDYNAMICLINEWIDTHSTATE,
+    CMD_BINDDYNAMICDEPTHBIASSTATE,
+    CMD_BINDDYNAMICBLENDSTATE,
+    CMD_BINDDYNAMICDEPTHBOUNDSSTATE,
     CMD_BINDDYNAMICSTENCILSTATE,
     CMD_BINDDESCRIPTORSETS,
     CMD_BINDINDEXBUFFER,
@@ -229,13 +229,13 @@ typedef enum _CBStatusFlagBits
 {
     CBSTATUS_NONE                              = 0x00000000, // No status is set
     CBSTATUS_VIEWPORT_BOUND                    = 0x00000001, // Viewport state object has been bound
-    CBSTATUS_RASTER_LINE_BOUND                 = 0x00000002, // Raster state object has been bound
-    CBSTATUS_RASTER_DEPTH_BIAS_BOUND           = 0x00000004, // Raster state object has been bound
+    CBSTATUS_LINE_WIDTH_BOUND                  = 0x00000002, // Line width state object has been bound
+    CBSTATUS_DEPTH_BIAS_BOUND                  = 0x00000004, // Raster state object has been bound
     CBSTATUS_COLOR_BLEND_WRITE_ENABLE          = 0x00000008, // PSO w/ CB Enable set has been bound
-    CBSTATUS_COLOR_BLEND_BOUND                 = 0x00000010, // CB state object has been bound
+    CBSTATUS_BLEND_BOUND                       = 0x00000010, // Blend state object has been bound
     CBSTATUS_DEPTH_WRITE_ENABLE                = 0x00000020, // PSO w/ Depth Enable set has been bound
     CBSTATUS_STENCIL_TEST_ENABLE               = 0x00000040, // PSO w/ Stencil Enable set has been bound
-    CBSTATUS_DEPTH_BOUND                       = 0x00000080, // Depth state object has been bound
+    CBSTATUS_DEPTH_BOUNDS_BOUND                = 0x00000080, // Depth bounds state object has been bound
     CBSTATUS_STENCIL_BOUND                     = 0x00000100, // Stencil state object has been bound
     CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000200, // Index buffer has been bound
 } CBStatusFlagBits;

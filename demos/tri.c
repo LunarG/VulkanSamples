@@ -216,11 +216,11 @@ struct demo {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkDynamicViewportState viewport;
-    VkDynamicRasterLineState raster_line;
-    VkDynamicRasterDepthBiasState raster_depth_bias;
-    VkDynamicColorBlendState color_blend;
-    VkDynamicDepthState dynamic_depth;
+    VkDynamicViewportState dynamic_viewport;
+    VkDynamicLineWidthState dynamic_line_width;
+    VkDynamicDepthBiasState dynamic_depth_bias;
+    VkDynamicBlendState dynamic_blend;
+    VkDynamicDepthBoundsState dynamic_depth_bounds;
     VkDynamicStencilState dynamic_stencil;
 
     VkShaderModule vert_shader_module;
@@ -383,11 +383,11 @@ static void demo_draw_build_cmd(struct demo *demo)
     vkCmdBindDescriptorSets(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
             0, 1, & demo->desc_set, 0, NULL);
 
-    vkCmdBindDynamicViewportState(demo->draw_cmd, demo->viewport);
-    vkCmdBindDynamicRasterLineState(demo->draw_cmd, demo->raster_line);
-    vkCmdBindDynamicRasterDepthBiasState(demo->draw_cmd, demo->raster_depth_bias);
-    vkCmdBindDynamicColorBlendState(demo->draw_cmd, demo->color_blend);
-    vkCmdBindDynamicDepthState(demo->draw_cmd, demo->dynamic_depth);
+    vkCmdBindDynamicViewportState(demo->draw_cmd, demo->dynamic_viewport);
+    vkCmdBindDynamicLineWidthState(demo->draw_cmd, demo->dynamic_line_width);
+    vkCmdBindDynamicDepthBiasState(demo->draw_cmd, demo->dynamic_depth_bias);
+    vkCmdBindDynamicBlendState(demo->draw_cmd, demo->dynamic_blend);
+    vkCmdBindDynamicDepthBoundsState(demo->draw_cmd, demo->dynamic_depth_bounds);
     vkCmdBindDynamicStencilState(demo->draw_cmd, demo->dynamic_stencil);
 
     VkDeviceSize offsets[1] = {0};
@@ -1251,7 +1251,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds.depthBoundsEnable = VK_FALSE;
+    ds.depthBoundsTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
@@ -1307,10 +1307,10 @@ static void demo_prepare_pipeline(struct demo *demo)
 static void demo_prepare_dynamic_states(struct demo *demo)
 {
     VkDynamicViewportStateCreateInfo viewport_create;
-    VkDynamicRasterLineStateCreateInfo raster_line;
-    VkDynamicRasterDepthBiasStateCreateInfo raster_depth_bias;
-    VkDynamicColorBlendStateCreateInfo color_blend;
-    VkDynamicDepthStateCreateInfo depth;
+    VkDynamicLineWidthStateCreateInfo line_width;
+    VkDynamicDepthBiasStateCreateInfo depth_bias;
+    VkDynamicBlendStateCreateInfo blend;
+    VkDynamicDepthBoundsStateCreateInfo depth_bounds;
     VkDynamicStencilStateCreateInfo stencil;
     VkResult U_ASSERT_ONLY err;
 
@@ -1332,49 +1332,49 @@ static void demo_prepare_dynamic_states(struct demo *demo)
     scissor.offset.y = 0;
     viewport_create.pScissors = &scissor;
 
-    memset(&raster_line, 0, sizeof(raster_line));
-    raster_line.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO;
-    raster_line.lineWidth = 1.0;
+    memset(&line_width, 0, sizeof(line_width));
+    line_width.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
+    line_width.lineWidth = 1.0;
 
-    memset(&raster_depth_bias, 0, sizeof(raster_depth_bias));
-    raster_depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO;
-    raster_depth_bias.depthBias = 0.0f;
-    raster_depth_bias.depthBiasClamp = 0.0f;
-    raster_depth_bias.slopeScaledDepthBias = 0.0f;
+    memset(&depth_bias, 0, sizeof(depth_bias));
+    depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
+    depth_bias.depthBias = 0.0f;
+    depth_bias.depthBiasClamp = 0.0f;
+    depth_bias.slopeScaledDepthBias = 0.0f;
 
-    memset(&color_blend, 0, sizeof(color_blend));
-    color_blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
-    color_blend.blendConst[0] = 1.0f;
-    color_blend.blendConst[1] = 1.0f;
-    color_blend.blendConst[2] = 1.0f;
-    color_blend.blendConst[3] = 1.0f;
+    memset(&blend, 0, sizeof(blend));
+    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
+    blend.blendConst[0] = 1.0f;
+    blend.blendConst[1] = 1.0f;
+    blend.blendConst[2] = 1.0f;
+    blend.blendConst[3] = 1.0f;
 
-    memset(&depth, 0, sizeof(depth));
-    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STATE_CREATE_INFO;
-    depth.minDepthBounds = 0.0f;
-    depth.maxDepthBounds = 1.0f;
+    memset(&depth_bounds, 0, sizeof(depth_bounds));
+    depth_bounds.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
+    depth_bounds.minDepthBounds = 0.0f;
+    depth_bounds.maxDepthBounds = 1.0f;
 
     memset(&stencil, 0, sizeof(stencil));
     stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
     stencil.stencilReference = 0;
-    stencil.stencilReadMask = 0xff;
+    stencil.stencilCompareMask = 0xff;
     stencil.stencilWriteMask = 0xff;
 
-    err = vkCreateDynamicViewportState(demo->device, &viewport_create, &demo->viewport);
+    err = vkCreateDynamicViewportState(demo->device, &viewport_create, &demo->dynamic_viewport);
     assert(!err);
 
-    err = vkCreateDynamicRasterLineState(demo->device, &raster_line, &demo->raster_line);
+    err = vkCreateDynamicLineWidthState(demo->device, &line_width, &demo->dynamic_line_width);
     assert(!err);
 
-    err = vkCreateDynamicRasterDepthBiasState(demo->device, &raster_depth_bias, &demo->raster_depth_bias);
+    err = vkCreateDynamicDepthBiasState(demo->device, &depth_bias, &demo->dynamic_depth_bias);
     assert(!err);
 
-    err = vkCreateDynamicColorBlendState(demo->device,
-            &color_blend, &demo->color_blend);
+    err = vkCreateDynamicBlendState(demo->device,
+            &blend, &demo->dynamic_blend);
     assert(!err);
 
-    err = vkCreateDynamicDepthState(demo->device,
-            &depth, &demo->dynamic_depth);
+    err = vkCreateDynamicDepthBoundsState(demo->device,
+            &depth_bounds, &demo->dynamic_depth_bounds);
     assert(!err);
 
     err = vkCreateDynamicStencilState(demo->device,
@@ -2123,11 +2123,11 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyCommandBuffer(demo->device, demo->draw_cmd);
     vkDestroyCommandPool(demo->device, demo->cmd_pool);
 
-    vkDestroyDynamicViewportState(demo->device, demo->viewport);
-    vkDestroyDynamicRasterLineState(demo->device, demo->raster_line);
-    vkDestroyDynamicRasterDepthBiasState(demo->device, demo->raster_depth_bias);
-    vkDestroyDynamicColorBlendState(demo->device, demo->color_blend);
-    vkDestroyDynamicDepthState(demo->device, demo->dynamic_depth);
+    vkDestroyDynamicViewportState(demo->device, demo->dynamic_viewport);
+    vkDestroyDynamicLineWidthState(demo->device, demo->dynamic_line_width);
+    vkDestroyDynamicDepthBiasState(demo->device, demo->dynamic_depth_bias);
+    vkDestroyDynamicBlendState(demo->device, demo->dynamic_blend);
+    vkDestroyDynamicDepthBoundsState(demo->device, demo->dynamic_depth_bounds);
     vkDestroyDynamicStencilState(demo->device, demo->dynamic_stencil);
 
     vkDestroyPipeline(demo->device, demo->pipeline);

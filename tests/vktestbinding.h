@@ -56,10 +56,10 @@ class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
 class DynamicViewportState;
-class DynamicRasterLineState;
-class DynamicRasterDepthBiasState;
-class DynamicColorBlendState;
-class DynamicDepthState;
+class DynamicLineWidthState;
+class DynamicDepthBiasState;
+class DynamicBlendState;
+class DynamicDepthBoundsState;
 class DynamicStencilState;
 class CmdBuffer;
 class CmdPool;
@@ -561,36 +561,36 @@ public:
     void init(const Device &dev, const VkDynamicViewportStateCreateInfo &info);
 };
 
-class DynamicRasterLineState : public internal::NonDispHandle<VkDynamicRasterLineState> {
+class DynamicLineWidthState : public internal::NonDispHandle<VkDynamicLineWidthState> {
 public:
-    ~DynamicRasterLineState();
+    ~DynamicLineWidthState();
 
-    // vkCreateDynamicRasterLineState()
-    void init(const Device &dev, const VkDynamicRasterLineStateCreateInfo &info);
+    // vkCreateDynamicLineWidthState()
+    void init(const Device &dev, const VkDynamicLineWidthStateCreateInfo &info);
 };
 
-class DynamicRasterDepthBiasState : public internal::NonDispHandle<VkDynamicRasterDepthBiasState> {
+class DynamicDepthBiasState : public internal::NonDispHandle<VkDynamicDepthBiasState> {
 public:
-    ~DynamicRasterDepthBiasState();
+    ~DynamicDepthBiasState();
 
-    // vkCreateDynamicRasterDepthBiasState()
-    void init(const Device &dev, const VkDynamicRasterDepthBiasStateCreateInfo &info);
+    // vkCreateDynamicDepthBiasState()
+    void init(const Device &dev, const VkDynamicDepthBiasStateCreateInfo &info);
 };
 
-class DynamicColorBlendState : public internal::NonDispHandle<VkDynamicColorBlendState> {
+class DynamicBlendState : public internal::NonDispHandle<VkDynamicBlendState> {
 public:
-    ~DynamicColorBlendState();
+    ~DynamicBlendState();
 
-    // vkCreateDynamicColorBlendState()
-    void init(const Device &dev, const VkDynamicColorBlendStateCreateInfo &info);
+    // vkCreateDynamicBlendState()
+    void init(const Device &dev, const VkDynamicBlendStateCreateInfo &info);
 };
 
-class DynamicDepthState : public internal::NonDispHandle<VkDynamicDepthState> {
+class DynamicDepthBoundsState : public internal::NonDispHandle<VkDynamicDepthBoundsState> {
 public:
-    ~DynamicDepthState();
+    ~DynamicDepthBoundsState();
 
-    // vkCreateDynamicDepthState()
-    void init(const Device &dev, const VkDynamicDepthStateCreateInfo &info);
+    // vkCreateDynamicDepthBoundsState()
+    void init(const Device &dev, const VkDynamicDepthBoundsStateCreateInfo &info);
 };
 
 class DynamicStencilState : public internal::NonDispHandle<VkDynamicStencilState> {

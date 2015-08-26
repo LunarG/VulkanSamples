@@ -518,14 +518,14 @@ static VkResult nulldrv_viewport_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_raster_line_state_create(struct nulldrv_dev *dev,
-                                     const VkDynamicRasterLineStateCreateInfo *info,
-                                     struct nulldrv_dynamic_rs_line **state_ret)
+static VkResult nulldrv_line_width_state_create(struct nulldrv_dev *dev,
+                                     const VkDynamicLineWidthStateCreateInfo *info,
+                                     struct nulldrv_dynamic_line_width **state_ret)
 {
-    struct nulldrv_dynamic_rs_line *state;
+    struct nulldrv_dynamic_line_width *state;
 
-    state = (struct nulldrv_dynamic_rs_line *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
+    state = (struct nulldrv_dynamic_line_width *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -534,14 +534,14 @@ static VkResult nulldrv_raster_line_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_raster_depth_bias_state_create(struct nulldrv_dev *dev,
-                                     const VkDynamicRasterDepthBiasStateCreateInfo *info,
-                                     struct nulldrv_dynamic_rs_depth_bias **state_ret)
+static VkResult nulldrv_depth_bias_state_create(struct nulldrv_dev *dev,
+                                     const VkDynamicDepthBiasStateCreateInfo *info,
+                                     struct nulldrv_dynamic_depth_bias **state_ret)
 {
-    struct nulldrv_dynamic_rs_depth_bias *state;
+    struct nulldrv_dynamic_depth_bias *state;
 
-    state = (struct nulldrv_dynamic_rs_depth_bias *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
+    state = (struct nulldrv_dynamic_depth_bias *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -551,13 +551,13 @@ static VkResult nulldrv_raster_depth_bias_state_create(struct nulldrv_dev *dev,
 }
 
 static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
-                                    const VkDynamicColorBlendStateCreateInfo *info,
-                                    struct nulldrv_dynamic_cb **state_ret)
+                                    const VkDynamicBlendStateCreateInfo *info,
+                                    struct nulldrv_dynamic_blend **state_ret)
 {
-    struct nulldrv_dynamic_cb *state;
+    struct nulldrv_dynamic_blend *state;
 
-    state = (struct nulldrv_dynamic_cb *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE);
+    state = (struct nulldrv_dynamic_blend *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -566,14 +566,14 @@ static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_depth_state_create(struct nulldrv_dev *dev,
-                                 const VkDynamicDepthStateCreateInfo *info,
-                                 struct nulldrv_dynamic_depth **state_ret)
+static VkResult nulldrv_depth_bounds_state_create(struct nulldrv_dev *dev,
+                                 const VkDynamicDepthBoundsStateCreateInfo *info,
+                                 struct nulldrv_dynamic_depth_bounds **state_ret)
 {
-    struct nulldrv_dynamic_depth *state;
+    struct nulldrv_dynamic_depth_bounds *state;
 
-    state = (struct nulldrv_dynamic_depth *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
+    state = (struct nulldrv_dynamic_depth_bounds *) nulldrv_base_create(dev,
+            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE);
     if (!state)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -1210,30 +1210,30 @@ ICD_EXPORT void VKAPI vkCmdBindDynamicViewportState(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicRasterLineState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicLineWidthState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicRasterLineState                  state)
+    VkDynamicLineWidthState                   state)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicRasterDepthBiasState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicDepthBiasState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicRasterDepthBiasState             state)
+    VkDynamicDepthBiasState                   state)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicColorBlendState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicBlendState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicColorBlendState                    state)
+    VkDynamicBlendState                       state)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicDepthState(
+ICD_EXPORT void VKAPI vkCmdBindDynamicDepthBoundsState(
     VkCmdBuffer                               cmdBuffer,
-    VkDynamicDepthState                       state)
+    VkDynamicDepthBoundsState                 state)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -2115,50 +2115,50 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
     VkDevice                                  device,
-    const VkDynamicRasterLineStateCreateInfo* pCreateInfo,
-    VkDynamicRasterLineState*                 pState)
+    const VkDynamicLineWidthStateCreateInfo*  pCreateInfo,
+    VkDynamicLineWidthState*                  pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_raster_line_state_create(dev, pCreateInfo,
+    return nulldrv_line_width_state_create(dev, pCreateInfo,
             (struct nulldrv_dynamic_rs_line **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
     VkDevice                                       device,
-    const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo,
-    VkDynamicRasterDepthBiasState*                 pState)
+    const VkDynamicDepthBiasStateCreateInfo*       pCreateInfo,
+    VkDynamicDepthBiasState*                       pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_raster_depth_bias_state_create(dev, pCreateInfo,
+    return nulldrv_depth_bias_state_create(dev, pCreateInfo,
             (struct nulldrv_dynamic_rs_depth_bias **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterLinesState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthsState(
     VkDevice                                  device,
-    VkDynamicRasterLineState                  dynamicRasterLineState)
+    VkDynamicLineWidthState                   dynamicLineWidthState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(
     VkDevice                                  device,
-    VkDynamicRasterDepthBiasState             dynamicRasterDepthBiasState)
+    VkDynamicDepthBiasState                   dynamicDepthBiasState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
     VkDevice                                     device,
-    const VkDynamicColorBlendStateCreateInfo*    pCreateInfo,
-    VkDynamicColorBlendState*                    pState)
+    const VkDynamicBlendStateCreateInfo*         pCreateInfo,
+    VkDynamicBlendState*                         pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
@@ -2167,29 +2167,29 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(
             (struct nulldrv_dynamic_cb **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicColorBlendState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(
     VkDevice                                  device,
-    VkDynamicColorBlendState                  dynamicColorBlendState)
+    VkDynamicBlendState                       dynamicBlendState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthState(
+ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
     VkDevice                                     device,
-    const VkDynamicDepthStateCreateInfo*         pCreateInfo,
-    VkDynamicDepthState*                         pState)
+    const VkDynamicDepthBoundsStateCreateInfo*   pCreateInfo,
+    VkDynamicDepthBoundsState*                   pState)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_depth_state_create(dev, pCreateInfo,
+    return nulldrv_depth_bounds_state_create(dev, pCreateInfo,
             (struct nulldrv_dynamic_depth **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(
     VkDevice                                  device,
-    VkDynamicDepthState                       dynamicDepthState)
+    VkDynamicDepthBoundsState                 dynamicDepthBoundsState)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

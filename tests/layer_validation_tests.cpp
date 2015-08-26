@@ -27,11 +27,11 @@ struct Vertex
 
 typedef enum _BsoFailSelect {
     BsoFailNone                     = 0x00000000,
-    BsoFailRasterLine               = 0x00000001,
-    BsoFailRasterDepthBias          = 0x00000002,
+    BsoFailLineWidth                = 0x00000001,
+    BsoFailDepthBias                = 0x00000002,
     BsoFailViewport                 = 0x00000004,
-    BsoFailColorBlend               = 0x00000008,
-    BsoFailDepth                    = 0x00000010,
+    BsoFailBlend                    = 0x00000008,
+    BsoFailDepthBounds              = 0x00000010,
     BsoFailStencil                  = 0x00000020,
 } BsoFailSelect;
 
@@ -309,20 +309,20 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     }
 
     cmdBuffer->PrepareAttachments();
-    if ((failMask & BsoFailRasterLine) != BsoFailRasterLine) {
-        cmdBuffer->BindDynamicRasterLineState(m_stateRasterLine);
+    if ((failMask & BsoFailLineWidth) != BsoFailLineWidth) {
+        cmdBuffer->BindDynamicLineWidthState(m_stateLineWidth);
     }
-    if ((failMask & BsoFailRasterDepthBias) != BsoFailRasterDepthBias) {
-        cmdBuffer->BindDynamicRasterDepthBiasState(m_stateRasterDepthBias);
+    if ((failMask & BsoFailDepthBias) != BsoFailDepthBias) {
+        cmdBuffer->BindDynamicDepthBiasState(m_stateDepthBias);
     }
     if ((failMask & BsoFailViewport) != BsoFailViewport) {
         cmdBuffer->BindDynamicViewportState(m_stateViewport);
     }
-    if ((failMask & BsoFailColorBlend) != BsoFailColorBlend) {
-        cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
+    if ((failMask & BsoFailBlend) != BsoFailBlend) {
+        cmdBuffer->BindDynamicBlendState(m_stateBlend);
     }
-    if ((failMask & BsoFailDepth) != BsoFailDepth) {
-        cmdBuffer->BindDynamicDepthState(m_stateDepth);
+    if ((failMask & BsoFailDepthBounds) != BsoFailDepthBounds) {
+        cmdBuffer->BindDynamicDepthBoundsState(m_stateDepthBounds);
     }
     if ((failMask & BsoFailStencil) != BsoFailStencil) {
         cmdBuffer->BindDynamicStencilState(m_stateStencil);
@@ -341,7 +341,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
         ds_ci.depthTestEnable = VK_FALSE;
         ds_ci.depthWriteEnable = VK_TRUE;
         ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
-        ds_ci.depthBoundsEnable = VK_FALSE;
+        ds_ci.depthBoundsTestEnable = VK_FALSE;
         ds_ci.stencilTestEnable = VK_TRUE;
         ds_ci.front = stencil;
         ds_ci.back = stencil;
@@ -903,37 +903,37 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 #endif
 #endif
 #if OBJ_TRACKER_TESTS
-TEST_F(VkLayerTest, RasterLineStateNotBound)
+TEST_F(VkLayerTest, LineWidthStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster line state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a line width state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRasterLine);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailLineWidth);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster Line State Object";
-    if (!strstr(msgString.c_str(),"Raster line object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Raster line object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Line Width State Object";
+    if (!strstr(msgString.c_str(),"Line width object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Line Width object not bound to this command buffer'";
     }
 }
 
-TEST_F(VkLayerTest, RasterDepthBiasStateNotBound)
+TEST_F(VkLayerTest, DepthBiasStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a raster depth bias state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bias state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailRasterDepthBias);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthBias);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Raster Depth Bias State Object";
-    if (!strstr(msgString.c_str(),"Raster depth bias object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Raster depth bias object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Depth Bias State Object";
+    if (!strstr(msgString.c_str(),"Depth bias object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Depth bias object not bound to this command buffer'";
     }
 }
 
@@ -954,37 +954,37 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
     }
 }
 
-TEST_F(VkLayerTest, ColorBlendStateNotBound)
+TEST_F(VkLayerTest, BlendStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a color-blend state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailColorBlend);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailBlend);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a ColorBlend State Object";
-    if (!strstr(msgString.c_str(),"Color-blend object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Color-blend object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Blend State Object";
+    if (!strstr(msgString.c_str(),"Blend object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Blend object not bound to this command buffer'";
     }
 }
 
-TEST_F(VkLayerTest, DepthStateNotBound)
+TEST_F(VkLayerTest, DepthBoundsStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth state object is not bound beforehand");
+    TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bounds state object is not bound beforehand");
 
-    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepth);
+    VKTriangleTest(bindStateVertShaderText, bindStateFragShaderText, BsoFailDepthBounds);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Depth State Object";
-    if (!strstr(msgString.c_str(),"Depth object not bound to this command buffer")) {
-        FAIL() << "Error received was not 'Depth object not bound to this command buffer'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from Not Binding a Depth Bounds State Object";
+    if (!strstr(msgString.c_str(),"Depth bounds object not bound to this command buffer")) {
+        FAIL() << "Error received was not 'Depth bounds object not bound to this command buffer'";
     }
 }
 

@@ -40,11 +40,11 @@ VkRenderFramework::VkRenderFramework() :
     m_cmdBuffer(),
     m_renderPass(VK_NULL_HANDLE),
     m_framebuffer(VK_NULL_HANDLE),
-    m_stateRasterLine( VK_NULL_HANDLE ),
-    m_stateRasterDepthBias( VK_NULL_HANDLE ),
-    m_colorBlend( VK_NULL_HANDLE ),
+    m_stateLineWidth( VK_NULL_HANDLE ),
+    m_stateDepthBias( VK_NULL_HANDLE ),
+    m_stateBlend( VK_NULL_HANDLE ),
     m_stateViewport( VK_NULL_HANDLE ),
-    m_stateDepth( VK_NULL_HANDLE ),
+    m_stateDepthBounds( VK_NULL_HANDLE ),
     m_stateStencil( VK_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 ),                  // default window height
@@ -155,11 +155,11 @@ void VkRenderFramework::InitFramework(
 
 void VkRenderFramework::ShutdownFramework()
 {
-    if (m_colorBlend) vkDestroyDynamicColorBlendState(device(), m_colorBlend);
-    if (m_stateDepth) vkDestroyDynamicDepthState(device(), m_stateDepth);
+    if (m_stateBlend) vkDestroyDynamicBlendState(device(), m_stateBlend);
+    if (m_stateDepthBounds) vkDestroyDynamicDepthBoundsState(device(), m_stateDepthBounds);
     if (m_stateStencil) vkDestroyDynamicStencilState(device(), m_stateStencil);
-    if (m_stateRasterLine) vkDestroyDynamicRasterLineState(device(), m_stateRasterLine);
-    if (m_stateRasterDepthBias) vkDestroyDynamicRasterDepthBiasState(device(), m_stateRasterDepthBias);
+    if (m_stateLineWidth) vkDestroyDynamicLineWidthState(device(), m_stateLineWidth);
+    if (m_stateDepthBias) vkDestroyDynamicDepthBiasState(device(), m_stateDepthBias);
     if (m_cmdBuffer)
         delete m_cmdBuffer;
     if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool);
@@ -215,39 +215,39 @@ void VkRenderFramework::InitState()
     m_render_target_fmt = surfFormats[0].format;
     free(surfFormats);
 
-    VkDynamicRasterLineStateCreateInfo rasterLine = {};
-    rasterLine.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO;
-    rasterLine.lineWidth = 1;
-    err = vkCreateDynamicRasterLineState( device(), &rasterLine, &m_stateRasterLine );
+    VkDynamicLineWidthStateCreateInfo lineWidth = {};
+    lineWidth.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
+    lineWidth.lineWidth = 1;
+    err = vkCreateDynamicLineWidthState( device(), &lineWidth, &m_stateLineWidth );
     ASSERT_VK_SUCCESS(err);
 
-    VkDynamicRasterDepthBiasStateCreateInfo rasterDepthBias = {};
-    rasterDepthBias.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO;
-    rasterDepthBias.depthBias = 0.0f;
-    rasterDepthBias.depthBiasClamp = 0.0f;
-    rasterDepthBias.slopeScaledDepthBias = 0.0f;
-    err = vkCreateDynamicRasterDepthBiasState( device(), &rasterDepthBias, &m_stateRasterDepthBias );
+    VkDynamicDepthBiasStateCreateInfo depthBias = {};
+    depthBias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
+    depthBias.depthBias = 0.0f;
+    depthBias.depthBiasClamp = 0.0f;
+    depthBias.slopeScaledDepthBias = 0.0f;
+    err = vkCreateDynamicDepthBiasState( device(), &depthBias, &m_stateDepthBias );
     ASSERT_VK_SUCCESS(err);
 
-    VkDynamicColorBlendStateCreateInfo blend = {};
-    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
+    VkDynamicBlendStateCreateInfo blend = {};
+    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
     blend.blendConst[0] = 1.0f;
     blend.blendConst[1] = 1.0f;
     blend.blendConst[2] = 1.0f;
     blend.blendConst[3] = 1.0f;
-    err = vkCreateDynamicColorBlendState(device(), &blend, &m_colorBlend);
+    err = vkCreateDynamicBlendState(device(), &blend, &m_stateBlend);
     ASSERT_VK_SUCCESS( err );
 
-    VkDynamicDepthStateCreateInfo depth = {};
-    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STATE_CREATE_INFO;
+    VkDynamicDepthBoundsStateCreateInfo depth = {};
+    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
     depth.minDepthBounds = 0.f;
     depth.maxDepthBounds = 1.f;
-    err = vkCreateDynamicDepthState( device(), &depth, &m_stateDepth );
+    err = vkCreateDynamicDepthBoundsState( device(), &depth, &m_stateDepthBounds );
     ASSERT_VK_SUCCESS( err );
 
     VkDynamicStencilStateCreateInfo stencil = {};
     stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
-    stencil.stencilReadMask = 0xff;
+    stencil.stencilCompareMask = 0xff;
     stencil.stencilWriteMask = 0xff;
     stencil.stencilReference = 0;
     err = vkCreateDynamicStencilState( device(), &stencil, &stencil, &m_stateStencil );
@@ -1203,7 +1203,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ds_state.pNext = VK_NULL_HANDLE,
     m_ds_state.depthTestEnable      = VK_FALSE;
     m_ds_state.depthWriteEnable     = VK_FALSE;
-    m_ds_state.depthBoundsEnable    = VK_FALSE;
+    m_ds_state.depthBoundsTestEnable = VK_FALSE;
     m_ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     m_ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     m_ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
@@ -1250,7 +1250,7 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_st
 {
     m_ds_state.depthTestEnable = ds_state->depthTestEnable;
     m_ds_state.depthWriteEnable = ds_state->depthWriteEnable;
-    m_ds_state.depthBoundsEnable = ds_state->depthBoundsEnable;
+    m_ds_state.depthBoundsTestEnable = ds_state->depthBoundsTestEnable;
     m_ds_state.depthCompareOp = ds_state->depthCompareOp;
     m_ds_state.stencilTestEnable = ds_state->stencilTestEnable;
     m_ds_state.back = ds_state->back;
@@ -1482,24 +1482,24 @@ void VkCommandBufferObj::BindDynamicViewportState(VkDynamicViewportState viewpor
     vkCmdBindDynamicViewportState( handle(), viewportState);
 }
 
-void VkCommandBufferObj::BindDynamicRasterLineState(VkDynamicRasterLineState rasterLineState)
+void VkCommandBufferObj::BindDynamicLineWidthState(VkDynamicLineWidthState lineWidthState)
 {
-    vkCmdBindDynamicRasterLineState( handle(), rasterLineState);
+    vkCmdBindDynamicLineWidthState( handle(), lineWidthState);
 }
 
-void VkCommandBufferObj::BindDynamicRasterDepthBiasState(VkDynamicRasterDepthBiasState rasterDepthBiasState)
+void VkCommandBufferObj::BindDynamicDepthBiasState(VkDynamicDepthBiasState depthBiasState)
 {
-    vkCmdBindDynamicRasterDepthBiasState( handle(), rasterDepthBiasState);
+    vkCmdBindDynamicDepthBiasState( handle(), depthBiasState);
 }
 
-void VkCommandBufferObj::BindDynamicColorBlendState(VkDynamicColorBlendState colorBlendState)
+void VkCommandBufferObj::BindDynamicBlendState(VkDynamicBlendState blendState)
 {
-    vkCmdBindDynamicColorBlendState( handle(), colorBlendState);
+    vkCmdBindDynamicBlendState( handle(), blendState);
 }
 
-void VkCommandBufferObj::BindDynamicDepthState(VkDynamicDepthState depthState)
+void VkCommandBufferObj::BindDynamicDepthBoundsState(VkDynamicDepthBoundsState depthBoundsState)
 {
-    vkCmdBindDynamicDepthState( handle(), depthState);
+    vkCmdBindDynamicDepthBoundsState( handle(), depthBoundsState);
 }
 
 void VkCommandBufferObj::BindDynamicStencilState(VkDynamicStencilState stencilState)

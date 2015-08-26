@@ -384,11 +384,11 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindDynamicRasterLineState(m_stateRasterLine);
-    cmdBuffer->BindDynamicRasterDepthBiasState(m_stateRasterDepthBias);
+    cmdBuffer->BindDynamicLineWidthState(m_stateLineWidth);
+    cmdBuffer->BindDynamicDepthBiasState(m_stateDepthBias);
     cmdBuffer->BindDynamicViewportState(m_stateViewport);
-    cmdBuffer->BindDynamicColorBlendState(m_colorBlend);
-    cmdBuffer->BindDynamicDepthState(m_stateDepth);
+    cmdBuffer->BindDynamicBlendState(m_stateBlend);
+    cmdBuffer->BindDynamicDepthBoundsState(m_stateDepthBounds);
     cmdBuffer->BindDynamicStencilState(m_stateStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -1881,7 +1881,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds_state.depthBoundsEnable = VK_FALSE;
+    ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
@@ -2794,7 +2794,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds_state.depthBoundsEnable = VK_FALSE;
+    ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
     ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;

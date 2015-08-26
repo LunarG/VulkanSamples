@@ -112,14 +112,14 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets) gpa(dev, "vkUpdateDescriptorSets");
     table->CreateDynamicViewportState = (PFN_vkCreateDynamicViewportState) gpa(dev, "vkCreateDynamicViewportState");
     table->DestroyDynamicViewportState = (PFN_vkDestroyDynamicViewportState) gpa(dev, "vkDestroyDynamicViewportState");
-    table->CreateDynamicRasterLineState = (PFN_vkCreateDynamicRasterLineState) gpa(dev, "vkCreateDynamicRasterLineState");
-    table->DestroyDynamicRasterLineState = (PFN_vkDestroyDynamicRasterLineState) gpa(dev, "vkDestroyDynamicRasterLineState");
-    table->CreateDynamicRasterDepthBiasState = (PFN_vkCreateDynamicRasterDepthBiasState) gpa(dev, "vkCreateDynamicRasterDepthBiasState");
-    table->DestroyDynamicRasterDepthBiasState = (PFN_vkDestroyDynamicRasterDepthBiasState) gpa(dev, "vkDestroyDynamicRasterDepthBiasState");
-    table->CreateDynamicColorBlendState = (PFN_vkCreateDynamicColorBlendState) gpa(dev, "vkCreateDynamicColorBlendState");
-    table->DestroyDynamicColorBlendState = (PFN_vkDestroyDynamicColorBlendState) gpa(dev, "vkDestroyDynamicColorBlendState");
-    table->CreateDynamicDepthState = (PFN_vkCreateDynamicDepthState) gpa(dev, "vkCreateDynamicDepthState");
-    table->DestroyDynamicDepthState = (PFN_vkDestroyDynamicDepthState) gpa(dev, "vkDestroyDynamicDepthState");
+    table->CreateDynamicLineWidthState = (PFN_vkCreateDynamicLineWidthState) gpa(dev, "vkCreateDynamicLineWidthState");
+    table->DestroyDynamicLineWidthState = (PFN_vkDestroyDynamicLineWidthState) gpa(dev, "vkDestroyDynamicLineWidthState");
+    table->CreateDynamicDepthBiasState = (PFN_vkCreateDynamicDepthBiasState) gpa(dev, "vkCreateDynamicDepthBiasState");
+    table->DestroyDynamicDepthBiasState = (PFN_vkDestroyDynamicDepthBiasState) gpa(dev, "vkDestroyDynamicDepthBiasState");
+    table->CreateDynamicBlendState = (PFN_vkCreateDynamicBlendState) gpa(dev, "vkCreateDynamicBlendState");
+    table->DestroyDynamicBlendState = (PFN_vkDestroyDynamicBlendState) gpa(dev, "vkDestroyDynamicBlendState");
+    table->CreateDynamicDepthBoundsState = (PFN_vkCreateDynamicDepthBoundsState) gpa(dev, "vkCreateDynamicDepthBoundsState");
+    table->DestroyDynamicDepthBoundsState = (PFN_vkDestroyDynamicDepthBoundsState) gpa(dev, "vkDestroyDynamicDepthBoundsState");
     table->CreateDynamicStencilState = (PFN_vkCreateDynamicStencilState) gpa(dev, "vkCreateDynamicStencilState");
     table->DestroyDynamicStencilState = (PFN_vkDestroyDynamicStencilState) gpa(dev, "vkDestroyDynamicStencilState");
     table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
@@ -137,10 +137,10 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->ResetCommandBuffer = (PFN_vkResetCommandBuffer) gpa(dev, "vkResetCommandBuffer");
     table->CmdBindPipeline = (PFN_vkCmdBindPipeline) gpa(dev, "vkCmdBindPipeline");
     table->CmdBindDynamicViewportState = (PFN_vkCmdBindDynamicViewportState) gpa(dev, "vkCmdBindDynamicViewportState");
-    table->CmdBindDynamicRasterLineState = (PFN_vkCmdBindDynamicRasterLineState) gpa(dev, "vkCmdBindDynamicRasterLineState");
-    table->CmdBindDynamicRasterDepthBiasState = (PFN_vkCmdBindDynamicRasterDepthBiasState) gpa(dev, "vkCmdBindDynamicRasterDepthBiasState");
-    table->CmdBindDynamicColorBlendState = (PFN_vkCmdBindDynamicColorBlendState) gpa(dev, "vkCmdBindDynamicColorBlendState");
-    table->CmdBindDynamicDepthState = (PFN_vkCmdBindDynamicDepthState) gpa(dev, "vkCmdBindDynamicDepthState");
+    table->CmdBindDynamicLineWidthState = (PFN_vkCmdBindDynamicLineWidthState) gpa(dev, "vkCmdBindDynamicLineWidthState");
+    table->CmdBindDynamicDepthBiasState = (PFN_vkCmdBindDynamicDepthBiasState) gpa(dev, "vkCmdBindDynamicDepthBiasState");
+    table->CmdBindDynamicBlendState = (PFN_vkCmdBindDynamicBlendState) gpa(dev, "vkCmdBindDynamicBlendState");
+    table->CmdBindDynamicDepthBoundsState = (PFN_vkCmdBindDynamicDepthBoundsState) gpa(dev, "vkCmdBindDynamicDepthBoundsState");
     table->CmdBindDynamicStencilState = (PFN_vkCmdBindDynamicStencilState) gpa(dev, "vkCmdBindDynamicStencilState");
     table->CmdBindDescriptorSets = (PFN_vkCmdBindDescriptorSets) gpa(dev, "vkCmdBindDescriptorSets");
     table->CmdBindVertexBuffers = (PFN_vkCmdBindVertexBuffers) gpa(dev, "vkCmdBindVertexBuffers");
@@ -350,22 +350,22 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateDynamicViewportState;
     if (!strcmp(name, "DestroyDynamicViewportState"))
         return (void *) table->DestroyDynamicViewportState;
-    if (!strcmp(name, "CreateDynamicRasterLineState"))
-        return (void *) table->CreateDynamicRasterLineState;
-    if (!strcmp(name, "DestroyDynamicRasterLineState"))
-        return (void *) table->DestroyDynamicRasterLineState;
-    if (!strcmp(name, "CreateDynamicRasterDepthBiasState"))
-        return (void *) table->CreateDynamicRasterDepthBiasState;
-    if (!strcmp(name, "DestroyDynamicRasterDepthBiasState"))
-        return (void *) table->DestroyDynamicRasterDepthBiasState;
-    if (!strcmp(name, "CreateDynamicColorBlendState"))
-        return (void *) table->CreateDynamicColorBlendState;
-    if (!strcmp(name, "DestroyDynamicColorBlendState"))
-        return (void *) table->DestroyDynamicColorBlendState;
-    if (!strcmp(name, "CreateDynamicDepthState"))
-        return (void *) table->CreateDynamicDepthState;
-    if (!strcmp(name, "DestroyDynamicDepthState"))
-        return (void *) table->DestroyDynamicDepthState;
+    if (!strcmp(name, "CreateDynamicLineWidthState"))
+        return (void *) table->CreateDynamicLineWidthState;
+    if (!strcmp(name, "DestroyDynamicLineWidthState"))
+        return (void *) table->DestroyDynamicLineWidthState;
+    if (!strcmp(name, "CreateDynamicDepthBiasState"))
+        return (void *) table->CreateDynamicDepthBiasState;
+    if (!strcmp(name, "DestroyDynamicDepthBiasState"))
+        return (void *) table->DestroyDynamicDepthBiasState;
+    if (!strcmp(name, "CreateDynamicBlendState"))
+        return (void *) table->CreateDynamicBlendState;
+    if (!strcmp(name, "DestroyDynamicBlendState"))
+        return (void *) table->DestroyDynamicBlendState;
+    if (!strcmp(name, "CreateDynamicDepthBoundsState"))
+        return (void *) table->CreateDynamicDepthBoundsState;
+    if (!strcmp(name, "DestroyDynamicDepthBoundsState"))
+        return (void *) table->DestroyDynamicDepthBoundsState;
     if (!strcmp(name, "CreateDynamicStencilState"))
         return (void *) table->CreateDynamicStencilState;
     if (!strcmp(name, "DestroyDynamicStencilState"))
@@ -400,14 +400,14 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdBindPipeline;
     if (!strcmp(name, "CmdBindDynamicViewportState"))
         return (void *) table->CmdBindDynamicViewportState;
-    if (!strcmp(name, "CmdBindDynamicRasterLineState"))
-        return (void *) table->CmdBindDynamicRasterLineState;
-    if (!strcmp(name, "CmdBindDynamicRasterDepthBiasState"))
-        return (void *) table->CmdBindDynamicRasterDepthBiasState;
-    if (!strcmp(name, "CmdBindDynamicColorBlendState"))
-        return (void *) table->CmdBindDynamicColorBlendState;
-    if (!strcmp(name, "CmdBindDynamicDepthState"))
-        return (void *) table->CmdBindDynamicDepthState;
+    if (!strcmp(name, "CmdBindDynamicLineWidthState"))
+        return (void *) table->CmdBindDynamicLineWidthState;
+    if (!strcmp(name, "CmdBindDynamicDepthBiasState"))
+        return (void *) table->CmdBindDynamicDepthBiasState;
+    if (!strcmp(name, "CmdBindDynamicBlendState"))
+        return (void *) table->CmdBindDynamicBlendState;
+    if (!strcmp(name, "CmdBindDynamicDepthBoundsState"))
+        return (void *) table->CmdBindDynamicDepthBoundsState;
     if (!strcmp(name, "CmdBindDynamicStencilState"))
         return (void *) table->CmdBindDynamicStencilState;
     if (!strcmp(name, "CmdBindDescriptorSets"))

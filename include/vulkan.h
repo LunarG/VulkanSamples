@@ -119,10 +119,10 @@ VK_DEFINE_NONDISP_HANDLE(VkSampler)
 VK_DEFINE_NONDISP_HANDLE(VkDescriptorPool)
 VK_DEFINE_NONDISP_HANDLE(VkDescriptorSet)
 VK_DEFINE_NONDISP_HANDLE(VkDynamicViewportState)
-VK_DEFINE_NONDISP_HANDLE(VkDynamicRasterLineState)
-VK_DEFINE_NONDISP_HANDLE(VkDynamicRasterDepthBiasState)
-VK_DEFINE_NONDISP_HANDLE(VkDynamicColorBlendState)
-VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicLineWidthState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthBiasState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicBlendState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthBoundsState)
 VK_DEFINE_NONDISP_HANDLE(VkDynamicStencilState)
 VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
 VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
@@ -201,10 +201,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 8,
     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 9,
     VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO = 10,
-    VK_STRUCTURE_TYPE_DYNAMIC_RASTER_LINE_STATE_CREATE_INFO = 11,
-    VK_STRUCTURE_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE_CREATE_INFO = 12,
-    VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO = 13,
-    VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STATE_CREATE_INFO = 14,
+    VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO = 11,
+    VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO = 12,
+    VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO = 13,
+    VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO = 14,
     VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO = 15,
     VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO = 16,
     VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 17,
@@ -1670,7 +1670,7 @@ typedef struct {
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
-    VkBool32                                    depthBoundsEnable;
+    VkBool32                                    depthBoundsTestEnable;
     VkBool32                                    stencilTestEnable;
     VkStencilOpState                            front;
     VkStencilOpState                            back;
@@ -1856,7 +1856,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     float                                       lineWidth;
-} VkDynamicRasterLineStateCreateInfo;
+} VkDynamicLineWidthStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1864,25 +1864,25 @@ typedef struct {
     float                                       depthBias;
     float                                       depthBiasClamp;
     float                                       slopeScaledDepthBias;
-} VkDynamicRasterDepthBiasStateCreateInfo;
+} VkDynamicDepthBiasStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     float                                       blendConst[4];
-} VkDynamicColorBlendStateCreateInfo;
+} VkDynamicBlendStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     float                                       minDepthBounds;
     float                                       maxDepthBounds;
-} VkDynamicDepthStateCreateInfo;
+} VkDynamicDepthBoundsStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    stencilReadMask;
+    uint32_t                                    stencilCompareMask;
     uint32_t                                    stencilWriteMask;
     uint32_t                                    stencilReference;
 } VkDynamicStencilStateCreateInfo;
@@ -2195,14 +2195,14 @@ typedef VkResult (VKAPI *PFN_vkFreeDescriptorSets)(VkDevice device, VkDescriptor
 typedef VkResult (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState);
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicViewportState)(VkDevice device, VkDynamicViewportState dynamicViewportState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterLineState)(VkDevice device, const VkDynamicRasterLineStateCreateInfo* pCreateInfo, VkDynamicRasterLineState* pState);
-typedef VkResult (VKAPI *PFN_vkDestroyDynamicRasterLineState)(VkDevice device, VkDynamicRasterLineState dynamicRasterLineState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterDepthBiasState)(VkDevice device, const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo, VkDynamicRasterDepthBiasState* pState);
-typedef VkResult (VKAPI *PFN_vkDestroyDynamicRasterDepthBiasState)(VkDevice device, VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState);
-typedef VkResult (VKAPI *PFN_vkDestroyDynamicColorBlendState)(VkDevice device, VkDynamicColorBlendState dynamicColorBlendState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthState)(VkDevice device, const VkDynamicDepthStateCreateInfo* pCreateInfo, VkDynamicDepthState* pState);
-typedef VkResult (VKAPI *PFN_vkDestroyDynamicDepthState)(VkDevice device, VkDynamicDepthState dynamicDepthState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicLineWidthState)(VkDevice device, const VkDynamicLineWidthStateCreateInfo* pCreateInfo, VkDynamicLineWidthState* pState);
+typedef VkResult (VKAPI *PFN_vkDestroyDynamicLineWidthState)(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthBiasState)(VkDevice device, const VkDynamicDepthBiasStateCreateInfo* pCreateInfo, VkDynamicDepthBiasState* pState);
+typedef VkResult (VKAPI *PFN_vkDestroyDynamicDepthBiasState)(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicBlendState)(VkDevice device, const VkDynamicBlendStateCreateInfo* pCreateInfo, VkDynamicBlendState* pState);
+typedef VkResult (VKAPI *PFN_vkDestroyDynamicBlendState)(VkDevice device, VkDynamicBlendState dynamicBlendState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthBoundsState)(VkDevice device, const VkDynamicDepthBoundsStateCreateInfo* pCreateInfo, VkDynamicDepthBoundsState* pState);
+typedef VkResult (VKAPI *PFN_vkDestroyDynamicDepthBoundsState)(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicStencilState)(VkDevice device, const VkDynamicStencilStateCreateInfo* pCreateInfoFront, const VkDynamicStencilStateCreateInfo* pCreateInfoBack, VkDynamicStencilState* pState);
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicStencilState)(VkDevice device, VkDynamicStencilState dynamicStencilState);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
@@ -2220,10 +2220,10 @@ typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
 typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags);
 typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
 typedef void (VKAPI *PFN_vkCmdBindDynamicViewportState)(VkCmdBuffer cmdBuffer, VkDynamicViewportState dynamicViewportState);
-typedef void (VKAPI *PFN_vkCmdBindDynamicRasterLineState)(VkCmdBuffer cmdBuffer, VkDynamicRasterLineState dynamicRasterLineState);
-typedef void (VKAPI *PFN_vkCmdBindDynamicRasterDepthBiasState)(VkCmdBuffer cmdBuffer, VkDynamicRasterDepthBiasState dynamicRasterDepthBiasState);
-typedef void (VKAPI *PFN_vkCmdBindDynamicColorBlendState)(VkCmdBuffer cmdBuffer, VkDynamicColorBlendState dynamicColorBlendState);
-typedef void (VKAPI *PFN_vkCmdBindDynamicDepthState)(VkCmdBuffer cmdBuffer, VkDynamicDepthState dynamicDepthState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicLineWidthState)(VkCmdBuffer cmdBuffer, VkDynamicLineWidthState dynamicLineWidthState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicDepthBiasState)(VkCmdBuffer cmdBuffer, VkDynamicDepthBiasState dynamicDepthBiasState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicBlendState)(VkCmdBuffer cmdBuffer, VkDynamicBlendState dynamicBlendState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicDepthBoundsState)(VkCmdBuffer cmdBuffer, VkDynamicDepthBoundsState dynamicDepthBoundsState);
 typedef void (VKAPI *PFN_vkCmdBindDynamicStencilState)(VkCmdBuffer cmdBuffer, VkDynamicStencilState dynamicStencilState);
 typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
 typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
@@ -2718,41 +2718,41 @@ VkResult VKAPI vkDestroyDynamicViewportState(
     VkDevice                                    device,
     VkDynamicViewportState                      dynamicViewportState);
 
-VkResult VKAPI vkCreateDynamicRasterLineState(
+VkResult VKAPI vkCreateDynamicLineWidthState(
     VkDevice                                    device,
-    const VkDynamicRasterLineStateCreateInfo*   pCreateInfo,
-    VkDynamicRasterLineState*                   pState);
+    const VkDynamicLineWidthStateCreateInfo*    pCreateInfo,
+    VkDynamicLineWidthState*                    pState);
 
-VkResult VKAPI vkDestroyDynamicRasterLineState(
+VkResult VKAPI vkDestroyDynamicLineWidthState(
     VkDevice                                    device,
-    VkDynamicRasterLineState                    dynamicRasterLineState);
+    VkDynamicLineWidthState                     dynamicLineWidthState);
 
-VkResult VKAPI vkCreateDynamicRasterDepthBiasState(
+VkResult VKAPI vkCreateDynamicDepthBiasState(
     VkDevice                                    device,
-    const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo,
-    VkDynamicRasterDepthBiasState*              pState);
+    const VkDynamicDepthBiasStateCreateInfo*    pCreateInfo,
+    VkDynamicDepthBiasState*                    pState);
 
-VkResult VKAPI vkDestroyDynamicRasterDepthBiasState(
+VkResult VKAPI vkDestroyDynamicDepthBiasState(
     VkDevice                                    device,
-    VkDynamicRasterDepthBiasState               dynamicRasterDepthBiasState);
+    VkDynamicDepthBiasState                     dynamicDepthBiasState);
 
-VkResult VKAPI vkCreateDynamicColorBlendState(
+VkResult VKAPI vkCreateDynamicBlendState(
     VkDevice                                    device,
-    const VkDynamicColorBlendStateCreateInfo*   pCreateInfo,
-    VkDynamicColorBlendState*                   pState);
+    const VkDynamicBlendStateCreateInfo*        pCreateInfo,
+    VkDynamicBlendState*                        pState);
 
-VkResult VKAPI vkDestroyDynamicColorBlendState(
+VkResult VKAPI vkDestroyDynamicBlendState(
     VkDevice                                    device,
-    VkDynamicColorBlendState                    dynamicColorBlendState);
+    VkDynamicBlendState                         dynamicBlendState);
 
-VkResult VKAPI vkCreateDynamicDepthState(
+VkResult VKAPI vkCreateDynamicDepthBoundsState(
     VkDevice                                    device,
-    const VkDynamicDepthStateCreateInfo*        pCreateInfo,
-    VkDynamicDepthState*                        pState);
+    const VkDynamicDepthBoundsStateCreateInfo*  pCreateInfo,
+    VkDynamicDepthBoundsState*                  pState);
 
-VkResult VKAPI vkDestroyDynamicDepthState(
+VkResult VKAPI vkDestroyDynamicDepthBoundsState(
     VkDevice                                    device,
-    VkDynamicDepthState                         dynamicDepthState);
+    VkDynamicDepthBoundsState                   dynamicDepthBoundsState);
 
 VkResult VKAPI vkCreateDynamicStencilState(
     VkDevice                                    device,
@@ -2830,21 +2830,21 @@ void VKAPI vkCmdBindDynamicViewportState(
     VkCmdBuffer                                 cmdBuffer,
     VkDynamicViewportState                      dynamicViewportState);
 
-void VKAPI vkCmdBindDynamicRasterLineState(
+void VKAPI vkCmdBindDynamicLineWidthState(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicRasterLineState                    dynamicRasterLineState);
+    VkDynamicLineWidthState                     dynamicLineWidthState);
 
-void VKAPI vkCmdBindDynamicRasterDepthBiasState(
+void VKAPI vkCmdBindDynamicDepthBiasState(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicRasterDepthBiasState               dynamicRasterDepthBiasState);
+    VkDynamicDepthBiasState                     dynamicDepthBiasState);
 
-void VKAPI vkCmdBindDynamicColorBlendState(
+void VKAPI vkCmdBindDynamicBlendState(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicColorBlendState                    dynamicColorBlendState);
+    VkDynamicBlendState                         dynamicBlendState);
 
-void VKAPI vkCmdBindDynamicDepthState(
+void VKAPI vkCmdBindDynamicDepthBoundsState(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicDepthState                         dynamicDepthState);
+    VkDynamicDepthBoundsState                   dynamicDepthBoundsState);
 
 void VKAPI vkCmdBindDynamicStencilState(
     VkCmdBuffer                                 cmdBuffer,

@@ -791,32 +791,32 @@ void DynamicViewportState::init(const Device &dev, const VkDynamicViewportStateC
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterLineState, vkDestroyDynamicRasterLineState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicLineWidthState, vkDestroyDynamicLineWidthState)
 
-void DynamicRasterLineState::init(const Device &dev, const VkDynamicRasterLineStateCreateInfo &info)
+void DynamicLineWidthState::init(const Device &dev, const VkDynamicLineWidthStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterLineState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicLineWidthState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicRasterDepthBiasState, vkDestroyDynamicRasterDepthBiasState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthBiasState, vkDestroyDynamicDepthBiasState)
 
-void DynamicRasterDepthBiasState::init(const Device &dev, const VkDynamicRasterDepthBiasStateCreateInfo &info)
+void DynamicDepthBiasState::init(const Device &dev, const VkDynamicDepthBiasStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicRasterDepthBiasState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthBiasState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicColorBlendState, vkDestroyDynamicColorBlendState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicBlendState, vkDestroyDynamicBlendState)
 
-void DynamicColorBlendState::init(const Device &dev, const VkDynamicColorBlendStateCreateInfo &info)
+void DynamicBlendState::init(const Device &dev, const VkDynamicBlendStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicColorBlendState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicBlendState, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthState, vkDestroyDynamicDepthState)
+NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthBoundsState, vkDestroyDynamicDepthBoundsState)
 
-void DynamicDepthState::init(const Device &dev, const VkDynamicDepthStateCreateInfo &info)
+void DynamicDepthBoundsState::init(const Device &dev, const VkDynamicDepthBoundsStateCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthState, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthBoundsState, dev, &info);
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(DynamicStencilState, vkDestroyDynamicStencilState)
