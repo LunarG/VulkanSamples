@@ -719,3 +719,38 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info)
     assert(!err);
 }
 
+void init_command_buffer(struct sample_info &info)
+{
+    /* DEPENDS on init_wsi() */
+
+    VkResult res;
+
+    VkCmdPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+    cmd_pool_info.pNext = NULL;
+    cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
+    cmd_pool_info.flags = 0;
+
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
+    assert(!res);
+
+    VkCmdBufferCreateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    cmd.pNext = NULL;
+    cmd.cmdPool = info.cmd_pool;
+    cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
+    cmd.flags = 0;
+
+    res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
+    assert(!res);
+}
+
+void init_device_queue(struct sample_info &info)
+{
+    /* DEPENDS on init_wsi() */
+
+    VkResult res;
+    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
+            0, &info.queue);
+    assert(!res);
+}

@@ -56,18 +56,8 @@ int main(int argc, char **argv)
     init_wsi(info);
     res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
     assert(!res);
-
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
-    cmd_pool_info.flags = 0;
-
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
-            0, &info.queue);
-    assert(!res);
+    init_command_buffer(info);
+    init_device_queue(info);
 
     /* VULKAN_KEY_START */
     VkImageCreateInfo image_info = {};
