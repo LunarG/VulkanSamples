@@ -90,7 +90,6 @@ struct texture_object {
  */
 typedef struct _swap_chain_buffers {
     VkImage image;
-    VkCmdBuffer cmd;
     VkAttachmentView view;
 } swap_chain_buffer;
 
