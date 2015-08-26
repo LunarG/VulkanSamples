@@ -140,7 +140,7 @@ endif()
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate enumerate-adv depthbuffer initwsi initTexture uniformbuffer descriptor_pipeline_layouts initcommandbuffer initrenderpass initframebuffers vertexbuffer)
+set (S_TARGETS instance device enumerate enumerate-adv depthbuffer initwsi initTexture uniformbuffer descriptor_pipeline_layouts initcommandbuffer initrenderpass initframebuffers vertexbuffer dynamicstate)
 sampleWithSingleFile()
 
 # targets that use spv shaders
