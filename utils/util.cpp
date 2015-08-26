@@ -103,19 +103,11 @@ void set_image_layout(
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout)
 {
+    /* DEPENDS on info.cmd and info.queue initialized */
     VkResult res;
 
-    if (info.cmd == VK_NULL_HANDLE) {
-        VkCmdBufferCreateInfo cmd = {};
-        cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
-        cmd.pNext = NULL;
-        cmd.cmdPool = info.cmd_pool;
-        cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
-        cmd.flags = 0;
-
-        res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
-        assert(!res);
-    }
+    assert(info.cmd != VK_NULL_HANDLE);
+    assert(info.queue != VK_NULL_HANDLE);
 
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;

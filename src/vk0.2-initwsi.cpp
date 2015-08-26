@@ -54,18 +54,8 @@ int main(int argc, char **argv)
     init_device(info);
     init_connection(info);
     info.width = info.height = 50;
-    init_window(info);
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
-    cmd_pool_info.flags = 0;
+    init_window(info);    
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
-            0, &info.queue);
-    assert(!res);
 
     /* VULKAN_KEY_START */
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportWSI);
@@ -295,6 +285,9 @@ int main(int argc, char **argv)
 #endif // WORK_AROUND_CODE
 
     info.buffers.reserve(info.swapChainImageCount);
+
+    init_command_buffer(info); /* Going to need command buffer and device queue to */
+    init_device_queue(info);   /* send memory barriers in set_image_layout()       */
 
     for (int i = 0; i < info.swapChainImageCount; i++) {
         VkAttachmentViewCreateInfo color_attachment_view = {};
