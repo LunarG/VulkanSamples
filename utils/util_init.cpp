@@ -240,6 +240,8 @@ LRESULT CALLBACK WndProc(HWND hWnd,
 void init_window(struct sample_info &info)
 {
     WNDCLASSEX  win_class;
+    assert(info.width > 0);
+    assert(info.height > 0);
 
     info.connection = GetModuleHandle(NULL);
 
@@ -290,6 +292,9 @@ void init_window(struct sample_info &info)
 #else
 void init_window(struct sample_info &info)
 {
+    assert(info.width > 0);
+    assert(info.height > 0);
+
     uint32_t value_mask, value_list[32];
 
     info.window = xcb_generate_id(info.connection);
