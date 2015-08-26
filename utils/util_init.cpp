@@ -786,6 +786,37 @@ void init_renderpass(struct sample_info &info)
     assert(!res);
 }
 
+void init_framebuffers(struct sample_info &info)
+{
+    /* DEPENDS on init_depth_buffer(), init_renderpass() and init_wsi() */
+
+    VkResult res;
+    VkAttachmentBindInfo attachments[2];
+    attachments[0].view.handle = VK_NULL_HANDLE;
+    attachments[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[1].view = info.depth.view;
+    attachments[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkFramebufferCreateInfo fb_info = {};
+    fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fb_info.pNext = NULL;
+    fb_info.renderPass = info.render_pass;
+    fb_info.attachmentCount = 2;
+    fb_info.pAttachments = attachments;
+    fb_info.width  = info.width;
+    fb_info.height = info.height;
+    fb_info.layers = 1;
+
+    VkResult err;
+    uint32_t i;
+
+    for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+        attachments[0].view = info.buffers[i].view;
+        err = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
+        assert(!err);
+    }
+}
+
 void init_command_buffer(struct sample_info &info)
 {
     /* DEPENDS on init_wsi() */
