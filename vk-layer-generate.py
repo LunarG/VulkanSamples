@@ -32,6 +32,7 @@ import re
 import vulkan
 import vk_helper
 from source_line_info import sourcelineinfo
+from collections import defaultdict
 
 def proto_is_global(proto):
     if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalLayerProperties" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetPhysicalDeviceLayerProperties" or proto.name == "GetPhysicalDeviceExtensionProperties":
@@ -1134,7 +1135,7 @@ class ObjectTrackerSubcommand(Subcommand):
         procs_txt = []
         for o in vulkan.core.objects:
             procs_txt.append('%s' % self.lineinfo.get())
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void create_obj(%s dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o, o))
                 procs_txt.append('{')
                 procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
@@ -1150,7 +1151,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;')
             procs_txt.append('    pNewObjNode->objType = objType;')
             procs_txt.append('    pNewObjNode->status  = OBJSTATUS_NONE;')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);')
                 procs_txt.append('    %sMap[vkObj] = pNewObjNode;' % (o))
             else:
@@ -1162,12 +1163,12 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void validate_object(%s dispatchable_object, %s object)' % (o, o))
             else:
                 procs_txt.append('static void validate_object(VkDevice dispatchable_object, %s object)' % (o))
             procs_txt.append('{')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find(object) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<uint64_t>(object));' % o)
@@ -1180,12 +1181,12 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void destroy_obj(%s dispatchable_object, %s object)' % (o, o))
             else:
                 procs_txt.append('static void destroy_obj(VkDevice dispatchable_object, %s object)' % (o))
             procs_txt.append('{')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
                 procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             else:
@@ -1196,7 +1197,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        numTotalObjs--;')
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
                 procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
@@ -1206,7 +1207,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('            string_VkDbgObjectType(pNode->objType), object.handle, numTotalObjs, numObjs[objIndex],')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType));')
             procs_txt.append('        delete pNode;')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('        %sMap.erase(object);' % (o))
                 procs_txt.append('    } else {')
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
@@ -1223,7 +1224,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void set_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
                 procs_txt.append('{')
                 procs_txt.append('    if (object != VK_NULL_HANDLE) {')
@@ -1235,12 +1236,12 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('    if (object != VK_NULL_HANDLE) {')
                 procs_txt.append('        if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
                 procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
-            procs_txt.append('           pNode->status |= status_flag;')
+            procs_txt.append('            pNode->status |= status_flag;')
             procs_txt.append('            return;')
             procs_txt.append('        }')
             procs_txt.append('        else {')
             procs_txt.append('            // If we do not find it print an error')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
                 procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
                 procs_txt.append('                reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
@@ -1254,7 +1255,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
             procs_txt.append('static VkBool32 validate_status(')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('%s dispatchable_object, %s object,' % (o, o))
             else:
                 procs_txt.append('VkDevice dispatchable_object, %s object,' % (o))
@@ -1265,14 +1266,14 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    OBJECT_TRACK_ERROR  error_code,')
             procs_txt.append('    const char         *fail_msg)')
             procs_txt.append('{')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
                 procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             else:
                 procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
                 procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
             procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
                 procs_txt.append('                 reinterpret_cast<uint64_t>(object), fail_msg);')
@@ -1286,7 +1287,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
                 procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
@@ -1299,7 +1300,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void reset_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
                 procs_txt.append('{')
                 procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
@@ -1314,7 +1315,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            if o in [ 'VkInstance', 'VkPhysicalDevice', 'VkDevice', 'VkQueue', 'VkCmdBuffer']:
+            if o in vulkan.object_dispatch_list:
                 procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
                 procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
@@ -1458,30 +1459,49 @@ class ObjectTrackerSubcommand(Subcommand):
         using_line = ''
         create_line = ''
         destroy_line = ''
-        object_params = {} # dict of parameters that are VkObject types mapping to the size of array types or '0' if not array
+        # Dict below tracks params that are vk objects. Dict is "loop count"->["params w/ that loop count"] where '0' is params that aren't in an array
+        loop_params = defaultdict(list) # Dict uses loop count as key to make final code generation cleaner so params shared in single loop where needed
         # TODO : For now skipping objs that can be NULL. Really should check these and have special case that allows them to be NULL
-        valid_null_object_names = ['basePipelineHandle', 'renderPass', 'framebuffer']
+        #  or better yet, these should be encoded into an API json definition and we generate checks from there
+        #  Until then, this is a dict where each func name is a list of object params that can be null (so don't need to be validated)
+        #   param names may be directly passed to the function, or may be a field in a struct param
+        valid_null_object_names = {'CreateGraphicsPipelines' : ['basePipelineHandle'],
+                                   'CreateComputePipelines' : ['basePipelineHandle'],
+                                   'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
+                                  }
         # TODO : A few of the skipped types are just "hard" cases that need some more work to support
         #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
+        param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:
+            if 'count' in p.name.lower():
+                param_count = p.name
             if p.ty in vulkan.core.objects and p.ty not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                if p.name not in valid_null_object_names:
-                    object_params[p.name] = 0
+                if proto.name not in valid_null_object_names or p.name not in valid_null_object_names[proto.name]:
+                    loop_params[0].append(p.name)
             elif vk_helper.is_type(p.ty.replace('const ', '').strip('*'), 'struct'):
                 struct_type = p.ty.replace('const ', '').strip('*')
                 if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
                     struct_type = vk_helper.typedef_rev_dict[struct_type]
                 for m in sorted(vk_helper.struct_dict[struct_type]):
                     if vk_helper.struct_dict[struct_type][m]['type'] in vulkan.core.objects and vk_helper.struct_dict[struct_type][m]['type'] not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                        if vk_helper.struct_dict[struct_type][m]['name'] not in valid_null_object_names:
-                            param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
-                            object_params[param_name] = {}
-                            if vk_helper.struct_dict[struct_type][m]['dyn_array']:
-                                object_params[param_name] = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                        if proto.name not in valid_null_object_names or vk_helper.struct_dict[struct_type][m]['name'] not in valid_null_object_names[proto.name]:
+                            # If we have a count and this param is a ptr w/ last letter 's', then this is a dynamically sized array param
+                            #  This is not great, but gets the job done for now
+                            if param_count != 'NONE' and '*' in p.ty and 's' == p.name[-1]:
+                                param_name = '%s[i].%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
                             else:
-                                object_params[param_name] = 0
+                                param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
+                            if vk_helper.struct_dict[struct_type][m]['dyn_array']:
+                                loop_count = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                                loop_params[loop_count].append(param_name)
+                            else:
+                                if '[' in param_name: # dynamic array param, set size
+                                    loop_params[param_count].append(param_name)
+                                else:
+                                    loop_params[0].append(param_name)
         funcs = []
         mutex_unlock = False
+        funcs.append('%s\n' % self.lineinfo.get())
         if proto.name in explicit_object_tracker_functions:
             funcs.append('%s%s\n'
                      '{\n'
@@ -1506,20 +1526,29 @@ class ObjectTrackerSubcommand(Subcommand):
                     destroy_line += '        destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
                 destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-            if len(object_params) > 0:
+            if len(loop_params) > 0:
                 if not mutex_unlock:
                     using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
                     mutex_unlock = True
-                for opn in object_params:
-                    if 0 != object_params[opn]:
-                        using_line += '    for (uint32_t i=0; i<%s; i++)\n' % object_params[opn]
-                        using_line += '        validate_object(%s, %s[i]);\n' % (param0_name, opn)
+                for lc in loop_params:
+                    if 0 == lc: # No looping required for these params
+                        for opn in loop_params[lc]:
+                            if '->' in opn:
+                                using_line += '    if (%s)\n' % (opn.split('-')[0])
+                                using_line += '        validate_object(%s, %s);\n' % (param0_name, opn)
+                            else:
+                                using_line += '    validate_object(%s, %s);\n' % (param0_name, opn)
                     else:
-                        if '->' in opn:
-                            using_line += '    if (%s)\n' % (opn.split('-')[0])
-                            using_line += '        validate_object(%s, %s);\n' % (param0_name, opn)
-                        else:
-                            using_line += '    validate_object(%s, %s);\n' % (param0_name, opn)
+                        base_param = loop_params[lc][0].split('-')[0].split('[')[0]
+                        using_line += '    if (%s) {\n' % base_param
+                        using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
+                        for opn in loop_params[lc]:
+                            if '[' in opn: # API func param is array
+                                using_line += '            validate_object(%s, %s);\n' % (param0_name, opn)
+                            else: # struct element is array
+                                using_line += '            validate_object(%s, %s[i]);\n' % (param0_name, opn)
+                        using_line += '        }\n'
+                        using_line += '    }\n'
             if mutex_unlock:
                 using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             ret_val = ''
