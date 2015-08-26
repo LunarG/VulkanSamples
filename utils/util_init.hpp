@@ -43,6 +43,7 @@ void init_device_queue(struct sample_info &info);
 void init_swap_chain(struct sample_info &info);
 void init_depth_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info);
+void init_renderpass(struct sample_info &info);
 
 
 #endif // UTIL_INIT
