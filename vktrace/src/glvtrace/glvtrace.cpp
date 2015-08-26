@@ -296,7 +296,29 @@ int main(int argc, char* argv[])
             glv_LogError("Missing required -l0 parameter to specify the tracer library.");
             validArgs = FALSE;
         }
-
+        if (!strcmp(g_settings.trace_library[0], g_default_settings.trace_library[0]))
+        {
+            // look for default trace library in CWD then system directories
+            void *handle;
+            if ((handle = glv_platform_open_library(g_settings.trace_library[0])) == NULL)
+            {
+                char *filename = strrchr(g_settings.trace_library[0], GLV_PATH_SEPARATOR[0]);
+                if (!filename || (handle = glv_platform_open_library(filename+1)) == NULL)
+                {
+                    glv_LogError("No -l0 arg and default tracer library file can't be found.");
+                    validArgs = FALSE;
+                }
+                else
+                {
+                    g_settings.trace_library[0] = filename+1;
+                    glv_platform_close_library(handle);
+                }
+            }
+            else
+            {
+                glv_platform_close_library(handle);
+            }
+        }
         if (g_settings.output_trace == NULL || strlen (g_settings.output_trace) == 0)
         {
             glv_LogError("No output trace file (-o) parameter found: Please specify a valid trace file to generate.");
