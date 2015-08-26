@@ -41,20 +41,13 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
+    init_connection(info);
     info.width = info.height = 50;
-
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
-    cmd_pool_info.pNext = NULL;
-    cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
-    cmd_pool_info.flags = 0;
-
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
-            0, &info.queue);
+    init_window(info);
+    init_wsi(info);
+    init_command_buffer(info);
+    init_device_queue(info);
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
     assert(!res);
 
     /* VULKAN_KEY_START */
