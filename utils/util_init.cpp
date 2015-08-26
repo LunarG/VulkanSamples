@@ -328,3 +328,37 @@ void init_window(struct sample_info &info)
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
 #endif // _WIN32
+void init_descriptor_and_pipeline_layouts(struct sample_info &info)
+{
+    VkDescriptorSetLayoutBinding layout_binding = {};
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_binding.arraySize = 1;
+    layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_binding.pImmutableSamplers = NULL;
+
+    /* Next take layout bindings and use them to create a descriptor set layout */
+    VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
+    descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout.pNext = NULL;
+    descriptor_layout.count = 1;
+    descriptor_layout.pBinding = &layout_binding;
+
+    VkResult err;
+
+    err = vkCreateDescriptorSetLayout(info.device,
+            &descriptor_layout, &info.desc_layout);
+    assert(!err);
+
+    /* Now use the descriptor layout to create a pipeline layout */
+    VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
+    pPipelineLayoutCreateInfo.sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.pNext              = NULL;
+    pPipelineLayoutCreateInfo.descriptorSetCount = 1;
+    pPipelineLayoutCreateInfo.pSetLayouts        = &info.desc_layout;
+
+    err = vkCreatePipelineLayout(info.device,
+                                 &pPipelineLayoutCreateInfo,
+                                 &info.pipeline_layout);
+    assert(!err);
+}
+
