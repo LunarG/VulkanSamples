@@ -1203,6 +1203,10 @@ static cJSON *loader_get_json(const char *filename)
     cJSON *json;
     uint64_t len;
     file = fopen(filename,"rb");
+    if (!file) {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Couldn't open JSON file %s", filename);
+        return NULL;
+    }
     fseek(file, 0, SEEK_END);
     len = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -1682,6 +1686,8 @@ void loader_icd_scan(struct loader_icd_libs *icds)
 
         cJSON *json;
         json = loader_get_json(file_str);
+        if (!json)
+            continue;
         cJSON *item;
         item = cJSON_GetObjectItem(json, "file_format_version");
         if (item == NULL)
