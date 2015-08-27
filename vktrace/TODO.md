@@ -1,4 +1,4 @@
-Here is a list of all supported features in GLAVE, followed by a TODO list of features that we'd like to add soon in the development process. We've also listed the features that we'd "like to have" in the future, but don't have a short-term plan to implement. 
+Here is a list of all supported features in VkTrace, followed by a TODO list of features that we'd like to add soon in the development process. We've also listed the features that we'd "like to have" in the future, but don't have a short-term plan to implement. 
 
 Feel Free to vote things up in the lists, attempt to implement them yourself, or add to the list!
 
@@ -51,10 +51,10 @@ As you complete an item, please copy / paste it into the SUPPORTED FEATURES sect
 * Optimize trace file loading by memory-mapping the file
 
 **SUPPORTED FEATURES IN TRACING/REPLAYING COMMAND LINE TOOLS AND LIBRARIES**
-* Command line Tracer app (glvtrace) which launches game/app with tracing library(ies) inserted and writes trace packets to a file
+* Command line Tracer app (vktrace) which launches game/app with tracing library(ies) inserted and writes trace packets to a file
 * Command line Tracer server which collects tracing packets over a socket connection and writes them to a file
 * Vulkan tracer library supports multithreaded Vulkan apps
-* Command line Replayer app (glvreplay) replays a Vulkan trace file with Window display on Linux
+* Command line Replayer app (vkreplay) replays a Vulkan trace file with Window display on Linux
 
 **TODO LIST IN TRACING/REPLAYING COMMAND LINE TOOLS AND LIBRARIES**
 * Optimize replay speed by using hash maps for opaque handles

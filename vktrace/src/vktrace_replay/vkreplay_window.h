@@ -30,22 +30,22 @@ extern "C"{
 
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
 #include <xcb/xcb.h>
-typedef xcb_window_t glv_window_handle;
+typedef xcb_window_t vktrace_window_handle;
 #elif defined(WIN32)
-typedef HWND glv_window_handle;
+typedef HWND vktrace_window_handle;
 #endif
 
 /* classes to abstract the display and initialization of rendering API for presenting
  * framebuffers for display into a window on the screen or else fullscreen.
  * Uses Bridge design pattern.
  */
-namespace glv_replay {
+namespace vktrace_replay {
 
 class DisplayImp {
 public:
     virtual ~DisplayImp() {}
     virtual int init(const unsigned int gpu_idx) = 0;
-    virtual int set_window(glv_window_handle hWindow, unsigned int width, unsigned int height) = 0;
+    virtual int set_window(vktrace_window_handle hWindow, unsigned int width, unsigned int height) = 0;
     virtual int create_window(const unsigned int width, const unsigned int height) = 0;
     virtual void process_event() = 0;
 };
@@ -73,7 +73,7 @@ public:
     {
     }
 
-    Display(glv_window_handle hWindow, unsigned int width, unsigned int height) :
+    Display(vktrace_window_handle hWindow, unsigned int width, unsigned int height) :
         m_imp(NULL),
         m_width(width),
         m_height(height),
@@ -120,7 +120,7 @@ public:
         return m_height;
     }
 
-    glv_window_handle get_window_handle()
+    vktrace_window_handle get_window_handle()
     {
         return m_hWindow;
     }
@@ -131,7 +131,7 @@ private:
     unsigned int m_height;
     unsigned int m_gpu;
     bool m_fullscreen;
-    glv_window_handle m_hWindow;
+    vktrace_window_handle m_hWindow;
 };
 
-}   // namespace glv_replay
+}   // namespace vktrace_replay

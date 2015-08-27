@@ -27,13 +27,13 @@
 
 #include "vkreplay_vkreplay.h"
 
-class vkDisplay: public glv_replay::DisplayImp {
+class vkDisplay: public vktrace_replay::DisplayImp {
 friend class vkReplay;
 public:
     vkDisplay();
     ~vkDisplay();
     int init(const unsigned int gpu_idx);
-    int set_window(glv_window_handle hWindow, unsigned int width, unsigned int height);
+    int set_window(vktrace_window_handle hWindow, unsigned int width, unsigned int height);
     int create_window(const unsigned int width, const unsigned int height);
     void resize_window(const unsigned int width, const unsigned int height);
     void process_event();

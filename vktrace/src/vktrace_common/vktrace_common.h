@@ -42,20 +42,20 @@
 
 #if defined(WIN32)
 
-#define GLVTRACER_EXPORT __declspec(dllexport)
-#define GLVTRACER_STDCALL __stdcall
-#define GLVTRACER_CDECL __cdecl
-#define GLVTRACER_EXIT void __cdecl
-#define GLVTRACER_ENTRY void
-#define GLVTRACER_LEAVE void
+#define VKTRACER_EXPORT __declspec(dllexport)
+#define VKTRACER_STDCALL __stdcall
+#define VKTRACER_CDECL __cdecl
+#define VKTRACER_EXIT void __cdecl
+#define VKTRACER_ENTRY void
+#define VKTRACER_LEAVE void
 
 #elif defined(PLATFORM_LINUX)
 
-#define GLVTRACER_EXPORT __attribute__ ((visibility ("default")))
-#define GLVTRACER_STDCALL
-#define GLVTRACER_CDECL
-#define GLVTRACER_EXIT void
-#define GLVTRACER_ENTRY void __attribute__ ((constructor))
-#define GLVTRACER_LEAVE void __attribute__ ((destructor))
+#define VKTRACER_EXPORT __attribute__ ((visibility ("default")))
+#define VKTRACER_STDCALL
+#define VKTRACER_CDECL
+#define VKTRACER_EXIT void
+#define VKTRACER_ENTRY void __attribute__ ((constructor))
+#define VKTRACER_LEAVE void __attribute__ ((destructor))
 
 #endif

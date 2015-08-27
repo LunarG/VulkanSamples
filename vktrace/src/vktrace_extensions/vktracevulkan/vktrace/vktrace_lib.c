@@ -31,56 +31,56 @@
 #include "vktrace_interconnect.h"
 #include "vktrace_vk_vk.h"
 
-// this is needed to be loaded by glvtrace
-GLVTRACER_EXPORT GLV_TRACER_ID GLVTRACER_CDECL GLV_GetTracerId(void)
+// this is needed to be loaded by vktrace
+VKTRACER_EXPORT VKTRACE_TRACER_ID VKTRACER_CDECL VKTRACE_GetTracerId(void)
 {
-    return GLV_TID_VULKAN;
+    return VKTRACE_TID_VULKAN;
 }
 
-GLVTRACER_LEAVE _Unload(void);
+VKTRACER_LEAVE _Unload(void);
 
 #ifdef PLATFORM_LINUX
-static void glv_sighandler(int signum, siginfo_t *info, void *ptr)
+static void vktrace_sighandler(int signum, siginfo_t *info, void *ptr)
 {
-   glv_LogVerbose("glvtrace_vk library handle signal %d.", signum);
+   vktrace_LogVerbose("vktrace_lib library handle signal %d.", signum);
     _Unload();
     kill(0, signum);
 }
 #endif
 
-GLVTRACER_EXIT TrapExit(void)
+VKTRACER_EXIT TrapExit(void)
 {
-    glv_LogVerbose("glvtrace_vk TrapExit.");
+    vktrace_LogVerbose("vktrace_lib TrapExit.");
 }
 
-void loggingCallback(GlvLogLevel level, const char* pMessage)
+void loggingCallback(VktraceLogLevel level, const char* pMessage)
 {
     switch(level)
     {
-    case GLV_LOG_ALWAYS: printf("%s\n", pMessage); break;
-    case GLV_LOG_DEBUG: printf("Debug: %s\n", pMessage); break;
-    case GLV_LOG_ERROR: printf("Error: %s\n", pMessage); break;
-    case GLV_LOG_WARNING: printf("Warning: %s\n", pMessage); break;
-    case GLV_LOG_VERBOSE: printf("Verbose: %s\n", pMessage); break;
+    case VKTRACE_LOG_ALWAYS: printf("%s\n", pMessage); break;
+    case VKTRACE_LOG_DEBUG: printf("Debug: %s\n", pMessage); break;
+    case VKTRACE_LOG_ERROR: printf("Error: %s\n", pMessage); break;
+    case VKTRACE_LOG_WARNING: printf("Warning: %s\n", pMessage); break;
+    case VKTRACE_LOG_VERBOSE: printf("Verbose: %s\n", pMessage); break;
     default:
         printf("%s\n", pMessage); break;
     }
 
-    if (glv_trace_get_trace_file() != NULL)
+    if (vktrace_trace_get_trace_file() != NULL)
     {
         size_t requiredLength = strlen(pMessage) + 1;
-        glv_trace_packet_header* pHeader = glv_create_trace_packet(GLV_GetTracerId(), GLV_TPI_MESSAGE, sizeof(glv_trace_packet_message), requiredLength);
-        glv_trace_packet_message* pPacket = glv_interpret_body_as_trace_packet_message(pHeader);
+        vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_GetTracerId(), VKTRACE_TPI_MESSAGE, sizeof(vktrace_trace_packet_message), requiredLength);
+        vktrace_trace_packet_message* pPacket = vktrace_interpret_body_as_trace_packet_message(pHeader);
         pPacket->type = level;
         pPacket->length = requiredLength;
 
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&pPacket->message, requiredLength, pMessage);
-        glv_finalize_buffer_address(pHeader, (void**)&pPacket->message);
-        glv_set_packet_entrypoint_end_time(pHeader);
-        glv_finalize_trace_packet(pHeader);
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&pPacket->message, requiredLength, pMessage);
+        vktrace_finalize_buffer_address(pHeader, (void**)&pPacket->message);
+        vktrace_set_packet_entrypoint_end_time(pHeader);
+        vktrace_finalize_trace_packet(pHeader);
 
-        glv_write_trace_packet(pHeader, glv_trace_get_trace_file());
-        glv_delete_trace_packet(&pHeader);
+        vktrace_write_trace_packet(pHeader, vktrace_trace_get_trace_file());
+        vktrace_delete_trace_packet(&pHeader);
     }
 
 #if defined(WIN32)
@@ -91,15 +91,15 @@ void loggingCallback(GlvLogLevel level, const char* pMessage)
 }
 
 extern
-GLVTRACER_ENTRY _Load(void)
+VKTRACER_ENTRY _Load(void)
 {
-    // only do the hooking and networking if the tracer is NOT loaded by glvtrace
-    if (glv_is_loaded_into_glvtrace() == FALSE)
+    // only do the hooking and networking if the tracer is NOT loaded by vktrace
+    if (vktrace_is_loaded_into_vktrace() == FALSE)
     {
-        glv_LogSetCallback(loggingCallback);
-        glv_LogSetLevel(GLV_LOG_LEVEL_MAXIMUM);
+        vktrace_LogSetCallback(loggingCallback);
+        vktrace_LogSetLevel(VKTRACE_LOG_LEVEL_MAXIMUM);
 
-        glv_LogVerbose("glvtrace_vk library loaded into PID %d", glv_get_pid());
+        vktrace_LogVerbose("vktrace_lib library loaded into PID %d", vktrace_get_pid());
         atexit(TrapExit);
 
         // If you need to debug startup, build with this set to true, then attach and change it to false.
@@ -114,7 +114,7 @@ GLVTRACER_ENTRY _Load(void)
 #else
         struct sigaction act;
         memset(&act, 0 , sizeof(act));
-        act.sa_sigaction = glv_sighandler;
+        act.sa_sigaction = vktrace_sighandler;
         act.sa_flags = SA_SIGINFO | SA_RESETHAND;
         sigaction(SIGINT, &act, NULL);
         sigaction(SIGTERM, &act, NULL);
@@ -123,25 +123,25 @@ GLVTRACER_ENTRY _Load(void)
     }
 }
 
-GLVTRACER_LEAVE _Unload(void)
+VKTRACER_LEAVE _Unload(void)
 {
-    // only do the hooking and networking if the tracer is NOT loaded by glvtrace
-    if (glv_is_loaded_into_glvtrace() == FALSE)
+    // only do the hooking and networking if the tracer is NOT loaded by vktrace
+    if (vktrace_is_loaded_into_vktrace() == FALSE)
     {
         DetachHooks();
-        if (glv_trace_get_trace_file() != NULL) {
-            glv_trace_packet_header* pHeader = glv_create_trace_packet(GLV_GetTracerId(), GLV_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
-            glv_finalize_trace_packet(pHeader);
-            glv_write_trace_packet(pHeader, glv_trace_get_trace_file());
-            glv_delete_trace_packet(&pHeader);
-            glv_free(glv_trace_get_trace_file());
-            glv_trace_set_trace_file(NULL);
+        if (vktrace_trace_get_trace_file() != NULL) {
+            vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_GetTracerId(), VKTRACE_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
+            vktrace_finalize_trace_packet(pHeader);
+            vktrace_write_trace_packet(pHeader, vktrace_trace_get_trace_file());
+            vktrace_delete_trace_packet(&pHeader);
+            vktrace_free(vktrace_trace_get_trace_file());
+            vktrace_trace_set_trace_file(NULL);
         }
         if (gMessageStream != NULL)
         {
-            glv_MessageStream_destroy(&gMessageStream);
+            vktrace_MessageStream_destroy(&gMessageStream);
         }
-        glv_LogVerbose("glvtrace_vk library unloaded from PID %d", glv_get_pid());
+        vktrace_LogVerbose("vktrace_lib library unloaded from PID %d", vktrace_get_pid());
     }
 }
 

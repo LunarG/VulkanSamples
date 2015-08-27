@@ -32,17 +32,17 @@ static vkreplay_settings s_defaultVkReplaySettings = { 1, "",
                                                        STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK)};
 vkreplay_settings g_vkReplaySettings;
 
-glv_SettingInfo g_vk_settings_info[] =
+vktrace_SettingInfo g_vk_settings_info[] =
 {
-    { "dl", "DebugLevel", GLV_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
-    { "e", "EnableLayers", GLV_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
-    { "dsrf", "DrawStateReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateReportFlags, &s_defaultVkReplaySettings.drawStateReportFlags, TRUE, "DrawState Layer reporting level"},
-    { "dsda", "DrawStateDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateDebugAction, &s_defaultVkReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
-    { "mtrf", "MemTrackerReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerReportFlags, &s_defaultVkReplaySettings.memTrackerReportFlags, TRUE, "MemTracker Layer reporting level"},
-    { "mtda", "MemTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerDebugAction, &s_defaultVkReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},
-    { "dsrf", "ObjectTrackerReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerReportFlags, &s_defaultVkReplaySettings.objectTrackerReportFlags, TRUE, "ObjectTracker Layer reporting level"},
-    { "dsda", "ObjectTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerDebugAction, &s_defaultVkReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},};
-glv_SettingGroup g_vkReplaySettingGroup =
+    { "dl", "DebugLevel", VKTRACE_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
+    { "e", "EnableLayers", VKTRACE_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
+    { "dsrf", "DrawStateReportFlags", VKTRACE_SETTING_STRING, &g_vkReplaySettings.drawStateReportFlags, &s_defaultVkReplaySettings.drawStateReportFlags, TRUE, "DrawState Layer reporting level"},
+    { "dsda", "DrawStateDebugAction", VKTRACE_SETTING_STRING, &g_vkReplaySettings.drawStateDebugAction, &s_defaultVkReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
+    { "mtrf", "MemTrackerReportFlags", VKTRACE_SETTING_STRING, &g_vkReplaySettings.memTrackerReportFlags, &s_defaultVkReplaySettings.memTrackerReportFlags, TRUE, "MemTracker Layer reporting level"},
+    { "mtda", "MemTrackerDebugAction", VKTRACE_SETTING_STRING, &g_vkReplaySettings.memTrackerDebugAction, &s_defaultVkReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},
+    { "dsrf", "ObjectTrackerReportFlags", VKTRACE_SETTING_STRING, &g_vkReplaySettings.objectTrackerReportFlags, &s_defaultVkReplaySettings.objectTrackerReportFlags, TRUE, "ObjectTracker Layer reporting level"},
+    { "dsda", "ObjectTrackerDebugAction", VKTRACE_SETTING_STRING, &g_vkReplaySettings.objectTrackerDebugAction, &s_defaultVkReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},};
+vktrace_SettingGroup g_vkReplaySettingGroup =
 {
     "vkreplay_vk",
     sizeof(g_vk_settings_info) / sizeof(g_vk_settings_info[0]),
@@ -85,11 +85,11 @@ char** get_enableLayers_list(unsigned int *pNumLayers)
         }
 
         // allocate an array to contain pointers to the layer names
-        pList = GLV_NEW_ARRAY(char*, (*pNumLayers));
+        pList = VKTRACE_NEW_ARRAY(char*, (*pNumLayers));
 
         // copy the entire string to the first element in the list to keep
         // the layer names localized in memory.
-        pList[0] = (char*)glv_allocate_and_copy(g_vkReplaySettings.enableLayers);
+        pList[0] = (char*)vktrace_allocate_and_copy(g_vkReplaySettings.enableLayers);
 
         // now walk the string and replace commas with NULL and record
         // the pointers in the pList array.
@@ -114,9 +114,9 @@ void release_enableLayer_list(char** pList)
     {
         if (pList[0] != NULL)
         {
-            GLV_DELETE(pList[0]);
+            VKTRACE_DELETE(pList[0]);
         }
 
-        GLV_DELETE(pList);
+        VKTRACE_DELETE(pList);
     }
 }

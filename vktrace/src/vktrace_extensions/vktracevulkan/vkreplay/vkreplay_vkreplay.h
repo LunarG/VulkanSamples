@@ -57,22 +57,22 @@ extern "C" {
 class vkReplay {
 public:
     ~vkReplay();
-    vkReplay(glvreplay_settings *pReplaySettings);
+    vkReplay(vkreplayer_settings *pReplaySettings);
 
-    int init(glv_replay::Display & disp);
+    int init(vktrace_replay::Display & disp);
     vkDisplay * get_display() {return m_display;}
-    glv_replay::GLV_REPLAY_RESULT replay(glv_trace_packet_header *packet);
-    glv_replay::GLV_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const glv_replay::GLV_REPLAY_RESULT resIn);
+    vktrace_replay::VKTRACE_REPLAY_RESULT replay(vktrace_trace_packet_header *packet);
+    vktrace_replay::VKTRACE_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const vktrace_replay::VKTRACE_REPLAY_RESULT resIn);
 
     void push_validation_msg(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
-    glv_replay::GLV_REPLAY_RESULT pop_validation_msgs();
+    vktrace_replay::VKTRACE_REPLAY_RESULT pop_validation_msgs();
     int dump_validation_data();
 private:
     struct vkFuncs m_vkFuncs;
     vkReplayObjMapper m_objMapper;
     void (*m_pDSDump)(char*);
     void (*m_pCBDump)(char*);
-    //GLVSNAPSHOT_PRINT_OBJECTS m_pGlvSnapshotPrint;
+    //VKTRACESNAPSHOT_PRINT_OBJECTS m_pVktraceSnapshotPrint;
     vkDisplay *m_display;
 
     struct shaderPair {

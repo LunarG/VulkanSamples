@@ -56,9 +56,9 @@ void SafeCloseHandle(HANDLE& _handle)
 #endif
 
 // ------------------------------------------------------------------------------------------------
-GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID _procInfoPtr)
+VKTRACE_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID _procInfoPtr)
 {
-    glv_process_info* pProcInfo = (glv_process_info*)_procInfoPtr;
+    vktrace_process_info* pProcInfo = (vktrace_process_info*)_procInfoPtr;
 
 #if defined(WIN32)
 
@@ -66,14 +66,14 @@ GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID _procInfoPtr)
     {
         if (pProcInfo->serverRequestsTermination)
         {
-            glv_LogVerbose("GLVTrace has requested exit.");
+            vktrace_LogVerbose("Vktrace has requested exit.");
             return 0;
         }
     }
 
-    glv_LogVerbose("Child process has terminated.");
+    vktrace_LogVerbose("Child process has terminated.");
 
-    PostThreadMessage(pProcInfo->parentThreadId, GLV_WM_COMPLETE, 0, 0);
+    PostThreadMessage(pProcInfo->parentThreadId, VKTRACE_WM_COMPLETE, 0, 0);
     pProcInfo->serverRequestsTermination = TRUE;
     
 #elif defined(PLATFORM_LINUX)
@@ -83,119 +83,119 @@ GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID _procInfoPtr)
     {
         if (WIFEXITED(status))
         {
-            glv_LogVerbose("Child process exited.");
+            vktrace_LogVerbose("Child process exited.");
             break;
         }
         else if (WCOREDUMP(status))
         {
-            glv_LogError("Child process crashed.");
+            vktrace_LogError("Child process crashed.");
             break;
         }
         else if (WIFSIGNALED(status))
-            glv_LogVerbose("Child process was signaled.");
+            vktrace_LogVerbose("Child process was signaled.");
         else if (WIFSTOPPED(status))
-            glv_LogVerbose("Child process was stopped.");
+            vktrace_LogVerbose("Child process was stopped.");
         else if (WIFCONTINUED(status))
-            glv_LogVerbose("Child process was continued.");
+            vktrace_LogVerbose("Child process was continued.");
     }
 #endif
     return 0;
 }
 
 // ------------------------------------------------------------------------------------------------
-GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID _threadInfo)
+VKTRACE_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID _threadInfo)
 {
-    glv_process_capture_trace_thread_info* pInfo = (glv_process_capture_trace_thread_info*)_threadInfo;
+    vktrace_process_capture_trace_thread_info* pInfo = (vktrace_process_capture_trace_thread_info*)_threadInfo;
 
-    MessageStream* pMessageStream = glv_MessageStream_create(TRUE, "", GLV_BASE_PORT + pInfo->tracerId);
+    MessageStream* pMessageStream = vktrace_MessageStream_create(TRUE, "", VKTRACE_BASE_PORT + pInfo->tracerId);
     if (pMessageStream == NULL)
     {
-        glv_LogError("Thread_CaptureTrace() cannot create message stream.");
+        vktrace_LogError("Thread_CaptureTrace() cannot create message stream.");
         return 1;
     }
 
     // create trace file
-    pInfo->pProcessInfo->pTraceFile = glv_write_trace_file_header(pInfo->pProcessInfo);
+    pInfo->pProcessInfo->pTraceFile = vktrace_write_trace_file_header(pInfo->pProcessInfo);
 
     if (pInfo->pProcessInfo->pTraceFile == NULL) {
         // writing trace file generated an error, no sense in continuing.
-        glv_LogError("Error cannot create trace file and write header.");
-        glv_process_info_delete(pInfo->pProcessInfo);
+        vktrace_LogError("Error cannot create trace file and write header.");
+        vktrace_process_info_delete(pInfo->pProcessInfo);
         return 1;
     }
 
-    FileLike* fileLikeSocket = glv_FileLike_create_msg(pMessageStream);
+    FileLike* fileLikeSocket = vktrace_FileLike_create_msg(pMessageStream);
     unsigned int total_packet_count = 0;
-    glv_trace_packet_header* pHeader = NULL;
+    vktrace_trace_packet_header* pHeader = NULL;
     size_t bytes_written;
 
     while (pInfo->pProcessInfo->serverRequestsTermination == FALSE)
     {
         // get a packet
-        //glv_LogDebug("Waiting for a packet...");
+        //vktrace_LogDebug("Waiting for a packet...");
 
         // read entire packet in
-        pHeader = glv_read_trace_packet(fileLikeSocket);
+        pHeader = vktrace_read_trace_packet(fileLikeSocket);
         ++total_packet_count;
         if (pHeader == NULL)
         {
             if (pMessageStream->mErrorNum == WSAECONNRESET)
             {
-                glv_LogError("Network Connection Reset");
+                vktrace_LogError("Network Connection Reset");
             }
             else
             {
-                glv_LogError("Network Connection Failed");
+                vktrace_LogError("Network Connection Failed");
             }
             break;
         }
 
-        //glv_LogDebug("Received packet id: %hu", pHeader->packet_id);
+        //vktrace_LogDebug("Received packet id: %hu", pHeader->packet_id);
         
         if (pHeader->pBody == (uintptr_t) NULL)
         {
-            glv_LogWarning("Received empty packet body for id: %hu", pHeader->packet_id);
+            vktrace_LogWarning("Received empty packet body for id: %hu", pHeader->packet_id);
         }
         else
         {
             // handle special case packets
-            if (pHeader->packet_id == GLV_TPI_MESSAGE)
+            if (pHeader->packet_id == VKTRACE_TPI_MESSAGE)
             {
                 if (g_settings.print_trace_messages == TRUE)
                 {
-                    glv_trace_packet_message* pPacket = glv_interpret_body_as_trace_packet_message(pHeader);
-                    glv_LogAlways("Packet %lu: Traced Message (%s): %s", pHeader->global_packet_index, glv_LogLevelToShortString(pPacket->type), pPacket->message);
-                    glv_finalize_buffer_address(pHeader, (void **) &(pPacket->message));
+                    vktrace_trace_packet_message* pPacket = vktrace_interpret_body_as_trace_packet_message(pHeader);
+                    vktrace_LogAlways("Packet %lu: Traced Message (%s): %s", pHeader->global_packet_index, vktrace_LogLevelToShortString(pPacket->type), pPacket->message);
+                    vktrace_finalize_buffer_address(pHeader, (void **) &(pPacket->message));
                 }
             }
 
-            if (pHeader->packet_id == GLV_TPI_MARKER_TERMINATE_PROCESS)
+            if (pHeader->packet_id == VKTRACE_TPI_MARKER_TERMINATE_PROCESS)
             {
                 pInfo->pProcessInfo->serverRequestsTermination = true;
-                glv_delete_trace_packet(&pHeader);
-                glv_LogVerbose("Thread_CaptureTrace is exiting.");
+                vktrace_delete_trace_packet(&pHeader);
+                vktrace_LogVerbose("Thread_CaptureTrace is exiting.");
                 break;
             }
 
             if (pInfo->pProcessInfo->pTraceFile != NULL)
             {
-                glv_enter_critical_section(&pInfo->pProcessInfo->traceFileCriticalSection);
+                vktrace_enter_critical_section(&pInfo->pProcessInfo->traceFileCriticalSection);
                 bytes_written = fwrite(pHeader, 1, (size_t)pHeader->size, pInfo->pProcessInfo->pTraceFile);
                 fflush(pInfo->pProcessInfo->pTraceFile);
-                glv_leave_critical_section(&pInfo->pProcessInfo->traceFileCriticalSection);
+                vktrace_leave_critical_section(&pInfo->pProcessInfo->traceFileCriticalSection);
                 if (bytes_written != pHeader->size)
                 {
-                    glv_LogError("Failed to write the packet for packet_id = %hu", pHeader->packet_id);
+                    vktrace_LogError("Failed to write the packet for packet_id = %hu", pHeader->packet_id);
                 }
             }
         }
 
         // clean up
-        glv_delete_trace_packet(&pHeader);
+        vktrace_delete_trace_packet(&pHeader);
     }
 
-    GLV_DELETE(fileLikeSocket);
-    glv_MessageStream_destroy(&pMessageStream);
+    VKTRACE_DELETE(fileLikeSocket);
+    vktrace_MessageStream_destroy(&pMessageStream);
 
     return 0;
 }

@@ -30,13 +30,13 @@ extern "C" {
 
 
 #if defined(WIN32)
-#define GLV_WM_COMPLETE (WM_USER + 0)
+#define VKTRACE_WM_COMPLETE (WM_USER + 0)
 #endif
 
 //----------------------------------------------------------------------------------------------------------------------
 // globals
 //----------------------------------------------------------------------------------------------------------------------
-typedef struct glvtrace_settings
+typedef struct vktrace_settings
 {
     char* program;
     char* arguments;
@@ -45,6 +45,6 @@ typedef struct glvtrace_settings
     char* trace_library[16];
     BOOL print_trace_messages;
     char* screenshotList;
-} glvtrace_settings;
+} vktrace_settings;
 
-extern glvtrace_settings g_settings;
+extern vktrace_settings g_settings;

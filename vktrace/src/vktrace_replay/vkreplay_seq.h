@@ -32,7 +32,7 @@ extern "C" {
 /* Class to handle fetching and sequencing packets from a tracefile.
  * Contains no knowledge of type of tracer needed to process packet.
  * Requires low level file/stream reading/seeking support. */
-namespace glv_replay {
+namespace vktrace_replay {
 
 
 struct seqBookmark
@@ -46,7 +46,7 @@ struct seqBookmark
  {
  public:
     virtual ~AbstractSequencer() {}
-    virtual glv_trace_packet_header *get_next_packet() = 0;
+    virtual vktrace_trace_packet_header *get_next_packet() = 0;
     virtual void get_bookmark(seqBookmark &bookmark) = 0;
     virtual void set_bookmark(const seqBookmark &bookmark) = 0;
  };
@@ -58,18 +58,18 @@ public:
     Sequencer(FileLike* pFile) : m_lastPacket(NULL), m_pFile(pFile) {}
     ~Sequencer() { delete m_lastPacket;}
     
-    glv_trace_packet_header *get_next_packet();
+    vktrace_trace_packet_header *get_next_packet();
     void get_bookmark(seqBookmark &bookmark);
     void set_bookmark(const seqBookmark &bookmark);
     void record_bookmark();
     
 private:
-    glv_trace_packet_header *m_lastPacket;
+    vktrace_trace_packet_header *m_lastPacket;
     seqBookmark m_bookmark;
     FileLike *m_pFile;
     
 };
 
-} /* namespace glv_replay */
+} /* namespace vktrace_replay */
 
 

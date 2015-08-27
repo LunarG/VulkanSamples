@@ -22,8 +22,8 @@
  * THE SOFTWARE.
  *
  **************************************************************************/
-#ifndef GLVREPLAY_VK_SETTINGS_H
-#define GLVREPLAY_VK_SETTINGS_H
+#ifndef VKREPLAY__VK_SETTINGS_H
+#define VKREPLAY__VK_SETTINGS_H
 
 extern "C"
 {
@@ -45,10 +45,10 @@ typedef struct vkreplay_settings
 } vkreplay_settings;
 
 extern vkreplay_settings g_vkReplaySettings;
-extern glv_SettingGroup g_vkReplaySettingGroup;
+extern vktrace_SettingGroup g_vkReplaySettingGroup;
 
 void apply_layerSettings_overrides();
 char** get_enableLayers_list(unsigned int* pNumLayers);
 void release_enableLayer_list(char** pList);
 
-#endif // GLVREPLAY_VK_SETTINGS_H
+#endif // VKREPLAY__VK_SETTINGS_H

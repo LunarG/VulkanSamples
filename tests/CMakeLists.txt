@@ -95,11 +95,11 @@ else()
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/golden GOLDEN)
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_run_all_tests.ps1 RUN_ALL)
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_run_all_tests_with_layers.ps1 RUN_ALL_WITH_LAYERS)
-        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_vktracereplay.ps1 VKGLAVETRACEREPLAY)
+        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/_vktracereplay.ps1 VKTRACEREPLAY)
         add_custom_target(binary-dir-symlinks ALL
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL} run_all_tests.ps1
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_ALL_WITH_LAYERS} run_all_tests_with_layers.ps1
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VKGLAVETRACEREPLAY} vktracereplay.ps1
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${VKTRACEREPLAY} vktracereplay.ps1
             COMMAND IF NOT EXIST golden mklink /J golden ${GOLDEN}
             VERBATIM
             )

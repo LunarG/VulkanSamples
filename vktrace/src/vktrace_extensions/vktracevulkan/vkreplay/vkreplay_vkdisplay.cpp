@@ -77,14 +77,14 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
             // get the GPU physical properties:
             res = vkGetGpuInfo( m_gpus[gpu], VK_INFO_TYPE_PHYSICAL_GPU_PROPERTIES, &gpuInfoSize, &m_gpuProps[gpu]);
             if (res != VK_SUCCESS)
-                glv_LogWarning("Failed to retrieve properties for gpu[%d] result %d", gpu, res);
+                vktrace_LogWarning("Failed to retrieve properties for gpu[%d] result %d", gpu, res);
         }
         res = VK_SUCCESS;
     } else if ((gpu_idx + 1) > m_gpuCount) {
-        glv_LogError("vkInitAndEnumerate number of gpus does not include requested index: num %d, requested %d", m_gpuCount, gpu_idx);
+        vktrace_LogError("vkInitAndEnumerate number of gpus does not include requested index: num %d, requested %d", m_gpuCount, gpu_idx);
         return -1;
     } else {
-        glv_LogError("vkInitAndEnumerate failed");
+        vktrace_LogError("vkInitAndEnumerate failed");
         return res;
     }
     // TODO add multi-gpu support always use gpu[gpu_idx] for now
@@ -101,7 +101,7 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
         }
     }
     if (!foundWSIExt) {
-        glv_LogError("VK_WSI_WINDOWS extension not supported by gpu[%d]", gpu_idx);
+        vktrace_LogError("VK_WSI_WINDOWS extension not supported by gpu[%d]", gpu_idx);
         return VK_ERROR_INCOMPATIBLE_DEVICE;
     }
     // TODO generalize this: use one universal queue for now
@@ -120,7 +120,7 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
     bool32_t vkTrue = VK_TRUE;
     res = vkDbgSetGlobalOption( VK_DBG_OPTION_BREAK_ON_ERROR, sizeof( vkTrue ), &vkTrue );
     if (res != VK_SUCCESS)
-        glv_LogWarning("Could not set debug option break on error");
+        vktrace_LogWarning("Could not set debug option break on error");
     res = vkCreateDevice( m_gpus[0], &info, &m_dev[gpu_idx]);
     return res;
 #else
@@ -134,7 +134,7 @@ int vkDisplay::init(const unsigned int gpu_idx)
 #if 0
     VkResult result = init_vk(gpu_idx);
     if (result != VK_SUCCESS) {
-        glv_LogError("could not init vulkan library");
+        vktrace_LogError("could not init vulkan library");
         return -1;
     } else {
         m_initedVK = true;
@@ -171,7 +171,7 @@ LRESULT WINAPI WindowProcVk( HWND window, unsigned int msg, WPARAM wp, LPARAM lp
 }
 #endif
 
-int vkDisplay::set_window(glv_window_handle hWindow, unsigned int width, unsigned int height)
+int vkDisplay::set_window(vktrace_window_handle hWindow, unsigned int width, unsigned int height)
 {
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     m_XcbWindow = hWindow;
@@ -230,7 +230,7 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
     wcex.hIconSm = LoadIcon( wcex.hInstance, MAKEINTRESOURCE( IDI_ICON));
     if( !RegisterClassEx( &wcex))
     {
-        glv_LogError("Failed to register windows class");
+        vktrace_LogError("Failed to register windows class");
         return -1;
     }
 
@@ -244,7 +244,7 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
         m_windowWidth = width;
         m_windowHeight = height;
     } else {
-        glv_LogError("Failed to create window");
+        vktrace_LogError("Failed to create window");
         return -1;
     }
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now

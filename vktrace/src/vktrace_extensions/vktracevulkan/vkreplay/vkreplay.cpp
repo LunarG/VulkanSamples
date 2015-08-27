@@ -33,9 +33,9 @@ extern "C"
 }
 
 vkReplay* g_pReplayer = NULL;
-GLV_CRITICAL_SECTION g_handlerLock;
+VKTRACE_CRITICAL_SECTION g_handlerLock;
 PFN_vkDbgMsgCallback g_fpDbgMsgCallback;
-glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION g_fpGlvCallback = NULL;
+vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
 static void VKAPI vkErrorHandler(
                                 VkFlags             msgFlags,
@@ -47,68 +47,68 @@ static void VKAPI vkErrorHandler(
                                 const char*         pMsg,
                                 void*               pUserData)
 {
-    glv_enter_critical_section(&g_handlerLock);
+    vktrace_enter_critical_section(&g_handlerLock);
     if ((msgFlags & VK_DBG_REPORT_ERROR_BIT) == VK_DBG_REPORT_ERROR_BIT)
     {
-        glv_LogError("MsgFlags %d with object %#" PRIxLEAST64 ", location %u returned msgCode %d and msg %s",
+        vktrace_LogError("MsgFlags %d with object %#" PRIxLEAST64 ", location %u returned msgCode %d and msg %s",
                      msgFlags, srcObjectHandle, location, msgCode, (char *) pMsg);
         g_pReplayer->push_validation_msg(msgFlags, objType, srcObjectHandle, location, msgCode, pLayerPrefix, (char *) pMsg, pUserData);
-        if (g_fpGlvCallback != NULL)
+        if (g_fpVktraceCallback != NULL)
         {
-            g_fpGlvCallback(glv_replay::GLV_DBG_MSG_ERROR, pMsg);
+            g_fpVktraceCallback(vktrace_replay::VKTRACE_DBG_MSG_ERROR, pMsg);
         }
     }
     else if ((msgFlags & VK_DBG_REPORT_WARN_BIT) == VK_DBG_REPORT_WARN_BIT ||
              (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) == VK_DBG_REPORT_PERF_WARN_BIT)
     {
-        if (g_fpGlvCallback != NULL)
+        if (g_fpVktraceCallback != NULL)
         {
-            g_fpGlvCallback(glv_replay::GLV_DBG_MSG_WARNING, pMsg);
+            g_fpVktraceCallback(vktrace_replay::VKTRACE_DBG_MSG_WARNING, pMsg);
         }
     }
     else
     {
-        if (g_fpGlvCallback != NULL)
+        if (g_fpVktraceCallback != NULL)
         {
-            g_fpGlvCallback(glv_replay::GLV_DBG_MSG_INFO, pMsg);
+            g_fpVktraceCallback(vktrace_replay::VKTRACE_DBG_MSG_INFO, pMsg);
         }
     }
-    glv_leave_critical_section(&g_handlerLock);
+    vktrace_leave_critical_section(&g_handlerLock);
 }
 
-void VkReplaySetLogCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback)
+void VkReplaySetLogCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback)
 {
-    glv_LogSetCallback(pCallback);
+    vktrace_LogSetCallback(pCallback);
 }
 
-void VkReplaySetLogLevel(GlvLogLevel level)
+void VkReplaySetLogLevel(VktraceLogLevel level)
 {
-    glv_LogSetLevel(level);
+    vktrace_LogSetLevel(level);
 }
 
-void VkReplayRegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback)
+void VkReplayRegisterDbgMsgCallback(vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION pCallback)
 {
-    g_fpGlvCallback = pCallback;
+    g_fpVktraceCallback = pCallback;
 }
 
-glv_SettingGroup* GLVTRACER_CDECL VkReplayGetSettings()
+vktrace_SettingGroup* VKTRACER_CDECL VkReplayGetSettings()
 {
     static BOOL bFirstTime = TRUE;
     if (bFirstTime == TRUE)
     {
-        glv_SettingGroup_reset_defaults(&g_vkReplaySettingGroup);
+        vktrace_SettingGroup_reset_defaults(&g_vkReplaySettingGroup);
         bFirstTime = FALSE;
     }
 
     return &g_vkReplaySettingGroup;
 }
 
-void GLVTRACER_CDECL VkReplayUpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
+void VKTRACER_CDECL VkReplayUpdateFromSettings(vktrace_SettingGroup* pSettingGroups, unsigned int numSettingGroups)
 {
-    glv_SettingGroup_Apply_Overrides(&g_vkReplaySettingGroup, pSettingGroups, numSettingGroups);
+    vktrace_SettingGroup_Apply_Overrides(&g_vkReplaySettingGroup, pSettingGroups, numSettingGroups);
 }
 
-int GLVTRACER_CDECL VkReplayInitialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings)
+int VKTRACER_CDECL VkReplayInitialize(vktrace_replay::Display* pDisplay, vkreplayer_settings *pReplaySettings)
 {
     try
     {
@@ -116,52 +116,52 @@ int GLVTRACER_CDECL VkReplayInitialize(glv_replay::Display* pDisplay, glvreplay_
     }
     catch (int e)
     {
-        glv_LogError("Failed to create vkReplay, probably out of memory. Error %d", e);
+        vktrace_LogError("Failed to create vkReplay, probably out of memory. Error %d", e);
         return -1;
     }
 
-    glv_create_critical_section(&g_handlerLock);
+    vktrace_create_critical_section(&g_handlerLock);
     g_fpDbgMsgCallback = vkErrorHandler;
     int result = g_pReplayer->init(*pDisplay);
     return result;
 }
 
-void GLVTRACER_CDECL VkReplayDeinitialize()
+void VKTRACER_CDECL VkReplayDeinitialize()
 {
     if (g_pReplayer != NULL)
     {
         delete g_pReplayer;
         g_pReplayer = NULL;
     }
-    glv_delete_critical_section(&g_handlerLock);
+    vktrace_delete_critical_section(&g_handlerLock);
 }
 
-glv_trace_packet_header* GLVTRACER_CDECL VkReplayInterpret(glv_trace_packet_header* pPacket)
+vktrace_trace_packet_header* VKTRACER_CDECL VkReplayInterpret(vktrace_trace_packet_header* pPacket)
 {
     // Attempt to interpret the packet as a Vulkan packet
-    glv_trace_packet_header* pInterpretedHeader = interpret_trace_packet_vk(pPacket);
+    vktrace_trace_packet_header* pInterpretedHeader = interpret_trace_packet_vk(pPacket);
     if (pInterpretedHeader == NULL)
     {
-        glv_LogError("Unrecognized Vulkan packet_id: %u", pPacket->packet_id);
+        vktrace_LogError("Unrecognized Vulkan packet_id: %u", pPacket->packet_id);
     }
 
     return pInterpretedHeader;
 }
 
-glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL VkReplayReplay(glv_trace_packet_header* pPacket)
+vktrace_replay::VKTRACE_REPLAY_RESULT VKTRACER_CDECL VkReplayReplay(vktrace_trace_packet_header* pPacket)
 {
-    glv_replay::GLV_REPLAY_RESULT result = glv_replay::GLV_REPLAY_ERROR;
+    vktrace_replay::VKTRACE_REPLAY_RESULT result = vktrace_replay::VKTRACE_REPLAY_ERROR;
     if (g_pReplayer != NULL)
     {
         result = g_pReplayer->replay(pPacket);
 
-        if (result == glv_replay::GLV_REPLAY_SUCCESS)
+        if (result == vktrace_replay::VKTRACE_REPLAY_SUCCESS)
             result = g_pReplayer->pop_validation_msgs();
     }
     return result;
 }
 
-int GLVTRACER_CDECL VkReplayDump()
+int VKTRACER_CDECL VkReplayDump()
 {
     if (g_pReplayer != NULL)
     {

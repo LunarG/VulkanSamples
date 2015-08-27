@@ -56,30 +56,30 @@ typedef struct Checkpoint
     size_t mTokenLength;
 } Checkpoint;
 
-Checkpoint* glv_Checkpoint_create(const char* _str);
-void glv_Checkpoint_write(Checkpoint* pCheckpoint, FileLike* _out);
-BOOL glv_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in);
+Checkpoint* vktrace_Checkpoint_create(const char* _str);
+void vktrace_Checkpoint_write(Checkpoint* pCheckpoint, FileLike* _out);
+BOOL vktrace_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in);
 
 // An interface for interacting with sockets, files, and memory streams with a file-like interface.
 // This is a simple file-like interface--it doesn't support rewinding or anything fancy, just fifo 
 // reads and writes.
 
 // create a filelike interface for file streaming
-FileLike* glv_FileLike_create_file(FILE* fp);
+FileLike* vktrace_FileLike_create_file(FILE* fp);
 
 // create a filelike interface for network streaming
-FileLike* glv_FileLike_create_msg(MessageStream* _msgStream);
+FileLike* vktrace_FileLike_create_msg(MessageStream* _msgStream);
 
 // read a size and then a buffer of that size
-size_t glv_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len);
+size_t vktrace_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len);
 
 // Normally, Read expects the size to live in the stream prefixing the data to be read.
 // With ReadRaw, no size is expected first, and the bytes are directly read.
-BOOL glv_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len);
+BOOL vktrace_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len);
 
 // write _len and then the buffer of size _len
-void glv_FileLike_Write(FileLike* pFileLike, const void* _bytes, size_t _len);
+void vktrace_FileLike_Write(FileLike* pFileLike, const void* _bytes, size_t _len);
 
 // Normally, Write outputs the _len to the stream first--with WriteRaw the bytes are simply written, 
 // no size parameter first.
-BOOL glv_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len);
+BOOL vktrace_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len);

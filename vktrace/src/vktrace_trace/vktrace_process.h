@@ -35,6 +35,6 @@ extern "C" {
 #include "vktrace_interconnect.h"
 }
 
-GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID);
+VKTRACE_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID);
 
-GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID);
+VKTRACE_THREAD_ROUTINE_RETURN_TYPE Process_RunWatchdogThread(LPVOID);

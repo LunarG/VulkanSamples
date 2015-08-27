@@ -32,66 +32,66 @@ extern "C" {
 #include "vkreplay_window.h"
 #include "vkreplay_main.h"
 
-namespace glv_replay {
+namespace vktrace_replay {
 
-enum GLV_REPLAY_RESULT
+enum VKTRACE_REPLAY_RESULT
 {
-    GLV_REPLAY_SUCCESS = 0,
-    GLV_REPLAY_ERROR,          // internal error unrelated to the specific packet
-    GLV_REPLAY_INVALID_ID,     // packet_id invalid
-    GLV_REPLAY_BAD_RETURN,     // replay return value != trace return value
-    GLV_REPLAY_CALL_ERROR,     // replaying call caused an error
-    GLV_REPLAY_INVALID_PARAMS, // trace file parameters are invalid
-    GLV_REPLAY_VALIDATION_ERROR // callback Msg error from validation layer
+    VKTRACE_REPLAY_SUCCESS = 0,
+    VKTRACE_REPLAY_ERROR,          // internal error unrelated to the specific packet
+    VKTRACE_REPLAY_INVALID_ID,     // packet_id invalid
+    VKTRACE_REPLAY_BAD_RETURN,     // replay return value != trace return value
+    VKTRACE_REPLAY_CALL_ERROR,     // replaying call caused an error
+    VKTRACE_REPLAY_INVALID_PARAMS, // trace file parameters are invalid
+    VKTRACE_REPLAY_VALIDATION_ERROR // callback Msg error from validation layer
 };
 
-enum GLV_DBG_MSG_TYPE
+enum VKTRACE_DBG_MSG_TYPE
 {
-    GLV_DBG_MSG_INFO = 0,
-    GLV_DBG_MSG_WARNING,
-    GLV_DBG_MSG_ERROR
+    VKTRACE_DBG_MSG_INFO = 0,
+    VKTRACE_DBG_MSG_WARNING,
+    VKTRACE_DBG_MSG_ERROR
 };
 
 // callback signature
-typedef void (*GLV_DBG_MSG_CALLBACK_FUNCTION)(GLV_DBG_MSG_TYPE msgType, const char* pMsg);
+typedef void (*VKTRACE_DBG_MSG_CALLBACK_FUNCTION)(VKTRACE_DBG_MSG_TYPE msgType, const char* pMsg);
 
 // entrypoints that must be exposed by each replayer library
 extern "C"
 {
 // entrypoints
 
-typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_setloglevel)(GlvLogLevel level);
-typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_setlogcallback)(GLV_REPORT_CALLBACK_FUNCTION pCallback);
+typedef void (VKTRACER_CDECL *funcptr_vkreplayer_setloglevel)(VktraceLogLevel level);
+typedef void (VKTRACER_CDECL *funcptr_vkreplayer_setlogcallback)(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback);
 
-typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_registerdbgmsgcallback)(GLV_DBG_MSG_CALLBACK_FUNCTION pCallback);
-typedef glv_SettingGroup* (GLVTRACER_CDECL *funcptr_glvreplayer_getSettings)();
-typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_updatefromsettings)(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
-typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_initialize)(glv_replay::Display* pDisplay, glvreplay_settings* pReplaySettings);
-typedef void (GLVTRACER_CDECL *funcptr_glvreplayer_deinitialize)();
-typedef glv_trace_packet_header* (GLVTRACER_CDECL *funcptr_glvreplayer_interpret)(glv_trace_packet_header* pPacket);
-typedef glv_replay::GLV_REPLAY_RESULT (GLVTRACER_CDECL *funcptr_glvreplayer_replay)(glv_trace_packet_header* pPacket);
-typedef int (GLVTRACER_CDECL *funcptr_glvreplayer_dump)();
+typedef void (VKTRACER_CDECL *funcptr_vkreplayer_registerdbgmsgcallback)(VKTRACE_DBG_MSG_CALLBACK_FUNCTION pCallback);
+typedef vktrace_SettingGroup* (VKTRACER_CDECL *funcptr_vkreplayer_getSettings)();
+typedef void (VKTRACER_CDECL *funcptr_vkreplayer_updatefromsettings)(vktrace_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
+typedef int (VKTRACER_CDECL *funcptr_vkreplayer_initialize)(vktrace_replay::Display* pDisplay, vkreplayer_settings* pReplaySettings);
+typedef void (VKTRACER_CDECL *funcptr_vkreplayer_deinitialize)();
+typedef vktrace_trace_packet_header* (VKTRACER_CDECL *funcptr_vkreplayer_interpret)(vktrace_trace_packet_header* pPacket);
+typedef vktrace_replay::VKTRACE_REPLAY_RESULT (VKTRACER_CDECL *funcptr_vkreplayer_replay)(vktrace_trace_packet_header* pPacket);
+typedef int (VKTRACER_CDECL *funcptr_vkreplayer_dump)();
 }
 
-struct glv_trace_packet_replay_library
+struct vktrace_trace_packet_replay_library
 {
     void* pLibrary;
-    funcptr_glvreplayer_setloglevel SetLogLevel;
-    funcptr_glvreplayer_setlogcallback SetLogCallback;
+    funcptr_vkreplayer_setloglevel SetLogLevel;
+    funcptr_vkreplayer_setlogcallback SetLogCallback;
 
-    funcptr_glvreplayer_registerdbgmsgcallback RegisterDbgMsgCallback;
-    funcptr_glvreplayer_getSettings GetSettings;
-    funcptr_glvreplayer_updatefromsettings UpdateFromSettings;
-    funcptr_glvreplayer_initialize Initialize;
-    funcptr_glvreplayer_deinitialize Deinitialize;
-    funcptr_glvreplayer_interpret Interpret;
-    funcptr_glvreplayer_replay Replay;
-    funcptr_glvreplayer_dump Dump;
+    funcptr_vkreplayer_registerdbgmsgcallback RegisterDbgMsgCallback;
+    funcptr_vkreplayer_getSettings GetSettings;
+    funcptr_vkreplayer_updatefromsettings UpdateFromSettings;
+    funcptr_vkreplayer_initialize Initialize;
+    funcptr_vkreplayer_deinitialize Deinitialize;
+    funcptr_vkreplayer_interpret Interpret;
+    funcptr_vkreplayer_replay Replay;
+    funcptr_vkreplayer_dump Dump;
 };
 
 class ReplayFactory {
 public:
-    glv_trace_packet_replay_library *Create(uint8_t tracerId);
-    void Destroy(glv_trace_packet_replay_library** ppReplayer);
+    vktrace_trace_packet_replay_library *Create(uint8_t tracerId);
+    void Destroy(vktrace_trace_packet_replay_library** ppReplayer);
 };
-} // namespace glv_replay
+} // namespace vktrace_replay

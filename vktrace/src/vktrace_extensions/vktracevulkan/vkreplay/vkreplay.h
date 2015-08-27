@@ -29,15 +29,15 @@
 #include "vk_debug_report_lunarg.h"
 
 
-extern void VkReplaySetLogCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback);
-extern void VkReplaySetLogLevel(GlvLogLevel level);
-extern void VkReplayRegisterDbgMsgCallback(glv_replay::GLV_DBG_MSG_CALLBACK_FUNCTION pCallback);
-extern glv_SettingGroup* GLVTRACER_CDECL VkReplayGetSettings();
-extern void GLVTRACER_CDECL VkReplayUpdateFromSettings(glv_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
-extern int GLVTRACER_CDECL VkReplayInitialize(glv_replay::Display* pDisplay, glvreplay_settings *pReplaySettings);
-extern void GLVTRACER_CDECL VkReplayDeinitialize();
-extern glv_trace_packet_header* GLVTRACER_CDECL VkReplayInterpret(glv_trace_packet_header* pPacket);
-extern glv_replay::GLV_REPLAY_RESULT GLVTRACER_CDECL VkReplayReplay(glv_trace_packet_header* pPacket);
-extern int GLVTRACER_CDECL VkReplayDump();
+extern void VkReplaySetLogCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback);
+extern void VkReplaySetLogLevel(VktraceLogLevel level);
+extern void VkReplayRegisterDbgMsgCallback(vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION pCallback);
+extern vktrace_SettingGroup* VKTRACER_CDECL VkReplayGetSettings();
+extern void VKTRACER_CDECL VkReplayUpdateFromSettings(vktrace_SettingGroup* pSettingGroups, unsigned int numSettingGroups);
+extern int VKTRACER_CDECL VkReplayInitialize(vktrace_replay::Display* pDisplay, vkreplayer_settings *pReplaySettings);
+extern void VKTRACER_CDECL VkReplayDeinitialize();
+extern vktrace_trace_packet_header* VKTRACER_CDECL VkReplayInterpret(vktrace_trace_packet_header* pPacket);
+extern vktrace_replay::VKTRACE_REPLAY_RESULT VKTRACER_CDECL VkReplayReplay(vktrace_trace_packet_header* pPacket);
+extern int VKTRACER_CDECL VkReplayDump();
 
 extern PFN_vkDbgMsgCallback g_fpDbgMsgCallback;

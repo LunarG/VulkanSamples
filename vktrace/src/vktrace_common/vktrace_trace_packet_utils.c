@@ -38,10 +38,10 @@
 static uint64_t g_packet_index = 0;
 static int g_reliable_rdtsc = -1;
 
-void glv_gen_uuid(uint32_t* pUuid)
+void vktrace_gen_uuid(uint32_t* pUuid)
 {
     uint32_t buf[] = { 0xABCDEF, 0x12345678, 0xFFFECABC, 0xABCDDEF0 };
-    glv_platform_rand_s(buf, sizeof(buf)/sizeof(uint32_t));
+    vktrace_platform_rand_s(buf, sizeof(buf)/sizeof(uint32_t));
     
     pUuid[0] = buf[0];
     pUuid[1] = buf[1];
@@ -49,7 +49,7 @@ void glv_gen_uuid(uint32_t* pUuid)
     pUuid[3] = buf[3];
 }
 
-BOOL glv_init_time()
+BOOL vktrace_init_time()
 {
 #if defined(PLATFORM_LINUX)
     if (g_reliable_rdtsc == -1)
@@ -78,9 +78,9 @@ BOOL glv_init_time()
 #endif
 }
 
-uint64_t glv_get_time()
+uint64_t vktrace_get_time()
 {
-#if defined(GLV_USE_LINUX_API)
+#if defined(VKTRACE_USE_LINUX_API)
     extern int g_reliable_rdtsc;
     if (g_reliable_rdtsc == -1)
         init_rdtsc();
@@ -103,63 +103,63 @@ uint64_t glv_get_time()
 //=============================================================================
 // trace file header
 
-glv_trace_file_header* glv_create_trace_file_header()
+vktrace_trace_file_header* vktrace_create_trace_file_header()
 {
-    glv_trace_file_header* pHeader = GLV_NEW(glv_trace_file_header);
-    memset(pHeader, 0, sizeof(glv_trace_file_header));
-    pHeader->trace_file_version = GLV_TRACE_FILE_VERSION;
-    glv_gen_uuid(pHeader->uuid);
-    pHeader->trace_start_time = glv_get_time();
+    vktrace_trace_file_header* pHeader = VKTRACE_NEW(vktrace_trace_file_header);
+    memset(pHeader, 0, sizeof(vktrace_trace_file_header));
+    pHeader->trace_file_version = VKTRACE_TRACE_FILE_VERSION;
+    vktrace_gen_uuid(pHeader->uuid);
+    pHeader->trace_start_time = vktrace_get_time();
 
     return pHeader;
 }
 
-void glv_delete_trace_file_header(glv_trace_file_header** ppHeader)
+void vktrace_delete_trace_file_header(vktrace_trace_file_header** ppHeader)
 {
-    glv_free(*ppHeader);
+    vktrace_free(*ppHeader);
     *ppHeader = NULL;
 }
 
 //=============================================================================
 // Methods for creating, populating, and writing trace packets
 
-glv_trace_packet_header* glv_create_trace_packet(uint8_t tracer_id, uint16_t packet_id, uint64_t packet_size, uint64_t additional_buffers_size)
+vktrace_trace_packet_header* vktrace_create_trace_packet(uint8_t tracer_id, uint16_t packet_id, uint64_t packet_size, uint64_t additional_buffers_size)
 {
     // Always allocate at least enough space for the packet header
-    uint64_t total_packet_size = sizeof(glv_trace_packet_header) + packet_size + additional_buffers_size;
-    void* pMem = glv_malloc((size_t)total_packet_size);
+    uint64_t total_packet_size = sizeof(vktrace_trace_packet_header) + packet_size + additional_buffers_size;
+    void* pMem = vktrace_malloc((size_t)total_packet_size);
     memset(pMem, 0, (size_t)total_packet_size);
 
-    glv_trace_packet_header* pHeader = (glv_trace_packet_header*)pMem;
+    vktrace_trace_packet_header* pHeader = (vktrace_trace_packet_header*)pMem;
     pHeader->size = total_packet_size;
     pHeader->global_packet_index = g_packet_index++;
     pHeader->tracer_id = tracer_id;
-    pHeader->thread_id = glv_platform_get_thread_id();
+    pHeader->thread_id = vktrace_platform_get_thread_id();
     pHeader->packet_id = packet_id;
-    pHeader->glave_begin_time = glv_get_time();
-    pHeader->entrypoint_begin_time = pHeader->glave_begin_time;
+    pHeader->vktrace_begin_time = vktrace_get_time();
+    pHeader->entrypoint_begin_time = pHeader->vktrace_begin_time;
     pHeader->entrypoint_end_time = 0;
-    pHeader->glave_end_time = 0;
-    pHeader->next_buffers_offset = sizeof(glv_trace_packet_header) + packet_size; // initial offset is from start of header to after the packet body
-    if (total_packet_size > sizeof(glv_trace_packet_header))
+    pHeader->vktrace_end_time = 0;
+    pHeader->next_buffers_offset = sizeof(vktrace_trace_packet_header) + packet_size; // initial offset is from start of header to after the packet body
+    if (total_packet_size > sizeof(vktrace_trace_packet_header))
     {
-        pHeader->pBody = (uintptr_t)(((char*)pMem) + sizeof(glv_trace_packet_header));
+        pHeader->pBody = (uintptr_t)(((char*)pMem) + sizeof(vktrace_trace_packet_header));
     }
     return pHeader;
 }
 
-void glv_delete_trace_packet(glv_trace_packet_header** ppHeader)
+void vktrace_delete_trace_packet(vktrace_trace_packet_header** ppHeader)
 {
     if (ppHeader == NULL)
         return;
     if (*ppHeader == NULL)
         return;
 
-    GLV_DELETE(*ppHeader);
+    VKTRACE_DELETE(*ppHeader);
     *ppHeader = NULL;
 }
 
-void* glv_trace_packet_get_new_buffer_address(glv_trace_packet_header* pHeader, uint64_t byteCount)
+void* vktrace_trace_packet_get_new_buffer_address(vktrace_trace_packet_header* pHeader, uint64_t byteCount)
 {
     void* pBufferStart;
     assert(byteCount > 0);
@@ -176,7 +176,7 @@ void* glv_trace_packet_get_new_buffer_address(glv_trace_packet_header* pHeader, 
     return pBufferStart;
 }
 
-void glv_add_buffer_to_trace_packet(glv_trace_packet_header* pHeader, void** ptr_address, uint64_t size, const void* pBuffer)
+void vktrace_add_buffer_to_trace_packet(vktrace_trace_packet_header* pHeader, void** ptr_address, uint64_t size, const void* pBuffer)
 {
     assert(ptr_address != NULL);
     if (pBuffer == NULL || size == 0)
@@ -186,14 +186,14 @@ void glv_add_buffer_to_trace_packet(glv_trace_packet_header* pHeader, void** ptr
     else
     {
         // set ptr to the location of the added buffer
-        *ptr_address = glv_trace_packet_get_new_buffer_address(pHeader, size);
+        *ptr_address = vktrace_trace_packet_get_new_buffer_address(pHeader, size);
 
         // copy buffer to the location
         memcpy(*ptr_address, pBuffer, (size_t)size);
     }
 }
 
-void glv_finalize_buffer_address(glv_trace_packet_header* pHeader, void** ptr_address)
+void vktrace_finalize_buffer_address(vktrace_trace_packet_header* pHeader, void** ptr_address)
 {
     assert(ptr_address != NULL);
 
@@ -205,31 +205,31 @@ void glv_finalize_buffer_address(glv_trace_packet_header* pHeader, void** ptr_ad
     }
 }
 
-void glv_set_packet_entrypoint_end_time(glv_trace_packet_header* pHeader)
+void vktrace_set_packet_entrypoint_end_time(vktrace_trace_packet_header* pHeader)
 {
-    pHeader->entrypoint_end_time = glv_get_time();
+    pHeader->entrypoint_end_time = vktrace_get_time();
 }
 
-void glv_finalize_trace_packet(glv_trace_packet_header* pHeader)
+void vktrace_finalize_trace_packet(vktrace_trace_packet_header* pHeader)
 {
     if (pHeader->entrypoint_end_time == 0)
     {
-        glv_set_packet_entrypoint_end_time(pHeader);
+        vktrace_set_packet_entrypoint_end_time(pHeader);
     }
-    pHeader->glave_end_time = glv_get_time();
+    pHeader->vktrace_end_time = vktrace_get_time();
 }
 
-void glv_write_trace_packet(const glv_trace_packet_header* pHeader, FileLike* pFile)
+void vktrace_write_trace_packet(const vktrace_trace_packet_header* pHeader, FileLike* pFile)
 {
-    BOOL res = glv_FileLike_WriteRaw(pFile, pHeader, (size_t)pHeader->size);
+    BOOL res = vktrace_FileLike_WriteRaw(pFile, pHeader, (size_t)pHeader->size);
     if (!res)
-        glv_LogError("Failed to send trace packet index %u packetId %u size %u.", pHeader->global_packet_index, pHeader->packet_id, pHeader->size);
+        vktrace_LogError("Failed to send trace packet index %u packetId %u size %u.", pHeader->global_packet_index, pHeader->packet_id, pHeader->size);
 }
 
 //=============================================================================
 // Methods for Reading and interpretting trace packets
 
-glv_trace_packet_header* glv_read_trace_packet(FileLike* pFile)
+vktrace_trace_packet_header* vktrace_read_trace_packet(FileLike* pFile)
 {
     // read size
     // allocate space
@@ -237,37 +237,37 @@ glv_trace_packet_header* glv_read_trace_packet(FileLike* pFile)
     // read the rest of the packet
     uint64_t total_packet_size = 0;
     void* pMem;
-    glv_trace_packet_header* pHeader;
+    vktrace_trace_packet_header* pHeader;
 
-    if (glv_FileLike_ReadRaw(pFile, &total_packet_size, sizeof(uint64_t)) == FALSE)
+    if (vktrace_FileLike_ReadRaw(pFile, &total_packet_size, sizeof(uint64_t)) == FALSE)
     {
-        //glv_LogError("Failed to read trace packet size.");
+        //vktrace_LogError("Failed to read trace packet size.");
         return NULL;
     }
 
     // allocate space
-    pMem = glv_malloc((size_t)total_packet_size);
-    pHeader = (glv_trace_packet_header*)pMem;
+    pMem = vktrace_malloc((size_t)total_packet_size);
+    pHeader = (vktrace_trace_packet_header*)pMem;
 
     if (pHeader != NULL)
     {
         pHeader->size = total_packet_size;
-        if (glv_FileLike_ReadRaw(pFile, (char*)pHeader + sizeof(uint64_t), (size_t)total_packet_size - sizeof(uint64_t)) == FALSE)
+        if (vktrace_FileLike_ReadRaw(pFile, (char*)pHeader + sizeof(uint64_t), (size_t)total_packet_size - sizeof(uint64_t)) == FALSE)
         {
-            glv_LogError("Failed to read trace packet with size of %u.", total_packet_size);
+            vktrace_LogError("Failed to read trace packet with size of %u.", total_packet_size);
             return NULL;
         }
 
-        pHeader->pBody = (uintptr_t)pHeader + sizeof(glv_trace_packet_header);
+        pHeader->pBody = (uintptr_t)pHeader + sizeof(vktrace_trace_packet_header);
     }
     else {
-        glv_LogError("Malloc failed in glv_read_trace_packet of size %u.", total_packet_size);
+        vktrace_LogError("Malloc failed in vktrace_read_trace_packet of size %u.", total_packet_size);
     }
 
     return pHeader;
 }
 
-void* glv_trace_packet_interpret_buffer_pointer(glv_trace_packet_header* pHeader, intptr_t ptr_variable)
+void* vktrace_trace_packet_interpret_buffer_pointer(vktrace_trace_packet_header* pHeader, intptr_t ptr_variable)
 {
     // the pointer variable actually contains a byte offset from the packet body to the start of the buffer.
     uint64_t offset = ptr_variable;

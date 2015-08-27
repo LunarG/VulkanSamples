@@ -1,5 +1,5 @@
 /*
- * GLAVE & vulkan
+ * VKTRACE & vulkan
  *
  * Copyright (C) 2015 LunarG, Inc. and Valve Corporation
  *
@@ -24,26 +24,26 @@
 
 #include "vkLayer.h"
 #include "vulkan.h"
-// Glave Snapshot ERROR codes
-typedef enum _GLAVE_SNAPSHOT_ERROR
+// VkTrace Snapshot ERROR codes
+typedef enum _VKTRACE_SNAPSHOT_ERROR
 {
-    GLVSNAPSHOT_NONE,                              // Used for INFO & other non-error messages
-    GLVSNAPSHOT_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
-    GLVSNAPSHOT_INTERNAL_ERROR,                    // Bug with data tracking within the layer
-    GLVSNAPSHOT_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
-    GLVSNAPSHOT_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
-    GLVSNAPSHOT_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
-    GLVSNAPSHOT_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
-    GLVSNAPSHOT_INVALID_FENCE,                     // Requested status of unsubmitted fence object
-    GLVSNAPSHOT_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
-    GLVSNAPSHOT_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
-    GLVSNAPSHOT_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
-    GLVSNAPSHOT_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
-    GLVSNAPSHOT_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
-    GLVSNAPSHOT_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
-    GLVSNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
-    GLVSNAPSHOT_SNAPSHOT_DATA,                     // Message being printed is actually snapshot data
-} GLAVE_SNAPSHOT_ERROR;
+    VKTRACESNAPSHOT_NONE,                              // Used for INFO & other non-error messages
+    VKTRACESNAPSHOT_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
+    VKTRACESNAPSHOT_INTERNAL_ERROR,                    // Bug with data tracking within the layer
+    VKTRACESNAPSHOT_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
+    VKTRACESNAPSHOT_MISSING_OBJECT,                    // Attempted look-up on object that isn't in global object list
+    VKTRACESNAPSHOT_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
+    VKTRACESNAPSHOT_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
+    VKTRACESNAPSHOT_INVALID_FENCE,                     // Requested status of unsubmitted fence object
+    VKTRACESNAPSHOT_VIEWPORT_NOT_BOUND,                // Draw submitted with no viewport state object bound
+    VKTRACESNAPSHOT_RASTER_NOT_BOUND,                  // Draw submitted with no raster state object bound
+    VKTRACESNAPSHOT_COLOR_BLEND_NOT_BOUND,             // Draw submitted with no color blend state object bound
+    VKTRACESNAPSHOT_DEPTH_STENCIL_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound
+    VKTRACESNAPSHOT_GPU_MEM_MAPPED,                    // Mem object ref'd in cmd buff is still mapped
+    VKTRACESNAPSHOT_GETGPUINFO_NOT_CALLED,             // Gpu Information has not been requested before drawing
+    VKTRACESNAPSHOT_MEMREFCOUNT_MAX_EXCEEDED,          // Number of QueueSubmit memory references exceeds GPU maximum
+    VKTRACESNAPSHOT_SNAPSHOT_DATA,                     // Message being printed is actually snapshot data
+} VKTRACE_SNAPSHOT_ERROR;
 
 // Object Status -- used to track state of individual objects
 typedef enum _OBJECT_STATUS
@@ -128,88 +128,88 @@ static const char* string_VK_OBJECT_TYPE(VkDbgObjectType type) {
 }
 
 //=============================================================================
-// Helper structure for a GLAVE vulkan snapshot.
+// Helper structure for a VKTRACE vulkan snapshot.
 // These can probably be auto-generated at some point.
 //=============================================================================
 
-void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
+void vktrace_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc);
 
-typedef struct _GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS
+typedef struct _VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS
 {
     VkPhysicalDevice physicalDevice;
     VkDeviceCreateInfo* pCreateInfo;
     VkDevice* pDevice;
-} GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
+} VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS;
 
-VkDeviceCreateInfo* glv_deepcopy_xgl_device_create_info(const VkDeviceCreateInfo* pSrcCreateInfo);void glv_deepfree_xgl_device_create_info(VkDeviceCreateInfo* pCreateInfo);
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
-void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
+VkDeviceCreateInfo* vktrace_deepcopy_xgl_device_create_info(const VkDeviceCreateInfo* pSrcCreateInfo);void vktrace_deepfree_xgl_device_create_info(VkDeviceCreateInfo* pCreateInfo);
+void vktrace_vk_snapshot_copy_createdevice_params(VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
+void vktrace_vk_snapshot_destroy_createdevice_params(VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc);
 
 //=============================================================================
-// Glave Snapshot helper structs
+// VkTrace Snapshot helper structs
 //=============================================================================
 
 // Node that stores information about an object
-typedef struct _GLV_VK_SNAPSHOT_OBJECT_NODE {
+typedef struct _VKTRACE_VK_SNAPSHOT_OBJECT_NODE {
     VkObject        object;
     VkObjectType    objType;
     uint64_t        numUses;
     OBJECT_STATUS   status;
-    void*           pStruct;    //< optionally points to a device-specific struct (ie, GLV_VK_SNAPSHOT_DEVICE_NODE)
-} GLV_VK_SNAPSHOT_OBJECT_NODE;
+    void*           pStruct;    //< optionally points to a device-specific struct (ie, VKTRACE_VK_SNAPSHOT_DEVICE_NODE)
+} VKTRACE_VK_SNAPSHOT_OBJECT_NODE;
 
 // Node that stores information about an VkDevice
-typedef struct _GLV_VK_SNAPSHOT_DEVICE_NODE {
+typedef struct _VKTRACE_VK_SNAPSHOT_DEVICE_NODE {
     // This object
     VkDevice device;
 
     // CreateDevice parameters
-    GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS params;
+    VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS params;
 
     // Other information a device needs to store.
     // TODO: anything?
-} GLV_VK_SNAPSHOT_DEVICE_NODE;
+} VKTRACE_VK_SNAPSHOT_DEVICE_NODE;
 
 // Linked-List node that stores information about an object
 // We maintain a "Global" list which links every object and a
 //  per-Object list which just links objects of a given type
 // The object node has both pointers so the actual nodes are shared between the two lists
-typedef struct _GLV_VK_SNAPSHOT_LL_NODE {
-    struct _GLV_VK_SNAPSHOT_LL_NODE *pNextObj;
-    struct _GLV_VK_SNAPSHOT_LL_NODE *pNextGlobal;
-    GLV_VK_SNAPSHOT_OBJECT_NODE obj;
-} GLV_VK_SNAPSHOT_LL_NODE;
+typedef struct _VKTRACE_VK_SNAPSHOT_LL_NODE {
+    struct _VKTRACE_VK_SNAPSHOT_LL_NODE *pNextObj;
+    struct _VKTRACE_VK_SNAPSHOT_LL_NODE *pNextGlobal;
+    VKTRACE_VK_SNAPSHOT_OBJECT_NODE obj;
+} VKTRACE_VK_SNAPSHOT_LL_NODE;
 
 // Linked-List node to identify an object that has been deleted,
 // but the delta snapshot never saw it get created.
-typedef struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE {
-    struct _GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pNextObj;
+typedef struct _VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE {
+    struct _VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE* pNextObj;
     VkObject object;
     VkObjectType objType;
-} GLV_VK_SNAPSHOT_DELETED_OBJ_NODE;
+} VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE;
 
 //=============================================================================
-// Main structure for a GLAVE vulkan snapshot.
+// Main structure for a VKTRACE vulkan snapshot.
 //=============================================================================
-typedef struct _GLV_VK_SNAPSHOT {
+typedef struct _VKTRACE_VK_SNAPSHOT {
     // Stores a list of all the objects known by this snapshot.
     // This may be used as a shortcut to more easily find objects.
     uint64_t globalObjCount;
-    GLV_VK_SNAPSHOT_LL_NODE* pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pGlobalObjs;
 
     // TEMPORARY: Keep track of all objects of each type
     uint64_t numObjs[VK_NUM_OBJECT_TYPE];
-    GLV_VK_SNAPSHOT_LL_NODE *pObjectHead[VK_NUM_OBJECT_TYPE];
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pObjectHead[VK_NUM_OBJECT_TYPE];
 
     // List of created devices and [potentially] hierarchical tree of the objects on it.
     // This is used to represent ownership of the objects
     uint64_t deviceCount;
-    GLV_VK_SNAPSHOT_LL_NODE* pDevices;
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pDevices;
 
     // This is used to support snapshot deltas.
     uint64_t deltaDeletedObjectCount;
-    GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pDeltaDeletedObjects;
-} GLV_VK_SNAPSHOT;
+    VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE* pDeltaDeletedObjects;
+} VKTRACE_VK_SNAPSHOT;
 
 //=============================================================================
 // prototype for extension functions
@@ -242,28 +242,28 @@ typedef struct _GLV_VK_SNAPSHOT {
 // 7) 'Clear()' will clear the 'deltaSnapshot' and the 'masterSnapshot'.
 //=============================================================================
 
-void glvSnapshotStartTracking(void);
-GLV_VK_SNAPSHOT glvSnapshotGetDelta(void);
-GLV_VK_SNAPSHOT glvSnapshotGetSnapshot(void);
-void glvSnapshotPrintDelta(void);
-void glvSnapshotStopTracking(void);
-void glvSnapshotClear(void);
+void vktraceSnapshotStartTracking(void);
+VKTRACE_VK_SNAPSHOT vktraceSnapshotGetDelta(void);
+VKTRACE_VK_SNAPSHOT vktraceSnapshotGetSnapshot(void);
+void vktraceSnapshotPrintDelta(void);
+void vktraceSnapshotStopTracking(void);
+void vktraceSnapshotClear(void);
 
 // utility
 // merge a delta into a snapshot and return the updated snapshot
-GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT * const pDelta, const GLV_VK_SNAPSHOT * const pSnapshot);
+VKTRACE_VK_SNAPSHOT vktraceSnapshotMerge(const VKTRACE_VK_SNAPSHOT * const pDelta, const VKTRACE_VK_SNAPSHOT * const pSnapshot);
 
-uint64_t glvSnapshotGetObjectCount(VkObjectType type);
-VkResult glvSnapshotGetObjects(VkObjectType type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
-void glvSnapshotPrintObjects(void);
+uint64_t vktraceSnapshotGetObjectCount(VkObjectType type);
+VkResult vktraceSnapshotGetObjects(VkObjectType type, uint64_t objCount, VKTRACE_VK_SNAPSHOT_OBJECT_NODE* pObjNodeArray);
+void vktraceSnapshotPrintObjects(void);
 
 // Func ptr typedefs
-typedef uint64_t (*GLVSNAPSHOT_GET_OBJECT_COUNT)(VkObjectType);
-typedef VkResult (*GLVSNAPSHOT_GET_OBJECTS)(VkObjectType, uint64_t, GLV_VK_SNAPSHOT_OBJECT_NODE*);
-typedef void (*GLVSNAPSHOT_PRINT_OBJECTS)(void);
-typedef void (*GLVSNAPSHOT_START_TRACKING)(void);
-typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_DELTA)(void);
-typedef GLV_VK_SNAPSHOT (*GLVSNAPSHOT_GET_SNAPSHOT)(void);
-typedef void (*GLVSNAPSHOT_PRINT_DELTA)(void);
-typedef void (*GLVSNAPSHOT_STOP_TRACKING)(void);
-typedef void (*GLVSNAPSHOT_CLEAR)(void);
+typedef uint64_t (*VKTRACESNAPSHOT_GET_OBJECT_COUNT)(VkObjectType);
+typedef VkResult (*VKTRACESNAPSHOT_GET_OBJECTS)(VkObjectType, uint64_t, VKTRACE_VK_SNAPSHOT_OBJECT_NODE*);
+typedef void (*VKTRACESNAPSHOT_PRINT_OBJECTS)(void);
+typedef void (*VKTRACESNAPSHOT_START_TRACKING)(void);
+typedef VKTRACE_VK_SNAPSHOT (*VKTRACESNAPSHOT_GET_DELTA)(void);
+typedef VKTRACE_VK_SNAPSHOT (*VKTRACESNAPSHOT_GET_SNAPSHOT)(void);
+typedef void (*VKTRACESNAPSHOT_PRINT_DELTA)(void);
+typedef void (*VKTRACESNAPSHOT_STOP_TRACKING)(void);
+typedef void (*VKTRACESNAPSHOT_CLEAR)(void);

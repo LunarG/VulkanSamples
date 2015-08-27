@@ -1,5 +1,5 @@
 /*
- * GLAVE & vulkan
+ * VKTRACE & vulkan
  *
  * Copyright (C) 2015 LunarG, Inc. and Valve Corporation
  *
@@ -29,8 +29,8 @@
 #include "vktrace_snapshot.h"
 #include "vk_struct_string_helper.h"
 
-#define LAYER_NAME_STR "GlaveSnapshot"
-#define LAYER_ABBREV_STR "GLVSnap"
+#define LAYER_NAME_STR "VktraceSnapshot"
+#define LAYER_ABBREV_STR "VKTRACESnap"
 
 static VkLayerDispatchTable nextTable;
 static VkBaseLayerObject *pCurObj;
@@ -45,39 +45,39 @@ static int objLockInitialized = 0;
 static loader_platform_thread_mutex objLock;
 
 // The 'masterSnapshot' which gets the delta merged into it when 'GetSnapshot()' is called.
-static GLV_VK_SNAPSHOT s_snapshot = {0};
+static VKTRACE_VK_SNAPSHOT s_snapshot = {0};
 
 // The 'deltaSnapshot' which tracks all object creation and deletion.
-static GLV_VK_SNAPSHOT s_delta = {0};
+static VKTRACE_VK_SNAPSHOT s_delta = {0};
 
 
 //=============================================================================
-// Helper structure for a GLAVE vulkan snapshot.
+// Helper structure for a VKTRACE vulkan snapshot.
 // These can probably be auto-generated at some point.
 //=============================================================================
 
-void glv_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc)
+void vktrace_vk_malloc_and_copy(void** ppDest, size_t size, const void* pSrc)
 {
     *ppDest = malloc(size);
     memcpy(*ppDest, pSrc, size);
 }
 
-VkDeviceCreateInfo* glv_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo* pSrcCreateInfo)
+VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo* pSrcCreateInfo)
 {
     VkDeviceCreateInfo* pDestCreateInfo;
 
     // NOTE: partially duplicated code from add_VkDeviceCreateInfo_to_packet(...)
     {
         uint32_t i;
-        glv_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VkDeviceCreateInfo), pSrcCreateInfo);
-        glv_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
+        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VkDeviceCreateInfo), pSrcCreateInfo);
+        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
 
         if (pSrcCreateInfo->extensionCount > 0)
         {
-            glv_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames, pSrcCreateInfo->extensionCount * sizeof(char *), pSrcCreateInfo->ppEnabledExtensionNames);
+            vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames, pSrcCreateInfo->extensionCount * sizeof(char *), pSrcCreateInfo->ppEnabledExtensionNames);
             for (i = 0; i < pSrcCreateInfo->extensionCount; i++)
             {
-                glv_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames[i], strlen(pSrcCreateInfo->ppEnabledExtensionNames[i]) + 1, pSrcCreateInfo->ppEnabledExtensionNames[i]);
+                vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames[i], strlen(pSrcCreateInfo->ppEnabledExtensionNames[i]) + 1, pSrcCreateInfo->ppEnabledExtensionNames[i]);
             }
         }
         VkLayerCreateInfo *pSrcNext = ( VkLayerCreateInfo *) pSrcCreateInfo->pNext;
@@ -86,11 +86,11 @@ VkDeviceCreateInfo* glv_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo* pS
         {
             if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
             {
-                glv_vk_malloc_and_copy((void**)ppDstNext, sizeof(VkLayerCreateInfo), pSrcNext);
-                glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->layerCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
+                vktrace_vk_malloc_and_copy((void**)ppDstNext, sizeof(VkLayerCreateInfo), pSrcNext);
+                vktrace_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->layerCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
                 for (i = 0; i < pSrcNext->layerCount; i++)
                 {
-                    glv_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames[i], strlen(pSrcNext->ppActiveLayerNames[i]) + 1, pSrcNext->ppActiveLayerNames[i]);
+                    vktrace_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames[i], strlen(pSrcNext->ppActiveLayerNames[i]) + 1, pSrcNext->ppActiveLayerNames[i]);
                 }
 
                 ppDstNext = (VkLayerCreateInfo**) &(*ppDstNext)->pNext;
@@ -102,7 +102,7 @@ VkDeviceCreateInfo* glv_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo* pS
     return pDestCreateInfo;
 }
 
-void glv_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
+void vktrace_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
 {
     uint32_t i;
     if (pCreateInfo->pRequestedQueues != NULL)
@@ -139,21 +139,21 @@ void glv_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
     free(pCreateInfo);
 }
 
-void glv_vk_snapshot_copy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+void vktrace_vk_snapshot_copy_createdevice_params(VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pDest, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
     pDest->physicalDevice = physicalDevice;
 
-    pDest->pCreateInfo = glv_deepcopy_VkDeviceCreateInfo(pCreateInfo);
+    pDest->pCreateInfo = vktrace_deepcopy_VkDeviceCreateInfo(pCreateInfo);
 
     pDest->pDevice = (VkDevice*)malloc(sizeof(VkDevice));
     *pDest->pDevice = *pDevice;
 }
 
-void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc)
+void vktrace_vk_snapshot_destroy_createdevice_params(VKTRACE_VK_SNAPSHOT_CREATEDEVICE_PARAMS* pSrc)
 {
     memset(&pSrc->physicalDevice, 0, sizeof(VkPhysicalDevice));
 
-    glv_deepfree_VkDeviceCreateInfo(pSrc->pCreateInfo);
+    vktrace_deepfree_VkDeviceCreateInfo(pSrc->pCreateInfo);
     pSrc->pCreateInfo = NULL;
 
     free(pSrc->pDevice);
@@ -163,11 +163,11 @@ void glv_vk_snapshot_destroy_createdevice_params(GLV_VK_SNAPSHOT_CREATEDEVICE_PA
 
 
 // add a new node to the global and object lists, then return it so the caller can populate the object information.
-static GLV_VK_SNAPSHOT_LL_NODE* snapshot_insert_object(GLV_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType type)
+static VKTRACE_VK_SNAPSHOT_LL_NODE* snapshot_insert_object(VKTRACE_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType type)
 {
     // Create a new node
-    GLV_VK_SNAPSHOT_LL_NODE* pNewObjNode = (GLV_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_LL_NODE));
-    memset(pNewObjNode, 0, sizeof(GLV_VK_SNAPSHOT_LL_NODE));
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pNewObjNode = (VKTRACE_VK_SNAPSHOT_LL_NODE*)malloc(sizeof(VKTRACE_VK_SNAPSHOT_LL_NODE));
+    memset(pNewObjNode, 0, sizeof(VKTRACE_VK_SNAPSHOT_LL_NODE));
     pNewObjNode->obj.object = object;
     pNewObjNode->obj.objType = type;
     pNewObjNode->obj.status = OBJSTATUS_NONE;
@@ -188,9 +188,9 @@ static GLV_VK_SNAPSHOT_LL_NODE* snapshot_insert_object(GLV_VK_SNAPSHOT* pSnapsho
 }
 
 // This is just a helper function to snapshot_remove_object(..). It is not intended for this to be called directly.
-static void snapshot_remove_obj_type(GLV_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType objType) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pObjectHead[objType];
-    GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pObjectHead[objType];
+static void snapshot_remove_obj_type(VKTRACE_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType objType) {
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pObjectHead[objType];
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pObjectHead[objType];
     while (pTrav) {
         if (pTrav->obj.object == object) {
             pPrev->pNextObj = pTrav->pNextObj;
@@ -208,7 +208,7 @@ static void snapshot_remove_obj_type(GLV_VK_SNAPSHOT* pSnapshot, VkObject object
     }
     char str[1024];
     sprintf(str, "OBJ INTERNAL ERROR : Obj %p was in global list but not in %s list", (void*)object, string_VK_OBJECT_TYPE(objType));
-    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
 }
 
 // Search global list to find object,
@@ -219,10 +219,10 @@ static void snapshot_remove_obj_type(GLV_VK_SNAPSHOT* pSnapshot, VkObject object
 // else:
 // Report message that we didn't see it get created,
 // return NULL.
-static GLV_VK_SNAPSHOT_LL_NODE* snapshot_remove_object(GLV_VK_SNAPSHOT* pSnapshot, VkObject object)
+static VKTRACE_VK_SNAPSHOT_LL_NODE* snapshot_remove_object(VKTRACE_VK_SNAPSHOT* pSnapshot, VkObject object)
 {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pGlobalObjs;
-    GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pGlobalObjs;
     while (pTrav)
     {
         if (pTrav->obj.object == object)
@@ -245,16 +245,16 @@ static GLV_VK_SNAPSHOT_LL_NODE* snapshot_remove_object(GLV_VK_SNAPSHOT* pSnapsho
     // Object not found.
     char str[1024];
     sprintf(str, "Object %p was not found in the created object list. It should be added as a deleted object.", (void*)object);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
     return NULL;
 }
 
 // Add a new deleted object node to the list
-static void snapshot_insert_deleted_object(GLV_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType type)
+static void snapshot_insert_deleted_object(VKTRACE_VK_SNAPSHOT* pSnapshot, VkObject object, VkObjectType type)
 {
     // Create a new node
-    GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pNewObjNode = (GLV_VK_SNAPSHOT_DELETED_OBJ_NODE*)malloc(sizeof(GLV_VK_SNAPSHOT_DELETED_OBJ_NODE));
-    memset(pNewObjNode, 0, sizeof(GLV_VK_SNAPSHOT_DELETED_OBJ_NODE));
+    VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE* pNewObjNode = (VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE*)malloc(sizeof(VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE));
+    memset(pNewObjNode, 0, sizeof(VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE));
     pNewObjNode->objType = type;
     pNewObjNode->object = object;
 
@@ -267,13 +267,13 @@ static void snapshot_insert_deleted_object(GLV_VK_SNAPSHOT* pSnapshot, VkObject 
 }
 
 // Note: the parameters after pSnapshot match the order of vkCreateDevice(..)
-static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+static void snapshot_insert_device(VKTRACE_VK_SNAPSHOT* pSnapshot, VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(pSnapshot, *pDevice, VK_OBJECT_TYPE_DEVICE);
-    pNode->obj.pStruct = malloc(sizeof(GLV_VK_SNAPSHOT_DEVICE_NODE));
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(pSnapshot, *pDevice, VK_OBJECT_TYPE_DEVICE);
+    pNode->obj.pStruct = malloc(sizeof(VKTRACE_VK_SNAPSHOT_DEVICE_NODE));
 
-    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pNode->obj.pStruct;
-    glv_vk_snapshot_copy_createdevice_params(&pDevNode->params, physicalDevice, pCreateInfo, pDevice);
+    VKTRACE_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (VKTRACE_VK_SNAPSHOT_DEVICE_NODE*)pNode->obj.pStruct;
+    vktrace_vk_snapshot_copy_createdevice_params(&pDevNode->params, physicalDevice, pCreateInfo, pDevice);
 
     // insert at front of device list
     pNode->pNextObj = pSnapshot->pDevices;
@@ -283,14 +283,14 @@ static void snapshot_insert_device(GLV_VK_SNAPSHOT* pSnapshot, VkPhysicalDevice 
     pSnapshot->deviceCount++;
 }
 
-static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VkDevice device)
+static void snapshot_remove_device(VKTRACE_VK_SNAPSHOT* pSnapshot, VkDevice device)
 {
-    GLV_VK_SNAPSHOT_LL_NODE* pFoundObject = snapshot_remove_object(pSnapshot, device);
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pFoundObject = snapshot_remove_object(pSnapshot, device);
 
     if (pFoundObject != NULL)
     {
-        GLV_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pDevices;
-        GLV_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pDevices;
+        VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = pSnapshot->pDevices;
+        VKTRACE_VK_SNAPSHOT_LL_NODE *pPrev = pSnapshot->pDevices;
         while (pTrav != NULL)
         {
             if (pTrav->obj.object == device)
@@ -303,8 +303,8 @@ static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VkDevice device)
                 // delete the object
                 if (pTrav->obj.pStruct != NULL)
                 {
-                    GLV_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pTrav->obj.pStruct;
-                    glv_vk_snapshot_destroy_createdevice_params(&pDevNode->params);
+                    VKTRACE_VK_SNAPSHOT_DEVICE_NODE* pDevNode = (VKTRACE_VK_SNAPSHOT_DEVICE_NODE*)pTrav->obj.pStruct;
+                    vktrace_vk_snapshot_destroy_createdevice_params(&pDevNode->params);
                     free(pDevNode);
                 }
                 free(pTrav);
@@ -332,7 +332,7 @@ static void snapshot_remove_device(GLV_VK_SNAPSHOT* pSnapshot, VkDevice device)
 
 // Traverse global list and return type for given object
 static VkObjectType ll_get_obj_type(VkObject object) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
     while (pTrav) {
         if (pTrav->obj.object == object)
             return pTrav->obj.objType;
@@ -340,12 +340,12 @@ static VkObjectType ll_get_obj_type(VkObject object) {
     }
     char str[1024];
     sprintf(str, "Attempting look-up on obj %p but it is NOT in the global list!", (void*)object);
-    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_MISSING_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_MISSING_OBJECT, LAYER_ABBREV_STR, str);
     return (VkObjectType)-1;
 }
 
 static void ll_increment_use_count(VkObject object, VkObjectType objType) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
     while (pTrav) {
         if (pTrav->obj.object == object) {
             pTrav->obj.numUses++;
@@ -360,7 +360,7 @@ static void ll_increment_use_count(VkObject object, VkObjectType objType) {
     // to confirm that the referenced objects actually exist in the snapshot; otherwise I guess the merge should fail.
     char str[1024];
     sprintf(str, "Unable to increment count for obj %p, will add to list as %s type and increment count", (void*)object, string_VK_OBJECT_TYPE(objType));
-    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_WARNING, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 
 //    ll_insert_obj(pObj, objType);
 //    ll_increment_use_count(pObj, objType);
@@ -369,7 +369,7 @@ static void ll_increment_use_count(VkObject object, VkObjectType objType) {
 // Set selected flag state for an object node
 static void set_status(VkObject object, VkObjectType objType, OBJECT_STATUS status_flag) {
     if ((void*)object != NULL) {
-        GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+        VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
         while (pTrav) {
             if (pTrav->obj.object == object) {
                 pTrav->obj.status |= status_flag;
@@ -381,13 +381,13 @@ static void set_status(VkObject object, VkObjectType objType, OBJECT_STATUS stat
         // If we do not find it print an error
         char str[1024];
         sprintf(str, "Unable to set status for non-existent object %p of %s type", (void*)object, string_VK_OBJECT_TYPE(objType));
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
     }
 }
 
 // Track selected state for an object node
 static void track_object_status(VkObject object, VkStateBindPoint stateBindPoint) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[VK_OBJECT_TYPE_COMMAND_BUFFER];
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[VK_OBJECT_TYPE_COMMAND_BUFFER];
 
     while (pTrav) {
         if (pTrav->obj.object == object) {
@@ -408,12 +408,12 @@ static void track_object_status(VkObject object, VkStateBindPoint stateBindPoint
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to track status for non-existent Command Buffer object %p", (void*)object);
-    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
 // Reset selected flag state for an object node
 static void reset_status(VkObject object, VkObjectType objType, OBJECT_STATUS status_flag) {
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pObjectHead[objType];
     while (pTrav) {
         if (pTrav->obj.object == object) {
             pTrav->obj.status &= ~status_flag;
@@ -425,14 +425,14 @@ static void reset_status(VkObject object, VkObjectType objType, OBJECT_STATUS st
     // If we do not find it print an error
     char str[1024];
     sprintf(str, "Unable to reset status for non-existent object %p of %s type", (void*)object, string_VK_OBJECT_TYPE(objType));
-    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, GLVSNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, object, 0, VKTRACESNAPSHOT_UNKNOWN_OBJECT, LAYER_ABBREV_STR, str);
 }
 
 #include "vk_dispatch_table_helper.h"
-static void initGlaveSnapshot(void)
+static void initVktraceSnapshot(void)
 {
     const char *strOpt;
-    // initialize GlaveSnapshot options
+    // initialize VktraceSnapshot options
     getLayerOptionEnum(LAYER_NAME_STR "ReportLevel", (uint32_t *) &g_reportingLevel);
     g_actionIsDefault = getLayerOptionEnum(LAYER_NAME_STR "DebugAction", (uint32_t *) &g_debugAction);
 
@@ -494,7 +494,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceInfo(VkPhysicalDevice gpu, VkP
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
+    loader_platform_thread_once(&tabOnce, initVktraceSnapshot);
     VkResult result = nextTable.GetPhysicalDeviceInfo((VkPhysicalDevice)gpuw->nextObject, infoType, pDataSize, pData);
     return result;
 }
@@ -503,7 +503,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 {
     VkBaseLayerObject* gpuw = (VkBaseLayerObject *) gpu;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
+    loader_platform_thread_once(&tabOnce, initVktraceSnapshot);
     VkResult result = nextTable.CreateDevice((VkPhysicalDevice)gpuw->nextObject, pCreateInfo, pDevice);
     if (result == VK_SUCCESS)
     {
@@ -522,19 +522,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     loader_platform_thread_unlock_mutex(&objLock);
 
     // Report any remaining objects in LL
-    GLV_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE *pTrav = s_delta.pGlobalObjs;
     while (pTrav != NULL)
     {
 //        if (pTrav->obj.objType == VK_OBJECT_TYPE_SWAP_CHAIN_IMAGE_WSI ||
 //            pTrav->obj.objType == VK_OBJECT_TYPE_SWAP_CHAIN_MEMORY_WSI)
 //        {
-//            GLV_VK_SNAPSHOT_LL_NODE *pDel = pTrav;
+//            VKTRACE_VK_SNAPSHOT_LL_NODE *pDel = pTrav;
 //            pTrav = pTrav->pNextGlobal;
 //            snapshot_remove_object(&s_delta, (void*)(pDel->obj.pVkObject));
 //        } else {
             char str[1024];
             sprintf(str, "OBJ ERROR : %s object %p has not been destroyed (was used %lu times).", string_VK_OBJECT_TYPE(pTrav->obj.objType), (void*)pTrav->obj.object, pTrav->obj.numUses);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, GLVSNAPSHOT_OBJECT_LEAK, LAYER_ABBREV_STR, str);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, device, 0, VKTRACESNAPSHOT_OBJECT_LEAK, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
 //        }
     }
@@ -551,7 +551,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice
         ll_increment_use_count(physicalDevice, VK_OBJECT_TYPE_PHYSICAL_DEVICE);
         loader_platform_thread_unlock_mutex(&objLock);
         pCurObj = gpuw;
-        loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
+        loader_platform_thread_once(&tabOnce, initVktraceSnapshot);
         VkResult result = nextTable.EnumerateLayers((VkPhysicalDevice)gpuw->nextObject, maxStringSize, pOutLayerCount, pOutLayers, pReserved);
         return result;
     } else {
@@ -570,8 +570,8 @@ struct extProps {
     const char * const name;
 };
 
-#define GLAVE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE 1
-static const struct extProps mtExts[GLAVE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE] = {
+#define VKTRACE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE 1
+static const struct extProps mtExts[VKTRACE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE] = {
     // TODO what is the version?
 { 0x10, LAYER_NAME_STR }
 };
@@ -595,13 +595,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             if (pData == NULL)
                 return VK_SUCCESS;
             count = (uint32_t *) pData;
-            *count = GLAVE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE;
+            *count = VKTRACE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE;
             break;
         case VK_EXTENSION_INFO_TYPE_PROPERTIES:
             *pDataSize = sizeof(VkExtensionProperties);
             if (pData == NULL)
                 return VK_SUCCESS;
-            if (extensionIndex >= GLAVE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE)
+            if (extensionIndex >= VKTRACE_SNAPSHOT_LAYER_EXT_ARRAY_SIZE)
                 return VK_ERROR_INVALID_VALUE;
             ext_props = (VkExtensionProperties *) pData;
             ext_props->version = mtExts[extensionIndex].version;
@@ -656,7 +656,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pMem, VK_OBJECT_TYPE_DEVICE_MEMORY);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pMem, VK_OBJECT_TYPE_DEVICE_MEMORY);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -717,7 +717,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetMultiDeviceCompatibility(VkPhysicalDevice ph
     ll_increment_use_count(physicalDevice0, VK_OBJECT_TYPE_PHYSICAL_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
+    loader_platform_thread_once(&tabOnce, initVktraceSnapshot);
     VkResult result = nextTable.GetMultiDeviceCompatibility((VkPhysicalDevice)gpuw->nextObject, physicalDevice1, pInfo);
     return result;
 }
@@ -812,7 +812,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreat
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFence, VK_OBJECT_TYPE_FENCE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFence, VK_OBJECT_TYPE_FENCE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -847,7 +847,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaph
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSemaphore, VK_OBJECT_TYPE_SEMAPHORE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -875,7 +875,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreat
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pEvent, VK_OBJECT_TYPE_EVENT);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pEvent, VK_OBJECT_TYPE_EVENT);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -918,7 +918,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryP
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pQueryPool, VK_OBJECT_TYPE_QUERY_POOL);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pQueryPool, VK_OBJECT_TYPE_QUERY_POOL);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -952,7 +952,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCre
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pBuffer, VK_OBJECT_TYPE_BUFFER);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pBuffer, VK_OBJECT_TYPE_BUFFER);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -968,7 +968,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_BUFFER_VIEW);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_BUFFER_VIEW);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -984,7 +984,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, VK_OBJECT_TYPE_IMAGE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, VK_OBJECT_TYPE_IMAGE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1009,7 +1009,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_IMAGE_VIEW);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_IMAGE_VIEW);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1025,7 +1025,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateColorAttachmentView(VkDevice device, cons
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1041,7 +1041,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const V
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pView, VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1057,7 +1057,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCre
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pShader, VK_OBJECT_TYPE_SHADER);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pShader, VK_OBJECT_TYPE_SHADER);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1073,7 +1073,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const V
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, VK_OBJECT_TYPE_PIPELINE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, VK_OBJECT_TYPE_PIPELINE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1089,7 +1089,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipeline(VkDevice device, const Vk
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, VK_OBJECT_TYPE_PIPELINE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pPipeline, VK_OBJECT_TYPE_PIPELINE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1123,7 +1123,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSampler, VK_OBJECT_TYPE_SAMPLER);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSampler, VK_OBJECT_TYPE_SAMPLER);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1139,7 +1139,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout( VkDevice device, con
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSetLayout, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pSetLayout, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1173,7 +1173,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pDescriptorPool, VK_OBJECT_TYPE_DESCRIPTOR_POOL);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pDescriptorPool, VK_OBJECT_TYPE_DESCRIPTOR_POOL);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1199,7 +1199,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
     {
         for (uint32_t i = 0; i < *pCount; i++) {
             loader_platform_thread_lock_mutex(&objLock);
-            GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);
+            VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);
             pNode->obj.pStruct = NULL;
             loader_platform_thread_unlock_mutex(&objLock);
         }
@@ -1232,7 +1232,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, con
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1248,7 +1248,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(VkDevice device, c
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1264,7 +1264,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(VkDevice devi
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1280,7 +1280,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, c
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_CB_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_CB_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1296,7 +1296,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthState(VkDevice device, const 
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1312,7 +1312,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(VkDevice device, cons
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1328,7 +1328,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pCmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pCmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1649,7 +1649,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFramebuffer, VK_OBJECT_TYPE_FRAMEBUFFER);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pFramebuffer, VK_OBJECT_TYPE_FRAMEBUFFER);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1665,7 +1665,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pRenderPass, VK_OBJECT_TYPE_RENDER_PASS);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pRenderPass, VK_OBJECT_TYPE_RENDER_PASS);
         pNode->obj.pStruct = NULL;
         loader_platform_thread_unlock_mutex(&objLock);
     }
@@ -1809,10 +1809,10 @@ VK_LAYER_EXPORT VkResult VKAPI xglCreateSwapChainWSI(VkDevice device, const VkSw
         loader_platform_thread_lock_mutex(&objLock);
 
 #if 0
-        GLV_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, VK_OBJECT_TYPE_IMAGE);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pImage, VK_OBJECT_TYPE_IMAGE);
         pNode->obj.pStruct = NULL;
 
-        GLV_VK_SNAPSHOT_LL_NODE* pMemNode = snapshot_insert_object(&s_delta, *pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pMemNode = snapshot_insert_object(&s_delta, *pMem, VK_OBJECT_TYPE_PRESENTABLE_IMAGE_MEMORY);
         pMemNode->obj.pStruct = NULL;
 #else
         snapshot_insert_object(&s_delta, *pSwapChain, VK_OBJECT_TYPE_SWAP_CHAIN_WSI);
@@ -1854,48 +1854,48 @@ VK_LAYER_EXPORT VkResult VKAPI xglQueuePresentWSI(VkQueue queue, const VkPresent
 //=================================================================================================
 // Exported methods
 //=================================================================================================
-void glvSnapshotStartTracking(void)
+void vktraceSnapshotStartTracking(void)
 {
     assert(!"Not Implemented");
 }
 
 //=================================================================================================
-GLV_VK_SNAPSHOT glvSnapshotGetDelta(void)
+VKTRACE_VK_SNAPSHOT vktraceSnapshotGetDelta(void)
 {
     // copy the delta by merging it into an empty snapshot
-    GLV_VK_SNAPSHOT empty;
-    memset(&empty, 0, sizeof(GLV_VK_SNAPSHOT));
+    VKTRACE_VK_SNAPSHOT empty;
+    memset(&empty, 0, sizeof(VKTRACE_VK_SNAPSHOT));
 
-    return glvSnapshotMerge(&s_delta, &empty);
+    return vktraceSnapshotMerge(&s_delta, &empty);
 }
 
 //=================================================================================================
-GLV_VK_SNAPSHOT glvSnapshotGetSnapshot(void)
+VKTRACE_VK_SNAPSHOT vktraceSnapshotGetSnapshot(void)
 {
     // copy the master snapshot by merging it into an empty snapshot
-    GLV_VK_SNAPSHOT empty;
-    memset(&empty, 0, sizeof(GLV_VK_SNAPSHOT));
+    VKTRACE_VK_SNAPSHOT empty;
+    memset(&empty, 0, sizeof(VKTRACE_VK_SNAPSHOT));
 
-    return glvSnapshotMerge(&s_snapshot, &empty);
+    return vktraceSnapshotMerge(&s_snapshot, &empty);
 }
 
 //=================================================================================================
-void glvSnapshotPrintDelta()
+void vktraceSnapshotPrintDelta()
 {
     char str[2048];
-    GLV_VK_SNAPSHOT_LL_NODE* pTrav = s_delta.pGlobalObjs;
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pTrav = s_delta.pGlobalObjs;
     sprintf(str, "==== DELTA SNAPSHOT contains %lu objects, %lu devices, and %lu deleted objects", s_delta.globalObjCount, s_delta.deviceCount, s_delta.deltaDeletedObjectCount);
-    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+    layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
 
     // print all objects
     if (s_delta.globalObjCount > 0)
     {
         sprintf(str, "======== DELTA SNAPSHOT Created Objects:");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pTrav->obj.object, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pTrav->obj.object, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pTrav != NULL)
         {
             sprintf(str, "\t%s obj %p", string_VK_OBJECT_TYPE(pTrav->obj.objType), (void*)pTrav->obj.object);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pTrav->obj.object, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pTrav->obj.object, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pTrav = pTrav->pNextGlobal;
         }
     }
@@ -1903,15 +1903,15 @@ void glvSnapshotPrintDelta()
     // print devices
     if (s_delta.deviceCount > 0)
     {
-        GLV_VK_SNAPSHOT_LL_NODE* pDeviceNode = s_delta.pDevices;
+        VKTRACE_VK_SNAPSHOT_LL_NODE* pDeviceNode = s_delta.pDevices;
         sprintf(str, "======== DELTA SNAPSHOT Devices:");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pDeviceNode != NULL)
         {
-            GLV_VK_SNAPSHOT_DEVICE_NODE* pDev = (GLV_VK_SNAPSHOT_DEVICE_NODE*)pDeviceNode->obj.pStruct;
+            VKTRACE_VK_SNAPSHOT_DEVICE_NODE* pDev = (VKTRACE_VK_SNAPSHOT_DEVICE_NODE*)pDeviceNode->obj.pStruct;
             char * createInfoStr = vk_print_vkdevicecreateinfo(pDev->params.pCreateInfo, "\t\t");
             sprintf(str, "\t%s obj %p:\n%s", string_VK_OBJECT_TYPE(VK_OBJECT_TYPE_DEVICE), (void*)pDeviceNode->obj.object, createInfoStr);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDeviceNode->obj.object, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDeviceNode->obj.object, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pDeviceNode = pDeviceNode->pNextObj;
         }
     }
@@ -1919,29 +1919,29 @@ void glvSnapshotPrintDelta()
     // print deleted objects
     if (s_delta.deltaDeletedObjectCount > 0)
     {
-        GLV_VK_SNAPSHOT_DELETED_OBJ_NODE* pDelObjNode = s_delta.pDeltaDeletedObjects;
+        VKTRACE_VK_SNAPSHOT_DELETED_OBJ_NODE* pDelObjNode = s_delta.pDeltaDeletedObjects;
         sprintf(str, "======== DELTA SNAPSHOT Deleted Objects:");
-        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+        layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, (VkObject)NULL, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
         while (pDelObjNode != NULL)
         {
             sprintf(str, "         %s obj %p", string_VK_OBJECT_TYPE(pDelObjNode->objType), (void*)pDelObjNode->object);
-            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDelObjNode->object, 0, GLVSNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
+            layerCbMsg(VK_DBG_MSG_UNKNOWN, VK_VALIDATION_LEVEL_0, pDelObjNode->object, 0, VKTRACESNAPSHOT_SNAPSHOT_DATA, LAYER_ABBREV_STR, str);
             pDelObjNode = pDelObjNode->pNextObj;
         }
     }
 }
 
-void glvSnapshotStopTracking(void)
+void vktraceSnapshotStopTracking(void)
 {
     assert(!"Not Implemented");
 }
 
-void glvSnapshotClear(void)
+void vktraceSnapshotClear(void)
 {
     assert(!"Not Implemented");
 }
 
-GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT* const pDelta, const GLV_VK_SNAPSHOT* const pSnapshot)
+VKTRACE_VK_SNAPSHOT vktraceSnapshotMerge(const VKTRACE_VK_SNAPSHOT* const pDelta, const VKTRACE_VK_SNAPSHOT* const pSnapshot)
 {
     assert(!"Not Implemented");
 }
@@ -1952,13 +1952,13 @@ GLV_VK_SNAPSHOT glvSnapshotMerge(const GLV_VK_SNAPSHOT* const pDelta, const GLV_
 //=============================================================================
 // Old Exported methods
 //=============================================================================
-uint64_t glvSnapshotGetObjectCount(VkObjectType type)
+uint64_t vktraceSnapshotGetObjectCount(VkObjectType type)
 {
     uint64_t retVal = /*(type == VK_OBJECT_TYPE_ANY) ? s_delta.globalObjCount :*/ s_delta.numObjs[type];
     return retVal;
 }
 
-VkResult glvSnapshotGetObjects(VkObjectType type, uint64_t objCount, GLV_VK_SNAPSHOT_OBJECT_NODE *pObjNodeArray)
+VkResult vktraceSnapshotGetObjects(VkObjectType type, uint64_t objCount, VKTRACE_VK_SNAPSHOT_OBJECT_NODE *pObjNodeArray)
 {
     // This bool flags if we're pulling all objs or just a single class of objs
     bool32_t bAllObjs = false; /*(type == VK_OBJECT_TYPE_ANY);*/
@@ -1967,28 +1967,28 @@ VkResult glvSnapshotGetObjects(VkObjectType type, uint64_t objCount, GLV_VK_SNAP
     if (objCount > maxObjCount) {
         char str[1024];
         sprintf(str, "OBJ ERROR : Received objTrackGetObjects() request for %lu objs, but there are only %lu objs of type %s", objCount, maxObjCount, string_VK_OBJECT_TYPE(type));
-        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_OBJCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
+        layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, VKTRACESNAPSHOT_OBJCOUNT_MAX_EXCEEDED, LAYER_ABBREV_STR, str);
         return VK_ERROR_INVALID_VALUE;
     }
 
-    GLV_VK_SNAPSHOT_LL_NODE* pTrav = (bAllObjs) ? s_delta.pGlobalObjs : s_delta.pObjectHead[type];
+    VKTRACE_VK_SNAPSHOT_LL_NODE* pTrav = (bAllObjs) ? s_delta.pGlobalObjs : s_delta.pObjectHead[type];
 
     for (uint64_t i = 0; i < objCount; i++) {
         if (!pTrav) {
             char str[1024];
             sprintf(str, "OBJ INTERNAL ERROR : Ran out of %s objs! Should have %lu, but only copied %lu and not the requested %lu.", string_VK_OBJECT_TYPE(type), maxObjCount, i, objCount);
-            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, GLVSNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
+            layerCbMsg(VK_DBG_MSG_ERROR, VK_VALIDATION_LEVEL_0, 0, 0, VKTRACESNAPSHOT_INTERNAL_ERROR, LAYER_ABBREV_STR, str);
             return VK_ERROR_UNKNOWN;
         }
-        memcpy(&pObjNodeArray[i], pTrav, sizeof(GLV_VK_SNAPSHOT_OBJECT_NODE));
+        memcpy(&pObjNodeArray[i], pTrav, sizeof(VKTRACE_VK_SNAPSHOT_OBJECT_NODE));
         pTrav = (bAllObjs) ? pTrav->pNextGlobal : pTrav->pNextObj;
     }
     return VK_SUCCESS;
 }
 
-void glvSnapshotPrintObjects(void)
+void vktraceSnapshotPrintObjects(void)
 {
-    glvSnapshotPrintDelta();
+    vktraceSnapshotPrintDelta();
 }
 
 #include "vk_generic_intercept_proc_helper.h"
@@ -1998,33 +1998,33 @@ VK_LAYER_EXPORT void* VKAPI vkGetProcAddr(VkPhysicalDevice physicalDevice, const
     if ((void*)physicalDevice == NULL)
         return NULL;
     pCurObj = gpuw;
-    loader_platform_thread_once(&tabOnce, initGlaveSnapshot);
+    loader_platform_thread_once(&tabOnce, initVktraceSnapshot);
 
     // TODO: This needs to be changed, need only the entry points this layer intercepts
     //addr = layer_intercept_proc(funcName);
     //if (addr)
     //    return addr;
     //else
-    if (!strncmp("glvSnapshotGetObjectCount", funcName, sizeof("glvSnapshotGetObjectCount")))
-        return glvSnapshotGetObjectCount;
-    else if (!strncmp("glvSnapshotGetObjects", funcName, sizeof("glvSnapshotGetObjects")))
-        return glvSnapshotGetObjects;
-    else if (!strncmp("glvSnapshotPrintObjects", funcName, sizeof("glvSnapshotPrintObjects")))
-        return glvSnapshotPrintObjects;
-    else if (!strncmp("glvSnapshotStartTracking", funcName, sizeof("glvSnapshotStartTracking")))
-        return glvSnapshotStartTracking;
-    else if (!strncmp("glvSnapshotGetDelta", funcName, sizeof("glvSnapshotGetDelta")))
-        return glvSnapshotGetDelta;
-    else if (!strncmp("glvSnapshotGetSnapshot", funcName, sizeof("glvSnapshotGetSnapshot")))
-        return glvSnapshotGetSnapshot;
-    else if (!strncmp("glvSnapshotPrintDelta", funcName, sizeof("glvSnapshotPrintDelta")))
-        return glvSnapshotPrintDelta;
-    else if (!strncmp("glvSnapshotStopTracking", funcName, sizeof("glvSnapshotStopTracking")))
-        return glvSnapshotStopTracking;
-    else if (!strncmp("glvSnapshotClear", funcName, sizeof("glvSnapshotClear")))
-        return glvSnapshotClear;
-    else if (!strncmp("glvSnapshotMerge", funcName, sizeof("glvSnapshotMerge")))
-        return glvSnapshotMerge;
+    if (!strncmp("vktraceSnapshotGetObjectCount", funcName, sizeof("vktraceSnapshotGetObjectCount")))
+        return vktraceSnapshotGetObjectCount;
+    else if (!strncmp("vktraceSnapshotGetObjects", funcName, sizeof("vktraceSnapshotGetObjects")))
+        return vktraceSnapshotGetObjects;
+    else if (!strncmp("vktraceSnapshotPrintObjects", funcName, sizeof("vktraceSnapshotPrintObjects")))
+        return vktraceSnapshotPrintObjects;
+    else if (!strncmp("vktraceSnapshotStartTracking", funcName, sizeof("vktraceSnapshotStartTracking")))
+        return vktraceSnapshotStartTracking;
+    else if (!strncmp("vktraceSnapshotGetDelta", funcName, sizeof("vktraceSnapshotGetDelta")))
+        return vktraceSnapshotGetDelta;
+    else if (!strncmp("vktraceSnapshotGetSnapshot", funcName, sizeof("vktraceSnapshotGetSnapshot")))
+        return vktraceSnapshotGetSnapshot;
+    else if (!strncmp("vktraceSnapshotPrintDelta", funcName, sizeof("vktraceSnapshotPrintDelta")))
+        return vktraceSnapshotPrintDelta;
+    else if (!strncmp("vktraceSnapshotStopTracking", funcName, sizeof("vktraceSnapshotStopTracking")))
+        return vktraceSnapshotStopTracking;
+    else if (!strncmp("vktraceSnapshotClear", funcName, sizeof("vktraceSnapshotClear")))
+        return vktraceSnapshotClear;
+    else if (!strncmp("vktraceSnapshotMerge", funcName, sizeof("vktraceSnapshotMerge")))
+        return vktraceSnapshotMerge;
     else {
         if (gpuw->pGPA == NULL)
             return NULL;

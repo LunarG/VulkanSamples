@@ -28,12 +28,12 @@
 #include <string.h>
 #include <stdarg.h>
 
-#define GLV_NEW(type) (type*)glv_malloc(sizeof(type))
-#define GLV_NEW_ARRAY(type, count) (type*)glv_malloc(sizeof(type)*count)
-#define GLV_DELETE(ptr) glv_free(ptr);
-#define GLV_REALLOC(ptr, size) glv_realloc(ptr, size);
+#define VKTRACE_NEW(type) (type*)vktrace_malloc(sizeof(type))
+#define VKTRACE_NEW_ARRAY(type, count) (type*)vktrace_malloc(sizeof(type)*count)
+#define VKTRACE_DELETE(ptr) vktrace_free(ptr);
+#define VKTRACE_REALLOC(ptr, size) vktrace_realloc(ptr, size);
 
-static void* glv_malloc(size_t size)
+static void* vktrace_malloc(size_t size)
 {
     void* pMem;
     if (size == 0)
@@ -44,13 +44,13 @@ static void* glv_malloc(size_t size)
     return pMem;
 }
 
-static void glv_free(void* ptr)
+static void vktrace_free(void* ptr)
 {
     free(ptr);
     ptr = NULL;
 }
 
-static void * glv_realloc(void *ptr,size_t size)
+static void * vktrace_realloc(void *ptr,size_t size)
 {
     void *pMem;
     if (size == 0)
@@ -60,7 +60,7 @@ static void * glv_realloc(void *ptr,size_t size)
     return pMem;
 }
 
-static char* glv_allocate_and_copy(const char* _src)
+static char* vktrace_allocate_and_copy(const char* _src)
 {
     if (_src == NULL)
     {
@@ -70,7 +70,7 @@ static char* glv_allocate_and_copy(const char* _src)
     {
         size_t bufferSize = 1 + strlen(_src);
 
-        char* retVal = GLV_NEW_ARRAY(char, bufferSize);
+        char* retVal = VKTRACE_NEW_ARRAY(char, bufferSize);
 #ifdef WIN32
         strcpy_s(retVal, bufferSize, _src);
 #else // linux
@@ -81,11 +81,11 @@ static char* glv_allocate_and_copy(const char* _src)
     }
 }
 
-static char* glv_allocate_and_copy_n(const char* _src, int _count)
+static char* vktrace_allocate_and_copy_n(const char* _src, int _count)
 {
     size_t bufferSize = 1 + _count;
 
-    char* retVal = GLV_NEW_ARRAY(char, bufferSize);
+    char* retVal = VKTRACE_NEW_ARRAY(char, bufferSize);
 
 #ifdef WIN32
     strncpy_s(retVal, bufferSize, _src, _count);
@@ -97,14 +97,14 @@ static char* glv_allocate_and_copy_n(const char* _src, int _count)
     return retVal;
 }
 
-static char* glv_copy_and_append(const char* pBaseString, const char* pSeparator, const char* pAppendString)
+static char* vktrace_copy_and_append(const char* pBaseString, const char* pSeparator, const char* pAppendString)
 {
     size_t baseSize = (pBaseString != NULL) ? strlen(pBaseString) : 0;
     size_t separatorSize = ((pAppendString != NULL) && strlen(pAppendString) && (pSeparator != NULL)) ?
                            strlen(pSeparator) : 0;
     size_t appendSize = (pAppendString != NULL) ? strlen(pAppendString) : 0;
     size_t bufferSize = baseSize + separatorSize + appendSize + 1;
-    char* retVal = GLV_NEW_ARRAY(char, bufferSize);
+    char* retVal = VKTRACE_NEW_ARRAY(char, bufferSize);
     if (retVal != NULL)
     {
 #ifdef WIN32
@@ -121,7 +121,7 @@ static char* glv_copy_and_append(const char* pBaseString, const char* pSeparator
     return retVal;
 }
 
-static char* glv_copy_and_append_args(const char* pBaseString, const char* pSeparator, const char* pAppendFormat, va_list args)
+static char* vktrace_copy_and_append_args(const char* pBaseString, const char* pSeparator, const char* pAppendFormat, va_list args)
 {
     size_t baseSize = (pBaseString != NULL) ? strlen(pBaseString) : 0;
     size_t separatorSize = (pSeparator != NULL) ? strlen(pSeparator) : 0;
@@ -139,7 +139,7 @@ static char* glv_copy_and_append_args(const char* pBaseString, const char* pSepa
 #endif
 
     bufferSize = baseSize + separatorSize + appendSize + 1;
-    retVal = GLV_NEW_ARRAY(char, bufferSize);
+    retVal = VKTRACE_NEW_ARRAY(char, bufferSize);
     if (retVal != NULL)
     {
 #ifdef WIN32

@@ -22,8 +22,8 @@ The following components are available:
 - VK Library and header files, which include:
     - [*ICD Loader*](loader) and [*Layer Manager*](layers/README.md)
     - Snapshot of *VK* and *BIL* header files from [*Khronos*](www.khronos.org)
-    
-- [*GLAVE Debugger*](tools/glave)
+
+- [*VKTRACE tools*](tools/vktrace)
 
     ![ScreenShot](docs/images/Vktrace-Small.png)
 
@@ -37,14 +37,14 @@ The following components are available:
   Supports new resource binding model, memory allocation, pixel FORMATs and
   other updates.
   APIDump layer is working with these new API elements.
-  Glave can trace and replay the cube and tri demos.
+  VkTrace can trace and replay the cube and tri demos.
   Other layers in progress.
-- Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
-  Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.  
+- Warning: Recent versions of 14.10 have **REMOVED** DRI 3.
+  Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.
 
 ## Prior updates
 
-- VK API trace and capture tools. See tools/glave/README.md for details.
+- VK API trace and capture tools. See tools/vktrace/README.md for details.
 - Sample driver now supports multiple render targets. Added TriangleMRT to test that functionality.
 - Added VK_SLOT_SHADER_TEXTURE_RESOURCE to vulkan.h as a descriptor slot type to work around confusion in GLSL
   between textures and buffers as shader resources.

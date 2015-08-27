@@ -27,8 +27,8 @@ import os, sys
 
 
 # add main repo directory so vulkan.py can be imported. This needs to be a complete path.
-glv_scripts_path = os.path.dirname(os.path.abspath(__file__))
-main_path = os.path.abspath(glv_scripts_path + "/../")
+vktrace_scripts_path = os.path.dirname(os.path.abspath(__file__))
+main_path = os.path.abspath(vktrace_scripts_path + "/../")
 sys.path.append(main_path)
 from source_line_info import sourcelineinfo
 
@@ -146,7 +146,7 @@ class Subcommand(object):
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
             if 'Dbg' not in proto.name and 'WSI' not in proto.name:
-                func_protos.append('GLVTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
+                func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
         return "\n".join(func_protos)
 
@@ -156,7 +156,7 @@ class Subcommand(object):
         for ext in vulkan.extensions_all:
             if (extName.lower() == ext.name.lower()):
                 for proto in ext.protos:
-                    func_protos.append('GLVTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
+                    func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
         return "\n".join(func_protos)
 
@@ -208,17 +208,17 @@ class Subcommand(object):
                 hook_operator = '&='
         hooks_txt.append('    }\n')
         hooks_txt.append('    if (!hookSuccess)\n    {')
-        hooks_txt.append('        glv_LogError("Failed to hook Vulkan.");\n    }\n')
+        hooks_txt.append('        vktrace_LogError("Failed to hook Vulkan.");\n    }\n')
         hooks_txt.append('    Mhook_EndMultiOperation();\n')
         hooks_txt.append('#elif defined(__linux__)')
         hooks_txt.append('    if (real_vkCreateInstance == vkCreateInstance)')
-        hooks_txt.append('        hookSuccess = glv_platform_get_next_lib_sym((PVOID*)&real_vkCreateInstance,"vkCreateInstance");')
+        hooks_txt.append('        hookSuccess = vktrace_platform_get_next_lib_sym((PVOID*)&real_vkCreateInstance,"vkCreateInstance");')
         hooks_txt.append('    isHooked = TRUE;')
         for proto in self.protos:
             if 'Dbg' not in proto.name and 'WSI' not in proto.name and 'CreateInstance' not in proto.name:
-                hooks_txt.append('    hookSuccess %s glv_platform_get_next_lib_sym((PVOID*)&real_vk%s, "vk%s");' % (hook_operator, proto.name, proto.name))
+                hooks_txt.append('    hookSuccess %s vktrace_platform_get_next_lib_sym((PVOID*)&real_vk%s, "vk%s");' % (hook_operator, proto.name, proto.name))
         hooks_txt.append('    if (!hookSuccess)\n    {')
-        hooks_txt.append('        glv_LogError("Failed to hook Vulkan.");\n    }\n')
+        hooks_txt.append('        vktrace_LogError("Failed to hook Vulkan.");\n    }\n')
         hooks_txt.append('#endif\n}\n')
         return "\n".join(hooks_txt)
 
@@ -233,7 +233,7 @@ class Subcommand(object):
                 hook_operator = '&='
         hooks_txt.append('    }\n    isHooked = FALSE;')
         hooks_txt.append('    if (!unhookSuccess)\n    {')
-        hooks_txt.append('        glv_LogError("Failed to unhook Vulkan.");\n    }')
+        hooks_txt.append('        vktrace_LogError("Failed to unhook Vulkan.");\n    }')
         hooks_txt.append('#endif\n}')
         hooks_txt.append('#ifdef WIN32\nINIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;\n#elif defined(PLATFORM_LINUX)\npthread_once_t gInitOnce = PTHREAD_ONCE_INIT;\n#endif\n')
         return "\n".join(hooks_txt)
@@ -242,22 +242,22 @@ class Subcommand(object):
         init_tracer = []
         init_tracer.append('void send_vk_api_version_packet()\n{')
         init_tracer.append('    packet_vkApiVersion* pPacket;')
-        init_tracer.append('    glv_trace_packet_header* pHeader;')
-        init_tracer.append('    pHeader = glv_create_trace_packet(GLV_TID_VULKAN, GLV_TPI_VK_vkApiVersion, sizeof(packet_vkApiVersion), 0);')
+        init_tracer.append('    vktrace_trace_packet_header* pHeader;')
+        init_tracer.append('    pHeader = vktrace_create_trace_packet(VKTRACE_TID_VULKAN, VKTRACE_TPI_VK_vkApiVersion, sizeof(packet_vkApiVersion), 0);')
         init_tracer.append('    pPacket = interpret_body_as_vkApiVersion(pHeader);')
         init_tracer.append('    pPacket->version = VK_API_VERSION;')
-        init_tracer.append('    glv_set_packet_entrypoint_end_time(pHeader);')
+        init_tracer.append('    vktrace_set_packet_entrypoint_end_time(pHeader);')
         init_tracer.append('    FINISH_TRACE_PACKET();\n}\n')
 
-        init_tracer.append('extern GLV_CRITICAL_SECTION g_memInfoLock;')
+        init_tracer.append('extern VKTRACE_CRITICAL_SECTION g_memInfoLock;')
         init_tracer.append('void InitTracer(void)\n{')
-        init_tracer.append('    const char *ipAddr = glv_get_global_var("GLVLIB_TRACE_IPADDR");')
+        init_tracer.append('    const char *ipAddr = vktrace_get_global_var("VKTRACE_LIB_IPADDR");')
         init_tracer.append('    if (ipAddr == NULL)')
         init_tracer.append('        ipAddr = "127.0.0.1";')
-        init_tracer.append('    gMessageStream = glv_MessageStream_create(FALSE, ipAddr, GLV_BASE_PORT + GLV_TID_VULKAN);')
-        init_tracer.append('    glv_trace_set_trace_file(glv_FileLike_create_msg(gMessageStream));')
-        init_tracer.append('    glv_tracelog_set_tracer_id(GLV_TID_VULKAN);')
-        init_tracer.append('    glv_create_critical_section(&g_memInfoLock);')
+        init_tracer.append('    gMessageStream = vktrace_MessageStream_create(FALSE, ipAddr, VKTRACE_BASE_PORT + VKTRACE_TID_VULKAN);')
+        init_tracer.append('    vktrace_trace_set_trace_file(vktrace_FileLike_create_msg(gMessageStream));')
+        init_tracer.append('    vktrace_tracelog_set_tracer_id(VKTRACE_TID_VULKAN);')
+        init_tracer.append('    vktrace_create_critical_section(&g_memInfoLock);')
         init_tracer.append('    send_vk_api_version_packet();\n}\n')
         return "\n".join(init_tracer)
 
@@ -271,87 +271,87 @@ class Subcommand(object):
                                                   'finalize_txt': ''},
                            'VkApplicationInfo': {'add_txt': 'add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&(pPacket->pAppInfo), pAppInfo)',
                                                  'finalize_txt': ''},
-                           'VkPhysicalDevice': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VkPhysicalDevice), pGpus)',
+                           'VkPhysicalDevice': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VkPhysicalDevice), pGpus)',
                                                 'finalize_txt': 'default'},
-                           'pDataSize': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize)',
-                                         'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize))'},
-#                           'pData': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData)',
+                           'pDataSize': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize)',
+                                         'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize))'},
+#                           'pData': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData)',
 #                                     'finalize_txt': 'default'},
-                           'pName': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pName), ((pName != NULL) ? strlen(pName) + 1 : 0), pName)',
+                           'pName': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pName), ((pName != NULL) ? strlen(pName) + 1 : 0), pName)',
                                      'finalize_txt': 'default'},
-                           'pMarker': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMarker), ((pMarker != NULL) ? strlen(pMarker) + 1 : 0), pMarker)',
+                           'pMarker': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMarker), ((pMarker != NULL) ? strlen(pMarker) + 1 : 0), pMarker)',
                                        'finalize_txt': 'default'},
-                           'pExtName': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pExtName), ((pExtName != NULL) ? strlen(pExtName) + 1 : 0), pExtName)',
+                           'pExtName': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pExtName), ((pExtName != NULL) ? strlen(pExtName) + 1 : 0), pExtName)',
                                         'finalize_txt': 'default'},
-                           'pDescriptorSets': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets)',
+                           'pDescriptorSets': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), customSize, pDescriptorSets)',
                                                'finalize_txt': 'default'},
-                           'pSparseMemoryRequirements': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSparseMemoryRequirements), (*pNumRequirements) * sizeof(VkSparseImageMemoryRequirements), pSparseMemoryRequirements)',
+                           'pSparseMemoryRequirements': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSparseMemoryRequirements), (*pNumRequirements) * sizeof(VkSparseImageMemoryRequirements), pSparseMemoryRequirements)',
                                                'finalize_txt': 'default'},
-                           'VkSparseImageFormatProperties': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pProperties), (*pNumProperties) * sizeof(VkSparseImageFormatProperties), pProperties)',
+                           'VkSparseImageFormatProperties': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pProperties), (*pNumProperties) * sizeof(VkSparseImageFormatProperties), pProperties)',
                                                'finalize_txt': 'default'},
-                           'VkSparseMemoryBindInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBindInfo), numBindings * sizeof(VkSparseMemoryBindInfo), pBindInfo)',
+                           'VkSparseMemoryBindInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBindInfo), numBindings * sizeof(VkSparseMemoryBindInfo), pBindInfo)',
                                                'finalize_txt': 'default'},
-                           'VkSparseImageMemoryBindInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBindInfo), numBindings * sizeof(VkSparseImageMemoryBindInfo), pBindInfo)',
+                           'VkSparseImageMemoryBindInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBindInfo), numBindings * sizeof(VkSparseImageMemoryBindInfo), pBindInfo)',
                                                'finalize_txt': 'default'},
-#                           'VkShaderCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n'
-#                                                             '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
-#                                             'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
-#                                                             '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkFramebufferCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);\n'
-                                                                  '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VkColorAttachmentBindInfo), pCreateInfo->pColorAttachments);\n'
-                                                                  '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
-                                                  'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));\n'
-                                                                  '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));\n'
-                                                                  '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkRenderPassCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkRenderPassCreateInfo), pCreateInfo);\n'
-                                                                 '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorFormats), colorCount * sizeof(VkFormat), pCreateInfo->pColorFormats);\n'
-                                                                 '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLayouts), colorCount * sizeof(VkImageLayout), pCreateInfo->pColorLayouts);\n'
-                                                                 '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(VkAttachmentLoadOp), pCreateInfo->pColorLoadOps);\n'
-                                                                 '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(VkAttachmentStoreOp), pCreateInfo->pColorStoreOps);\n'
-                                                                 '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(VkClearColor), pCreateInfo->pColorLoadClearValues)',
-                                                 'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorFormats));\n'
-                                                                 '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLayouts));\n'
-                                                                 '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));\n'
-                                                                 '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));\n'
-                                                                 '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));\n'
-                                                                 '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkPipelineLayoutCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkPipelineLayoutCreateInfo), pCreateInfo);\n'
-                                                                     '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts), pCreateInfo->descriptorSetCount * sizeof(VkDescriptorSetLayout), pCreateInfo->pSetLayouts);',
-                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts));\n'
-                                                                     '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkDynamicViewportStateCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDynamicViewportStateCreateInfo), pCreateInfo);\n'
-                                                                     '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VkViewport), pCreateInfo->pViewports);\n'
-                                                                     '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VkRect2D), pCreateInfo->pScissors)',
-                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));\n'
-                                                                     '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));\n'
-                                                                     '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkMemoryAllocInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkMemoryAllocInfo), pAllocInfo);\n'
+#                           'VkShaderCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n'
+#                                                             '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
+#                                             'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
+#                                                             '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkFramebufferCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);\n'
+                                                                  '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VkColorAttachmentBindInfo), pCreateInfo->pColorAttachments);\n'
+                                                                  '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
+                                                  'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments));\n'
+                                                                  '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment));\n'
+                                                                  '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkRenderPassCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkRenderPassCreateInfo), pCreateInfo);\n'
+                                                                 '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorFormats), colorCount * sizeof(VkFormat), pCreateInfo->pColorFormats);\n'
+                                                                 '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLayouts), colorCount * sizeof(VkImageLayout), pCreateInfo->pColorLayouts);\n'
+                                                                 '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps), colorCount * sizeof(VkAttachmentLoadOp), pCreateInfo->pColorLoadOps);\n'
+                                                                 '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps), colorCount * sizeof(VkAttachmentStoreOp), pCreateInfo->pColorStoreOps);\n'
+                                                                 '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues), colorCount * sizeof(VkClearColor), pCreateInfo->pColorLoadClearValues)',
+                                                 'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorFormats));\n'
+                                                                 '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLayouts));\n'
+                                                                 '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadOps));\n'
+                                                                 '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorStoreOps));\n'
+                                                                 '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pColorLoadClearValues));\n'
+                                                                 '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkPipelineLayoutCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkPipelineLayoutCreateInfo), pCreateInfo);\n'
+                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts), pCreateInfo->descriptorSetCount * sizeof(VkDescriptorSetLayout), pCreateInfo->pSetLayouts);',
+                                                     'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts));\n'
+                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkDynamicViewportStateCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDynamicViewportStateCreateInfo), pCreateInfo);\n'
+                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VkViewport), pCreateInfo->pViewports);\n'
+                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VkRect2D), pCreateInfo->pScissors)',
+                                                     'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));\n'
+                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));\n'
+                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkMemoryAllocInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkMemoryAllocInfo), pAllocInfo);\n'
                                                             '    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
-                                            'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
-#                          'VkGraphicsPipelineCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfos), count*sizeof(VkGraphicsPipelineCreateInfo), pCreateInfos);\n'
+                                            'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
+#                          'VkGraphicsPipelineCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfos), count*sizeof(VkGraphicsPipelineCreateInfo), pCreateInfos);\n'
 #                                                                      '    add_VkGraphicsPipelineCreateInfos_to_trace_packet(pHeader, (VkGraphicsPipelineCreateInfo*)pPacket->pCreateInfos, pCreateInfos, count)',
-#                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfos))'},
-#                          'VkComputePipelineCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfos), count*sizeof(VkComputePipelineCreateInfo), pCreateInfos);\n'
+#                                                      'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfos))'},
+#                          'VkComputePipelineCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfos), count*sizeof(VkComputePipelineCreateInfo), pCreateInfos);\n'
 #                                                                      '    add_VkComputePipelineCreateInfos_to_trace_packet(pHeader, (VkComputePipelineCreateInfo*)pPacket->pCreateInfos, pCreateInfos, count)',
-#                                                      'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfos))'},
-                           'VkDescriptorPoolCreateInfo': {'add_txt': 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDescriptorPoolCreateInfo), pCreateInfo);\n'
-                                                                     '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), pCreateInfo->count * sizeof(VkDescriptorTypeCount), pCreateInfo->pTypeCount)',
-                                                     'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n'
-                                                                     '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+#                                                      'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfos))'},
+                           'VkDescriptorPoolCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDescriptorPoolCreateInfo), pCreateInfo);\n'
+                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), pCreateInfo->count * sizeof(VkDescriptorTypeCount), pCreateInfo->pTypeCount)',
+                                                     'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount));\n'
+                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VkDescriptorSetLayoutCreateInfo': {'add_txt': 'add_create_ds_layout_to_trace_packet(pHeader, &pPacket->pCreateInfo, pCreateInfo)',
                                                           'finalize_txt': '// pCreateInfo finalized in add_create_ds_layout_to_trace_packet'},
-                           'VkSwapChainCreateInfoWSI': {'add_txt':      'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapChainCreateInfoWSI), pCreateInfo);\n'
-                                                                        '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pCreateInfo->pSurfaceDescription)',
-                                                        'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));\n'
-                                                                        '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkShaderModuleCreateInfo': {'add_txt':      'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderModuleCreateInfo), pCreateInfo);\n'
-                                                                        '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), pPacket->pCreateInfo->codeSize, pCreateInfo->pCode)',
-                                                        'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
-                                                                        '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkShaderCreateInfo': {'add_txt':    'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderModuleCreateInfo), pCreateInfo);\n'
-                                                                '    glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pName), strlen(pPacket->pCreateInfo->pName), pCreateInfo->pName)',
-                                                                'finalize_txt': 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pName));\n'
-                                                                '    glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkSwapChainCreateInfoWSI': {'add_txt':      'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapChainCreateInfoWSI), pCreateInfo);\n'
+                                                                        '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionWSI), pCreateInfo->pSurfaceDescription)',
+                                                        'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));\n'
+                                                                        '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkShaderModuleCreateInfo': {'add_txt':      'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderModuleCreateInfo), pCreateInfo);\n'
+                                                                        '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), pPacket->pCreateInfo->codeSize, pCreateInfo->pCode)',
+                                                        'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
+                                                                        '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
+                           'VkShaderCreateInfo': {'add_txt':    'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderModuleCreateInfo), pCreateInfo);\n'
+                                                                '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pName), strlen(pPacket->pCreateInfo->pName), pCreateInfo->pName)',
+                                                                'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pName));\n'
+                                                                '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                           }
 
         for p in params:
@@ -359,9 +359,9 @@ class Subcommand(object):
             if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
 # LUGMAL        if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower() and p.name != 'pCreateInfos':
                 if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower():
-                    pp_dict['add_txt'] = 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-1].name, p.ty.strip('*').replace('const ', ''), p.name)
+                    pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-1].name, p.ty.strip('*').replace('const ', ''), p.name)
                 elif 'pOffsets' == p.name: # TODO : This is a custom case for BindVertexBuffers last param, need to clean this up
-                    pp_dict['add_txt'] = 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-2].name, p.ty.strip('*').replace('const ', ''), p.name)
+                    pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-2].name, p.ty.strip('*').replace('const ', ''), p.name)
                 elif p.ty.strip('*').replace('const ', '') in custom_ptr_dict:
                     pp_dict['add_txt'] = custom_ptr_dict[p.ty.strip('*').replace('const ', '')]['add_txt']
                     pp_dict['finalize_txt'] = custom_ptr_dict[p.ty.strip('*').replace('const ', '')]['finalize_txt']
@@ -372,9 +372,9 @@ class Subcommand(object):
                     if 'pData' == p.name and 'dataSize' == params[params.index(p)-1].name:
                         pp_dict['add_txt'] = pp_dict['add_txt'].replace('_dataSize', 'dataSize')
                 else:
-                    pp_dict['add_txt'] = 'glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
+                    pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
                 if 'finalize_txt' not in pp_dict or 'default' == pp_dict['finalize_txt']:
-                    pp_dict['finalize_txt'] = 'glv_finalize_buffer_address(pHeader, (void**)&(pPacket->%s))' % (p.name)
+                    pp_dict['finalize_txt'] = 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->%s))' % (p.name)
                 pp_dict['index'] = params.index(p)
                 ptr_param_list.append(pp_dict)
         return ptr_param_list
@@ -509,7 +509,7 @@ class Subcommand(object):
                         packet_size = []
                         in_data_size = False # flag when we need to capture local input size variable for in/out size
                         func_body.append('%s' % self.lineinfo.get())
-                        func_body.append('GLVTRACER_EXPORT %s VKAPI __HOOKED_vk%s(' % (proto.ret, proto.name))
+                        func_body.append('VKTRACER_EXPORT %s VKAPI __HOOKED_vk%s(' % (proto.ret, proto.name))
                         for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 if NULL
                             func_body.append('    %s %s,' % (p.ty, p.name))
                             if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
@@ -525,7 +525,7 @@ class Subcommand(object):
                         ptr_packet_update_list = self._get_packet_ptr_param_list(proto.params)
                         func_body[-1] = func_body[-1].replace(',', ')')
                         # End of function declaration portion, begin function body
-                        func_body.append('{\n    glv_trace_packet_header* pHeader;')
+                        func_body.append('{\n    vktrace_trace_packet_header* pHeader;')
                         if 'void' not in proto.ret or '*' in proto.ret:
                             func_body.append('    %s result;' % proto.ret)
                             return_txt = 'result = '
@@ -543,7 +543,7 @@ class Subcommand(object):
                                 if 'Dbg' in iProto.name or 'GetPhysicalDeviceSurfaceSupportWSI' in iProto.name:
                                     func_body.append('    if (strcmp(pName, "vk%s") == 0) {' % (iProto.name))
                                     func_body.append('        real_vk%s = (PFN_vk%s)real_vkGetInstanceProcAddr(instance, pName);' % (iProto.name, iProto.name))
-                                    func_body.append('        glv_set_packet_entrypoint_end_time(pHeader);')
+                                    func_body.append('        vktrace_set_packet_entrypoint_end_time(pHeader);')
                                     func_body.append('        if (real_vk%s != NULL) {' % (iProto.name))
                                     func_body.append('            result = (PFN_vkVoidFunction)__HOOKED_vk%s;' % (iProto.name))
                                     func_body.append('        } else {')
@@ -555,7 +555,7 @@ class Subcommand(object):
                                 if 'WSI' in dProto.name:
                                     func_body.append('    if (strcmp(pName, "vk%s") == 0) {' % (dProto.name))
                                     func_body.append('        real_vk%s = (PFN_vk%s)real_vkGetDeviceProcAddr(device, pName);' % (dProto.name, dProto.name))
-                                    func_body.append('        glv_set_packet_entrypoint_end_time(pHeader);')
+                                    func_body.append('        vktrace_set_packet_entrypoint_end_time(pHeader);')
                                     func_body.append('        if (real_vk%s != NULL) {' % (dProto.name))
                                     func_body.append('            result = (PFN_vkVoidFunction)__HOOKED_vk%s;' % (dProto.name))
                                     func_body.append('        } else {')
@@ -565,7 +565,7 @@ class Subcommand(object):
                         else:
                             # call real entrypoint and get return value (if there is one)
                             func_body.append('    %sreal_vk%s;' % (return_txt, proto.c_call()))
-                            func_body.append('    glv_set_packet_entrypoint_end_time(pHeader);')
+                            func_body.append('    vktrace_set_packet_entrypoint_end_time(pHeader);')
 
                         if in_data_size:
                             func_body.append('    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;')
@@ -588,30 +588,30 @@ class Subcommand(object):
 
     def _generate_packet_id_enum(self):
         pid_enum = []
-        pid_enum.append('enum GLV_TRACE_PACKET_ID_VK')
+        pid_enum.append('enum VKTRACE_TRACE_PACKET_ID_VK')
         pid_enum.append('{')
         first_func = True
         for proto in self.protos:
             if first_func:
                 first_func = False
-                pid_enum.append('    GLV_TPI_VK_vkApiVersion = GLV_TPI_BEGIN_API_HERE,')
-                pid_enum.append('    GLV_TPI_VK_vk%s,' % proto.name)
+                pid_enum.append('    VKTRACE_TPI_VK_vkApiVersion = VKTRACE_TPI_BEGIN_API_HERE,')
+                pid_enum.append('    VKTRACE_TPI_VK_vk%s,' % proto.name)
             else:
-                pid_enum.append('    GLV_TPI_VK_vk%s,' % proto.name)
+                pid_enum.append('    VKTRACE_TPI_VK_vk%s,' % proto.name)
         pid_enum.append('};\n')
         return "\n".join(pid_enum)
 
     def _generate_packet_id_name_func(self):
         func_body = []
-        func_body.append('static const char *glv_vk_packet_id_name(const enum GLV_TRACE_PACKET_ID_VK id)')
+        func_body.append('static const char *vktrace_vk_packet_id_name(const enum VKTRACE_TRACE_PACKET_ID_VK id)')
         func_body.append('{')
         func_body.append('    switch(id) {')
-        func_body.append('    case GLV_TPI_VK_vkApiVersion:')
+        func_body.append('    case VKTRACE_TPI_VK_vkApiVersion:')
         func_body.append('    {')
         func_body.append('        return "vkApiVersion";')
         func_body.append('    }')
         for proto in self.protos:
-            func_body.append('    case GLV_TPI_VK_vk%s:' % proto.name)
+            func_body.append('    case VKTRACE_TPI_VK_vk%s:' % proto.name)
             func_body.append('    {')
             func_body.append('        return "vk%s";' % proto.name)
             func_body.append('    }')
@@ -624,7 +624,7 @@ class Subcommand(object):
     def _generate_interp_func(self):
         interp_func_body = []
         interp_func_body.append('%s' % self.lineinfo.get())
-        interp_func_body.append('static glv_trace_packet_header* interpret_trace_packet_vk(glv_trace_packet_header* pHeader)')
+        interp_func_body.append('static vktrace_trace_packet_header* interpret_trace_packet_vk(vktrace_trace_packet_header* pHeader)')
         interp_func_body.append('{')
         interp_func_body.append('    if (pHeader == NULL)')
         interp_func_body.append('    {')
@@ -632,12 +632,12 @@ class Subcommand(object):
         interp_func_body.append('    }')
         interp_func_body.append('    switch (pHeader->packet_id)')
         interp_func_body.append('    {')
-        interp_func_body.append('        case GLV_TPI_VK_vkApiVersion:')
+        interp_func_body.append('        case VKTRACE_TPI_VK_vkApiVersion:')
         interp_func_body.append('        {')
         interp_func_body.append('            return interpret_body_as_vkApiVersion(pHeader)->header;')
         interp_func_body.append('        }')
         for proto in self.protos:
-            interp_func_body.append('        case GLV_TPI_VK_vk%s:\n        {' % proto.name)
+            interp_func_body.append('        case VKTRACE_TPI_VK_vk%s:\n        {' % proto.name)
             header_prefix = 'h'
             if 'WSI' in proto.name or 'Dbg' in proto.name:
                 header_prefix = 'pH'
@@ -654,150 +654,150 @@ class Subcommand(object):
         pid_enum = []
         pid_enum.append('%s' % lineinfo.get())
         pid_enum.append('//=============================================================================')
-        pid_enum.append('static void add_VkApplicationInfo_to_packet(glv_trace_packet_header*  pHeader, VkApplicationInfo** ppStruct, const VkApplicationInfo *pInStruct)')
+        pid_enum.append('static void add_VkApplicationInfo_to_packet(vktrace_trace_packet_header*  pHeader, VkApplicationInfo** ppStruct, const VkApplicationInfo *pInStruct)')
         pid_enum.append('{')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkApplicationInfo), pInStruct);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen(pInStruct->pAppName) + 1, pInStruct->pAppName);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen(pInStruct->pEngineName) + 1, pInStruct->pEngineName);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkApplicationInfo), pInStruct);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen(pInStruct->pAppName) + 1, pInStruct->pAppName);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen(pInStruct->pEngineName) + 1, pInStruct->pEngineName);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
         pid_enum.append('%s' % lineinfo.get())
-        pid_enum.append('static void add_VkInstanceCreateInfo_to_packet(glv_trace_packet_header* pHeader, VkInstanceCreateInfo** ppStruct, VkInstanceCreateInfo *pInStruct)')
+        pid_enum.append('static void add_VkInstanceCreateInfo_to_packet(vktrace_trace_packet_header* pHeader, VkInstanceCreateInfo** ppStruct, VkInstanceCreateInfo *pInStruct)')
         pid_enum.append('{')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkInstanceCreateInfo), pInStruct);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkInstanceCreateInfo), pInStruct);')
         pid_enum.append('    add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&((*ppStruct)->pAppInfo), pInStruct->pAppInfo);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAllocCb), sizeof(VkAllocCallbacks), pInStruct->pAllocCb);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAllocCb));')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAllocCb), sizeof(VkAllocCallbacks), pInStruct->pAllocCb);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAllocCb));')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->layerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->layerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
         pid_enum.append('    if (pInStruct->layerCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->layerCount; i++) {')
         pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
-        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
+        pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
+        pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++) {')
         pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
-        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)ppStruct);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)ppStruct);')
         pid_enum.append('}\n')
         pid_enum.append('%s' % lineinfo.get())
-        pid_enum.append('static void add_VkDeviceCreateInfo_to_packet(glv_trace_packet_header*  pHeader, VkDeviceCreateInfo** ppStruct, const VkDeviceCreateInfo *pInStruct)')
+        pid_enum.append('static void add_VkDeviceCreateInfo_to_packet(vktrace_trace_packet_header*  pHeader, VkDeviceCreateInfo** ppStruct, const VkDeviceCreateInfo *pInStruct)')
         pid_enum.append('{')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkDeviceCreateInfo), pInStruct);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pInStruct->pRequestedQueues);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkDeviceCreateInfo), pInStruct);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pInStruct->pRequestedQueues);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->layerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->layerCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
         pid_enum.append('    if (pInStruct->layerCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->layerCount; i++) {')
         pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
-        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
+        pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
+        pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledExtensionNames), pInStruct->extensionCount * sizeof(char*), pInStruct->ppEnabledExtensionNames);')
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++) {')
         pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
-        pid_enum.append('            glv_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
-        pid_enum.append('            glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
+        pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
         pid_enum.append('        }')
         pid_enum.append('    }')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
-        pid_enum.append('    glv_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pEnabledFeatures, sizeof(VkPhysicalDeviceFeatures), pInStruct->pEnabledFeatures);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pEnabledFeatures);')
-        pid_enum.append('    glv_finalize_buffer_address(pHeader, (void**)ppStruct);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pEnabledFeatures, sizeof(VkPhysicalDeviceFeatures), pInStruct->pEnabledFeatures);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pEnabledFeatures);')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)ppStruct);')
         pid_enum.append('}\n')
         pid_enum.append('%s' % lineinfo.get())
         pid_enum.append('//=============================================================================\n')
-        pid_enum.append('static VkInstanceCreateInfo* interpret_VkInstanceCreateInfo(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
+        pid_enum.append('static VkInstanceCreateInfo* interpret_VkInstanceCreateInfo(vktrace_trace_packet_header*  pHeader, intptr_t ptr_variable)')
         pid_enum.append('{')
-        pid_enum.append('    VkInstanceCreateInfo* pVkInstanceCreateInfo = (VkInstanceCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
+        pid_enum.append('    VkInstanceCreateInfo* pVkInstanceCreateInfo = (VkInstanceCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
         pid_enum.append('    uint32_t i;')
         pid_enum.append('    if (pVkInstanceCreateInfo != NULL)')
         pid_enum.append('    {')
-        pid_enum.append('        pVkInstanceCreateInfo->pAppInfo = (VkApplicationInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo);')
-        pid_enum.append('        pVkInstanceCreateInfo->pAllocCb = (VkAllocCallbacks*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAllocCb);')
+        pid_enum.append('        pVkInstanceCreateInfo->pAppInfo = (VkApplicationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo);')
+        pid_enum.append('        pVkInstanceCreateInfo->pAllocCb = (VkAllocCallbacks*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAllocCb);')
         pid_enum.append('        VkApplicationInfo** ppAppInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pAppInfo;')
-        pid_enum.append('        (*ppAppInfo)->pAppName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pAppName);')
-        pid_enum.append('        (*ppAppInfo)->pEngineName = (const char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pEngineName);')
+        pid_enum.append('        (*ppAppInfo)->pAppName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pAppName);')
+        pid_enum.append('        (*ppAppInfo)->pEngineName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pEngineName);')
         pid_enum.append('        if (pVkInstanceCreateInfo->layerCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            pVkInstanceCreateInfo->ppEnabledLayerNames = (const char* const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames);')
+        pid_enum.append('            pVkInstanceCreateInfo->ppEnabledLayerNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames);')
         pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->layerCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkInstanceCreateInfo->ppEnabledLayerNames[i];')
-        pid_enum.append('                *ppTmp = (char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames[i]);')
+        pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
         pid_enum.append('        if (pVkInstanceCreateInfo->extensionCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            pVkInstanceCreateInfo->ppEnabledExtensionNames = (const char* const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames);')
+        pid_enum.append('            pVkInstanceCreateInfo->ppEnabledExtensionNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames);')
         pid_enum.append('            for (i = 0; i < pVkInstanceCreateInfo->extensionCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkInstanceCreateInfo->ppEnabledExtensionNames[i];')
-        pid_enum.append('                *ppTmp = (char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames[i]);')
+        pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledExtensionNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
         pid_enum.append('    }\n')
         pid_enum.append('    return pVkInstanceCreateInfo;')
         pid_enum.append('}\n')
         pid_enum.append('%s' % lineinfo.get())
-        pid_enum.append('static VkDeviceCreateInfo* interpret_VkDeviceCreateInfo(glv_trace_packet_header*  pHeader, intptr_t ptr_variable)')
+        pid_enum.append('static VkDeviceCreateInfo* interpret_VkDeviceCreateInfo(vktrace_trace_packet_header*  pHeader, intptr_t ptr_variable)')
         pid_enum.append('{')
-        pid_enum.append('    VkDeviceCreateInfo* pVkDeviceCreateInfo = (VkDeviceCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
+        pid_enum.append('    VkDeviceCreateInfo* pVkDeviceCreateInfo = (VkDeviceCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)ptr_variable);\n')
         pid_enum.append('    uint32_t i;')
         pid_enum.append('    if (pVkDeviceCreateInfo != NULL)')
         pid_enum.append('    {')
-        pid_enum.append('        pVkDeviceCreateInfo->pRequestedQueues = (const VkDeviceQueueCreateInfo *)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pRequestedQueues);\n')
+        pid_enum.append('        pVkDeviceCreateInfo->pRequestedQueues = (const VkDeviceQueueCreateInfo *)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pRequestedQueues);\n')
         pid_enum.append('        if (pVkDeviceCreateInfo->layerCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            pVkDeviceCreateInfo->ppEnabledLayerNames = (const char* const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames);')
+        pid_enum.append('            pVkDeviceCreateInfo->ppEnabledLayerNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames);')
         pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->layerCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkDeviceCreateInfo->ppEnabledLayerNames[i];')
-        pid_enum.append('                *ppTmp = (char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames[i]);')
+        pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledLayerNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
         pid_enum.append('        if (pVkDeviceCreateInfo->extensionCount > 0)')
         pid_enum.append('        {')
-        pid_enum.append('            pVkDeviceCreateInfo->ppEnabledExtensionNames = (const char* const*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames);')
+        pid_enum.append('            pVkDeviceCreateInfo->ppEnabledExtensionNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames);')
         pid_enum.append('            for (i = 0; i < pVkDeviceCreateInfo->extensionCount; i++) {')
         pid_enum.append('                char** ppTmp = (char**)&pVkDeviceCreateInfo->ppEnabledExtensionNames[i];')
-        pid_enum.append('                *ppTmp = (char*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames[i]);')
+        pid_enum.append('                *ppTmp = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->ppEnabledExtensionNames[i]);')
         pid_enum.append('            }')
         pid_enum.append('        }')
-        pid_enum.append('        pVkDeviceCreateInfo->pEnabledFeatures = (const VkPhysicalDeviceFeatures*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pEnabledFeatures);\n')
+        pid_enum.append('        pVkDeviceCreateInfo->pEnabledFeatures = (const VkPhysicalDeviceFeatures*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkDeviceCreateInfo->pEnabledFeatures);\n')
         pid_enum.append('    }\n')
         pid_enum.append('    return pVkDeviceCreateInfo;')
         pid_enum.append('}\n')
         pid_enum.append('%s' % lineinfo.get())
-        pid_enum.append('static void interpret_VkPipelineShaderStageCreateInfo(glv_trace_packet_header*  pHeader, VkPipelineShaderStageCreateInfo* pShader)')
+        pid_enum.append('static void interpret_VkPipelineShaderStageCreateInfo(vktrace_trace_packet_header*  pHeader, VkPipelineShaderStageCreateInfo* pShader)')
         pid_enum.append('{')
         pid_enum.append('    if (pShader != NULL)')
         pid_enum.append('    {')
         pid_enum.append('        // specialization info')
-        pid_enum.append('        pShader->pSpecializationInfo = (const VkSpecializationInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo);')
+        pid_enum.append('        pShader->pSpecializationInfo = (const VkSpecializationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo);')
         pid_enum.append('        if (pShader->pSpecializationInfo != NULL)')
         pid_enum.append('        {')
         pid_enum.append('            VkSpecializationInfo* pInfo = (VkSpecializationInfo*)pShader->pSpecializationInfo;')
-        pid_enum.append('            pInfo->pMap = (const VkSpecializationMapEntry*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pMap);')
-        pid_enum.append('            pInfo->pData = (const void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pData);')
+        pid_enum.append('            pInfo->pMap = (const VkSpecializationMapEntry*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pMap);')
+        pid_enum.append('            pInfo->pData = (const void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pData);')
         pid_enum.append('        }')
         pid_enum.append('    }')
         pid_enum.append('}\n')
@@ -812,28 +812,28 @@ class Subcommand(object):
         mem_barrier_interp = ['uint32_t i = 0;\n',
                               'for (i = 0; i < pPacket->memBarrierCount; i++) {\n',
                               '    void** ppMB = (void**)&(pPacket->ppMemBarriers[i]);\n',
-                              '    *ppMB = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppMemBarriers[i]);\n',
+                              '    *ppMB = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppMemBarriers[i]);\n',
                               '    //VkMemoryBarrier* pBarr = (VkMemoryBarrier*)pPacket->ppMemBarriers[i];\n',
                               '    // TODO : Could fix up the pNext ptrs here if they were finalized and if we cared by switching on Barrier type and remapping\n',
                               '}']
         create_rp_interp = ['VkRenderPassCreateInfo* pInfo = (VkRenderPassCreateInfo*)pPacket->pCreateInfo;\n',
                             'uint32_t i = 0;\n',
                             'VkAttachmentDescription **ppAD = (VkAttachmentDescription **)&(pInfo->pAttachments);\n',
-                            '*ppAD = (VkAttachmentDescription*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pAttachments);\n',
+                            '*ppAD = (VkAttachmentDescription*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pAttachments);\n',
                             'VkSubpassDescription** ppSP = (VkSubpassDescription**)&(pInfo->pSubpasses);\n',
-                            '*ppSP = (VkSubpassDescription*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses);\n',
+                            '*ppSP = (VkSubpassDescription*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses);\n',
                             'for (i=0; i<pInfo->subpassCount; i++) {\n',
                             '    VkAttachmentReference** pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pInputAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pInputAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pInputAttachments);\n',
                             '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pColorAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pColorAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pColorAttachments);\n',
                             '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pResolveAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pResolveAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pResolveAttachments);\n',
                             '    pAR = (VkAttachmentReference**)&(pInfo->pSubpasses[i].pPreserveAttachments);\n',
-                            '    *pAR = (VkAttachmentReference*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pPreserveAttachments);\n',
+                            '    *pAR = (VkAttachmentReference*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pSubpasses[i].pPreserveAttachments);\n',
                             '}\n',
                             'VkSubpassDependency** ppSD = (VkSubpassDependency**)&(pInfo->pDependencies);\n',
-                            '*ppSD = (VkSubpassDependency*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pDependencies);\n']
+                            '*ppSD = (VkSubpassDependency*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pInfo->pDependencies);\n']
         create_gfx_pipe = ['uint32_t i;\n',
                            'uint32_t j;\n',
                            'for (i=0; i<pPacket->count; i++) {\n',
@@ -841,56 +841,56 @@ class Subcommand(object):
                             '// need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                             'VkGraphicsPipelineCreateInfo* pNonConst = (VkGraphicsPipelineCreateInfo*)&(pPacket->pCreateInfos[i]);\n',
                             '// shader stages array\n',
-                            'pNonConst->pStages = (VkPipelineShaderStageCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pStages);\n',
+                            'pNonConst->pStages = (VkPipelineShaderStageCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pStages);\n',
                             'for (j = 0; j < pPacket->pCreateInfos[i].stageCount; j++)\n',
                             '{\n',
                             '    interpret_VkPipelineShaderStageCreateInfo(pHeader, (VkPipelineShaderStageCreateInfo*)&pPacket->pCreateInfos[i].pStages[j]);\n',
                             '}\n',
                             '// Vertex Input State\n',
-                            'pNonConst->pVertexInputState = (VkPipelineVertexInputStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState);\n',
+                            'pNonConst->pVertexInputState = (VkPipelineVertexInputStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState);\n',
                             'VkPipelineVertexInputStateCreateInfo* pNonConstVIState = (VkPipelineVertexInputStateCreateInfo*)pNonConst->pVertexInputState;\n',
                             'if (pNonConstVIState) {\n',
-                            '    pNonConstVIState->pVertexBindingDescriptions = (const VkVertexInputBindingDescription*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState->pVertexBindingDescriptions);\n',
-                            '    pNonConstVIState->pVertexAttributeDescriptions = (const VkVertexInputAttributeDescription*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState->pVertexAttributeDescriptions);\n',
+                            '    pNonConstVIState->pVertexBindingDescriptions = (const VkVertexInputBindingDescription*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState->pVertexBindingDescriptions);\n',
+                            '    pNonConstVIState->pVertexAttributeDescriptions = (const VkVertexInputAttributeDescription*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pVertexInputState->pVertexAttributeDescriptions);\n',
                             '}\n',
                             '// Input Assembly State\n',
-                            'pNonConst->pInputAssemblyState = (const VkPipelineInputAssemblyStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pInputAssemblyState);\n',
+                            'pNonConst->pInputAssemblyState = (const VkPipelineInputAssemblyStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pInputAssemblyState);\n',
                             '// Tesselation State\n',
-                            'pNonConst->pTessellationState = (const VkPipelineTessellationStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pTessellationState);\n',
+                            'pNonConst->pTessellationState = (const VkPipelineTessellationStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pTessellationState);\n',
                             '// Viewport State\n',
-                            'pNonConst->pViewportState = (const VkPipelineViewportStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pViewportState);\n',
+                            'pNonConst->pViewportState = (const VkPipelineViewportStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pViewportState);\n',
                             '// Raster State\n',
-                            'pNonConst->pRasterState = (const VkPipelineRasterStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pRasterState);\n',
+                            'pNonConst->pRasterState = (const VkPipelineRasterStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pRasterState);\n',
                             '// MultiSample State\n',
-                            'pNonConst->pMultisampleState = (const VkPipelineMultisampleStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pMultisampleState);\n',
+                            'pNonConst->pMultisampleState = (const VkPipelineMultisampleStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pMultisampleState);\n',
                             '// DepthStencil State\n',
-                            'pNonConst->pDepthStencilState = (const VkPipelineDepthStencilStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pDepthStencilState);\n',
+                            'pNonConst->pDepthStencilState = (const VkPipelineDepthStencilStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pDepthStencilState);\n',
                             '// ColorBuffer State\n',
-                            'pNonConst->pColorBlendState = (const VkPipelineColorBlendStateCreateInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pColorBlendState);\n',
+                            'pNonConst->pColorBlendState = (const VkPipelineColorBlendStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pColorBlendState);\n',
                             'VkPipelineColorBlendStateCreateInfo* pNonConstCbState = (VkPipelineColorBlendStateCreateInfo*)pNonConst->pColorBlendState;\n',
                             'if (pNonConstCbState)\n',
-                            '    pNonConstCbState->pAttachments = (const VkPipelineColorBlendAttachmentState*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pColorBlendState->pAttachments);\n',
+                            '    pNonConstCbState->pAttachments = (const VkPipelineColorBlendAttachmentState*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pColorBlendState->pAttachments);\n',
                             '} else {\n',
                             '    // This is unexpected.\n',
-                            '    glv_LogError("CreateGraphicsPipelines must have CreateInfo stype of VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO.");\n',
+                            '    vktrace_LogError("CreateGraphicsPipelines must have CreateInfo stype of VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO.");\n',
                             '    pPacket->header = NULL;\n',
                             '}\n',
                             '}\n']
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
                               # TODO138 : Just ripped out a bunch of custom code here that was out of date. Need to scrub these function and verify they're correct
         custom_case_dict = { #'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
-                              #                 'pInfo->pCode = glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
+                              #                 'pInfo->pCode = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
                              'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['VkDynamicViewportStateCreateInfo* pInfo = (VkDynamicViewportStateCreateInfo*)pPacket->pCreateInfo;\n',
-                                                                                             'pInfo->pViewports = (VkViewport*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
-                                                                                             'pInfo->pScissors = (VkRect2D*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pScissors);']},
+                                                                                             'pInfo->pViewports = (VkViewport*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
+                                                                                             'pInfo->pScissors = (VkRect2D*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pScissors);']},
                              #'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkFramebufferCreateInfo* pInfo = (VkFramebufferCreateInfo*)pPacket->pCreateInfo;\n',
-                              #                      'pInfo->pColorAttachments = (VkColorAttachmentBindInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
-                               #                     'pInfo->pDepthStencilAttachment = (VkDepthStencilBindInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
+                              #                      'pInfo->pColorAttachments = (VkColorAttachmentBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
+                               #                     'pInfo->pDepthStencilAttachment = (VkDepthStencilBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
                              'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': create_rp_interp},
                              'CreatePipelineLayout' : {'param': 'pCreateInfo', 'txt': ['VkPipelineLayoutCreateInfo* pInfo = (VkPipelineLayoutCreateInfo*)pPacket->pCreateInfo;\n',
-                                                       'pInfo->pSetLayouts = (VkDescriptorSetLayout*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pSetLayouts);\n']},
+                                                       'pInfo->pSetLayouts = (VkDescriptorSetLayout*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pSetLayouts);\n']},
                              'CreateDescriptorPool' : {'param': 'pCreateInfo', 'txt': ['VkDescriptorPoolCreateInfo* pInfo = (VkDescriptorPoolCreateInfo*)pPacket->pCreateInfo;\n',
-                                                       'pInfo->pTypeCount = (VkDescriptorTypeCount*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
+                                                       'pInfo->pTypeCount = (VkDescriptorTypeCount*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCount);\n']},
                              'CmdWaitEvents' : {'param': 'ppMemBarriers', 'txt': mem_barrier_interp},
                              'CmdPipelineBarrier' : {'param': 'ppMemBarriers', 'txt': mem_barrier_interp},
                              'CreateDescriptorSetLayout' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) {\n',
@@ -898,21 +898,21 @@ class Subcommand(object):
                                                                                          '    do\n','    {\n',
                                                                                          '        // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
                                                                                          '        void** ppNextVoidPtr = (void**)&(pNext->pNext);\n',
-                                                                                         '        *ppNextVoidPtr = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+                                                                                         '        *ppNextVoidPtr = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            case VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO:\n',
                                                                                          '            {\n' ,
                                                                                          '                unsigned int i = 0;\n',
-                                                                                         '                pNext->pBinding = (VkDescriptorSetLayoutBinding*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pBinding);\n',
+                                                                                         '                pNext->pBinding = (VkDescriptorSetLayoutBinding*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pBinding);\n',
                                                                                          '                for (i = 0; i < pNext->count; i++)\n','                {\n',
                                                                                          '                    VkSampler** ppSamplers = (VkSampler**)&(pNext->pBinding[i].pImmutableSamplers);\n',
-                                                                                         '                    *ppSamplers = (VkSampler*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pBinding[i].pImmutableSamplers);\n',
+                                                                                         '                    *ppSamplers = (VkSampler*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pBinding[i].pImmutableSamplers);\n',
                                                                                          '                }\n',
                                                                                          '                break;\n',
                                                                                          '            }\n',
                                                                                          '            default:\n',
                                                                                          '            {\n',
-                                                                                         '                glv_LogError("Encountered an unexpected type in descriptor set layout create list.");\n',
+                                                                                         '                vktrace_LogError("Encountered an unexpected type in descriptor set layout create list.");\n',
                                                                                          '                pPacket->header = NULL;\n',
                                                                                          '                pNext->pNext = NULL;\n',
                                                                                          '            }\n',
@@ -921,25 +921,25 @@ class Subcommand(object):
                                                                                          '     }  while (NULL != pNext);\n',
                                                                                          '} else {\n',
                                                                                          '     // This is unexpected.\n',
-                                                                                         '     glv_LogError("CreateDescriptorSetLayout must have pCreateInfo->stype of VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO.");\n',
+                                                                                         '     vktrace_LogError("CreateDescriptorSetLayout must have pCreateInfo->stype of VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO.");\n',
                                                                                          '     pPacket->header = NULL;\n',
                                                                                          '}']},
 #                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['if (pPacket->pBeginInfo->sType == VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO) {\n',
 #                                                                                         '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
 #                                                                                         '    VkCmdBufferGraphicsBeginInfo** ppNext = (VkCmdBufferGraphicsBeginInfo**)&(pPacket->pBeginInfo->pNext);\n',
-#                                                                                         '    *ppNext = (VkCmdBufferGraphicsBeginInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
+#                                                                                         '    *ppNext = (VkCmdBufferGraphicsBeginInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
 #                                                                                         '    VkCmdBufferGraphicsBeginInfo* pNext = *ppNext;\n',
 #                                                                                         '    while (NULL != pNext)\n', '    {\n',
 #                                                                                         '        switch(pNext->sType)\n', '        {\n',
 #                                                                                         '            case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:\n',
 #                                                                                         '            {\n',
 #                                                                                         '                ppNext = (VkCmdBufferGraphicsBeginInfo**) &pNext->pNext;\n',
-#                                                                                         '                *ppNext = (VkCmdBufferGraphicsBeginInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+#                                                                                         '                *ppNext = (VkCmdBufferGraphicsBeginInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
 #                                                                                         '                break;\n',
 #                                                                                         '            }\n',
 #                                                                                         '            default:\n',
 #                                                                                         '            {\n',
-#                                                                                         '                glv_LogError("Encountered an unexpected type in begin command buffer list.");\n',
+#                                                                                         '                vktrace_LogError("Encountered an unexpected type in begin command buffer list.");\n',
 #                                                                                         '                pPacket->header = NULL;\n',
 #                                                                                         '                pNext->pNext = NULL;\n',
 #                                                                                         '            }\n',
@@ -948,18 +948,18 @@ class Subcommand(object):
 #                                                                                         '    }\n',
 #                                                                                         '} else {\n',
 #                                                                                         '    // This is unexpected.\n',
-#                                                                                         '    glv_LogError("BeginCommandBuffer must have BeginInfo stype of VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO.");\n',
+#                                                                                         '    vktrace_LogError("BeginCommandBuffer must have BeginInfo stype of VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO.");\n',
 #                                                                                         '    pPacket->header = NULL;\n',
 #                                                                                         '}']},
                              'AllocMemory' : {'param': 'pAllocInfo', 'txt': ['if (pPacket->pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {\n',
                                                                                          '    VkMemoryAllocInfo** ppNext = (VkMemoryAllocInfo**) &(pPacket->pAllocInfo->pNext);\n',
-                                                                                         '    *ppNext = (VkMemoryAllocInfo*) glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                                                                                         '    *ppNext = (VkMemoryAllocInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
                                                                                          '    VkMemoryAllocInfo* pNext = (VkMemoryAllocInfo*) *ppNext;\n',
                                                                                          '    while (NULL != pNext)\n', '    {\n',
                                                                                          '        switch(pNext->sType)\n', '        {\n',
                                                                                          '            default:\n',
                                                                                          '            {\n',
-                                                                                         '               glv_LogError("Encountered an unexpected type alloc memory list.");\n',
+                                                                                         '               vktrace_LogError("Encountered an unexpected type alloc memory list.");\n',
                                                                                          '               pPacket->header = NULL;\n',
                                                                                          '               pNext->pNext = NULL;\n',
                                                                                          '            }\n',
@@ -968,37 +968,37 @@ class Subcommand(object):
                                                                                          '    }\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
-                                                                                         '    glv_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',
+                                                                                         '    vktrace_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
                              'UpdateDescriptorSets' : {'param': 'pDescriptorWrites', 'txt':
                                                                                [ 'uint32_t i;\n',
                                                                                  'for (i = 0; i < pPacket->writeCount; i++) {\n',
                                                                                  '   VkDescriptorInfo** ppDescriptors = (VkDescriptorInfo**)&pPacket->pDescriptorWrites[i].pDescriptors;\n',
-                                                                                 '   *ppDescriptors = (VkDescriptorInfo*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pDescriptorWrites[i].pDescriptors);\n',
+                                                                                 '   *ppDescriptors = (VkDescriptorInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pDescriptorWrites[i].pDescriptors);\n',
                                                                                  '}'
                                                                                ]},
                              'CreateGraphicsPipelines' : {'param': 'pCreateInfos', 'txt': create_gfx_pipe},
                              'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_VkPipelineShaderStageCreateInfo(pHeader, (VkPipelineShaderStageCreateInfo*)(&pPacket->pCreateInfo->cs));']},
                              'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkAttachmentView** ppAV = (VkAttachmentView**)&(pPacket->pCreateInfo->pAttachments);\n',
-                                                                                    '*ppAV = (VkAttachmentView*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
+                                                                                    '*ppAV = (VkAttachmentView*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
                              'CmdBeginRenderPass' : {'param': 'pRenderPassBegin', 'txt': ['VkClearValue** ppCV = (VkClearValue**)&(pPacket->pRenderPassBegin->pClearValues);\n',
-                                                                                          '*ppCV = (VkClearValue*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pClearValues));']},
+                                                                                          '*ppCV = (VkClearValue*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pClearValues));']},
                              'CreateShaderModule' : {'param': 'pCreateInfo', 'txt': ['void** ppCode = (void**)&(pPacket->pCreateInfo->pCode);\n',
-                                                                                     '*ppCode = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
+                                                                                     '*ppCode = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['void** ppName = (void**)&(pPacket->pCreateInfo->pName);\n',
-                                                                               '*ppName = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pName);']},
+                                                                               '*ppName = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pName);']},
                              'FlushMappedMemoryRanges' : {'param': 'ppData', 'txt': ['uint32_t i = 0;\n',
                                                                                      'for (i = 0; i < pPacket->memRangeCount; i++)\n',
                                                                                      '{\n',
-                                                                                     '    pPacket->ppData[i] = (void*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppData[i]);\n',
+                                                                                     '    pPacket->ppData[i] = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppData[i]);\n',
                                                                                      '}']}}
         if_body = []
         if_body.append('typedef struct packet_vkApiVersion {')
-        if_body.append('    glv_trace_packet_header* header;')
+        if_body.append('    vktrace_trace_packet_header* header;')
         if_body.append('    uint32_t version;')
         if_body.append('} packet_vkApiVersion;\n')
-        if_body.append('static packet_vkApiVersion* interpret_body_as_vkApiVersion(glv_trace_packet_header* pHeader)')
+        if_body.append('static packet_vkApiVersion* interpret_body_as_vkApiVersion(vktrace_trace_packet_header* pHeader)')
         if_body.append('{')
         if_body.append('    packet_vkApiVersion* pPacket = (packet_vkApiVersion*)pHeader->pBody;')
         if_body.append('    pPacket->header = pHeader;')
@@ -1012,13 +1012,13 @@ class Subcommand(object):
                     proto.params.append(vulkan.Param("void**", "ppData"))
                 if_body.append('%s' % self.lineinfo.get())
                 if_body.append('typedef struct packet_vk%s {' % proto.name)
-                if_body.append('    glv_trace_packet_header* header;')
+                if_body.append('    vktrace_trace_packet_header* header;')
                 for p in proto.params:
                     if_body.append('    %s %s;' % (p.ty, p.name))
                 if 'void' != proto.ret:
                     if_body.append('    %s result;' % proto.ret)
                 if_body.append('} packet_vk%s;\n' % proto.name)
-                if_body.append('static packet_vk%s* interpret_body_as_vk%s(glv_trace_packet_header* pHeader)' % (proto.name, proto.name))
+                if_body.append('static packet_vk%s* interpret_body_as_vk%s(vktrace_trace_packet_header* pHeader)' % (proto.name, proto.name))
                 if_body.append('{')
                 if_body.append('    packet_vk%s* pPacket = (packet_vk%s*)pHeader->pBody;' % (proto.name, proto.name))
                 if_body.append('    pPacket->header = pHeader;')
@@ -1029,7 +1029,7 @@ class Subcommand(object):
                         elif 'InstanceCreateInfo' in p.ty:
                             if_body.append('    pPacket->%s = interpret_VkInstanceCreateInfo(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.name))
                         else:
-                            if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
+                            if_body.append('    pPacket->%s = (%s)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
                         # TODO : Generalize this custom code to kill dict data struct above.
                         #  Really the point of this block is to catch params w/ embedded ptrs to structs and chains of structs
                         if proto.name in custom_case_dict and p.name == custom_case_dict[proto.name]['param']:
@@ -1043,30 +1043,30 @@ class Subcommand(object):
 
     def _generate_interp_funcs_ext(self, extName):
         if_body = []
-        custom_case_dict = { 'QueuePresentWSI' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapChains = (VkSwapChainWSI*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapChains));\n',
-                                                                                   'pPacket->pPresentInfo->imageIndices = (uint32_t*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
+        custom_case_dict = { 'QueuePresentWSI' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapChains = (VkSwapChainWSI*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapChains));\n',
+                                                                                   'pPacket->pPresentInfo->imageIndices = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
                              'CreateSwapChainWSI' : {'param': 'pCreateInfo', 'txt': ['VkSurfaceDescriptionWSI **ppSurfDescp = (VkSurfaceDescriptionWSI**)&pPacket->pCreateInfo->pSurfaceDescription;\n',
                                                      'uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
-                                                     '(*ppSurfDescp) = (VkSurfaceDescriptionWSI*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pSurfaceDescription));\n',
-                                                     '(*ppQFI) = (uint32_t*)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
+                                                     '(*ppSurfDescp) = (VkSurfaceDescriptionWSI*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pSurfaceDescription));\n',
+                                                     '(*ppQFI) = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
                             }
         for ext in vulkan.extensions_all:
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     if_body.append('typedef struct packet_vk%s {' % proto.name)
-                    if_body.append('    glv_trace_packet_header* pHeader;')
+                    if_body.append('    vktrace_trace_packet_header* pHeader;')
                     for p in proto.params:
                         if_body.append('    %s %s;' % (p.ty, p.name))
                     if 'void' != proto.ret:
                         if_body.append('    %s result;' % proto.ret)
                     if_body.append('} packet_vk%s;\n' % proto.name)
-                    if_body.append('static packet_vk%s* interpret_body_as_vk%s(glv_trace_packet_header* pHeader)' % (proto.name, proto.name))
+                    if_body.append('static packet_vk%s* interpret_body_as_vk%s(vktrace_trace_packet_header* pHeader)' % (proto.name, proto.name))
                     if_body.append('{')
                     if_body.append('    packet_vk%s* pPacket = (packet_vk%s*)pHeader->pBody;' % (proto.name, proto.name))
                     if_body.append('    pPacket->pHeader = pHeader;')
                     for p in proto.params:
                         if '*' in p.ty:
-                            if_body.append('    pPacket->%s = (%s)glv_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
+                            if_body.append('    pPacket->%s = (%s)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->%s);' % (p.name, p.ty, p.name))
                             # TODO : Generalize this custom code to kill dict data struct above.
                             #  Really the point of this block is to catch params w/ embedded ptrs to structs and chains of structs
                             if proto.name in custom_case_dict and p.name == custom_case_dict[proto.name]['param']:
@@ -1112,7 +1112,7 @@ class Subcommand(object):
         txt = '    %s remap_%s(const %s& value)\n    {\n' % (ty, name[2:], ty)
         txt += '        if (value == 0) { return 0; }\n'
         txt += '        std::map<%s, %s>::const_iterator q = %s.find(value);\n' % (ty, ty, name)
-        txt += '        if (q == %s.end()) { glv_LogError("Failed to remap %s."); return value; }\n' % (name, ty)
+        txt += '        if (q == %s.end()) { vktrace_LogError("Failed to remap %s."); return value; }\n' % (name, ty)
         txt += '        return q->second;\n    }\n'
         return txt
 
@@ -1135,14 +1135,14 @@ class Subcommand(object):
         rof_body.append('    {')
         rof_body.append('        if (m_mapRange.empty())')
         rof_body.append('        {')
-        rof_body.append('            glv_LogError("gpuMemory::setMemoryDataAddr() m_mapRange is empty.");')
+        rof_body.append('            vktrace_LogError("gpuMemory::setMemoryDataAddr() m_mapRange is empty.");')
         rof_body.append('            return;')
         rof_body.append('        }')
         rof_body.append('        MapRange mr = m_mapRange.back();')
         rof_body.append('        if (mr.pData != NULL)')
-        rof_body.append('            glv_LogWarning("gpuMemory::setMemoryDataAddr() data already mapped overwrite old mapping.");')
+        rof_body.append('            vktrace_LogWarning("gpuMemory::setMemoryDataAddr() data already mapped overwrite old mapping.");')
         rof_body.append('        else if (pBuf == NULL)')
-        rof_body.append('            glv_LogWarning("gpuMemory::setMemoryDataAddr() adding NULL pointer.");')
+        rof_body.append('            vktrace_LogWarning("gpuMemory::setMemoryDataAddr() adding NULL pointer.");')
         rof_body.append('        mr.pData = (uint8_t *) pBuf;')
         rof_body.append('    }')
         rof_body.append('')
@@ -1164,16 +1164,16 @@ class Subcommand(object):
         rof_body.append('    {')
         rof_body.append('        if (m_mapRange.empty())')
         rof_body.append('        {')
-        rof_body.append('            glv_LogError("gpuMemory::copyMappingData() m_mapRange is empty.");')
+        rof_body.append('            vktrace_LogError("gpuMemory::copyMappingData() m_mapRange is empty.");')
         rof_body.append('            return;')
         rof_body.append('        }')
         rof_body.append('        MapRange mr = m_mapRange.back();')
         rof_body.append('        if (!pSrcData || !mr.pData)')
         rof_body.append('        {')
         rof_body.append('            if (!pSrcData)')
-        rof_body.append('                glv_LogError("gpuMemory::copyMappingData() null src pointer.");')
+        rof_body.append('                vktrace_LogError("gpuMemory::copyMappingData() null src pointer.");')
         rof_body.append('            else')
-        rof_body.append('                glv_LogError("gpuMemory::copyMappingData() null dest pointer totalSize=%u.", m_allocInfo.allocationSize);')
+        rof_body.append('                vktrace_LogError("gpuMemory::copyMappingData() null dest pointer totalSize=%u.", m_allocInfo.allocationSize);')
         rof_body.append('            m_mapRange.pop_back();')
         rof_body.append('            return;')
         rof_body.append('        }')
@@ -1208,7 +1208,7 @@ class Subcommand(object):
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
             obj_map_dict[mem_var] = obj
         rc_body = []
-        rc_body.append('#define GLV_VK_OBJECT_TYPE_UNKNOWN (VkObjectType)-1')
+        rc_body.append('#define VKTRACE_VK_OBJECT_TYPE_UNKNOWN (VkObjectType)-1')
         rc_body.append('')
         rc_body.append('typedef struct _VKAllocInfo {')
         rc_body.append('    VkDeviceSize size;')
@@ -1227,13 +1227,13 @@ class Subcommand(object):
         rc_body.append('    void setReqs(const VkMemoryRequirements *pReqs, const uint32_t num)')
         rc_body.append('    {')
         rc_body.append('        if (m_numAllocations != num && m_numAllocations != 0)')
-        rc_body.append('            glv_LogError("objMemory::setReqs, internal mismatch on number of allocations.");')
+        rc_body.append('            vktrace_LogError("objMemory::setReqs, internal mismatch on number of allocations.");')
         rc_body.append('        if (m_pMemReqs == NULL && pReqs != NULL)')
         rc_body.append('        {')
-        rc_body.append('            m_pMemReqs = (VkMemoryRequirements *) glv_malloc(num * sizeof(VkMemoryRequirements));')
+        rc_body.append('            m_pMemReqs = (VkMemoryRequirements *) vktrace_malloc(num * sizeof(VkMemoryRequirements));')
         rc_body.append('            if (m_pMemReqs == NULL)')
         rc_body.append('            {')
-        rc_body.append('                glv_LogError("objMemory::setReqs out of memory.");')
+        rc_body.append('                vktrace_LogError("objMemory::setReqs out of memory.");')
         rc_body.append('                return;')
         rc_body.append('            }')
         rc_body.append('            memcpy(m_pMemReqs, pReqs, num * sizeof(VkMemoryRequirements));')
@@ -1360,7 +1360,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, imageObj>::const_iterator q = m_images.find(value);')
-                rc_body.append('        if (q == m_images.end()) { glv_LogError("Failed to remap VkImage."); return value; }\n')
+                rc_body.append('        if (q == m_images.end()) { vktrace_LogError("Failed to remap VkImage."); return value; }\n')
                 rc_body.append('        return q->second.replayImage.handle;')
                 rc_body.append('    }\n')
             elif obj_map_dict[var] == 'VkBuffer':
@@ -1372,7 +1372,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, bufferObj>::const_iterator q = m_buffers.find(value);')
-                rc_body.append('        if (q == m_buffers.end()) { glv_LogError("Failed to remap VkBuffer."); return value; }\n')
+                rc_body.append('        if (q == m_buffers.end()) { vktrace_LogError("Failed to remap VkBuffer."); return value; }\n')
                 rc_body.append('        return q->second.replayBuffer.handle;')
                 rc_body.append('    }\n')
             elif obj_map_dict[var] == 'VkDeviceMemory':
@@ -1384,7 +1384,7 @@ class Subcommand(object):
                 rc_body.append('        if (value == 0) { return 0; }')
                 rc_body.append('')
                 rc_body.append('        std::map<uint64_t, gpuMemObj>::const_iterator q = m_devicememorys.find(value);')
-                rc_body.append('        if (q == m_devicememorys.end()) { glv_LogError("Failed to remap VkDeviceMemory."); return value; }')
+                rc_body.append('        if (q == m_devicememorys.end()) { vktrace_LogError("Failed to remap VkDeviceMemory."); return value; }')
                 rc_body.append('        return q->second.replayGpuMem.handle;')
                 rc_body.append('    }\n')
             else:
@@ -1410,7 +1410,7 @@ class Subcommand(object):
 #        for obj in state_obj_remap_types:
 #            rc_body.append('//        if ((obj = remap(static_cast <%s> (state))) != VK_NULL_HANDLE)' % obj.type)
 #            rc_body.append('//            return obj;')
-#        rc_body.append('        glv_LogWarning("Failed to remap VkDynamicStateObject.");')
+#        rc_body.append('        vktrace_LogWarning("Failed to remap VkDynamicStateObject.");')
 #        rc_body.append('        return VK_NULL_HANDLE;\n    }')
 #        rc_body.append('    void rm_from_map(const VkDynamicStateObject& state)\n    {')
 #        for obj in state_obj_remap_types:
@@ -1428,7 +1428,7 @@ class Subcommand(object):
 #                rc_body.append('        case %s:' % obj.enum)
 #                rc_body.append('            obj = remap(static_cast <%s> (object));' % obj.type)
 #                rc_body.append('            break;')
-#        rc_body.append('        case GLV_VK_OBJECT_TYPE_UNKNOWN:')
+#        rc_body.append('        case VKTRACE_VK_OBJECT_TYPE_UNKNOWN:')
 #        rc_body.append('        default:')
 #        rc_body.append('            obj = VK_NULL_HANDLE;')
 #        rc_body.append('            break;')
@@ -1438,7 +1438,7 @@ class Subcommand(object):
 #        for obj in obj_remap_types:
 #            if obj.type not in vulkan.object_parent_list:
 #                rc_body.append('            if ((obj = remap(static_cast <%s> (object))) != VK_NULL_HANDLE) return obj;' % obj.type)
-#        rc_body.append('            glv_LogError("Failed to remap VkObject.");')
+#        rc_body.append('            vktrace_LogError("Failed to remap VkObject.");')
 #        rc_body.append('        }')
 #        rc_body.append('        return obj;')
 #        rc_body.append('    }')
@@ -1463,7 +1463,7 @@ class Subcommand(object):
         rif_body.append('void vkFuncs::init_funcs(void * handle)\n{\n    m_libHandle = handle;')
         for proto in self.protos:
             if 'WSI' not in proto.name and 'Dbg' not in proto.name:
-                rif_body.append('    real_vk%s = (type_vk%s)(glv_platform_get_library_entrypoint(handle, "vk%s"));' % (proto.name, proto.name, proto.name))
+                rif_body.append('    real_vk%s = (type_vk%s)(vktrace_platform_get_library_entrypoint(handle, "vk%s"));' % (proto.name, proto.name, proto.name))
             else: # These func ptrs get assigned at GetProcAddr time
                 rif_body.append('    real_vk%s = (type_vk%s)NULL;' % (proto.name, proto.name))
         rif_body.append('}')
@@ -1481,7 +1481,7 @@ class Subcommand(object):
                     objectTypeRemapParam = ', pPacket->stateBindPoint'
                 elif 'object' == paramName:
                     if 'DbgSetObjectTag' == funcName:
-                        objectTypeRemapParam = ', GLV_VK_OBJECT_TYPE_UNKNOWN'
+                        objectTypeRemapParam = ', VKTRACE_VK_OBJECT_TYPE_UNKNOWN'
                     else:
                         objectTypeRemapParam = ', pPacket->objType'
                 elif 'srcObject' == paramName and 'Callback' in funcName:
@@ -1491,7 +1491,7 @@ class Subcommand(object):
                         result = '            %s remapped%s = m_objMapper.remap_%ss(*pPacket->%s%s);\n' % (cleanParamType, paramName, paramName.lower(), paramName, objectTypeRemapParam)
                         result += '            if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
                         result += '            {\n'
-                        result += '                return glv_replay::GLV_REPLAY_ERROR;\n'
+                        result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
                         result += '            }\n'
                         return result
                     else: # TODO : Don't remap array ptrs?
@@ -1502,14 +1502,14 @@ class Subcommand(object):
                     result += '%s\n' % self.lineinfo.get()
                     result += '            if (pPacket->%s.handle != 0 && remapped%s.handle == 0)\n' % (paramName, paramName)
                     result += '            {\n'
-                    result += '                return glv_replay::GLV_REPLAY_ERROR;\n'
+                    result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
                     result += '            }\n'
                 else:
                     result = '            %s remapped%s = m_objMapper.remap_%ss(pPacket->%s%s);\n' % (paramType, paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
                     result += '%s\n' % self.lineinfo.get()
                     result += '            if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
                     result += '            {\n'
-                    result += '                return glv_replay::GLV_REPLAY_ERROR;\n'
+                    result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
                     result += '            }\n'
                 return result
         return '            // No need to remap %s' % (paramName)
@@ -1524,7 +1524,7 @@ class Subcommand(object):
                 objectTypeRemapParam = ''
                 if 'object' == paramName:
                     if 'DbgSetObjectTag' == funcName:
-                        objectTypeRemapParam = ', GLV_VK_OBJECT_TYPE_UNKNOWN'
+                        objectTypeRemapParam = ', VKTRACE_VK_OBJECT_TYPE_UNKNOWN'
                     else:
                         objectTypeRemapParam = ', pPacket->objType'
                 if '*' in paramType:
@@ -1541,7 +1541,7 @@ class Subcommand(object):
         ci_body.append('            VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);')
         ci_body.append('            if (remappedDevice == VK_NULL_HANDLE)')
         ci_body.append('            {')
-        ci_body.append('                return glv_replay::GLV_REPLAY_ERROR;')
+        ci_body.append('                return vktrace_replay::VKTRACE_REPLAY_ERROR;')
         ci_body.append('            }')
         ci_body.append('            replayResult = m_vkFuncs.real_vkCreateImage(remappedDevice, pPacket->pCreateInfo, &local_imageObj.replayImage);')
         ci_body.append('            if (replayResult == VK_SUCCESS)')
@@ -1556,7 +1556,7 @@ class Subcommand(object):
         cb_body.append('            VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);')
         cb_body.append('            if (remappedDevice == VK_NULL_HANDLE)')
         cb_body.append('            {')
-        cb_body.append('                return glv_replay::GLV_REPLAY_ERROR;')
+        cb_body.append('                return vktrace_replay::VKTRACE_REPLAY_ERROR;')
         cb_body.append('            }')
         cb_body.append('            replayResult = m_vkFuncs.real_vkCreateBuffer(remappedDevice, pPacket->pCreateInfo, &local_bufferObj.replayBuffer);')
         cb_body.append('            if (replayResult == VK_SUCCESS)')
@@ -1633,19 +1633,19 @@ class Subcommand(object):
         do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VK_EVENT_SET || pPacket->result == VK_EVENT_RESET) && replayResult != pPacket->result'}
         rbody = []
         rbody.append('%s' % self.lineinfo.get())
-        rbody.append('glv_replay::GLV_REPLAY_RESULT vkReplay::replay(glv_trace_packet_header *packet)')
+        rbody.append('vktrace_replay::VKTRACE_REPLAY_RESULT vkReplay::replay(vktrace_trace_packet_header *packet)')
         rbody.append('{')
-        rbody.append('    glv_replay::GLV_REPLAY_RESULT returnValue = glv_replay::GLV_REPLAY_SUCCESS;')
+        rbody.append('    vktrace_replay::VKTRACE_REPLAY_RESULT returnValue = vktrace_replay::VKTRACE_REPLAY_SUCCESS;')
         rbody.append('    VkResult replayResult = VK_ERROR_UNKNOWN;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
-        rbody.append('        case GLV_TPI_VK_vkApiVersion:')
+        rbody.append('        case VKTRACE_TPI_VK_vkApiVersion:')
         rbody.append('        {')
         rbody.append('            packet_vkApiVersion* pPacket = (packet_vkApiVersion*)(packet->pBody);')
         rbody.append('            if (pPacket->version != VK_API_VERSION)')
         rbody.append('            {')
-        rbody.append('                glv_LogError("Trace file is from Vulkan version 0x%x (%u.%u.%u), but the glave plugin only supports version 0x%x (%u.%u.%u).", pPacket->version, (pPacket->version & 0xFFC00000) >> 22, (pPacket->version & 0x003FF000) >> 12, (pPacket->version & 0x00000FFF), VK_API_VERSION, (VK_API_VERSION & 0xFFC00000) >> 22, (VK_API_VERSION & 0x003FF000) >> 12, (VK_API_VERSION & 0x00000FFF));')
-        rbody.append('                returnValue = glv_replay::GLV_REPLAY_ERROR;')
+        rbody.append('                vktrace_LogError("Trace file is from Vulkan version 0x%x (%u.%u.%u), but the vktrace plugin only supports version 0x%x (%u.%u.%u).", pPacket->version, (pPacket->version & 0xFFC00000) >> 22, (pPacket->version & 0x003FF000) >> 12, (pPacket->version & 0x00000FFF), VK_API_VERSION, (VK_API_VERSION & 0xFFC00000) >> 22, (VK_API_VERSION & 0x003FF000) >> 12, (VK_API_VERSION & 0x00000FFF));')
+        rbody.append('                returnValue = vktrace_replay::VKTRACE_REPLAY_ERROR;')
         rbody.append('            }')
         rbody.append('            break;')
         rbody.append('        }')
@@ -1660,7 +1660,7 @@ class Subcommand(object):
                 create_view = True
             elif 'Create' in proto.name or proto.name in special_create_list:
                 create_func = True
-            rbody.append('        case GLV_TPI_VK_vk%s:' % proto.name)
+            rbody.append('        case VKTRACE_TPI_VK_vk%s:' % proto.name)
             rbody.append('        {')
             rbody.append('            packet_vk%s* pPacket = (packet_vk%s*)(packet->pBody);' % (proto.name, proto.name))
             if proto.name in manually_replay_funcs:
@@ -1696,7 +1696,7 @@ class Subcommand(object):
                     else:
                         rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif proto.name == 'ResetFences':
-                    rbody.append('            VkFence* fences = GLV_NEW_ARRAY(VkFence, pPacket->fenceCount);')
+                    rbody.append('            VkFence* fences = VKTRACE_NEW_ARRAY(VkFence, pPacket->fenceCount);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->fenceCount; i++)')
                     rbody.append('            {')
                     rbody.append('                fences[i].handle = m_objMapper.remap_fences(pPacket->%s[i].handle);' % (proto.params[-1].name))
@@ -1775,7 +1775,7 @@ class Subcommand(object):
                     rbody.append('                m_pCBDump = NULL;')
                     rbody.append('                m_pDSDump = NULL;')
                     #TODO138 : disabling snapshot
-                    #rbody.append('                m_pGlvSnapshotPrint = NULL;')
+                    #rbody.append('                m_pVktraceSnapshotPrint = NULL;')
                     rbody.append('                m_objMapper.rm_from_devices_map(pPacket->device);')
                     rbody.append('                m_display->m_initedVK = false;')
                     rbody.append('            }')
@@ -1801,7 +1801,7 @@ class Subcommand(object):
                     rbody.append('            free(local_pSetLayouts);')
                     rbody.append('            free(local_pDescriptorSets);')
                 elif proto.name == 'ResetFences':
-                    rbody.append('            GLV_DELETE(fences);')
+                    rbody.append('            VKTRACE_DELETE(fences);')
                 elif create_func: # save handle mapping if create successful
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
@@ -1823,15 +1823,15 @@ class Subcommand(object):
             rbody.append('            break;')
             rbody.append('        }')
         rbody.append('        default:')
-        rbody.append('            glv_LogWarning("Unrecognized packet_id %u, skipping.", packet->packet_id);')
-        rbody.append('            returnValue = glv_replay::GLV_REPLAY_INVALID_ID;')
+        rbody.append('            vktrace_LogWarning("Unrecognized packet_id %u, skipping.", packet->packet_id);')
+        rbody.append('            returnValue = vktrace_replay::VKTRACE_REPLAY_INVALID_ID;')
         rbody.append('            break;')
         rbody.append('    }')
         rbody.append('    return returnValue;')
         rbody.append('}')
         return "\n".join(rbody)
 
-class GlaveTraceHeader(Subcommand):
+class VktraceTraceHeader(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
@@ -1848,7 +1848,7 @@ class GlaveTraceHeader(Subcommand):
 
         return "\n".join(body)
 
-class GlaveTraceC(Subcommand):
+class VktraceTraceC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#include "vktrace_platform.h"')
@@ -1880,7 +1880,7 @@ class GlaveTraceC(Subcommand):
 
         return "\n".join(body)
 
-class GlavePacketID(Subcommand):
+class VktracePacketID(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -1909,15 +1909,15 @@ class GlavePacketID(Subcommand):
         header_txt.append('#define snprintf _snprintf')
         header_txt.append('#endif')
         header_txt.append('#define SEND_ENTRYPOINT_ID(entrypoint) ;')
-        header_txt.append('//#define SEND_ENTRYPOINT_ID(entrypoint) glv_TraceInfo(#entrypoint);\n')
+        header_txt.append('//#define SEND_ENTRYPOINT_ID(entrypoint) vktrace_TraceInfo(#entrypoint);\n')
         header_txt.append('#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) ;')
-        header_txt.append('//#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) glv_TraceInfo(entrypoint, __VA_ARGS__);\n')
+        header_txt.append('//#define SEND_ENTRYPOINT_PARAMS(entrypoint, ...) vktrace_TraceInfo(entrypoint, __VA_ARGS__);\n')
         header_txt.append('#define CREATE_TRACE_PACKET(entrypoint, buffer_bytes_needed) \\')
-        header_txt.append('    pHeader = glv_create_trace_packet(GLV_TID_VULKAN, GLV_TPI_VK_##entrypoint, sizeof(packet_##entrypoint), buffer_bytes_needed);\n')
+        header_txt.append('    pHeader = vktrace_create_trace_packet(VKTRACE_TID_VULKAN, VKTRACE_TPI_VK_##entrypoint, sizeof(packet_##entrypoint), buffer_bytes_needed);\n')
         header_txt.append('#define FINISH_TRACE_PACKET() \\')
-        header_txt.append('    glv_finalize_trace_packet(pHeader); \\')
-        header_txt.append('    glv_write_trace_packet(pHeader, glv_trace_get_trace_file()); \\')
-        header_txt.append('    glv_delete_trace_packet(&pHeader);')
+        header_txt.append('    vktrace_finalize_trace_packet(pHeader); \\')
+        header_txt.append('    vktrace_write_trace_packet(pHeader, vktrace_trace_get_trace_file()); \\')
+        header_txt.append('    vktrace_delete_trace_packet(&pHeader);')
         return "\n".join(header_txt)
 
     def generate_body(self):
@@ -1928,7 +1928,7 @@ class GlavePacketID(Subcommand):
 
         return "\n".join(body)
 
-class GlaveCoreTracePackets(Subcommand):
+class VktraceCoreTracePackets(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -1942,7 +1942,7 @@ class GlaveCoreTracePackets(Subcommand):
 
         return "\n".join(body)
 
-class GlaveExtTraceHeader(Subcommand):
+class VktraceExtTraceHeader(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -1956,7 +1956,7 @@ class GlaveExtTraceHeader(Subcommand):
 
         return "\n".join(body)
 
-class GlaveExtTraceC(Subcommand):
+class VktraceExtTraceC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#include "vktrace_platform.h"')
@@ -1979,7 +1979,7 @@ class GlaveExtTraceC(Subcommand):
 
         return "\n".join(body)
 
-class GlaveExtTracePackets(Subcommand):
+class VktraceExtTracePackets(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -1992,7 +1992,7 @@ class GlaveExtTracePackets(Subcommand):
 
         return "\n".join(body)
 
-class GlaveReplayVkFuncPtrs(Subcommand):
+class VktraceReplayVkFuncPtrs(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -2009,7 +2009,7 @@ class GlaveReplayVkFuncPtrs(Subcommand):
         body = [self._generate_replay_func_ptrs()]
         return "\n".join(body)
 
-class GlaveReplayObjMapperHeader(Subcommand):
+class VktraceReplayObjMapperHeader(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#pragma once\n')
@@ -2028,7 +2028,7 @@ class GlaveReplayObjMapperHeader(Subcommand):
         body = [self._generate_replay_objmapper_class()]
         return "\n".join(body)
 
-class GlaveReplayC(Subcommand):
+class VktraceReplayC(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#include "vkreplay_vkreplay.h"\n')
@@ -2057,16 +2057,16 @@ class GlaveReplayC(Subcommand):
 
 def main():
     subcommands = {
-            "glave-trace-h" : GlaveTraceHeader,
-            "glave-trace-c" : GlaveTraceC,
-            "glave-packet-id" : GlavePacketID,
-            "glave-core-trace-packets" : GlaveCoreTracePackets,
-            "glave-ext-trace-h" : GlaveExtTraceHeader,
-            "glave-ext-trace-c" : GlaveExtTraceC,
-            "glave-ext-trace-packets" : GlaveExtTracePackets,
-            "glave-replay-vk-funcs" : GlaveReplayVkFuncPtrs,
-            "glave-replay-obj-mapper-h" : GlaveReplayObjMapperHeader,
-            "glave-replay-c" : GlaveReplayC,
+            "vktrace-trace-h" : VktraceTraceHeader,
+            "vktrace-trace-c" : VktraceTraceC,
+            "vktrace-packet-id" : VktracePacketID,
+            "vktrace-core-trace-packets" : VktraceCoreTracePackets,
+            "vktrace-ext-trace-h" : VktraceExtTraceHeader,
+            "vktrace-ext-trace-c" : VktraceExtTraceC,
+            "vktrace-ext-trace-packets" : VktraceExtTracePackets,
+            "vktrace-replay-vk-funcs" : VktraceReplayVkFuncPtrs,
+            "vktrace-replay-obj-mapper-h" : VktraceReplayObjMapperHeader,
+            "vktrace-replay-c" : VktraceReplayC,
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:

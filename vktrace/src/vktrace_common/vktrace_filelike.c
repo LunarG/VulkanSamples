@@ -36,37 +36,37 @@
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-Checkpoint* glv_Checkpoint_create(const char* _str)
+Checkpoint* vktrace_Checkpoint_create(const char* _str)
 {
-    Checkpoint* pCheckpoint = GLV_NEW(Checkpoint);
+    Checkpoint* pCheckpoint = VKTRACE_NEW(Checkpoint);
     pCheckpoint->mToken = _str;
     pCheckpoint->mTokenLength = strlen(_str) + 1;
     return pCheckpoint;
 }
 
 // ------------------------------------------------------------------------------------------------
-void glv_Checkpoint_write(Checkpoint* pCheckpoint, FileLike* _out)
+void vktrace_Checkpoint_write(Checkpoint* pCheckpoint, FileLike* _out)
 {
-    glv_FileLike_Write(_out, pCheckpoint->mToken, pCheckpoint->mTokenLength);
+    vktrace_FileLike_Write(_out, pCheckpoint->mToken, pCheckpoint->mTokenLength);
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in)
+BOOL vktrace_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in)
 {
     if (pCheckpoint->mTokenLength < 64) {
         char buffer[64];
-        glv_FileLike_Read(_in, buffer, pCheckpoint->mTokenLength);
+        vktrace_FileLike_Read(_in, buffer, pCheckpoint->mTokenLength);
         if (strcmp(buffer, pCheckpoint->mToken) != 0) {
             return FALSE;
         }
     } else {
-        char* buffer = GLV_NEW_ARRAY(char, pCheckpoint->mTokenLength);
-        glv_FileLike_Read(_in, buffer, pCheckpoint->mTokenLength);
+        char* buffer = VKTRACE_NEW_ARRAY(char, pCheckpoint->mTokenLength);
+        vktrace_FileLike_Read(_in, buffer, pCheckpoint->mTokenLength);
         if (strcmp(buffer, pCheckpoint->mToken) != 0) {
-            GLV_DELETE(buffer);
+            VKTRACE_DELETE(buffer);
             return FALSE;
         }
-        GLV_DELETE(buffer);
+        VKTRACE_DELETE(buffer);
     }
     return TRUE;
 }
@@ -74,12 +74,12 @@ BOOL glv_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in)
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-FileLike* glv_FileLike_create_file(FILE* fp)
+FileLike* vktrace_FileLike_create_file(FILE* fp)
 {
     FileLike* pFile = NULL;
     if (fp != NULL)
     {
-        pFile = GLV_NEW(FileLike);
+        pFile = VKTRACE_NEW(FileLike);
         pFile->mMode = File;
         pFile->mFile = fp;
         pFile->mMessageStream = NULL;
@@ -88,12 +88,12 @@ FileLike* glv_FileLike_create_file(FILE* fp)
 }
 
 // ------------------------------------------------------------------------------------------------
-FileLike* glv_FileLike_create_msg(MessageStream* _msgStream)
+FileLike* vktrace_FileLike_create_msg(MessageStream* _msgStream)
 {
     FileLike* pFile = NULL;
     if (_msgStream != NULL)
     {
-        pFile = GLV_NEW(FileLike);
+        pFile = VKTRACE_NEW(FileLike);
         pFile->mMode = Socket;
         pFile->mFile = NULL;
         pFile->mMessageStream = _msgStream;
@@ -102,17 +102,17 @@ FileLike* glv_FileLike_create_msg(MessageStream* _msgStream)
 }
 
 // ------------------------------------------------------------------------------------------------
-size_t glv_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len)
+size_t vktrace_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len)
 {
     size_t minSize = 0;
     size_t bytesInStream = 0;
-    if (glv_FileLike_ReadRaw(pFileLike, &bytesInStream, sizeof(bytesInStream)) == FALSE)
+    if (vktrace_FileLike_ReadRaw(pFileLike, &bytesInStream, sizeof(bytesInStream)) == FALSE)
         return 0;
 
     minSize = (_len < bytesInStream) ? _len: bytesInStream;
     if (bytesInStream > 0) {
         assert(_len >= bytesInStream);
-        if (glv_FileLike_ReadRaw(pFileLike, _bytes, minSize) == FALSE)
+        if (vktrace_FileLike_ReadRaw(pFileLike, _bytes, minSize) == FALSE)
             return 0;
     }
 
@@ -120,7 +120,7 @@ size_t glv_FileLike_Read(FileLike* pFileLike, void* _bytes, size_t _len)
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len)
+BOOL vktrace_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len)
 {
     BOOL result = TRUE;
     assert((pFileLike->mFile != 0) ^ (pFileLike->mMessageStream != 0));
@@ -136,7 +136,7 @@ BOOL glv_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len)
                 }
                 else if (feof(pFileLike->mFile) != 0)
                 {
-                    glv_LogWarning("Reached end of file.");
+                    vktrace_LogWarning("Reached end of file.");
                 }
                 result = FALSE;
             } 
@@ -144,7 +144,7 @@ BOOL glv_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len)
         }
     case Socket:
         {
-            result = glv_MessageStream_BlockingRecv(pFileLike->mMessageStream, _bytes, _len);
+            result = vktrace_MessageStream_BlockingRecv(pFileLike->mMessageStream, _bytes, _len);
             break;
         }
 
@@ -155,16 +155,16 @@ BOOL glv_FileLike_ReadRaw(FileLike* pFileLike, void* _bytes, size_t _len)
     return result;
 }
 
-void glv_FileLike_Write(FileLike* pFileLike, const void* _bytes, size_t _len)
+void vktrace_FileLike_Write(FileLike* pFileLike, const void* _bytes, size_t _len)
 {
-    glv_FileLike_WriteRaw(pFileLike, &_len, sizeof(_len));
+    vktrace_FileLike_WriteRaw(pFileLike, &_len, sizeof(_len));
     if (_len) {
-        glv_FileLike_WriteRaw(pFileLike, _bytes, _len);
+        vktrace_FileLike_WriteRaw(pFileLike, _bytes, _len);
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len)
+BOOL vktrace_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len)
 {
     BOOL result = TRUE;
     assert((pFile->mFile != 0) ^ (pFile->mMessageStream != 0));
@@ -177,7 +177,7 @@ BOOL glv_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len)
             }
             break;
         case Socket:
-            result = glv_MessageStream_Send(pFile->mMessageStream, _bytes, _len);
+            result = vktrace_MessageStream_Send(pFile->mMessageStream, _bytes, _len);
             break;
         default:
             assert(!"Invalid mode in FileLike_WriteRaw");

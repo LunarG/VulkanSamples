@@ -28,14 +28,14 @@ extern "C" {
 #include "vktrace_trace_packet_utils.h"
 }
 
-namespace glv_replay {
+namespace vktrace_replay {
 
-glv_trace_packet_header * Sequencer::get_next_packet()
+vktrace_trace_packet_header * Sequencer::get_next_packet()
 {
-    glv_free(m_lastPacket);
+    vktrace_free(m_lastPacket);
     if (!m_pFile)
         return (NULL);
-    m_lastPacket = glv_read_trace_packet(m_pFile);
+    m_lastPacket = vktrace_read_trace_packet(m_pFile);
     return(m_lastPacket);
 }
 
@@ -53,4 +53,4 @@ void Sequencer::record_bookmark()
     m_bookmark.file_offset = ftell(m_pFile->mFile);
 }
 
-} /* namespace glv_replay */
+} /* namespace vktrace_replay */

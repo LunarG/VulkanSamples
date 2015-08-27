@@ -27,9 +27,9 @@
 #include "vktrace_platform.h"
 #include "vktrace_trace_packet_identifiers.h"
 
-typedef struct glv_process_capture_trace_thread_info glv_process_capture_trace_thread_info;
+typedef struct vktrace_process_capture_trace_thread_info vktrace_process_capture_trace_thread_info;
 
-typedef struct glv_process_info
+typedef struct vktrace_process_info
 {
     char* exeName;
     char* processArgs;
@@ -38,40 +38,40 @@ typedef struct glv_process_info
     char* traceFilename;
     FILE* pTraceFile;
 
-    // glvtrace's thread id
-    glv_thread_id parentThreadId;
+    // vktrace's thread id
+    vktrace_thread_id parentThreadId;
 
-    GLV_CRITICAL_SECTION traceFileCriticalSection;
+    VKTRACE_CRITICAL_SECTION traceFileCriticalSection;
 
     volatile BOOL serverRequestsTermination;
 
     unsigned int tracerCount;
-    glv_process_capture_trace_thread_info* pCaptureThreads;
+    vktrace_process_capture_trace_thread_info* pCaptureThreads;
 
     // process id, handle, and main thread
-    glv_process_id processId;
-    glv_process_handle hProcess;
-    glv_thread hThread;
-    glv_thread watchdogThread;
+    vktrace_process_id processId;
+    vktrace_process_handle hProcess;
+    vktrace_thread hThread;
+    vktrace_thread watchdogThread;
     char* processLDPreload;
-} glv_process_info;
+} vktrace_process_info;
 
 
-typedef struct glv_process_tracer_dll
+typedef struct vktrace_process_tracer_dll
 {
     char * dllPath;
     BOOL bLoaded;
-    GLV_TRACER_ID tid;
-} glv_process_tracer_dll;
+    VKTRACE_TRACER_ID tid;
+} vktrace_process_tracer_dll;
 
-struct glv_process_capture_trace_thread_info
+struct vktrace_process_capture_trace_thread_info
 {
-    glv_thread tracingThread;
-    glv_thread recordingThread;
-    glv_process_info* pProcessInfo;
-    GLV_TRACER_ID tracerId;
+    vktrace_thread tracingThread;
+    vktrace_thread recordingThread;
+    vktrace_process_info* pProcessInfo;
+    VKTRACE_TRACER_ID tracerId;
     char* tracerPath;
 };
 
-BOOL glv_process_spawn(glv_process_info* pInfo);
-void glv_process_info_delete(glv_process_info* pInfo);
+BOOL vktrace_process_spawn(vktrace_process_info* pInfo);
+void vktrace_process_info_delete(vktrace_process_info* pInfo);

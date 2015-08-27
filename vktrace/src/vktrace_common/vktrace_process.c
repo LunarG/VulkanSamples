@@ -25,7 +25,7 @@
 #include "vktrace_process.h"
 
 
-BOOL glv_process_spawn(glv_process_info* pInfo)
+BOOL vktrace_process_spawn(vktrace_process_info* pInfo)
 {
     assert(pInfo != NULL);
 
@@ -48,7 +48,7 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
         processCreateFlags, NULL, pInfo->workingDirectory,
         &si, &processInformation))
     {
-        glv_LogError("Failed to inject ourselves into target process--couldn't spawn '%s'.", fullExePath);
+        vktrace_LogError("Failed to inject ourselves into target process--couldn't spawn '%s'.", fullExePath);
         return FALSE;
     }
 
@@ -61,7 +61,7 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
     pInfo->processId = fork();
     if (pInfo->processId == -1)
     {
-        glv_LogError("Failed to spawn process.");
+        vktrace_LogError("Failed to spawn process.");
         return FALSE;
     }
     else if (pInfo->processId == 0)
@@ -71,17 +71,17 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
         const char delim[] = " \t";
         unsigned int idx;
 
-        glv_set_global_var("LD_PRELOAD", strchr(pInfo->processLDPreload, '=')+1);
+        vktrace_set_global_var("LD_PRELOAD", strchr(pInfo->processLDPreload, '=')+1);
 
         // Change process name so the the tracer DLLs will behave as expected when loaded.
         // NOTE: Must be 15 characters or less.
-        const char * tmpProcName = "glvChildProcess";
+        const char * tmpProcName = "vktraceChildProcess";
         prctl(PR_SET_NAME, (unsigned long)tmpProcName, 0, 0, 0);
 
         // Change working directory
         if (chdir(pInfo->workingDirectory) == -1)
         {
-            glv_LogError("Failed to set working directory.");
+            vktrace_LogError("Failed to set working directory.");
         }
 
         args[0] = pInfo->exeName;
@@ -93,18 +93,18 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
             idx++;
             args[idx] = strtok(NULL, delim);
         }
-        glv_LogDebug("exec process=%s argc=%u\n", pInfo->exeName, idx);
+        vktrace_LogDebug("exec process=%s argc=%u\n", pInfo->exeName, idx);
 #if 0  //uncoment to print out list of env vars
         char *env = environ[0];
         idx = 0;
         while (env && strlen(env)) {
-            glv_LogDebug("env[%d] = %s", idx++, env);
+            vktrace_LogDebug("env[%d] = %s", idx++, env);
             env = environ[idx];
         }
 #endif
         if (execv(pInfo->exeName, args) < 0)
         {
-            glv_LogError("Failed to spawn process.");
+            vktrace_LogError("Failed to spawn process.");
             return FALSE;
         }
     }
@@ -113,31 +113,31 @@ BOOL glv_process_spawn(glv_process_info* pInfo)
     return TRUE;
 }
 
-void glv_process_info_delete(glv_process_info* pInfo)
+void vktrace_process_info_delete(vktrace_process_info* pInfo)
 {
     unsigned int i = 0;
     if (pInfo->pCaptureThreads != NULL)
     {
         for (i = 0; i < pInfo->tracerCount; i++)
         {
-            glv_platform_delete_thread(&(pInfo->pCaptureThreads[i].recordingThread));
+            vktrace_platform_delete_thread(&(pInfo->pCaptureThreads[i].recordingThread));
         }
-        GLV_DELETE(pInfo->pCaptureThreads);
+        VKTRACE_DELETE(pInfo->pCaptureThreads);
     }
 
 #ifdef WIN32
-    glv_platform_delete_thread(&(pInfo->watchdogThread));
+    vktrace_platform_delete_thread(&(pInfo->watchdogThread));
 #endif
 
-    GLV_DELETE(pInfo->traceFilename);
-    GLV_DELETE(pInfo->workingDirectory);
-    GLV_DELETE(pInfo->processArgs);
-    GLV_DELETE(pInfo->fullProcessCmdLine);
-    GLV_DELETE(pInfo->exeName);
+    VKTRACE_DELETE(pInfo->traceFilename);
+    VKTRACE_DELETE(pInfo->workingDirectory);
+    VKTRACE_DELETE(pInfo->processArgs);
+    VKTRACE_DELETE(pInfo->fullProcessCmdLine);
+    VKTRACE_DELETE(pInfo->exeName);
 
     if (pInfo->pTraceFile != NULL)
     {
         fclose(pInfo->pTraceFile);
     }
-    glv_delete_critical_section(&(pInfo->traceFileCriticalSection));
+    vktrace_delete_critical_section(&(pInfo->traceFileCriticalSection));
 }

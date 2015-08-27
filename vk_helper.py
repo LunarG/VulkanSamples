@@ -36,7 +36,7 @@ from source_line_info import sourcelineinfo
 def handle_args():
     parser = argparse.ArgumentParser(description='Perform analysis of vogl trace.')
     parser.add_argument('input_file', help='The input header file from which code will be generated.')
-    parser.add_argument('--rel_out_dir', required=False, default='glave_gen', help='Path relative to exec path to write output files. Will be created if needed.')
+    parser.add_argument('--rel_out_dir', required=False, default='vktrace_gen', help='Path relative to exec path to write output files. Will be created if needed.')
     parser.add_argument('--abs_out_dir', required=False, default=None, help='Absolute path to write output files. Will be created if needed.')
     parser.add_argument('--gen_enum_string_helper', required=False, action='store_true', default=False, help='Enable generation of helper header file to print string versions of enums.')
     parser.add_argument('--gen_struct_wrappers', required=False, action='store_true', default=False, help='Enable generation of struct wrapper classes.')
@@ -91,7 +91,7 @@ class HeaderFileParser:
         self.typedef_rev_dict = {}
         self.types_dict = {}
         self.last_struct_count_name = ''
-        
+
     def setHeaderFile(self, header_file):
         self.header_file = header_file
 
@@ -201,7 +201,7 @@ class HeaderFileParser:
                     if ';' in line:
                         self._add_struct(line, base_type, member_num)
                         member_num = member_num + 1
-    
+
     # populate enum dicts based on enum lines
     def _add_enum(self, line_txt, enum_type, def_enum_val):
         #print("Parsing enum line %s" % line_txt)
@@ -372,22 +372,22 @@ class CommonFileGen:
         self.filename = filename
         self.contents = {'copyright': copyright_txt, 'header': header_txt, 'body': body_txt, 'footer': footer_txt}
         # TODO : Set a default copyright & footer at least
-    
+
     def setFilename(self, filename):
         self.filename = filename
-        
+
     def setCopyright(self, c):
         self.contents['copyright'] = c
-        
+
     def setHeader(self, h):
         self.contents['header'] = h
-        
+
     def setBody(self, b):
         self.contents['body'] = b
-        
+
     def setFooter(self, f):
         self.contents['footer'] = f
-        
+
     def generate(self):
         #print("Generate to file %s" % self.filename)
         with open(self.filename, "w") as f:
@@ -429,7 +429,7 @@ class StructWrapperGen:
         #print(self.header_filename)
         self.header_txt = ""
         self.definition_txt = ""
-        
+
     def set_include_headers(self, include_headers):
         self.include_headers = include_headers
 
@@ -446,18 +446,18 @@ class StructWrapperGen:
     def get_class_name(self, struct_name):
         class_name = struct_name.strip('_').lower() + "_struct_wrapper"
         return class_name
-        
+
     def get_file_list(self):
         return [os.path.basename(self.header_filename), os.path.basename(self.class_filename), os.path.basename(self.string_helper_filename)]
 
-    # Generate class header file        
+    # Generate class header file
     def generateHeader(self):
         self.hfg.setCopyright(self._generateCopyright())
         self.hfg.setHeader(self._generateHeader())
         self.hfg.setBody(self._generateClassDeclaration())
         self.hfg.setFooter(self._generateFooter())
         self.hfg.generate()
-    
+
     # Generate class definition
     def generateBody(self):
         self.cfg.setCopyright(self._generateCopyright())
@@ -539,10 +539,10 @@ class StructWrapperGen:
         header.append("//#includes, #defines, globals and such...\n")
         header.append("#include <stdio.h>\n#include <%s>\n#include <%s_enum_string_helper.h>\n" % (os.path.basename(self.header_filename), self.api_prefix))
         return "".join(header)
-        
+
     def _generateClassDefinition(self):
         class_def = []
-        if 'vk' == self.api: # Mantle doesn't have pNext to worry about
+        if 'vk' == self.api:
             class_def.append(self._generateDynamicPrintFunctions())
         for s in sorted(self.struct_dict):
             class_def.append("\n// %s class definition" % self.get_class_name(s))
@@ -550,7 +550,7 @@ class StructWrapperGen:
             class_def.append(self._generateDestructorDefinitions(s))
             class_def.append(self._generateDisplayDefinitions(s))
         return "\n".join(class_def)
-        
+
     def _generateConstructorDefinitions(self, s):
         con_defs = []
         con_defs.append("%s::%s() : m_struct(), m_indent(0), m_dummy_prefix('\\0'), m_origStructAddr(NULL) {}" % (self.get_class_name(s), self.get_class_name(s)))
@@ -558,10 +558,10 @@ class StructWrapperGen:
         con_defs.append("%s::%s(%s* pInStruct) : m_indent(0), m_dummy_prefix('\\0')\n{\n    m_struct = *pInStruct;\n    m_origStructAddr = pInStruct;\n}" % (self.get_class_name(s), self.get_class_name(s), typedef_fwd_dict[s]))
         con_defs.append("%s::%s(const %s* pInStruct) : m_indent(0), m_dummy_prefix('\\0')\n{\n    m_struct = *pInStruct;\n    m_origStructAddr = pInStruct;\n}" % (self.get_class_name(s), self.get_class_name(s), typedef_fwd_dict[s]))
         return "\n".join(con_defs)
-        
+
     def _generateDestructorDefinitions(self, s):
         return "%s::~%s() {}" % (self.get_class_name(s), self.get_class_name(s))
-        
+
     def _generateDynamicPrintFunctions(self):
         dp_funcs = []
         dp_funcs.append("\nvoid dynamic_display_full_txt(const void* pStruct, uint32_t indent)\n{\n    // Cast to APP_INFO ptr initially just to pull sType off struct")
@@ -1039,7 +1039,7 @@ class StructWrapperGen:
         sh_funcs.append("    }")
         sh_funcs.append("}")
         return "\n".join(sh_funcs)
-        
+
     def _genStructMemberPrint(self, member, s, array, struct_array):
         (p_out, p_arg) = self._get_struct_print_formatted(self.struct_dict[s][member], pre_var_name="&m_dummy_prefix", struct_var_name="m_struct", struct_ptr=False, print_array=True)
         extra_indent = ""
@@ -1131,7 +1131,7 @@ class StructWrapperGen:
             class_num += 1
         disp_def.append("}\n")
         return "\n".join(disp_def)
-        
+
     def _generateStringHelperHeader(self):
         header = []
         header.append("//#includes, #defines, globals and such...\n")
@@ -1345,7 +1345,7 @@ class StructWrapperGen:
         for f in self.include_headers:
             header.append("#include <%s>\n" % f)
         return "".join(header)
-    
+
     # Declarations
     def _generateConstructorDeclarations(self, s):
         constructors = []
@@ -1353,13 +1353,13 @@ class StructWrapperGen:
         constructors.append("    %s(%s* pInStruct);\n" % (self.get_class_name(s), typedef_fwd_dict[s]))
         constructors.append("    %s(const %s* pInStruct);\n" % (self.get_class_name(s), typedef_fwd_dict[s]))
         return "".join(constructors)
-    
+
     def _generateDestructorDeclarations(self, s):
         return "    virtual ~%s();\n" % self.get_class_name(s)
-        
+
     def _generateDisplayDeclarations(self, s):
         return "    void display_txt();\n    void display_single_txt();\n    void display_full_txt();\n"
-        
+
     def _generateGetSetDeclarations(self, s):
         get_set = []
         get_set.append("    void set_indent(uint32_t indent) { m_indent = indent; }\n")
@@ -1371,7 +1371,7 @@ class StructWrapperGen:
             if not self.struct_dict[s][member]['const']:
                 get_set.append("    void set_%s(%s inValue) { m_struct.%s = inValue; }\n" % (self.struct_dict[s][member]['name'], self.struct_dict[s][member]['full_type'], self.struct_dict[s][member]['name']))
         return "".join(get_set)
-    
+
     def _generatePrivateMembers(self, s):
         priv = []
         priv.append("\nprivate:\n")
@@ -1381,7 +1381,7 @@ class StructWrapperGen:
         priv.append("    const char m_dummy_prefix;\n")
         priv.append("    void display_struct_members();\n")
         return "".join(priv)
-    
+
     def _generateClassDeclaration(self):
         class_decl = []
         for s in sorted(self.struct_dict):
@@ -1394,7 +1394,7 @@ class StructWrapperGen:
             class_decl.append(self._generatePrivateMembers(s))
             class_decl.append("};\n")
         return "\n".join(class_decl)
-        
+
     def _generateFooter(self):
         return "\n//any footer info for class\n"
 
@@ -1408,7 +1408,7 @@ class EnumCodeGen:
         self.eshfg = CommonFileGen(self.out_sh_file)
         self.out_vh_file = out_vh_file
         self.evhfg = CommonFileGen(self.out_vh_file)
-        
+
     def generateStringHelper(self):
         self.eshfg.setHeader(self._generateSHHeader())
         self.eshfg.setBody(self._generateSHBody())
@@ -1450,7 +1450,7 @@ class EnumCodeGen:
                     body.append('        case %s:\n            return "%s";' % (e, e))
             body.append('        default:\n            return "Unhandled %s";\n    }\n}\n\n' % (fet))
         return "\n".join(body)
-    
+
     def _generateSHHeader(self):
         header = []
         header.append('#pragma once\n')
@@ -1459,7 +1459,7 @@ class EnumCodeGen:
         header.append('#endif\n')
         header.append('#include <%s>\n\n\n' % self.in_file)
         return "\n".join(header)
-        
+
 
 class CMakeGen:
     def __init__(self, struct_wrapper=None, out_dir=None):
@@ -1469,11 +1469,11 @@ class CMakeGen:
         self.out_dir = out_dir
         self.out_file = os.path.join(self.out_dir, "CMakeLists.txt")
         self.cmg = CommonFileGen(self.out_file)
-        
+
     def generate(self):
         self.cmg.setBody(self._generateBody())
         self.cmg.generate()
-        
+
     def _generateBody(self):
         body = []
         body.append("project(%s)" % os.path.basename(self.out_dir))
@@ -1742,7 +1742,7 @@ class GraphVizGen:
 #        hdr.append('node [\nfontsize = "16"\nshape = "plaintext"\n];')
 #        hdr.append('edge [\n];\n')
 #        return "\n".join(hdr)
-#        
+#
 #    def _generateBody(self):
 #        body = []
 #        for s in sorted(self.struc_dict):

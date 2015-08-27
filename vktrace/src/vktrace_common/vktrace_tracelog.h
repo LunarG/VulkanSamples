@@ -34,49 +34,49 @@
 typedef struct FileLike FileLike;
 
 typedef enum {
-    GLV_LOG_ALWAYS = 0,
-    GLV_LOG_DEBUG,
-    GLV_LOG_LEVEL_MINIMUM,
-    GLV_LOG_ERROR,
-    GLV_LOG_WARNING,
-    GLV_LOG_VERBOSE,
-    GLV_LOG_LEVEL_MAXIMUM
-} GlvLogLevel;
+    VKTRACE_LOG_ALWAYS = 0,
+    VKTRACE_LOG_DEBUG,
+    VKTRACE_LOG_LEVEL_MINIMUM,
+    VKTRACE_LOG_ERROR,
+    VKTRACE_LOG_WARNING,
+    VKTRACE_LOG_VERBOSE,
+    VKTRACE_LOG_LEVEL_MAXIMUM
+} VktraceLogLevel;
 
-const char* glv_LogLevelToString(GlvLogLevel level);
-const char* glv_LogLevelToShortString(GlvLogLevel level);
+const char* vktrace_LogLevelToString(VktraceLogLevel level);
+const char* vktrace_LogLevelToShortString(VktraceLogLevel level);
 
-void glv_trace_set_trace_file(FileLike* pFileLike);
-FileLike* glv_trace_get_trace_file();
-void glv_tracelog_set_tracer_id(uint8_t tracerId);
+void vktrace_trace_set_trace_file(FileLike* pFileLike);
+FileLike* vktrace_trace_get_trace_file();
+void vktrace_tracelog_set_tracer_id(uint8_t tracerId);
 
 // Logging is done by reporting the messages back to a callback.
 // Plugins should register a callback from the parent tool;
 // Tools should register their own callback so that they can output messages as desired.
-typedef void (*GLV_REPORT_CALLBACK_FUNCTION)(GlvLogLevel level, const char* pMsg);
-extern GLV_REPORT_CALLBACK_FUNCTION s_reportFunc;
-extern GlvLogLevel s_logLevel;
+typedef void (*VKTRACE_REPORT_CALLBACK_FUNCTION)(VktraceLogLevel level, const char* pMsg);
+extern VKTRACE_REPORT_CALLBACK_FUNCTION s_reportFunc;
+extern VktraceLogLevel s_logLevel;
 
-void glv_LogSetCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback);
-void glv_LogSetLevel(GlvLogLevel level);
+void vktrace_LogSetCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback);
+void vktrace_LogSetLevel(VktraceLogLevel level);
 
 // Allows checking if a level is being logged so that string-related functions
 // can be skipped if they will not reported.
-BOOL glv_LogIsLogging(GlvLogLevel level);
+BOOL vktrace_LogIsLogging(VktraceLogLevel level);
 
 // Always log the message, no matter what the ReportingLevel is.
-void glv_LogAlways(const char* format, ...);
+void vktrace_LogAlways(const char* format, ...);
 
-// Log debug information that is primarly helpful for Glave developers
+// Log debug information that is primarly helpful for Vktrace developers
 // and will only appear in _DEBUG builds.
 // This will also always be logged, no matter what the ReportingLevel is.
-void glv_LogDebug(const char* format, ...);
+void vktrace_LogDebug(const char* format, ...);
 
 // Log an error message.
-void glv_LogError(const char* format, ...);
+void vktrace_LogError(const char* format, ...);
 
 // Log a warning.
-void glv_LogWarning(const char* format, ...);
+void vktrace_LogWarning(const char* format, ...);
 
 // Log any misc information that might help a user understand what is going on.
-void glv_LogVerbose(const char* format, ...);
+void vktrace_LogVerbose(const char* format, ...);

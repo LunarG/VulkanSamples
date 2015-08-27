@@ -1,11 +1,11 @@
-#ifndef GLVREPLAY_MAIN_H
-#define GLVREPLAY_MAIN_H
+#ifndef VKREPLAY__MAIN_H
+#define VKREPLAY__MAIN_H
 
-typedef struct glvreplay_settings
+typedef struct vkreplayer_settings
 {
     char* pTraceFilePath;
     unsigned int numLoops;
     char* screenshotList;
-} glvreplay_settings;
+} vkreplayer_settings;
 
-#endif // GLVREPLAY_MAIN_H
+#endif // VKREPLAY__MAIN_H

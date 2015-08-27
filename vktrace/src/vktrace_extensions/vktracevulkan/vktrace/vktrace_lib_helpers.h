@@ -52,7 +52,7 @@ typedef struct _VKMemInfo {
 
 // defined in manually written file: vktrace_vk_trace.c
 extern VKMemInfo g_memInfo;
-extern GLV_CRITICAL_SECTION g_memInfoLock;
+extern VKTRACE_CRITICAL_SECTION g_memInfoLock;
 
 static void init_mem_info_entrys(VKAllocInfo *ptr, const unsigned int num)
 {
@@ -77,10 +77,10 @@ static void init_mem_info()
     g_memInfo.capacity = 4096;
     g_memInfo.pLastMapped = NULL;
 
-    g_memInfo.pEntrys = GLV_NEW_ARRAY(VKAllocInfo, g_memInfo.capacity);
+    g_memInfo.pEntrys = VKTRACE_NEW_ARRAY(VKAllocInfo, g_memInfo.capacity);
 
     if (g_memInfo.pEntrys == NULL)
-        glv_LogError("init_mem_info()  malloc failed.");
+        vktrace_LogError("init_mem_info()  malloc failed.");
     else
         init_mem_info_entrys(g_memInfo.pEntrys, g_memInfo.capacity);
 }
@@ -88,7 +88,7 @@ static void init_mem_info()
 // caller must hold the g_memInfoLock
 static void delete_mem_info()
 {
-    GLV_DELETE(g_memInfo.pEntrys);
+    VKTRACE_DELETE(g_memInfo.pEntrys);
     g_memInfo.pEntrys = NULL;
     g_memInfo.numEntrys = 0;
     g_memInfo.capacity = 0;
@@ -102,7 +102,7 @@ static VKAllocInfo * get_mem_info_entry()
     VKAllocInfo *entry;
     if (g_memInfo.numEntrys > g_memInfo.capacity)
     {
-        glv_LogError("get_mem_info_entry() bad internal state numEntrys %u.", g_memInfo.numEntrys);
+        vktrace_LogError("get_mem_info_entry() bad internal state numEntrys %u.", g_memInfo.numEntrys);
         return NULL;
     }
 
@@ -115,10 +115,10 @@ static VKAllocInfo * get_mem_info_entry()
     if (g_memInfo.numEntrys == g_memInfo.capacity)
     {  // grow the array 2x
         g_memInfo.capacity *= 2;
-        g_memInfo.pEntrys = (VKAllocInfo *) GLV_REALLOC(g_memInfo.pEntrys, g_memInfo.capacity * sizeof(VKAllocInfo));
+        g_memInfo.pEntrys = (VKAllocInfo *) VKTRACE_REALLOC(g_memInfo.pEntrys, g_memInfo.capacity * sizeof(VKAllocInfo));
         if (g_memInfo.pEntrys == NULL)
-            glv_LogError("get_mem_info_entry() realloc failed.");
-        //glv_LogDebug("realloc memInfo from %u to %", g_memInfo.capacity /2, g_memInfo.capacity);
+            vktrace_LogError("get_mem_info_entry() realloc failed.");
+        //vktrace_LogDebug("realloc memInfo from %u to %", g_memInfo.capacity /2, g_memInfo.capacity);
         //init the newly added entrys
         init_mem_info_entrys(g_memInfo.pEntrys + g_memInfo.capacity / 2, g_memInfo.capacity / 2);
     }
@@ -154,9 +154,9 @@ static VKAllocInfo * find_mem_info_entry(const VkDeviceMemory handle)
 static VKAllocInfo * find_mem_info_entry_lock(const VkDeviceMemory handle)
 {
     VKAllocInfo *res;
-    glv_enter_critical_section(&g_memInfoLock);
+    vktrace_enter_critical_section(&g_memInfoLock);
     res = find_mem_info_entry(handle);
-    glv_leave_critical_section(&g_memInfoLock);
+    vktrace_leave_critical_section(&g_memInfoLock);
     return res;
 }
 
@@ -164,7 +164,7 @@ static void add_new_handle_to_mem_info(const VkDeviceMemory handle, VkDeviceSize
 {
     VKAllocInfo *entry;
 
-    glv_enter_critical_section(&g_memInfoLock);
+    vktrace_enter_critical_section(&g_memInfoLock);
     if (g_memInfo.capacity == 0)
         init_mem_info();
 
@@ -179,14 +179,14 @@ static void add_new_handle_to_mem_info(const VkDeviceMemory handle, VkDeviceSize
         entry->didFlush = FALSE;
         entry->pData = pData;   // NOTE: VKFreeMemory will free this mem, so no malloc()
     }
-    glv_leave_critical_section(&g_memInfoLock);
+    vktrace_leave_critical_section(&g_memInfoLock);
 }
 
 static void add_data_to_mem_info(const VkDeviceMemory handle, VkDeviceSize rangeSize, VkDeviceSize rangeOffset, void *pData)
 {
     VKAllocInfo *entry;
 
-    glv_enter_critical_section(&g_memInfoLock);
+    vktrace_enter_critical_section(&g_memInfoLock);
     entry = find_mem_info_entry(handle);
     if (entry)
     {
@@ -199,14 +199,14 @@ static void add_data_to_mem_info(const VkDeviceMemory handle, VkDeviceSize range
         assert(entry->totalSize >= rangeSize + rangeOffset);
     }
     g_memInfo.pLastMapped = entry;
-    glv_leave_critical_section(&g_memInfoLock);
+    vktrace_leave_critical_section(&g_memInfoLock);
 }
 
 static void rm_handle_from_mem_info(const VkDeviceMemory handle)
 {
     VKAllocInfo *entry;
 
-    glv_enter_critical_section(&g_memInfoLock);
+    vktrace_enter_critical_section(&g_memInfoLock);
     entry = find_mem_info_entry(handle);
     if (entry)
     {
@@ -229,10 +229,10 @@ static void rm_handle_from_mem_info(const VkDeviceMemory handle)
         if (g_memInfo.numEntrys == 0)
             delete_mem_info();
     }
-    glv_leave_critical_section(&g_memInfoLock);
+    vktrace_leave_critical_section(&g_memInfoLock);
 }
 
-static void add_alloc_memory_to_trace_packet(glv_trace_packet_header* pHeader, void** ppOut, const void* pIn)
+static void add_alloc_memory_to_trace_packet(vktrace_trace_packet_header* pHeader, void** ppOut, const void* pIn)
 {
     const VkMemoryAllocInfo* pInNow = pIn;
     while (pInNow != NULL)
@@ -271,22 +271,22 @@ static size_t calculate_memory_barrier_size(uint32_t mbCount, const void* const*
     return siz;
 }
 
-static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(glv_trace_packet_header* pHeader, VkPipelineShaderStageCreateInfo* packetShader, const VkPipelineShaderStageCreateInfo* paramShader)
+static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(vktrace_trace_packet_header* pHeader, VkPipelineShaderStageCreateInfo* packetShader, const VkPipelineShaderStageCreateInfo* paramShader)
 {
     // Specialization info
     if (packetShader->pSpecializationInfo != NULL)
     {
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo, sizeof(VkPipelineShaderStageCreateInfo), paramShader->pSpecializationInfo);
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo->pMap, sizeof(VkSpecializationMapEntry) * paramShader->pSpecializationInfo->mapEntryCount, paramShader->pSpecializationInfo->pMap);
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo, sizeof(VkPipelineShaderStageCreateInfo), paramShader->pSpecializationInfo);
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pSpecializationInfo->pMap, sizeof(VkSpecializationMapEntry) * paramShader->pSpecializationInfo->mapEntryCount, paramShader->pSpecializationInfo->pMap);
         // TODO: packetShader->pSpecializationInfo->pData is not yet supported because we don't know what size it is.
         //   We now have dataSize so fix this
-        glv_LogError("VkSpecializationInfo is not yet supported because we don't know how many bytes it is.");
-        glv_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo->pMap);
-        glv_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo);
+        vktrace_LogError("VkSpecializationInfo is not yet supported because we don't know how many bytes it is.");
+        vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo->pMap);
+        vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pSpecializationInfo);
     }
 }
 
-static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeader, const VkDescriptorSetLayoutCreateInfo** ppOut, const VkDescriptorSetLayoutCreateInfo* pIn)
+static void add_create_ds_layout_to_trace_packet(vktrace_trace_packet_header* pHeader, const VkDescriptorSetLayoutCreateInfo** ppOut, const VkDescriptorSetLayoutCreateInfo* pIn)
 {
     const VkDescriptorSetLayoutCreateInfo* pInNow = pIn;
     VkDescriptorSetLayoutCreateInfo** ppOutNext = (VkDescriptorSetLayoutCreateInfo**)ppOut;
@@ -294,18 +294,18 @@ static void add_create_ds_layout_to_trace_packet(glv_trace_packet_header* pHeade
     {
         VkDescriptorSetLayoutCreateInfo** ppOutNow = ppOutNext;
         ppOutNext = NULL;
-        glv_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkDescriptorSetLayoutCreateInfo), pInNow);
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkDescriptorSetLayoutCreateInfo), pInNow);
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
-        glv_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(VkDescriptorSetLayoutBinding) * pInNow->count, pInNow->pBinding);
-        glv_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(VkDescriptorSetLayoutBinding) * pInNow->count, pInNow->pBinding);
+        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
         pInNow = (VkDescriptorSetLayoutCreateInfo*)pInNow->pNext;
-        glv_finalize_buffer_address(pHeader, (void**)(ppOutNow));
+        vktrace_finalize_buffer_address(pHeader, (void**)(ppOutNow));
     }
     return;
 }
 
-static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(glv_trace_packet_header* pHeader, VkGraphicsPipelineCreateInfo* pPacket, const VkGraphicsPipelineCreateInfo* pParam, uint32_t count)
+static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_packet_header* pHeader, VkGraphicsPipelineCreateInfo* pPacket, const VkGraphicsPipelineCreateInfo* pParam, uint32_t count)
 {
     if (pParam != NULL)
     {
@@ -314,68 +314,68 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(glv_trace_packet_h
 
         for (i = 0; i < count; i++) {
             // shader stages array
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pStages), sizeof(VkPipelineShaderStageCreateInfo) * pParam[i].stageCount, pParam[i].pStages);
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pStages), sizeof(VkPipelineShaderStageCreateInfo) * pParam[i].stageCount, pParam[i].pStages);
             for (j = 0; j < pParam[i].stageCount; j++)
             {
                 add_VkPipelineShaderStageCreateInfo_to_trace_packet(pHeader, (VkPipelineShaderStageCreateInfo*)&pPacket->pStages[j], &pParam->pStages[j]);
             }
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pStages));
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pStages));
 
             // Vertex Input State
             if (pParam[i].pVertexInputState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState), sizeof(VkPipelineVertexInputStateCreateInfo), pParam[i].pVertexInputState);
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i].pVertexInputState->bindingCount * sizeof(VkVertexInputBindingDescription), pParam[i].pVertexInputState->pVertexBindingDescriptions);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions));
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i].pVertexInputState->attributeCount * sizeof(VkVertexInputAttributeDescription), pParam[i].pVertexInputState->pVertexAttributeDescriptions);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions));
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState), sizeof(VkPipelineVertexInputStateCreateInfo), pParam[i].pVertexInputState);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i].pVertexInputState->bindingCount * sizeof(VkVertexInputBindingDescription), pParam[i].pVertexInputState->pVertexBindingDescriptions);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i].pVertexInputState->attributeCount * sizeof(VkVertexInputAttributeDescription), pParam[i].pVertexInputState->pVertexAttributeDescriptions);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions));
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState));
             }
             // Input Assembly State
             if (pParam[i].pInputAssemblyState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInputAssemblyState), sizeof(VkPipelineInputAssemblyStateCreateInfo), pParam[i].pInputAssemblyState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInputAssemblyState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInputAssemblyState), sizeof(VkPipelineInputAssemblyStateCreateInfo), pParam[i].pInputAssemblyState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pInputAssemblyState));
             }
             // Tesselation State
             if (pParam[i].pTessellationState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pTessellationState), sizeof(VkPipelineTessellationStateCreateInfo), pParam[i].pTessellationState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pTessellationState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pTessellationState), sizeof(VkPipelineTessellationStateCreateInfo), pParam[i].pTessellationState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pTessellationState));
             }
             // Viewport State
             if (pParam[i].pViewportState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState), sizeof(VkPipelineViewportStateCreateInfo), pParam[i].pViewportState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState), sizeof(VkPipelineViewportStateCreateInfo), pParam[i].pViewportState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
             }
 
             // Raster State
             if (pParam[i].pRasterState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i].pRasterState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i].pRasterState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
             }
             // MultiSample State
             if (pParam[i].pMultisampleState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i].pMultisampleState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i].pMultisampleState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState));
             }
 
             // DepthStencil State
             if (pParam[i].pDepthStencilState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDepthStencilState), sizeof(VkPipelineDepthStencilStateCreateInfo), pParam[i].pDepthStencilState);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDepthStencilState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDepthStencilState), sizeof(VkPipelineDepthStencilStateCreateInfo), pParam[i].pDepthStencilState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDepthStencilState));
             }
 
             // ColorBlend State
             if (pParam[i].pColorBlendState) {
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState), sizeof(VkPipelineColorBlendStateCreateInfo), pParam[i].pColorBlendState);
-                glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments), pParam[i].pColorBlendState->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState), pParam[i].pColorBlendState->pAttachments);
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments));
-                glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState));
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState), sizeof(VkPipelineColorBlendStateCreateInfo), pParam[i].pColorBlendState);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments), pParam[i].pColorBlendState->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState), pParam[i].pColorBlendState->pAttachments);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments));
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState));
             }
         }
     }
     return;
 }
 
-static void add_VkComputePipelineCreateInfos_to_trace_packet(glv_trace_packet_header* pHeader, VkComputePipelineCreateInfo* pPacket, const VkComputePipelineCreateInfo* pParam, uint32_t count)
+static void add_VkComputePipelineCreateInfos_to_trace_packet(vktrace_trace_packet_header* pHeader, VkComputePipelineCreateInfo* pPacket, const VkComputePipelineCreateInfo* pParam, uint32_t count)
 {
     if (pParam != NULL)
     {
@@ -384,48 +384,48 @@ static void add_VkComputePipelineCreateInfos_to_trace_packet(glv_trace_packet_he
         for (i = 0; i < count; i++) {
 
             // shader stage
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->cs), sizeof(VkPipelineShaderStageCreateInfo), &pParam[i].cs);
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->cs), sizeof(VkPipelineShaderStageCreateInfo), &pParam[i].cs);
             add_VkPipelineShaderStageCreateInfo_to_trace_packet(pHeader, (VkPipelineShaderStageCreateInfo*)&pPacket->cs, &pParam[i].cs);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->cs));
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->cs));
 
 /*
             // Vertex Input State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState), sizeof(VkPipelineVertexInputStateCreateInfo), pParam[i]->pVertexInputState);
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i]->pVertexInputState->bindingCount * sizeof(VkVertexInputBindingDescription), pParam[i]->pVertexInputState->pVertexBindingDescriptions);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions));
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i]->pVertexInputState->attributeCount * sizeof(VkVertexInputAttributeDescription), pParam[i]->pVertexInputState->pVertexAttributeDescriptions);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions));
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState), sizeof(VkPipelineVertexInputStateCreateInfo), pParam[i]->pVertexInputState);
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i]->pVertexInputState->bindingCount * sizeof(VkVertexInputBindingDescription), pParam[i]->pVertexInputState->pVertexBindingDescriptions);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i]->pVertexInputState->attributeCount * sizeof(VkVertexInputAttributeDescription), pParam[i]->pVertexInputState->pVertexAttributeDescriptions);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions));
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState));
 
             // Input Assembly State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInputAssemblyState), sizeof(VkPipelineInputAssemblyStateCreateInfo), pParam[i]->pInputAssemblyState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pInputAssemblyState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pInputAssemblyState), sizeof(VkPipelineInputAssemblyStateCreateInfo), pParam[i]->pInputAssemblyState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pInputAssemblyState));
 
             // Tesselation State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pTessellationState), sizeof(VkPipelineTessellationStateCreateInfo), pParam[i]->pTessellationState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pTessellationState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pTessellationState), sizeof(VkPipelineTessellationStateCreateInfo), pParam[i]->pTessellationState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pTessellationState));
 
             // Viewport State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState), sizeof(VkPipelineViewportStateCreateInfo), pParam[i]->pViewportState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pViewportState), sizeof(VkPipelineViewportStateCreateInfo), pParam[i]->pViewportState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
 
             // Raster State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i]->pRasterState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i]->pRasterState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
 
             // MultiSample State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i]->pMultisampleState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i]->pMultisampleState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pMultisampleState));
 
             // DepthStencil State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDepthStencilState), sizeof(VkPipelineDepthStencilStateCreateInfo), pParam[i]->pDepthStencilState);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pDepthStencilState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDepthStencilState), sizeof(VkPipelineDepthStencilStateCreateInfo), pParam[i]->pDepthStencilState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDepthStencilState));
 
             // ColorBlend State
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState), sizeof(VkPipelineColorBlendStateCreateInfo), pParam[i]->pColorBlendState);
-            glv_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments), pParam[i]->pColorBlendState->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState), pParam[i]->pColorBlendState->pAttachments);
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments));
-            glv_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState), sizeof(VkPipelineColorBlendStateCreateInfo), pParam[i]->pColorBlendState);
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments), pParam[i]->pColorBlendState->attachmentCount * sizeof(VkPipelineColorBlendAttachmentState), pParam[i]->pColorBlendState->pAttachments);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments));
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState));
 */
         }
     }

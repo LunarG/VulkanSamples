@@ -35,27 +35,27 @@
 const size_t kSendBufferSize = 1024 * 1024;
 
 MessageStream* gMessageStream = NULL;
-static GLV_CRITICAL_SECTION gSendLock;
+static VKTRACE_CRITICAL_SECTION gSendLock;
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // private functions
-BOOL glv_MessageStream_SetupSocket(MessageStream* pStream);
-BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream);
-BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream);
-BOOL glv_MessageStream_Handshake(MessageStream* pStream);
-BOOL glv_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional);
-void glv_MessageStream_FlushSendBuffer(MessageStream* pStream, BOOL _optional);
+BOOL vktrace_MessageStream_SetupSocket(MessageStream* pStream);
+BOOL vktrace_MessageStream_SetupHostSocket(MessageStream* pStream);
+BOOL vktrace_MessageStream_SetupClientSocket(MessageStream* pStream);
+BOOL vktrace_MessageStream_Handshake(MessageStream* pStream);
+BOOL vktrace_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional);
+void vktrace_MessageStream_FlushSendBuffer(MessageStream* pStream, BOOL _optional);
 
 // public functions
-MessageStream* glv_MessageStream_create_port_string(BOOL _isHost, const char* _address, const char* _port)
+MessageStream* vktrace_MessageStream_create_port_string(BOOL _isHost, const char* _address, const char* _port)
 {
     MessageStream* pStream;
     // make sure the strings are shorter than the destination buffer we have to store them!
     assert(strlen(_address) + 1 <= 64);
     assert(strlen(_port) + 1 <= 8);
 
-    pStream = GLV_NEW(MessageStream);
+    pStream = VKTRACE_NEW(MessageStream);
     memcpy(pStream->mAddress, _address, strlen(_address) + 1);
     memcpy(pStream->mPort, _port, strlen(_port) + 1);
 
@@ -67,28 +67,28 @@ MessageStream* glv_MessageStream_create_port_string(BOOL _isHost, const char* _a
     pStream->mSocket = INVALID_SOCKET;
     pStream->mSendBuffer = NULL;
 
-    if (glv_MessageStream_SetupSocket(pStream) == FALSE)
+    if (vktrace_MessageStream_SetupSocket(pStream) == FALSE)
     {
-        pStream->mErrorNum = GLV_WSAGetLastError();
+        pStream->mErrorNum = VKTRACE_WSAGetLastError();
     }
 
     return pStream;
 }
 
-MessageStream* glv_MessageStream_create(BOOL _isHost, const char* _address, unsigned int _port)
+MessageStream* vktrace_MessageStream_create(BOOL _isHost, const char* _address, unsigned int _port)
 {
     char portBuf[32];
     memset(portBuf, 0, 32 * sizeof(char));
     sprintf(portBuf, "%u", _port);
-    return glv_MessageStream_create_port_string(_isHost, _address, portBuf);
+    return vktrace_MessageStream_create_port_string(_isHost, _address, portBuf);
 }
 
-void glv_MessageStream_destroy(MessageStream** ppStream)
+void vktrace_MessageStream_destroy(MessageStream** ppStream)
 {
     if ((*ppStream)->mSendBuffer != NULL) { 
         // Try to get our data out.
-        glv_MessageStream_FlushSendBuffer(*ppStream, TRUE);
-        glv_SimpleBuffer_destroy(&(*ppStream)->mSendBuffer);
+        vktrace_MessageStream_FlushSendBuffer(*ppStream, TRUE);
+        vktrace_SimpleBuffer_destroy(&(*ppStream)->mSendBuffer);
     }
 
     if ((*ppStream)->mHostAddressInfo != NULL)
@@ -97,11 +97,11 @@ void glv_MessageStream_destroy(MessageStream** ppStream)
         (*ppStream)->mHostAddressInfo = NULL;
     }
 
-    glv_LogDebug("Destroyed socket connection.");
+    vktrace_LogDebug("Destroyed socket connection.");
 #if defined(WIN32)
     WSACleanup();
 #endif
-    GLV_DELETE(*ppStream);
+    VKTRACE_DELETE(*ppStream);
     (*ppStream) = NULL;
 }
 
@@ -109,7 +109,7 @@ void glv_MessageStream_destroy(MessageStream** ppStream)
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // private function implementations
-BOOL glv_MessageStream_SetupSocket(MessageStream* pStream)
+BOOL vktrace_MessageStream_SetupSocket(MessageStream* pStream)
 {
     BOOL result = TRUE;
 #if defined(WIN32)
@@ -122,15 +122,15 @@ BOOL glv_MessageStream_SetupSocket(MessageStream* pStream)
 #endif
     {
         if (pStream->mHost) {
-            result = glv_MessageStream_SetupHostSocket(pStream);
+            result = vktrace_MessageStream_SetupHostSocket(pStream);
         } else {
-            result = glv_MessageStream_SetupClientSocket(pStream);
+            result = vktrace_MessageStream_SetupClientSocket(pStream);
         }
     }
     return result;
 }
 
-BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
+BOOL vktrace_MessageStream_SetupHostSocket(MessageStream* pStream)
 {
     int hr = 0;
 #ifdef PLATFORM_LINUX
@@ -139,7 +139,7 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
     struct addrinfo hostAddrInfo = { 0 };
     SOCKET listenSocket;
 
-    glv_create_critical_section(&gSendLock);
+    vktrace_create_critical_section(&gSendLock);
     hostAddrInfo.ai_family = AF_INET;
     hostAddrInfo.ai_socktype = SOCK_STREAM;
     hostAddrInfo.ai_protocol = IPPROTO_TCP;
@@ -147,14 +147,14 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
 
     hr = getaddrinfo(NULL, pStream->mPort, &hostAddrInfo, &pStream->mHostAddressInfo);
     if (hr != 0) {
-        glv_LogError("Host: Failed getaddrinfo.");
+        vktrace_LogError("Host: Failed getaddrinfo.");
         return FALSE;
     }
 
     listenSocket = socket(pStream->mHostAddressInfo->ai_family, pStream->mHostAddressInfo->ai_socktype, pStream->mHostAddressInfo->ai_protocol);
     if (listenSocket == INVALID_SOCKET) {
         // TODO: Figure out errors
-        glv_LogError("Host: Failed creating a listen socket.");
+        vktrace_LogError("Host: Failed creating a listen socket.");
         freeaddrinfo(pStream->mHostAddressInfo);
         pStream->mHostAddressInfo = NULL;
         return FALSE;
@@ -165,7 +165,7 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
 #endif
     hr = bind(listenSocket, pStream->mHostAddressInfo->ai_addr, (int)pStream->mHostAddressInfo->ai_addrlen);
     if (hr == SOCKET_ERROR) {
-        glv_LogError("Host: Failed binding socket err=%d.", GLV_WSAGetLastError());
+        vktrace_LogError("Host: Failed binding socket err=%d.", VKTRACE_WSAGetLastError());
         freeaddrinfo(pStream->mHostAddressInfo);
         pStream->mHostAddressInfo = NULL;
         closesocket(listenSocket);
@@ -178,53 +178,53 @@ BOOL glv_MessageStream_SetupHostSocket(MessageStream* pStream)
 
     hr = listen(listenSocket, 1);
     if (hr == SOCKET_ERROR) {
-        glv_LogError("Host: Failed listening on socket err=%d.");
+        vktrace_LogError("Host: Failed listening on socket err=%d.");
         closesocket(listenSocket);
         return FALSE;
     }
 
     // Fo reals.
-    glv_LogAlways("Listening for connections on port %s.", pStream->mPort);
+    vktrace_LogAlways("Listening for connections on port %s.", pStream->mPort);
     pStream->mSocket = accept(listenSocket, NULL, NULL);
     closesocket(listenSocket);
 
     if (pStream->mSocket == INVALID_SOCKET) {
-        glv_LogError("Host: Failed accepting socket connection.");
+        vktrace_LogError("Host: Failed accepting socket connection.");
         return FALSE;
     }
 
-    glv_LogAlways("Connected on port %s.", pStream->mPort);
-    if (glv_MessageStream_Handshake(pStream))
+    vktrace_LogAlways("Connected on port %s.", pStream->mPort);
+    if (vktrace_MessageStream_Handshake(pStream))
     {
         // TODO: The SendBuffer can cause big delays in sending messages back to the client.
         // We haven't verified if this improves performance in real applications,
         // so disable it for now.
-        //pStream->mSendBuffer = glv_SimpleBuffer_create(kSendBufferSize);
+        //pStream->mSendBuffer = vktrace_SimpleBuffer_create(kSendBufferSize);
         pStream->mSendBuffer = NULL;
     }
     else
     {
-        glv_LogError("glv_MessageStream_SetupHostSocket failed handshake.");
+        vktrace_LogError("vktrace_MessageStream_SetupHostSocket failed handshake.");
     }
     return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
+BOOL vktrace_MessageStream_SetupClientSocket(MessageStream* pStream)
 {
     int hr = 0;
     unsigned int attempt = 0;
     BOOL bConnected = FALSE;
     struct addrinfo hostAddrInfo = { 0 },
         *currentAttempt = NULL;
-    glv_create_critical_section(&gSendLock);
+    vktrace_create_critical_section(&gSendLock);
     hostAddrInfo.ai_family = AF_UNSPEC;
     hostAddrInfo.ai_socktype = SOCK_STREAM;
     hostAddrInfo.ai_protocol = IPPROTO_TCP;
 
     hr = getaddrinfo(pStream->mAddress, pStream->mPort, &hostAddrInfo, &pStream->mHostAddressInfo);
     if (hr != 0) {
-        glv_LogError("Client: Failed getaddrinfo result=%d.", hr);
+        vktrace_LogError("Client: Failed getaddrinfo result=%d.", hr);
         return FALSE;
     }
 
@@ -238,7 +238,7 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
             hr = connect(pStream->mSocket, currentAttempt->ai_addr, (int)currentAttempt->ai_addrlen);
             if (hr == SOCKET_ERROR)
             {
-                glv_LogVerbose("Client: Failed connect. Possibly non-fatal.");
+                vktrace_LogVerbose("Client: Failed connect. Possibly non-fatal.");
                 closesocket(pStream->mSocket);
                 pStream->mSocket = INVALID_SOCKET;
                 continue;
@@ -251,11 +251,11 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
         if (!bConnected)
         {
             Sleep(1);
-            glv_LogVerbose("Client: Connect attempt %u on port %s failed, trying again.", attempt, pStream->mPort);
+            vktrace_LogVerbose("Client: Connect attempt %u on port %s failed, trying again.", attempt, pStream->mPort);
         }
         else
         {
-            glv_LogVerbose("Client: Connected to port %s successfully.", pStream->mPort);
+            vktrace_LogVerbose("Client: Connected to port %s successfully.", pStream->mPort);
         }
     }
 
@@ -263,33 +263,33 @@ BOOL glv_MessageStream_SetupClientSocket(MessageStream* pStream)
     pStream->mHostAddressInfo = NULL;
 
     if (pStream->mSocket == INVALID_SOCKET) {
-        glv_LogError("Client: Couldn't find any connections.");
+        vktrace_LogError("Client: Couldn't find any connections.");
         return FALSE;
     }
 
-    if (!glv_MessageStream_Handshake(pStream))
+    if (!vktrace_MessageStream_Handshake(pStream))
     {
-        glv_LogError("Client: Failed handshake with host.");
+        vktrace_LogError("Client: Failed handshake with host.");
         return FALSE;
     }
     return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_Handshake(MessageStream* pStream)
+BOOL vktrace_MessageStream_Handshake(MessageStream* pStream)
 {
     BOOL result = TRUE;
-    FileLike* fileLike = glv_FileLike_create_msg(pStream);
-    Checkpoint* syn = glv_Checkpoint_create("It's a trap!");
-    Checkpoint* ack = glv_Checkpoint_create(" - Admiral Ackbar");
+    FileLike* fileLike = vktrace_FileLike_create_msg(pStream);
+    Checkpoint* syn = vktrace_Checkpoint_create("It's a trap!");
+    Checkpoint* ack = vktrace_Checkpoint_create(" - Admiral Ackbar");
 
     if (pStream->mHost) {
-        glv_Checkpoint_write(syn, fileLike);
-        result = glv_Checkpoint_read(ack, fileLike);
+        vktrace_Checkpoint_write(syn, fileLike);
+        result = vktrace_Checkpoint_read(ack, fileLike);
     } else {
-        if (glv_Checkpoint_read(syn, fileLike))
+        if (vktrace_Checkpoint_read(syn, fileLike))
         {
-            glv_Checkpoint_write(ack, fileLike);
+            vktrace_Checkpoint_write(ack, fileLike);
         }
         else
         {
@@ -308,45 +308,45 @@ BOOL glv_MessageStream_Handshake(MessageStream* pStream)
 #endif
     }
 
-    GLV_DELETE(syn);
-    GLV_DELETE(ack);
-    GLV_DELETE(fileLike);
+    VKTRACE_DELETE(syn);
+    VKTRACE_DELETE(ack);
+    VKTRACE_DELETE(fileLike);
 
     return result;
 }
 
 // ------------------------------------------------------------------------------------------------
-void glv_MessageStream_FlushSendBuffer(MessageStream* pStream, BOOL _optional)
+void vktrace_MessageStream_FlushSendBuffer(MessageStream* pStream, BOOL _optional)
 {
     size_t bufferedByteSize = 0;
-    const void* bufferBytes = glv_SimpleBuffer_GetBytes(pStream->mSendBuffer, &bufferedByteSize);
+    const void* bufferBytes = vktrace_SimpleBuffer_GetBytes(pStream->mSendBuffer, &bufferedByteSize);
     if (bufferedByteSize > 0) {
         // TODO use return value from ReallySend
-        glv_MessageStream_ReallySend(pStream, bufferBytes, bufferedByteSize, _optional);
-        glv_SimpleBuffer_EmptyBuffer(pStream->mSendBuffer);
+        vktrace_MessageStream_ReallySend(pStream, bufferBytes, bufferedByteSize, _optional);
+        vktrace_SimpleBuffer_EmptyBuffer(pStream->mSendBuffer);
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_BufferedSend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional)
+BOOL vktrace_MessageStream_BufferedSend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional)
 {
     BOOL result = TRUE;
     if (pStream->mSendBuffer == NULL) {
-        result = glv_MessageStream_ReallySend(pStream, _bytes, _size, _optional);
+        result = vktrace_MessageStream_ReallySend(pStream, _bytes, _size, _optional);
     }
     else
     {
-        if (!glv_SimpleBuffer_WouldOverflow(pStream->mSendBuffer, _size)) {
-            result = glv_SimpleBuffer_AddBytes(pStream->mSendBuffer, _bytes, _size);
+        if (!vktrace_SimpleBuffer_WouldOverflow(pStream->mSendBuffer, _size)) {
+            result = vktrace_SimpleBuffer_AddBytes(pStream->mSendBuffer, _bytes, _size);
         } else {
             // Time to flush the cache.
-            glv_MessageStream_FlushSendBuffer(pStream, FALSE);
+            vktrace_MessageStream_FlushSendBuffer(pStream, FALSE);
 
             // Check to see if the packet is larger than the send buffer 
-            if (glv_SimpleBuffer_WouldOverflow(pStream->mSendBuffer, _size)) { 
-                result = glv_MessageStream_ReallySend(pStream, _bytes, _size, _optional); 
+            if (vktrace_SimpleBuffer_WouldOverflow(pStream->mSendBuffer, _size)) { 
+                result = vktrace_MessageStream_ReallySend(pStream, _bytes, _size, _optional); 
             } else { 
-                result = glv_SimpleBuffer_AddBytes(pStream->mSendBuffer, _bytes, _size);
+                result = vktrace_SimpleBuffer_AddBytes(pStream->mSendBuffer, _bytes, _size);
             }
         }
     }
@@ -354,72 +354,72 @@ BOOL glv_MessageStream_BufferedSend(MessageStream* pStream, const void* _bytes, 
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_Send(MessageStream* pStream, const void* _bytes, size_t _len)
+BOOL vktrace_MessageStream_Send(MessageStream* pStream, const void* _bytes, size_t _len)
 {
-    return glv_MessageStream_BufferedSend(pStream, _bytes, _len, FALSE);
+    return vktrace_MessageStream_BufferedSend(pStream, _bytes, _len, FALSE);
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional)
+BOOL vktrace_MessageStream_ReallySend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional)
 {
     size_t bytesSent = 0;
     assert(_size > 0);
 
-    glv_enter_critical_section(&gSendLock);
+    vktrace_enter_critical_section(&gSendLock);
     do {
         int sentThisTime = send(pStream->mSocket, (const char*)_bytes + bytesSent, (int)_size - (int)bytesSent, 0);
         if (sentThisTime == SOCKET_ERROR) {
-            int socketError = GLV_WSAGetLastError();
+            int socketError = VKTRACE_WSAGetLastError();
             if (socketError == WSAEWOULDBLOCK) {
                 // Try again. Don't sleep, because that nukes performance from orbit.
                 continue;
             }
 
             if (!_optional) {
-                glv_leave_critical_section(&gSendLock);
+                vktrace_leave_critical_section(&gSendLock);
                 return FALSE;
             } 
         }
         if (sentThisTime == 0) {
             if (!_optional) {
-                glv_leave_critical_section(&gSendLock);
+                vktrace_leave_critical_section(&gSendLock);
                 return FALSE;
             }
-            glv_LogDebug("Send on socket 0 bytes, totalbytes sent so far %u.", bytesSent);
+            vktrace_LogDebug("Send on socket 0 bytes, totalbytes sent so far %u.", bytesSent);
             break;
         }
 
         bytesSent += sentThisTime;
 
     } while (bytesSent < _size);
-    glv_leave_critical_section(&gSendLock);
+    vktrace_leave_critical_section(&gSendLock);
     return TRUE;
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len)
+BOOL vktrace_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len)
 {
     unsigned int totalDataRead = 0;
     do {
         int dataRead = recv(pStream->mSocket, ((char*)_out) + totalDataRead, (int)_len - totalDataRead, 0);
         if (dataRead == SOCKET_ERROR) {
-            pStream->mErrorNum = GLV_WSAGetLastError();
+            pStream->mErrorNum = VKTRACE_WSAGetLastError();
             if (pStream->mErrorNum == WSAEWOULDBLOCK || pStream->mErrorNum == EAGAIN) {
                 if (totalDataRead == 0) {
                     return FALSE;
                 } else {
                     // I don't do partial reads--once I start receiving I wait for everything.
-                    //glv_LogDebug("Sleep on partial socket recv (%u bytes / %u), error num %d.", totalDataRead, _len, pStream->mErrorNum);
+                    //vktrace_LogDebug("Sleep on partial socket recv (%u bytes / %u), error num %d.", totalDataRead, _len, pStream->mErrorNum);
                     Sleep(1);
                 }
                 // I've split these into two blocks because one of them is expected and the other isn't.
             } else if (pStream->mErrorNum == WSAECONNRESET) {
                 // The remote client disconnected, probably not an issue.
-                //glv_LogDebug("Connection was reset by client.");
+                //vktrace_LogDebug("Connection was reset by client.");
                 return FALSE;
             } else {
                 // Some other wonky network error--place a breakpoint here.
-                glv_LogError("Unexpected error (%d) while receiving message stream.", pStream->mErrorNum);
+                vktrace_LogError("Unexpected error (%d) while receiving message stream.", pStream->mErrorNum);
                 return FALSE;
             }
         } else {
@@ -431,9 +431,9 @@ BOOL glv_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len)
 }
 
 // ------------------------------------------------------------------------------------------------
-BOOL glv_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, size_t _len)
+BOOL vktrace_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, size_t _len)
 {
-    while (!glv_MessageStream_Recv(pStream, _outBuffer, _len)) {
+    while (!vktrace_MessageStream_Recv(pStream, _outBuffer, _len)) {
         Sleep(1);
     }
     return TRUE;
@@ -442,13 +442,13 @@ BOOL glv_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, si
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-SimpleBuffer* glv_SimpleBuffer_create(size_t _bufferSize)
+SimpleBuffer* vktrace_SimpleBuffer_create(size_t _bufferSize)
 {
-    SimpleBuffer* pBuffer = GLV_NEW(SimpleBuffer);
-    pBuffer->mBuffer = (unsigned char*)glv_malloc(_bufferSize);
+    SimpleBuffer* pBuffer = VKTRACE_NEW(SimpleBuffer);
+    pBuffer->mBuffer = (unsigned char*)vktrace_malloc(_bufferSize);
     if (pBuffer->mBuffer == NULL)
     {
-        GLV_DELETE(pBuffer);
+        VKTRACE_DELETE(pBuffer);
         return NULL;
     }
 
@@ -458,15 +458,15 @@ SimpleBuffer* glv_SimpleBuffer_create(size_t _bufferSize)
     return pBuffer;
 }
 
-void glv_SimpleBuffer_destroy(SimpleBuffer** ppBuffer)
+void vktrace_SimpleBuffer_destroy(SimpleBuffer** ppBuffer)
 {
-    glv_free((*ppBuffer)->mBuffer);
-    GLV_DELETE(*ppBuffer);
+    vktrace_free((*ppBuffer)->mBuffer);
+    VKTRACE_DELETE(*ppBuffer);
 }
 
-BOOL glv_SimpleBuffer_AddBytes(SimpleBuffer* pBuffer, const void* _bytes, size_t _size)
+BOOL vktrace_SimpleBuffer_AddBytes(SimpleBuffer* pBuffer, const void* _bytes, size_t _size)
 {
-    if (glv_SimpleBuffer_WouldOverflow(pBuffer, _size))
+    if (vktrace_SimpleBuffer_WouldOverflow(pBuffer, _size))
     { 
         return FALSE;
     }
@@ -477,17 +477,17 @@ BOOL glv_SimpleBuffer_AddBytes(SimpleBuffer* pBuffer, const void* _bytes, size_t
     return TRUE;
 }
 
-void glv_SimpleBuffer_EmptyBuffer(SimpleBuffer* pBuffer)
+void vktrace_SimpleBuffer_EmptyBuffer(SimpleBuffer* pBuffer)
 {
     pBuffer->mEnd = 0;
 }
 
-BOOL glv_SimpleBuffer_WouldOverflow(SimpleBuffer* pBuffer, size_t _requestedSize)
+BOOL vktrace_SimpleBuffer_WouldOverflow(SimpleBuffer* pBuffer, size_t _requestedSize)
 {
     return pBuffer->mEnd + _requestedSize > pBuffer->mSize;
 }
 
-const void* glv_SimpleBuffer_GetBytes(SimpleBuffer* pBuffer, size_t* _outByteCount)
+const void* vktrace_SimpleBuffer_GetBytes(SimpleBuffer* pBuffer, size_t* _outByteCount)
 {
     (*_outByteCount) = pBuffer->mEnd; 
     return pBuffer->mBuffer; 

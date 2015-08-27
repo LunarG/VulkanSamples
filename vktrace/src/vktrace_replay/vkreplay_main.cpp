@@ -36,30 +36,30 @@ extern "C" {
 #include "vkreplay_seq.h"
 #include "vkreplay_window.h"
 
-glvreplay_settings replaySettings = { NULL, 1, NULL };
+vkreplayer_settings replaySettings = { NULL, 1, NULL };
 
-glv_SettingInfo g_settings_info[] =
+vktrace_SettingInfo g_settings_info[] =
 {
-    { "t", "TraceFile", GLV_SETTING_STRING, &replaySettings.pTraceFilePath, &replaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
-    { "l", "NumLoops", GLV_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
-    { "s", "Screenshot", GLV_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma separated list of frames to take a take snapshots of"},
+    { "t", "TraceFile", VKTRACE_SETTING_STRING, &replaySettings.pTraceFilePath, &replaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
+    { "l", "NumLoops", VKTRACE_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
+    { "s", "Screenshot", VKTRACE_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma separated list of frames to take a take snapshots of"},
 };
 
-glv_SettingGroup g_replaySettingGroup =
+vktrace_SettingGroup g_replaySettingGroup =
 {
-    "glvreplay",
+    "vkreplay",
     sizeof(g_settings_info) / sizeof(g_settings_info[0]),
     &g_settings_info[0]
 };
 
-namespace glv_replay {
-int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[], unsigned int numLoops)
+namespace vktrace_replay {
+int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray[], unsigned int numLoops)
 {
     int err = 0;
-    glv_trace_packet_header *packet;
+    vktrace_trace_packet_header *packet;
     unsigned int res;
-    glv_trace_packet_replay_library *replayer;
-    glv_trace_packet_message* msgPacket;
+    vktrace_trace_packet_replay_library *replayer;
+    vktrace_trace_packet_message* msgPacket;
     struct seqBookmark startingPacket;
 
     // record the location of starting trace packet
@@ -71,43 +71,43 @@ int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[], 
         while ((packet = seq.get_next_packet()) != NULL)
         {
             switch (packet->packet_id) {
-                case GLV_TPI_MESSAGE:
-                    msgPacket = glv_interpret_body_as_trace_packet_message(packet);
-                    glv_LogAlways("Packet %lu: Traced Message (%s): %s", packet->global_packet_index, glv_LogLevelToShortString(msgPacket->type), msgPacket->message);
+                case VKTRACE_TPI_MESSAGE:
+                    msgPacket = vktrace_interpret_body_as_trace_packet_message(packet);
+                    vktrace_LogAlways("Packet %lu: Traced Message (%s): %s", packet->global_packet_index, vktrace_LogLevelToShortString(msgPacket->type), msgPacket->message);
                     break;
-                case GLV_TPI_MARKER_CHECKPOINT:
+                case VKTRACE_TPI_MARKER_CHECKPOINT:
                     break;
-                case GLV_TPI_MARKER_API_BOUNDARY:
+                case VKTRACE_TPI_MARKER_API_BOUNDARY:
                     break;
-                case GLV_TPI_MARKER_API_GROUP_BEGIN:
+                case VKTRACE_TPI_MARKER_API_GROUP_BEGIN:
                     break;
-                case GLV_TPI_MARKER_API_GROUP_END:
+                case VKTRACE_TPI_MARKER_API_GROUP_END:
                     break;
-                case GLV_TPI_MARKER_TERMINATE_PROCESS:
+                case VKTRACE_TPI_MARKER_TERMINATE_PROCESS:
                     break;
                 //TODO processing code for all the above cases
                 default:
                 {
-                    if (packet->tracer_id >= GLV_MAX_TRACER_ID_ARRAY_SIZE  || packet->tracer_id == GLV_TID_RESERVED) {
-                        glv_LogError("Tracer_id from packet num packet %d invalid.", packet->packet_id);
+                    if (packet->tracer_id >= VKTRACE_MAX_TRACER_ID_ARRAY_SIZE  || packet->tracer_id == VKTRACE_TID_RESERVED) {
+                        vktrace_LogError("Tracer_id from packet num packet %d invalid.", packet->packet_id);
                         continue;
                     }
                     replayer = replayerArray[packet->tracer_id];
                     if (replayer == NULL) {
-                        glv_LogWarning("Tracer_id %d has no valid replayer.", packet->tracer_id);
+                        vktrace_LogWarning("Tracer_id %d has no valid replayer.", packet->tracer_id);
                         continue;
                     }
-                    if (packet->packet_id >= GLV_TPI_BEGIN_API_HERE)
+                    if (packet->packet_id >= VKTRACE_TPI_BEGIN_API_HERE)
                     {
                         // replay the API packet
                         res = replayer->Replay(replayer->Interpret(packet));
-                        if (res != GLV_REPLAY_SUCCESS)
+                        if (res != VKTRACE_REPLAY_SUCCESS)
                         {
-                           glv_LogError("Failed to replay packet_id %d.",packet->packet_id);
+                           vktrace_LogError("Failed to replay packet_id %d.",packet->packet_id);
                            return -1;
                         }
                     } else {
-                        glv_LogError("Bad packet type id=%d, index=%d.", packet->packet_id, packet->global_packet_index);
+                        vktrace_LogError("Bad packet type id=%d, index=%d.", packet->packet_id, packet->global_packet_index);
                         return -1;
                     }
                 }
@@ -118,19 +118,19 @@ int main_loop(Sequencer &seq, glv_trace_packet_replay_library *replayerArray[], 
     }
     return err;
 }
-} // namespace glv_replay
+} // namespace vktrace_replay
 
-using namespace glv_replay;
+using namespace vktrace_replay;
 
-void loggingCallback(GlvLogLevel level, const char* pMessage)
+void loggingCallback(VktraceLogLevel level, const char* pMessage)
 {
     switch(level)
     {
-    case GLV_LOG_ALWAYS: printf("%s\n", pMessage); break;
-    case GLV_LOG_DEBUG: printf("Debug: %s\n", pMessage); break;
-    case GLV_LOG_ERROR: printf("Error: %s\n", pMessage); break;
-    case GLV_LOG_WARNING: printf("Warning: %s\n", pMessage); break;
-    case GLV_LOG_VERBOSE: printf("Verbose: %s\n", pMessage); break;
+    case VKTRACE_LOG_ALWAYS: printf("%s\n", pMessage); break;
+    case VKTRACE_LOG_DEBUG: printf("Debug: %s\n", pMessage); break;
+    case VKTRACE_LOG_ERROR: printf("Error: %s\n", pMessage); break;
+    case VKTRACE_LOG_WARNING: printf("Warning: %s\n", pMessage); break;
+    case VKTRACE_LOG_VERBOSE: printf("Verbose: %s\n", pMessage); break;
     default:
         printf("%s\n", pMessage); break;
     }
@@ -146,41 +146,41 @@ extern "C"
 int main(int argc, char **argv)
 {
     int err = 0;
-    glv_SettingGroup* pAllSettings = NULL;
+    vktrace_SettingGroup* pAllSettings = NULL;
     unsigned int numAllSettings = 0;
 
-    glv_LogSetCallback(loggingCallback);
-    glv_LogSetLevel(GLV_LOG_LEVEL_MAXIMUM);
+    vktrace_LogSetCallback(loggingCallback);
+    vktrace_LogSetLevel(VKTRACE_LOG_LEVEL_MAXIMUM);
 
     // apply settings from cmd-line args
-    if (glv_SettingGroup_init_from_cmdline(&g_replaySettingGroup, argc, argv, &replaySettings.pTraceFilePath) != 0)
+    if (vktrace_SettingGroup_init_from_cmdline(&g_replaySettingGroup, argc, argv, &replaySettings.pTraceFilePath) != 0)
     {
         // invalid options specified
         if (pAllSettings != NULL)
         {
-            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+            vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
         }
         return err;
     }
 
     // merge settings so that new settings will get written into the settings file
-    glv_SettingGroup_merge(&g_replaySettingGroup, &pAllSettings, &numAllSettings);
+    vktrace_SettingGroup_merge(&g_replaySettingGroup, &pAllSettings, &numAllSettings);
 
     // Set up environment for screenshot
     if (replaySettings.screenshotList != NULL)
     {
         // Set env var that communicates list to ScreenShot layer
-        glv_set_global_var("_VK_SCREENSHOT", replaySettings.screenshotList);
+        vktrace_set_global_var("_VK_SCREENSHOT", replaySettings.screenshotList);
 
     }
     else
     {
-        glv_set_global_var("_VK_SCREENSHOT","");
+        vktrace_set_global_var("_VK_SCREENSHOT","");
     }
 
     // open trace file and read in header
     char* pTraceFile = replaySettings.pTraceFilePath;
-    glv_trace_file_header fileHeader;
+    vktrace_trace_file_header fileHeader;
     FILE *tracefp;
 
     if (pTraceFile != NULL && strlen(pTraceFile) > 0)
@@ -188,46 +188,46 @@ int main(int argc, char **argv)
         tracefp = fopen(pTraceFile, "rb");
         if (tracefp == NULL)
         {
-            glv_LogError("Cannot open trace file: '%s'.", pTraceFile);
+            vktrace_LogError("Cannot open trace file: '%s'.", pTraceFile);
             return 1;
         }
     }
     else
     {
-        glv_LogError("No trace file specified.");
-        glv_SettingGroup_print(&g_replaySettingGroup);
+        vktrace_LogError("No trace file specified.");
+        vktrace_SettingGroup_print(&g_replaySettingGroup);
         if (pAllSettings != NULL)
         {
-            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+            vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
         }
         return 1;
     }
 
-    FileLike* traceFile = glv_FileLike_create_file(tracefp);
-    if (glv_FileLike_ReadRaw(traceFile, &fileHeader, sizeof(fileHeader)) == false)
+    FileLike* traceFile = vktrace_FileLike_create_file(tracefp);
+    if (vktrace_FileLike_ReadRaw(traceFile, &fileHeader, sizeof(fileHeader)) == false)
     {
-        glv_LogError("Unable to read header from file.");
+        vktrace_LogError("Unable to read header from file.");
         if (pAllSettings != NULL)
         {
-            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+            vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
         }
-        GLV_DELETE(traceFile);
+        VKTRACE_DELETE(traceFile);
         return 1;
     }
 
     // Make sure trace file version is supported
-    if (fileHeader.trace_file_version < GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
+    if (fileHeader.trace_file_version < VKTRACE_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE)
     {
-        glv_LogError("Trace file version %u is older than minimum compatible version (%u).\nYou'll need to make a new trace file, or use an older replayer.", fileHeader.trace_file_version, GLV_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
+        vktrace_LogError("Trace file version %u is older than minimum compatible version (%u).\nYou'll need to make a new trace file, or use an older replayer.", fileHeader.trace_file_version, VKTRACE_TRACE_FILE_VERSION_MINIMUM_COMPATIBLE);
     }
 
     // load any API specific driver libraries and init replayer objects
-    uint8_t tidApi = GLV_TID_RESERVED;
-    glv_trace_packet_replay_library* replayer[GLV_MAX_TRACER_ID_ARRAY_SIZE];
+    uint8_t tidApi = VKTRACE_TID_RESERVED;
+    vktrace_trace_packet_replay_library* replayer[VKTRACE_MAX_TRACER_ID_ARRAY_SIZE];
     ReplayFactory makeReplayer;
     Display disp(1024, 768, 0, false);
 
-    for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
+    for (int i = 0; i < VKTRACE_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {
         replayer[i] = NULL;
     }
@@ -237,12 +237,12 @@ int main(int argc, char **argv)
         uint8_t tracerId = fileHeader.tracer_id_array[i].id;
         tidApi = tracerId;
 
-        const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
+        const VKTRACE_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
 
         if (pReplayerInfo->tracerId != tracerId)
         {
-            glv_LogError("Replayer info for TracerId (%d) failed consistency check.", tracerId);
-            assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
+            vktrace_LogError("Replayer info for TracerId (%d) failed consistency check.", tracerId);
+            assert(!"TracerId in VKTRACE_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
         }
         else if (pReplayerInfo->needsReplayer == TRUE)
         {
@@ -254,47 +254,47 @@ int main(int argc, char **argv)
                 // replayer failed to be created
                 if (pAllSettings != NULL)
                 {
-                    glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+                    vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
                 }
                 return err;
             }
 
             // merge the replayer's settings into the list of all settings so that we can output a comprehensive settings file later on.
-            glv_SettingGroup_merge(replayer[tracerId]->GetSettings(), &pAllSettings, &numAllSettings);
+            vktrace_SettingGroup_merge(replayer[tracerId]->GetSettings(), &pAllSettings, &numAllSettings);
 
             // update the replayer with the loaded settings
             replayer[tracerId]->UpdateFromSettings(pAllSettings, numAllSettings);
 
             replayer[tracerId]->SetLogCallback(loggingCallback);
-            replayer[tracerId]->SetLogLevel(GLV_LOG_LEVEL_MAXIMUM);
+            replayer[tracerId]->SetLogLevel(VKTRACE_LOG_LEVEL_MAXIMUM);
 
             // Initialize the replayer
             err = replayer[tracerId]->Initialize(&disp, &replaySettings);
             if (err) {
-                glv_LogError("Couldn't Initialize replayer for TracerId %d.", tracerId);
+                vktrace_LogError("Couldn't Initialize replayer for TracerId %d.", tracerId);
                 if (pAllSettings != NULL)
                 {
-                    glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+                    vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
                 }
                 return err;
             }
         }
     }
 
-    if (tidApi == GLV_TID_RESERVED) {
-        glv_LogError("No API specified in tracefile for replaying.");
+    if (tidApi == VKTRACE_TID_RESERVED) {
+        vktrace_LogError("No API specified in tracefile for replaying.");
         if (pAllSettings != NULL)
         {
-            glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+            vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
         }
         return -1;
     }
  
     // main loop
     Sequencer sequencer(traceFile);
-    err = glv_replay::main_loop(sequencer, replayer, replaySettings.numLoops);
+    err = vktrace_replay::main_loop(sequencer, replayer, replaySettings.numLoops);
 
-    for (int i = 0; i < GLV_MAX_TRACER_ID_ARRAY_SIZE; i++)
+    for (int i = 0; i < VKTRACE_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {
         if (replayer[i] != NULL)
         {
@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 
     if (pAllSettings != NULL)
     {
-        glv_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
+        vktrace_SettingGroup_Delete_Loaded(&pAllSettings, &numAllSettings);
     }
     return err;
 }

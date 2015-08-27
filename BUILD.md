@@ -1,6 +1,6 @@
 # Build Instructions
 This project fully supports Linux today.
-Support for Windows is for the loader, layers, and the Glave debugger (additional info below).  Additional Windows support will be coming in Q1'15.
+Support for Windows is for the loader, layers, and the VkTrace trace/replay tools.
 Support for Android is TBD.
 
 ## Git the Bits
@@ -18,21 +18,21 @@ Ubuntu 14.10 needed for DRI 3
 sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev
 sudo apt-get build-dep mesa
 ```
-Warning: Recent versions of 14.10 have **REMOVED** DRI 3.  
-Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.  
+Warning: Recent versions of 14.10 have **REMOVED** DRI 3.
+Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.
 To see status of this package:
 ```
 dpkg -s xserver-xorg-video-intel
 ```
 
-Note:  
-Version 2:2.99.914-1~exp1ubuntu4.2 does not work anymore.  
-To install the working driver from launchpadlibrarian.net:  
-- Remove the current driver:  
+Note:
+Version 2:2.99.914-1~exp1ubuntu4.2 does not work anymore.
+To install the working driver from launchpadlibrarian.net:
+- Remove the current driver:
 ```
 sudo apt-get purge xserver-xorg-video-intel
 ```
-- Download the old driver:  
+- Download the old driver:
 ```
 wget http://launchpadlibrarian.net/189418339/xserver-xorg-video-intel_2.99.914-1%7Eexp1ubuntu4.1_amd64.deb
 ```
@@ -45,8 +45,8 @@ sudo dpkg -i xserver-xorg-video-intel_2.99.914-1~exp1ubuntu4.1_amd64.deb
 sudo bash -c "echo $'Package: xserver-xorg-video-intel\nPin: version 2:2.99.914-1~exp1ubuntu4.1\nPin-Priority: 1001' > /etc/apt/preferences.d/xserver-xorg-video-intel"
 ```
 
-- Either restart Ubuntu or just X11.  
-  
+- Either restart Ubuntu or just X11.
+
 ## Clone the repository
 
 To create your local git repository:
@@ -132,11 +132,11 @@ Windows 7+ with additional required software packages:
 
 - Microsoft Visual Studio 2013 Professional.  Note: it is possible that lesser/older versions may work, but that has not been tested.
 - CMake (from http://www.cmake.org/download/).  Notes:
-  - In order to build the Glave debugger, you need at least version 3.0.
+  - In order to build the VkTrace tools, you need at least version 3.0.
   - Tell the installer to "Add CMake to the system PATH" environment variable.
 - Python 3 (from https://www.python.org/downloads).  Notes:
   - Select to install the optional sub-package to add Python to the system PATH environment variable.
-  - Need python3.3 or later to get the Windows py.exe launcher that is used to get pyhton3 rather than python2 if both are installed on Windows
+  - Need python3.3 or later to get the Windows py.exe launcher that is used to get python3 rather than python2 if both are installed on Windows
 - Git (from http://git-scm.com/download/win).
   - Note: If you use Cygwin, you can normally use Cygwin's "git.exe".  However, in order to use the "update_external_sources.bat" script, you must have this version.
   - Tell the installer to allow it to be used for "Developer Prompt" as well as "Git Bash".
@@ -150,11 +150,6 @@ Windows 7+ with additional required software packages:
 
 Optional software packages:
 
-- Qt 5.3 (from http://www.qt.io/download/).  Notes:
-  - Qt 5.3 is required in order to build the Glave debugger (GUI).  The Glave trace and replay tools can be built without Qt, but the debugger/GUI is built on top of Qt 5.3.  Various dependencies, from the Qt package are copied to the directory where the Glave debugger and its libraries are built.  In order to copy and run the debugger in another directory, these libraries must also be copied.  Other notes:
-  - While there are commercial licenses, you can also use the "Community" (free) license.
-  - By default, the installer will select the latest version (e.g. Qt 5.4) as well as some other components.  You must select "Qt 5.3"!  You can have multiple versions installed (e.g. Qt 5.2.1, 5.3, and 5.4).
-  - Installing Qt takes a long time.
 - Cygwin (from https://www.cygwin.com/).  Notes:
   - Cygwin provides some Linux-like tools, which are valuable for obtaining the source code, and running CMake.
     Especially valuable are the BASH shell and git packages.

@@ -42,7 +42,7 @@
     #define INVALID_SOCKET 0
     #define SOCKET_ERROR -1
     #define closesocket close
-    #define GLV_WSAGetLastError() errno
+    #define VKTRACE_WSAGetLastError() errno
     #define WSAEWOULDBLOCK EWOULDBLOCK
     #define WSAEAGAIN EAGAIN
     #define WSAECONNRESET ECONNRESET
@@ -50,10 +50,10 @@
     #include <WinSock2.h>
     #include <WS2tcpip.h>
     #pragma comment (lib, "Ws2_32.lib")
-    #define GLV_WSAGetLastError() WSAGetLastError()
+    #define VKTRACE_WSAGetLastError() WSAGetLastError()
 #endif
 
-static const unsigned int GLV_BASE_PORT = 34199;
+static const unsigned int VKTRACE_BASE_PORT = 34199;
 struct SSerializeDataPacket;
 
 struct SimpleBuffer;
@@ -79,14 +79,14 @@ typedef struct MessageStream
     int mErrorNum;
 } MessageStream;
 
-MessageStream* glv_MessageStream_create_port_string(BOOL _isHost, const char* _address, const char* _port);
-MessageStream* glv_MessageStream_create(BOOL _isHost, const char* _address, unsigned int _port);
-void glv_MessageStream_destroy(MessageStream** ppStream);
-BOOL glv_MessageStream_BufferedSend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional);
-BOOL glv_MessageStream_Send(MessageStream* pStream, const void* _bytes, size_t _len);
+MessageStream* vktrace_MessageStream_create_port_string(BOOL _isHost, const char* _address, const char* _port);
+MessageStream* vktrace_MessageStream_create(BOOL _isHost, const char* _address, unsigned int _port);
+void vktrace_MessageStream_destroy(MessageStream** ppStream);
+BOOL vktrace_MessageStream_BufferedSend(MessageStream* pStream, const void* _bytes, size_t _size, BOOL _optional);
+BOOL vktrace_MessageStream_Send(MessageStream* pStream, const void* _bytes, size_t _len);
 
-BOOL glv_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len);
-BOOL glv_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, size_t _len);
+BOOL vktrace_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len);
+BOOL vktrace_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, size_t _len);
 
 extern MessageStream* gMessageStream;
 
@@ -100,9 +100,9 @@ typedef struct SimpleBuffer
     size_t mSize;
 } SimpleBuffer;
 
-SimpleBuffer* glv_SimpleBuffer_create(size_t _bufferSize);
-void glv_SimpleBuffer_destroy(SimpleBuffer** ppBuffer);
-BOOL glv_SimpleBuffer_AddBytes(SimpleBuffer* pBuffer, const void* _bytes, size_t _size);
-void glv_SimpleBuffer_EmptyBuffer(SimpleBuffer* pBuffer);
-BOOL glv_SimpleBuffer_WouldOverflow(SimpleBuffer* pBuffer, size_t _requestedSize);
-const void* glv_SimpleBuffer_GetBytes(SimpleBuffer* pBuffer, size_t* _outByteCount);
+SimpleBuffer* vktrace_SimpleBuffer_create(size_t _bufferSize);
+void vktrace_SimpleBuffer_destroy(SimpleBuffer** ppBuffer);
+BOOL vktrace_SimpleBuffer_AddBytes(SimpleBuffer* pBuffer, const void* _bytes, size_t _size);
+void vktrace_SimpleBuffer_EmptyBuffer(SimpleBuffer* pBuffer);
+BOOL vktrace_SimpleBuffer_WouldOverflow(SimpleBuffer* pBuffer, size_t _requestedSize);
+const void* vktrace_SimpleBuffer_GetBytes(SimpleBuffer* pBuffer, size_t* _outByteCount);

@@ -27,28 +27,28 @@
 #include "vktrace_trace_packet_identifiers.h"
 #include "vkreplay.h"
 
-namespace glv_replay {
+namespace vktrace_replay {
 
-glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
+vktrace_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
 {
-    glv_trace_packet_replay_library* pReplayer = NULL;
+    vktrace_trace_packet_replay_library* pReplayer = NULL;
     void* pLibrary = NULL;
 
-    const GLV_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
+    const VKTRACE_TRACER_REPLAYER_INFO* pReplayerInfo = &(gs_tracerReplayerInfo[tracerId]);
 
 
     if (pReplayerInfo->tracerId != tracerId)
     {
-        glv_LogError("Replayer info for TracerId (%d) failed consistency check.", tracerId);
-        assert(!"TracerId in GLV_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
+        vktrace_LogError("Replayer info for TracerId (%d) failed consistency check.", tracerId);
+        assert(!"TracerId in VKTRACE_TRACER_REPLAYER_INFO does not match the requested tracerId. The array needs to be corrected.");
     }
 
     // Vulkan library is built into replayer executable
-    if (tracerId == GLV_TID_VULKAN) {
-        pReplayer = GLV_NEW(glv_trace_packet_replay_library);
+    if (tracerId == VKTRACE_TID_VULKAN) {
+        pReplayer = VKTRACE_NEW(vktrace_trace_packet_replay_library);
         if (pReplayer == NULL)
         {
-            glv_LogError("Failed to allocate replayer library.");
+            vktrace_LogError("Failed to allocate replayer library.");
         }
         else
         {
@@ -69,45 +69,45 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
 
     } else if (pReplayerInfo->needsReplayer == TRUE)
     {
-        pLibrary = glv_platform_open_library(pReplayerInfo->replayerLibraryName);
+        pLibrary = vktrace_platform_open_library(pReplayerInfo->replayerLibraryName);
         if (pLibrary == NULL)
         {
-            glv_LogError("Failed to load replayer '%s.", pReplayerInfo->replayerLibraryName);
+            vktrace_LogError("Failed to load replayer '%s.", pReplayerInfo->replayerLibraryName);
 #if defined(PLATFORM_LINUX)
             char* error = dlerror();
-            glv_LogError(error);
+            vktrace_LogError(error);
 #endif
         }
     }
     else
     {
-        glv_LogError("A replayer was requested for TracerId (%d), but it does not require a replayer.", tracerId);
+        vktrace_LogError("A replayer was requested for TracerId (%d), but it does not require a replayer.", tracerId);
         assert(!"Invalid TracerId supplied to ReplayFactory");
     }
 
     if (pLibrary != NULL)
     {
-        pReplayer = GLV_NEW(glv_trace_packet_replay_library);
+        pReplayer = VKTRACE_NEW(vktrace_trace_packet_replay_library);
         if (pReplayer == NULL)
         {
-            glv_LogError("Failed to allocate replayer library.");
-            glv_platform_close_library(pLibrary);
+            vktrace_LogError("Failed to allocate replayer library.");
+            vktrace_platform_close_library(pLibrary);
         }
         else
         {
             pReplayer->pLibrary = pLibrary;
 
-            pReplayer->SetLogCallback = (funcptr_glvreplayer_setlogcallback)glv_platform_get_library_entrypoint(pLibrary, "SetLogCallback");
-            pReplayer->SetLogLevel = (funcptr_glvreplayer_setloglevel)glv_platform_get_library_entrypoint(pLibrary, "SetLogLevel");
+            pReplayer->SetLogCallback = (funcptr_vkreplayer_setlogcallback)vktrace_platform_get_library_entrypoint(pLibrary, "SetLogCallback");
+            pReplayer->SetLogLevel = (funcptr_vkreplayer_setloglevel)vktrace_platform_get_library_entrypoint(pLibrary, "SetLogLevel");
 
-            pReplayer->RegisterDbgMsgCallback = (funcptr_glvreplayer_registerdbgmsgcallback)glv_platform_get_library_entrypoint(pLibrary, "RegisterDbgMsgCallback");
-            pReplayer->GetSettings = (funcptr_glvreplayer_getSettings)glv_platform_get_library_entrypoint(pLibrary, "GetSettings");
-            pReplayer->UpdateFromSettings = (funcptr_glvreplayer_updatefromsettings)glv_platform_get_library_entrypoint(pLibrary, "UpdateFromSettings");
-            pReplayer->Initialize = (funcptr_glvreplayer_initialize)glv_platform_get_library_entrypoint(pLibrary, "Initialize");
-            pReplayer->Deinitialize = (funcptr_glvreplayer_deinitialize)glv_platform_get_library_entrypoint(pLibrary, "Deinitialize");
-            pReplayer->Interpret = (funcptr_glvreplayer_interpret)glv_platform_get_library_entrypoint(pLibrary, "Interpret");
-            pReplayer->Replay = (funcptr_glvreplayer_replay)glv_platform_get_library_entrypoint(pLibrary, "Replay");
-            pReplayer->Dump = (funcptr_glvreplayer_dump)glv_platform_get_library_entrypoint(pLibrary, "Dump");
+            pReplayer->RegisterDbgMsgCallback = (funcptr_vkreplayer_registerdbgmsgcallback)vktrace_platform_get_library_entrypoint(pLibrary, "RegisterDbgMsgCallback");
+            pReplayer->GetSettings = (funcptr_vkreplayer_getSettings)vktrace_platform_get_library_entrypoint(pLibrary, "GetSettings");
+            pReplayer->UpdateFromSettings = (funcptr_vkreplayer_updatefromsettings)vktrace_platform_get_library_entrypoint(pLibrary, "UpdateFromSettings");
+            pReplayer->Initialize = (funcptr_vkreplayer_initialize)vktrace_platform_get_library_entrypoint(pLibrary, "Initialize");
+            pReplayer->Deinitialize = (funcptr_vkreplayer_deinitialize)vktrace_platform_get_library_entrypoint(pLibrary, "Deinitialize");
+            pReplayer->Interpret = (funcptr_vkreplayer_interpret)vktrace_platform_get_library_entrypoint(pLibrary, "Interpret");
+            pReplayer->Replay = (funcptr_vkreplayer_replay)vktrace_platform_get_library_entrypoint(pLibrary, "Replay");
+            pReplayer->Dump = (funcptr_vkreplayer_dump)vktrace_platform_get_library_entrypoint(pLibrary, "Dump");
 
             if (pReplayer->SetLogCallback == NULL ||
                 pReplayer->SetLogLevel == NULL ||
@@ -120,8 +120,8 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
                 pReplayer->Replay == NULL ||
                 pReplayer->Dump == NULL)
             {
-                GLV_DELETE(pReplayer);
-                glv_platform_close_library(pLibrary);
+                VKTRACE_DELETE(pReplayer);
+                vktrace_platform_close_library(pLibrary);
                 pReplayer = NULL;
             }
         }
@@ -130,15 +130,15 @@ glv_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
     return pReplayer;
 }
 
-void ReplayFactory::Destroy(glv_trace_packet_replay_library** ppReplayer)
+void ReplayFactory::Destroy(vktrace_trace_packet_replay_library** ppReplayer)
 {
     assert (ppReplayer != NULL);
     assert (*ppReplayer != NULL);
     if ((*ppReplayer)->pLibrary)
-        glv_platform_close_library((*ppReplayer)->pLibrary);
-    GLV_DELETE(*ppReplayer);
+        vktrace_platform_close_library((*ppReplayer)->pLibrary);
+    VKTRACE_DELETE(*ppReplayer);
     *ppReplayer = NULL;
 }
 
 
-} // namespace glv_replay
+} // namespace vktrace_replay

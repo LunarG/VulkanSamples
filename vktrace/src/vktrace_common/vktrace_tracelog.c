@@ -39,53 +39,53 @@
 // filelike thing that is used for outputting trace messages
 static FileLike* g_pFileOut = NULL;
 
-GLV_TRACER_ID g_tracelog_tracer_id = GLV_TID_RESERVED;
+VKTRACE_TRACER_ID g_tracelog_tracer_id = VKTRACE_TID_RESERVED;
 
-void glv_trace_set_trace_file(FileLike* pFileLike)
+void vktrace_trace_set_trace_file(FileLike* pFileLike)
 {
     g_pFileOut = pFileLike;
 }
 
-FileLike* glv_trace_get_trace_file()
+FileLike* vktrace_trace_get_trace_file()
 {
     return g_pFileOut;
 }
 
-void glv_tracelog_set_tracer_id(uint8_t tracerId)
+void vktrace_tracelog_set_tracer_id(uint8_t tracerId)
 {
-    g_tracelog_tracer_id = (GLV_TRACER_ID)tracerId;
+    g_tracelog_tracer_id = (VKTRACE_TRACER_ID)tracerId;
 }
 
-GLV_REPORT_CALLBACK_FUNCTION s_reportFunc;
-GlvLogLevel s_logLevel = GLV_LOG_LEVEL_MAXIMUM;
+VKTRACE_REPORT_CALLBACK_FUNCTION s_reportFunc;
+VktraceLogLevel s_logLevel = VKTRACE_LOG_LEVEL_MAXIMUM;
 
-const char* glv_LogLevelToString(GlvLogLevel level)
+const char* vktrace_LogLevelToString(VktraceLogLevel level)
 {
     switch(level)
     {
-    case GLV_LOG_ALWAYS: return "GLV_LOG_ALWAYS";
-    case GLV_LOG_DEBUG: return "GLV_LOG_DEBUG";
-    case GLV_LOG_LEVEL_MINIMUM: return "GLV_LOG_LEVEL_MINIMUM";
-    case GLV_LOG_ERROR: return "GLV_LOG_ERROR";
-    case GLV_LOG_WARNING: return "GLV_LOG_WARNING";
-    case GLV_LOG_VERBOSE: return "GLV_LOG_VERBOSE";
-    case GLV_LOG_LEVEL_MAXIMUM: return "GLV_LOG_LEVEL_MAXIMUM";
+    case VKTRACE_LOG_ALWAYS: return "VKTRACE_LOG_ALWAYS";
+    case VKTRACE_LOG_DEBUG: return "VKTRACE_LOG_DEBUG";
+    case VKTRACE_LOG_LEVEL_MINIMUM: return "VKTRACE_LOG_LEVEL_MINIMUM";
+    case VKTRACE_LOG_ERROR: return "VKTRACE_LOG_ERROR";
+    case VKTRACE_LOG_WARNING: return "VKTRACE_LOG_WARNING";
+    case VKTRACE_LOG_VERBOSE: return "VKTRACE_LOG_VERBOSE";
+    case VKTRACE_LOG_LEVEL_MAXIMUM: return "VKTRACE_LOG_LEVEL_MAXIMUM";
     default:
         return "Unknown";
     }
 }
 
-const char* glv_LogLevelToShortString(GlvLogLevel level)
+const char* vktrace_LogLevelToShortString(VktraceLogLevel level)
 {
     switch(level)
     {
-    case GLV_LOG_ALWAYS: return "Always";
-    case GLV_LOG_DEBUG: return "Debug";
-    case GLV_LOG_LEVEL_MINIMUM: return "Miniumm";
-    case GLV_LOG_ERROR: return "Error";
-    case GLV_LOG_WARNING: return "Warning";
-    case GLV_LOG_VERBOSE: return "Verbose";
-    case GLV_LOG_LEVEL_MAXIMUM: return "Maximum";
+    case VKTRACE_LOG_ALWAYS: return "Always";
+    case VKTRACE_LOG_DEBUG: return "Debug";
+    case VKTRACE_LOG_LEVEL_MINIMUM: return "Miniumm";
+    case VKTRACE_LOG_ERROR: return "Error";
+    case VKTRACE_LOG_WARNING: return "Warning";
+    case VKTRACE_LOG_VERBOSE: return "Verbose";
+    case VKTRACE_LOG_LEVEL_MAXIMUM: return "Maximum";
     default:
         return "Unknown";
     }
@@ -93,21 +93,21 @@ const char* glv_LogLevelToShortString(GlvLogLevel level)
 
 
 // For use by both tools and libraries.
-void glv_LogSetCallback(GLV_REPORT_CALLBACK_FUNCTION pCallback)
+void vktrace_LogSetCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback)
 {
     s_reportFunc = pCallback;
 }
 
-void glv_LogSetLevel(GlvLogLevel level)
+void vktrace_LogSetLevel(VktraceLogLevel level)
 {
     s_logLevel = level;
-    glv_LogDebug("Log Level = %u (%s)", level, glv_LogLevelToString(level));
+    vktrace_LogDebug("Log Level = %u (%s)", level, vktrace_LogLevelToString(level));
 }
 
-BOOL glv_LogIsLogging(GlvLogLevel level)
+BOOL vktrace_LogIsLogging(VktraceLogLevel level)
 {
 #if defined(_DEBUG)
-    if (level == GLV_LOG_DEBUG)
+    if (level == VKTRACE_LOG_DEBUG)
     {
         return TRUE;
     }
@@ -116,7 +116,7 @@ BOOL glv_LogIsLogging(GlvLogLevel level)
     return (level <= s_logLevel) ? TRUE : FALSE;
 }
 
-void LogGuts(GlvLogLevel level, const char* fmt, va_list args)
+void LogGuts(VktraceLogLevel level, const char* fmt, va_list args)
 {
 #if defined(WIN32)
         int requiredLength = _vscprintf(fmt, args) + 1;
@@ -127,7 +127,7 @@ void LogGuts(GlvLogLevel level, const char* fmt, va_list args)
         requiredLength = vsnprintf(NULL, 0, fmt, argcopy) + 1;
         va_end(argcopy);
 #endif
-    static GLV_THREAD_LOCAL BOOL logging = FALSE;
+    static VKTRACE_THREAD_LOCAL BOOL logging = FALSE;
 
     // Don't recursively log problems found during logging
     if (logging)
@@ -136,7 +136,7 @@ void LogGuts(GlvLogLevel level, const char* fmt, va_list args)
     }
     logging = TRUE;
 
-    char* message = (char*)glv_malloc(requiredLength);
+    char* message = (char*)vktrace_malloc(requiredLength);
 #if defined(WIN32)
     _vsnprintf_s(message, requiredLength, requiredLength - 1, fmt, args);
 #elif defined(PLATFORM_LINUX)
@@ -149,60 +149,60 @@ void LogGuts(GlvLogLevel level, const char* fmt, va_list args)
     }
     else
     {
-        printf("%s: %s\n", glv_LogLevelToString(level), message);
+        printf("%s: %s\n", vktrace_LogLevelToString(level), message);
     }
 
-    glv_free(message);
+    vktrace_free(message);
     logging = FALSE;
 }
 
-void glv_LogAlways(const char* format, ...)
+void vktrace_LogAlways(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-    LogGuts(GLV_LOG_ALWAYS, format, args);
+    LogGuts(VKTRACE_LOG_ALWAYS, format, args);
     va_end(args);
 }
 
-void glv_LogDebug(const char* format, ...)
+void vktrace_LogDebug(const char* format, ...)
 {
 #if defined(_DEBUG)
     va_list args;
     va_start(args, format);
-    LogGuts(GLV_LOG_DEBUG, format, args);
+    LogGuts(VKTRACE_LOG_DEBUG, format, args);
     va_end(args);
 #endif
 }
 
-void glv_LogError(const char* format, ...)
+void vktrace_LogError(const char* format, ...)
 {
-    if (glv_LogIsLogging(GLV_LOG_ERROR))
+    if (vktrace_LogIsLogging(VKTRACE_LOG_ERROR))
     {
         va_list args;
         va_start(args, format);
-        LogGuts(GLV_LOG_ERROR, format, args);
+        LogGuts(VKTRACE_LOG_ERROR, format, args);
         va_end(args);
     }
 }
 
-void glv_LogWarning(const char* format, ...)
+void vktrace_LogWarning(const char* format, ...)
 {
-    if (glv_LogIsLogging(GLV_LOG_WARNING))
+    if (vktrace_LogIsLogging(VKTRACE_LOG_WARNING))
     {
         va_list args;
         va_start(args, format);
-        LogGuts(GLV_LOG_WARNING, format, args);
+        LogGuts(VKTRACE_LOG_WARNING, format, args);
         va_end(args);
     }
 }
 
-void glv_LogVerbose(const char* format, ...)
+void vktrace_LogVerbose(const char* format, ...)
 {
-    if (glv_LogIsLogging(GLV_LOG_VERBOSE))
+    if (vktrace_LogIsLogging(VKTRACE_LOG_VERBOSE))
     {
         va_list args;
         va_start(args, format);
-        LogGuts(GLV_LOG_VERBOSE, format, args);
+        LogGuts(VKTRACE_LOG_VERBOSE, format, args);
         va_end(args);
     }
 }

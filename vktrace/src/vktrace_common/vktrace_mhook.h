@@ -28,8 +28,8 @@
 #include "vktrace_tracelog.h"
 #include <stdio.h>
 
-#define GLV_MHOOK_SETHOOK(entrypoint) Mhook_SetHook((PVOID*)&real_##entrypoint, hooked_##entrypoint); \
-    if (hookSuccess == FALSE) { glv_LogError("Failed to hook " #entrypoint); }
+#define VKTRACE_MHOOK_SETHOOK(entrypoint) Mhook_SetHook((PVOID*)&real_##entrypoint, hooked_##entrypoint); \
+    if (hookSuccess == FALSE) { vktrace_LogError("Failed to hook " #entrypoint); }
 
-#define GLV_MHOOK_UNHOOK(entrypoint) Mhook_Unhook((PVOID*)&real_##entrypoint); \
+#define VKTRACE_MHOOK_UNHOOK(entrypoint) Mhook_Unhook((PVOID*)&real_##entrypoint); \
     if (unhookSuccess == FALSE) { printf("Failed to unhook " #entrypoint "\n"); }

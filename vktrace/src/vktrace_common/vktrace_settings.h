@@ -26,20 +26,20 @@
 
 #include "vktrace_common.h"
 
-typedef enum GLV_SETTING_TYPE
+typedef enum VKTRACE_SETTING_TYPE
 {
-    GLV_SETTING_STRING,
-    GLV_SETTING_BOOL,
-    GLV_SETTING_UINT,
-    GLV_SETTING_INT
-} GLV_SETTING_TYPE;
+    VKTRACE_SETTING_STRING,
+    VKTRACE_SETTING_BOOL,
+    VKTRACE_SETTING_UINT,
+    VKTRACE_SETTING_INT
+} VKTRACE_SETTING_TYPE;
 
 // ------------------------------------------------------------------------------------------------
-typedef struct glv_SettingInfo
+typedef struct vktrace_SettingInfo
 {
     const char* pShortName;
     const char* pLongName;
-    GLV_SETTING_TYPE type;
+    VKTRACE_SETTING_TYPE type;
     union Data
     {
         void* pVoid;
@@ -58,45 +58,45 @@ typedef struct glv_SettingInfo
     } Default;
     BOOL bPrintInHelp;
     const char* pDesc;
-} glv_SettingInfo;
+} vktrace_SettingInfo;
 
-typedef struct glv_SettingGroup
+typedef struct vktrace_SettingGroup
 {
     const char* pName;
     unsigned int numSettings;
-    glv_SettingInfo* pSettings;
-} glv_SettingGroup;
+    vktrace_SettingInfo* pSettings;
+} vktrace_SettingGroup;
 
-int glv_SettingGroup_init(glv_SettingGroup* pSettingGroup, FILE *pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args);
-BOOL glv_SettingGroup_save(glv_SettingGroup* pSettingGroup, unsigned int numSettingGroups, FILE* pSettingsFile);
-void glv_SettingGroup_delete(glv_SettingGroup* pSettingGroup);
-void glv_SettingGroup_reset_defaults(glv_SettingGroup* pSettingGroup);
+int vktrace_SettingGroup_init(vktrace_SettingGroup* pSettingGroup, FILE *pSettingsFile, int argc, char* argv[], char** ppOut_remaining_args);
+BOOL vktrace_SettingGroup_save(vktrace_SettingGroup* pSettingGroup, unsigned int numSettingGroups, FILE* pSettingsFile);
+void vktrace_SettingGroup_delete(vktrace_SettingGroup* pSettingGroup);
+void vktrace_SettingGroup_reset_defaults(vktrace_SettingGroup* pSettingGroup);
 
 // Adds pSrc group to ppDestGroups if the named group is not already there,
 // or adds missing settings from pSrc into the existing group in ppDestGroups.
 // pNumDestGroups is updated if pSrc is added to ppDestGroups.
-void glv_SettingGroup_merge(glv_SettingGroup* pSrc, glv_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups);
+void vktrace_SettingGroup_merge(vktrace_SettingGroup* pSrc, vktrace_SettingGroup** ppDestGroups, unsigned int* pNumDestGroups);
 
 // Updates DestGroups with values from Src
-void glv_SettingGroup_update(glv_SettingGroup* pSrc, glv_SettingGroup* pDestGroups, unsigned int numDestGroups);
+void vktrace_SettingGroup_update(vktrace_SettingGroup* pSrc, vktrace_SettingGroup* pDestGroups, unsigned int numDestGroups);
 
 // Creates a new named group at the end of the ppSettingGroups array, and updates pNumSettingGroups.
-glv_SettingGroup* glv_SettingGroup_Create(const char* pGroupName, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+vktrace_SettingGroup* vktrace_SettingGroup_Create(const char* pGroupName, vktrace_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
 
 // Adds a STRING settingInfo to pDestGroup which holds a copy of pSrcInfo, but with a stringified value.
 // The conversion to string is necessary for memory management purposes.
-void glv_SettingGroup_Add_Info(glv_SettingInfo* pSrcInfo, glv_SettingGroup* pDestGroup);
+void vktrace_SettingGroup_Add_Info(vktrace_SettingInfo* pSrcInfo, vktrace_SettingGroup* pDestGroup);
 
-int glv_SettingGroup_Load_from_file(FILE* pFile, glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
-void glv_SettingGroup_Delete_Loaded(glv_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+int vktrace_SettingGroup_Load_from_file(FILE* pFile, vktrace_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
+void vktrace_SettingGroup_Delete_Loaded(vktrace_SettingGroup** ppSettingGroups, unsigned int* pNumSettingGroups);
 
-void glv_SettingGroup_Apply_Overrides(glv_SettingGroup* pSettingGroup, glv_SettingGroup* pOverrideGroups, unsigned int numOverrideGroups);
+void vktrace_SettingGroup_Apply_Overrides(vktrace_SettingGroup* pSettingGroup, vktrace_SettingGroup* pOverrideGroups, unsigned int numOverrideGroups);
 
-int glv_SettingGroup_init_from_cmdline(glv_SettingGroup* pSettingGroup, int argc, char* argv[], char** ppOut_remaining_args);
+int vktrace_SettingGroup_init_from_cmdline(vktrace_SettingGroup* pSettingGroup, int argc, char* argv[], char** ppOut_remaining_args);
 
-void glv_SettingGroup_print(const glv_SettingGroup* pSettingGroup);
-void glv_SettingInfo_print(const glv_SettingInfo* pSetting);
+void vktrace_SettingGroup_print(const vktrace_SettingGroup* pSettingGroup);
+void vktrace_SettingInfo_print(const vktrace_SettingInfo* pSetting);
 
-char* glv_SettingInfo_stringify_value(glv_SettingInfo* pSetting);
-BOOL glv_SettingInfo_parse_value(glv_SettingInfo* pSetting, const char* arg);
-void glv_SettingInfo_reset_default(glv_SettingInfo* pSetting);
+char* vktrace_SettingInfo_stringify_value(vktrace_SettingInfo* pSetting);
+BOOL vktrace_SettingInfo_parse_value(vktrace_SettingInfo* pSetting, const char* arg);
+void vktrace_SettingInfo_reset_default(vktrace_SettingInfo* pSetting);
