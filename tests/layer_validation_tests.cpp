@@ -348,7 +348,8 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 
     pipelineobj.SetDepthStencil(&ds_ci);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
-    pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    ASSERT_VK_SUCCESS(err);
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }

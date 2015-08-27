@@ -391,7 +391,8 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     cmdBuffer->BindDynamicDepthBoundsState(m_stateDepthBounds);
     cmdBuffer->BindDynamicStencilState(m_stateStencil);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
-    pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+    ASSERT_VK_SUCCESS(err);
     cmdBuffer->BindPipeline(pipelineobj);
     cmdBuffer->BindDescriptorSet(descriptorSet);
 }
