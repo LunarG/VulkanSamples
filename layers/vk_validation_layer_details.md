@@ -201,6 +201,7 @@ The ObjectTracker layer maintains a record of all Vulkan objects. It flags error
 
  4. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
  6. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
+ 7. Verify cube array VkImageView objects use subresourceRange.arraySize (or effective arraySize when VK_REMAINING_ARRAY_SLICES is specified) that is a multiple of 6. 
 
 ## Threading
 
