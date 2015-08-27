@@ -28,8 +28,7 @@
 #include "util.hpp"
 
 VkResult init_global_extension_properties(
-        sample_info &info,
-        layer_properties *layer_props = NULL);
+        layer_properties &layer_props);
 
 VkResult init_global_layer_properties(sample_info &info);
 VkResult init_instance(struct sample_info &info, char const*const app_short_name);
