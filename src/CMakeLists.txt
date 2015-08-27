@@ -157,4 +157,5 @@ sampleWithGLSLShaders(useglslshader)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS instance_layer_properties)
+set (S_TARGETS instance_extension_properties)
 sampleWithSingleFile()
