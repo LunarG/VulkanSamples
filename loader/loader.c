@@ -1588,7 +1588,7 @@ static void loader_get_manifest_files(const char *env_override,
             // only Linux has relative paths
             char *dir;
             // make a copy of location so it isn't modified
-            dir = alloca(strlen(location) + 1);
+            dir = loader_stack_alloc(strlen(location) + 1);
             if (dir == NULL) {
                 loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
                 return;

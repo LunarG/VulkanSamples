@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #ifndef WIN32
-#include <alloca.h>
 #include <signal.h>
 #else
 #endif
@@ -289,11 +288,8 @@ static void VKAPI StringCallback(
                strlen(pLayerPrefix) +
                strlen(pMsg) +
                50 /* other / whitespace */;
-#ifdef WIN32
-    buf = _alloca(buf_size);
-#else
-    buf = alloca(buf_size);
-#endif
+    buf = loader_stack_alloc(buf_size);
+
     snprintf(buf, buf_size, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
     callback(buf);
