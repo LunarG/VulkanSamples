@@ -36,11 +36,11 @@ typedef struct vkreplay_settings
 {
     uint32_t debugLevel;
     const char* enableLayers;
-    const char* drawStateReportLevel;
+    const char* drawStateReportFlags;
     const char* drawStateDebugAction;
-    const char* memTrackerReportLevel;
+    const char* memTrackerReportFlags;
     const char* memTrackerDebugAction;
-    const char* objectTrackerReportLevel;
+    const char* objectTrackerReportFlags;
     const char* objectTrackerDebugAction;
 } vkreplay_settings;
 

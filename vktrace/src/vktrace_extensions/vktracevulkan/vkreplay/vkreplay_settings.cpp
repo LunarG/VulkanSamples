@@ -36,11 +36,11 @@ glv_SettingInfo g_vk_settings_info[] =
 {
     { "dl", "DebugLevel", GLV_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
     { "e", "EnableLayers", GLV_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
-    { "dsrl", "DrawStateReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateReportLevel, &s_defaultVkReplaySettings.drawStateReportLevel, TRUE, "DrawState Layer reporting level"},
+    { "dsrf", "DrawStateReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateReportFlags, &s_defaultVkReplaySettings.drawStateReportFlags, TRUE, "DrawState Layer reporting level"},
     { "dsda", "DrawStateDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.drawStateDebugAction, &s_defaultVkReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},
-    { "mtrl", "MemTrackerReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerReportLevel, &s_defaultVkReplaySettings.memTrackerReportLevel, TRUE, "MemTracker Layer reporting level"},
+    { "mtrf", "MemTrackerReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerReportFlags, &s_defaultVkReplaySettings.memTrackerReportFlags, TRUE, "MemTracker Layer reporting level"},
     { "mtda", "MemTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.memTrackerDebugAction, &s_defaultVkReplaySettings.memTrackerDebugAction, TRUE, "MemTracker Layer debug action"},
-    { "dsrl", "ObjectTrackerReportLevel", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerReportLevel, &s_defaultVkReplaySettings.objectTrackerReportLevel, TRUE, "ObjectTracker Layer reporting level"},
+    { "dsrf", "ObjectTrackerReportFlags", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerReportFlags, &s_defaultVkReplaySettings.objectTrackerReportFlags, TRUE, "ObjectTracker Layer reporting level"},
     { "dsda", "ObjectTrackerDebugAction", GLV_SETTING_STRING, &g_vkReplaySettings.objectTrackerDebugAction, &s_defaultVkReplaySettings.objectTrackerDebugAction, TRUE, "ObjectTracker Layer debug action"},};
 glv_SettingGroup g_vkReplaySettingGroup =
 {
@@ -52,11 +52,11 @@ glv_SettingGroup g_vkReplaySettingGroup =
 void apply_layerSettings_overrides()
 {
 #if 0
-    setLayerOptionEnum("DrawStateReportLevel", g_vkReplaySettings.drawStateReportLevel);
+    setLayerOptionEnum("DrawStateReportFlags", g_vkReplaySettings.drawStateReportFlags);
     setLayerOptionEnum("DrawStateDebugAction", g_vkReplaySettings.drawStateDebugAction);
-    setLayerOptionEnum("MemTrackerReportLevel", g_vkReplaySettings.memTrackerReportLevel);
+    setLayerOptionEnum("MemTrackerReportFlags", g_vkReplaySettings.memTrackerReportFlags);
     setLayerOptionEnum("MemTrackerDebugAction", g_vkReplaySettings.memTrackerDebugAction);
-    setLayerOptionEnum("ObjectTrackerReportLevel", g_vkReplaySettings.objectTrackerReportLevel);
+    setLayerOptionEnum("ObjectTrackerReportFlags", g_vkReplaySettings.objectTrackerReportFlags);
     setLayerOptionEnum("ObjectTrackerDebugAction", g_vkReplaySettings.objectTrackerDebugAction);
 #endif
 }
