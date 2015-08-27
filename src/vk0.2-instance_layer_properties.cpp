@@ -24,7 +24,8 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-create and destroy Vulkan instance
+Get global layer properties to know what
+layers are available to enable at CreateInstance time.
 */
 
 #include <util_init.hpp>
@@ -34,34 +35,50 @@ int main(int argc, char **argv)
 {
     VkResult res;
     struct sample_info info;
+    uint32_t instance_layer_count;
+    VkLayerProperties *vk_props = NULL;
 
 /* VULKAN_KEY_START */
 
-    res = init_global_layer_properties(info);
+    /*
+     * It's possible, though very rare, that the number of
+     * instance layers could change. For example, installing something
+     * could include new layers that the loader would pick up
+     * between the initial query for the count and the
+     * request for VkLayerProperties. The loader indicates that
+     * by returning a VK_INCOMPLETE status and will update the
+     * the count parameter.
+     * The count parameter will be updated with the number of
+     * entries loaded into the data pointer - in case the number
+     * of layers went down or is smaller than the size given.
+     */
+    do {
+        res = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+        if (res)
+            break;
+
+        if (instance_layer_count == 0) {
+            break;
+        }
+
+        vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
+
+        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
+    } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Layers:" << std::endl;
-    for (std::vector<layer_properties>::iterator it = info.instance_layer_properties.begin();
-         it != info.instance_layer_properties.end();
-         it++) {
-        layer_properties *props = &(*it);
-        std::cout << props->properties.layerName << std::endl;
-        if (props->extensions.size() > 0) {
-            for (uint32_t j = 0; j < props->extensions.size(); j++) {
-                if (j > 0) {
-                    std::cout << ", ";
-                }
-                uint32_t major, minor, patch;
-                extract_version(props->extensions[j].specVersion, major, minor, patch);
-
-                std::cout << props->extensions[j].extName << "(" << major << "." << minor << "." << patch << ")";
-            }
-        } else {
-            std::cout << "Layer Extensions: None";
-        }
+    for (uint32_t i = 0; i < instance_layer_count; i++) {
+        VkLayerProperties *props = &vk_props[i];
+        std::cout << props->layerName << ":" << std::endl;
+        std::cout << "\tVersion: " << props->specVersion << std::endl;
+        std::cout << "\tAPI Version: " << props->implVersion << std::endl;
+        std::cout << "\tDescription: " << props->description << std::endl;
         std::cout << std::endl << std::endl;
     }
 
     std::cout << std::endl;
+
+    free(vk_props);
 
 /* VULKAN_KEY_END */
 
