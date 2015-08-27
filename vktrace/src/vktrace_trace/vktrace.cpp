@@ -47,8 +47,7 @@ glv_SettingInfo g_settings_info[] =
     { "a", "Arguments", GLV_SETTING_STRING, &g_settings.arguments, &g_default_settings.arguments, TRUE, "Cmd-line arguments to pass to trace program."},
     { "w", "WorkingDir", GLV_SETTING_STRING, &g_settings.working_dir, &g_default_settings.working_dir, TRUE, "The program's working directory."},
     { "o", "OutputTrace", GLV_SETTING_STRING, &g_settings.output_trace, &g_default_settings.output_trace, TRUE, "Path to the generated output trace file."},
-    { "u", "UniqueOutput", GLV_SETTING_BOOL, &g_settings.unique_output, &g_default_settings.unique_output, TRUE, "Generate unique output trace filenames if the specified one already exists."},
-    { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Comma separated list of frame numbers on which to take a screen snapsot."},
+    { "s", "ScreenShot", GLV_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Comma separated list of frame numbers on which to take a screen snapshot."},
     { "l0", "TraceLibrary0", GLV_SETTING_STRING, &g_settings.trace_library[0], &g_default_settings.trace_library[0], TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l1", "TraceLibrary1", GLV_SETTING_STRING, &g_settings.trace_library[1], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "l2", "TraceLibrary2", GLV_SETTING_STRING, &g_settings.trace_library[2], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
@@ -198,41 +197,6 @@ bool InjectTracersIntoProcess(glv_process_info* pInfo)
     return bRecordingThreadsCreated;
 }
 
-char* create_usable_filename(char* output_trace)
-{
-    char * result = glv_allocate_and_copy(output_trace);
-
-    if (g_settings.unique_output == TRUE)
-    {
-        // user has specified to force unique output trace filenames.
-        glv_LogVerbose("Looking for a unique filename...", result);
-        char *pExtension = strrchr(output_trace, '.');
-        char *basename = glv_allocate_and_copy_n(output_trace, (int) ((pExtension == NULL) ? strlen(output_trace) : pExtension - output_trace));
-
-        unsigned int serverIndex = 0;
-        struct stat fileStats;
-        while (stat(result, &fileStats) == 0)
-        {
-            // File already exists, so find a new filename
-            char num[16];
-#ifdef PLATFORM_LINUX
-            snprintf(num, 16, "%u", serverIndex);
-#elif defined(WIN32)
-            _snprintf_s(num, 16, _TRUNCATE, "%u", serverIndex);
-#endif
-            // free memory from old name before allocating a new one.
-            glv_free(result);
-            result = glv_copy_and_append(basename, num, pExtension);
-            serverIndex++;
-        }
-        glv_free(basename);
-    }
-
-    glv_LogAlways("Tracing to file: '%s'", result);
-
-    return result;
-}
-
 void loggingCallback(GlvLogLevel level, const char* pMessage)
 {
     switch(level)
@@ -268,7 +232,6 @@ int main(int argc, char* argv[])
     memset(&g_default_settings, 0, sizeof(glvtrace_settings));
     g_default_settings.output_trace = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "vktrace_out.vktrace");
     g_default_settings.print_trace_messages = FALSE;
-    g_default_settings.unique_output = FALSE;
     g_default_settings.screenshotList = NULL;
 #if defined(WIN32)
     g_default_settings.trace_library[0] = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "vulkan_trace.dll");
@@ -378,7 +341,7 @@ int main(int argc, char* argv[])
     }
 
 
-
+    unsigned int serverIndex = 0;
     do {
         // Create and start the process or run in server mode
 
@@ -391,9 +354,19 @@ int main(int argc, char* argv[])
             procInfo.processArgs = glv_allocate_and_copy(g_settings.arguments);
             procInfo.fullProcessCmdLine = glv_copy_and_append(g_settings.program, " ", g_settings.arguments);
             procInfo.workingDirectory = glv_allocate_and_copy(g_settings.working_dir);
-        }
-
-        procInfo.traceFilename = create_usable_filename(g_settings.output_trace);
+            procInfo.traceFilename = glv_allocate_and_copy(g_settings.output_trace);
+        } else
+        {
+            char *pExtension = strrchr(g_settings.output_trace, '.');
+            char *basename = glv_allocate_and_copy_n(g_settings.output_trace, (int) ((pExtension == NULL) ? strlen(g_settings.output_trace) : pExtension - g_settings.output_trace));
+            char num[16];
+#ifdef PLATFORM_LINUX
+            snprintf(num, 16, "%u", serverIndex);
+#elif defined(WIN32)
+            _snprintf_s(num, 16, _TRUNCATE, "%u", serverIndex);
+#endif
+            procInfo.traceFilename = glv_copy_and_append(basename, num, pExtension);
+         }
 
         procInfo.parentThreadId = glv_platform_get_thread_id();
 
@@ -467,6 +440,7 @@ int main(int argc, char* argv[])
         }
 
         glv_process_info_delete(&procInfo);
+        serverIndex++;
     } while (g_settings.program == NULL);
 
     glv_SettingGroup_delete(&g_settingGroup);
