@@ -13,6 +13,8 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_wsi_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_wsi_device_swapchain.c)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-h vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-c vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.c)
 
 if (WIN32)
     # Put vulkan_trace.dll in the same directory as vktrace.exe
@@ -27,12 +29,14 @@ set(SRC_LIST
     vktrace_lib_trace.c
     codegen/vktrace_vk_vk.c
     codegen/vktrace_vk_vk_debug_report_lunarg.c
+    codegen/vktrace_vk_vk_debug_marker_lunarg.c
     codegen/vktrace_vk_vk_wsi_swapchain.c
     codegen/vktrace_vk_vk_wsi_device_swapchain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_marker_lunarg_struct_size_helper.c
 )
 
 set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE C)
@@ -41,17 +45,20 @@ set (HDR_LIST
     vktrace_lib_helpers.h
     codegen/vktrace_vk_vk.h
     codegen/vktrace_vk_vk_debug_report_lunarg.h
+    codegen/vktrace_vk_vk_debug_marker_lunarg.h
     codegen/vktrace_vk_vk_wsi_swapchain.h
     codegen/vktrace_vk_vk_wsi_device_swapchain.h
     ${CODEGEN_GLVVK_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_packets.h
     ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_debug_report_lunarg_packets.h
+    ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_debug_marker_lunarg_packets.h
     ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_wsi_swapchain_packets.h
     ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_wsi_device_swapchain_packets.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_struct_size_helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_swapchain_struct_size_helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_wsi_device_swapchain_struct_size_helper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_report_lunarg_struct_size_helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_debug_marker_lunarg_struct_size_helper.h
 )
 
 include_directories(

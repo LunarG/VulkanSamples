@@ -1136,9 +1136,35 @@ debug_report_lunarg = Extension(
              Param("VkDbgMsgCallback", "msgCallback")]),
     ],
 )
+debug_marker_lunarg = Extension(
+    name="VK_DEBUG_MARKER_LunarG",
+    headers=["vk_debug_marker_lunarg.h"],
+    objects=[],
+    protos=[
+        Proto("void", "CmdDbgMarkerBegin",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("const char*", "pMarker")]),
 
+        Proto("void", "CmdDbgMarkerEnd",
+            [Param("VkCmdBuffer", "cmdBuffer")]),
+
+        Proto("VkResult", "DbgSetObjectTag",
+            [Param("VkDevice", "device"),
+             Param("VkDbgObjectType", "objType"),
+             Param("uint64_t", "object"),
+             Param("size_t", "tagSize"),
+             Param("const void*", "pTag")]),
+
+        Proto("VkResult", "DbgSetObjectName",
+            [Param("VkDevice", "device"),
+             Param("VkDbgObjectType", "objType"),
+             Param("uint64_t", "object"),
+             Param("size_t", "nameSize"),
+             Param("const char*", "pName")]),
+    ],
+)
 extensions = [core, wsi_swapchain, wsi_device_swapchain]
-extensions_all = [core, wsi_swapchain, wsi_device_swapchain, debug_report_lunarg]
+extensions_all = [core, wsi_swapchain, wsi_device_swapchain, debug_report_lunarg, debug_marker_lunarg]
 object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",

@@ -1277,7 +1277,7 @@ class StructWrapperGen:
             sh_funcs.append('%s}' % (indent))
             sh_funcs.append("%sreturn structSize;\n}" % (indent))
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        if 'wsi' not in self.header_filename and 'debug_report' not in self.header_filename:
+        if 'wsi' not in self.header_filename and '_debug_' not in self.header_filename:
             for follow_chain in [True, False]:
                 sh_funcs.append('%s' % self.lineinfo.get())
                 if follow_chain:

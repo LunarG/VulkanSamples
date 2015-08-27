@@ -18,6 +18,7 @@ endif()
     set(GLV_VULKAN_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
     set(GLV_VULKAN_HEADER ${CMAKE_SOURCE_DIR}/include/vulkan.h)
     set(GLV_VULKAN_DEBUG_REPORT_LUNARG_HEADER ${GLV_VULKAN_INCLUDE_DIR}/vk_debug_report_lunarg.h)
+    set(GLV_VULKAN_DEBUG_MARKER_LUNARG_HEADER ${GLV_VULKAN_INCLUDE_DIR}/vk_debug_marker_lunarg.h)
     set(GLV_VULKAN_WSI_SWAPCHAIN_HEADER ${GLV_VULKAN_INCLUDE_DIR}/vk_wsi_swapchain.h)
     set(GLV_VULKAN_WSI_DEVICE_SWAPCHAIN_HEADER ${GLV_VULKAN_INCLUDE_DIR}/vk_wsi_device_swapchain.h)
 #else()
@@ -69,6 +70,10 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DRIVER_DIR}/vk_helper.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${GLV_VULKAN_DEBUG_REPORT_LUNARG_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${GLV_VULKAN_CODEGEN_UTILS})
 #execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DRIVER_DIR}/vk_helper.py --gen_enum_string_helper ${GLV_VULKAN_DEBUG_REPORT_LUNARG_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${GLV_VULKAN_CODEGEN_UTILS})
 
+# generate files for vk_debug_marker_lunarg.h
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${GLV_VULKAN_DEBUG_MARKER_LUNARG_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${GLV_VULKAN_CODEGEN_UTILS})
+#execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DRIVER_DIR}/vk_helper.py --gen_enum_string_helper ${GLV_VULKAN_DEBUG_MARKER_LUNARG_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${GLV_VULKAN_CODEGEN_UTILS})
+
 # Run a codegen script to generate glave-specific vulkan utils
 set(CODEGEN_GLVVK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/codegen_vktrace_utils")
 file(MAKE_DIRECTORY ${CODEGEN_GLVVK_DIR})
@@ -77,6 +82,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-packets vk_wsi_swapchain OUTPUT_FILE ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_wsi_swapchain_packets.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-packets vk_wsi_device_swapchain OUTPUT_FILE ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_wsi_device_swapchain_packets.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-packets vk_debug_report_lunarg OUTPUT_FILE ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_debug_report_lunarg_packets.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${GLV_VULKAN_DIR}/vktrace_generate.py glave-ext-trace-packets vk_debug_marker_lunarg OUTPUT_FILE ${CODEGEN_GLVVK_DIR}/vktrace_vk_vk_debug_marker_lunarg_packets.h)
 
 # Directories which actually contain vulkan-specific glave plugins.
 add_subdirectory(vkreplay/)
