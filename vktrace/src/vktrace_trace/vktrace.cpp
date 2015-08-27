@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
 
     // setup defaults
     memset(&g_default_settings, 0, sizeof(glvtrace_settings));
-    g_default_settings.output_trace = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "vktrace_out.trace");
+    g_default_settings.output_trace = glv_copy_and_append(execDir, GLV_PATH_SEPARATOR, "vktrace_out.vktrace");
     g_default_settings.print_trace_messages = FALSE;
     g_default_settings.unique_output = FALSE;
     g_default_settings.screenshotList = NULL;
@@ -327,10 +327,10 @@ int main(int argc, char* argv[])
         else
         {
             size_t len = strlen(g_settings.output_trace);
-            if (strncmp(&g_settings.output_trace[len-6], ".trace", 6) != 0)
+            if (strncmp(&g_settings.output_trace[len-8], ".vktrace", 8) != 0)
             {
-                // output trace filename does not end in .trace
-                glv_LogError("Output trace file specified with -o parameter must have a '.trace' extension.");
+                // output trace filename does not end in .vktrace
+                glv_LogError("Output trace file specified with -o parameter must have a '.vktrace' extension.");
                 validArgs = FALSE;
             }
         }

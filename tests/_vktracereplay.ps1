@@ -36,9 +36,9 @@ $Env:PATH = $pwd
 $Env:VK_LAYER_PATH = $pwd
 
 # Do a trace and replay
-& vktrace -o c01.trace -s 1 -p cube -a "--c 10" -l0 vktrace.dll > trace.sout 2> trace.serr
+& vktrace -o c01.vktrace -s 1 -p cube -a "--c 10" -l0 vktrace.dll > trace.sout 2> trace.serr
 rename-item -path 1.ppm -newname 1-trace.ppm
-& vkreplay  -s 1 -t  c01.trace  > replay.sout 2> replay.serr
+& vkreplay  -s 1 -t  c01.vktrace  > replay.sout 2> replay.serr
 rename-item -path 1.ppm -newname 1-replay.ppm
 
 # Force a failure - for testing this script
