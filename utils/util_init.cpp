@@ -46,17 +46,14 @@ using namespace std;
  * TODO: function description here
  */
 VkResult init_global_extension_properties(
-        struct sample_info &info,
-        layer_properties *layer_props)
+        layer_properties &layer_props)
 {
     VkExtensionProperties *instance_extensions;
     uint32_t instance_extension_count;
     VkResult res;
     char *layer_name = NULL;
 
-    if (layer_props) {
-        layer_name = layer_props->properties.layerName;
-    }
+    layer_name = layer_props.properties.layerName;
 
     do {
         res = vkGetGlobalExtensionProperties(layer_name, &instance_extension_count, NULL);
@@ -67,13 +64,8 @@ VkResult init_global_extension_properties(
             return VK_SUCCESS;
         }
 
-        if (layer_props) {
-            layer_props->extensions.reserve(instance_extension_count);
-            instance_extensions = layer_props->extensions.data();
-        } else {
-            info.instance_extension_properties.reserve(instance_extension_count);
-            instance_extensions = info.instance_extension_properties.data();
-        }
+        layer_props.extensions.reserve(instance_extension_count);
+        instance_extensions = layer_props.extensions.data();
         res = vkGetGlobalExtensionProperties(
                   layer_name,
                   &instance_extension_count,
@@ -124,8 +116,7 @@ VkResult init_global_layer_properties(struct sample_info &info)
     for (uint32_t i = 0; i < instance_layer_count; i++) {
         layer_properties layer_props;
         layer_props.properties = vk_props[i];
-        res = init_global_extension_properties(
-                  info, &layer_props);
+        res = init_global_extension_properties(layer_props);
         if (res)
             return res;
         info.instance_layer_properties.push_back(layer_props);
