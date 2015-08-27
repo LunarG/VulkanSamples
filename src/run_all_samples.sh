@@ -35,6 +35,8 @@ echo "Vertex Buffer"
 ./vk0.2-vertexbuffer
 echo "Dynamic State"
 ./vk0.2-dynamicstate
+echo "Alloc Descriptor Sets"
+./vk0.2-allocdescriptorsets
 echo "Use GLSL Shader"
 ./vk0.2-useglslshader
 echo "Use SPIR-V Shader"

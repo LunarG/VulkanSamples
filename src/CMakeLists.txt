@@ -144,7 +144,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initwsi initTexture uniformbuffer
     descriptor_pipeline_layouts initcommandbuffer
     initrenderpass initframebuffers vertexbuffer
-    dynamicstate
+    dynamicstate allocdescriptorsets
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback)
