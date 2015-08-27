@@ -391,19 +391,9 @@ int main(int argc, char* argv[])
             if (InjectTracersIntoProcess(&procInfo) == FALSE)
             {
                 glv_LogError("Failed to setup tracer communication threads.");
+                return -1;
             }
-            else
-            {
-                // create trace file before injecting tracers
-                procInfo.pTraceFile = glv_write_trace_file_header(&procInfo);
 
-                if (procInfo.pTraceFile == NULL)
-                {
-                    // writing trace file generated an error, no sense in continuing.
-                    glv_process_info_delete(&procInfo);
-                    return -1;
-                }
-            }
         }
 
 #if defined(PLATFORM_LINUX)

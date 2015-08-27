@@ -114,6 +114,16 @@ GLV_THREAD_ROUTINE_RETURN_TYPE Process_RunRecordTraceThread(LPVOID _threadInfo)
         return 1;
     }
 
+    // create trace file
+    pInfo->pProcessInfo->pTraceFile = glv_write_trace_file_header(pInfo->pProcessInfo);
+
+    if (pInfo->pProcessInfo->pTraceFile == NULL) {
+        // writing trace file generated an error, no sense in continuing.
+        glv_LogError("Error cannot create trace file and write header.");
+        glv_process_info_delete(pInfo->pProcessInfo);
+        return 1;
+    }
+
     FileLike* fileLikeSocket = glv_FileLike_create_msg(pMessageStream);
     unsigned int total_packet_count = 0;
     glv_trace_packet_header* pHeader = NULL;
