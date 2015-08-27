@@ -2139,7 +2139,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
             (struct nulldrv_dynamic_rs_depth_bias **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthsState(
+ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(
     VkDevice                                  device,
     VkDynamicLineWidthState                   dynamicLineWidthState)
 {
