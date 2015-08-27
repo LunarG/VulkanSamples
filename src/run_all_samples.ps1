@@ -44,6 +44,8 @@ echo "Vertex Buffer"
 & $dPath\vk0.2-vertexbuffer
 echo "Dynamic State"
 & $dPath\vk0.2-dynamicstate
+echo "Alloc Descriptor Sets"
+& $dPath\vk0.2-allocdescriptorsets
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"

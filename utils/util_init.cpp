@@ -1202,3 +1202,45 @@ void init_dynamic_state(struct sample_info &info)
     assert(!res);
 
 }
+void init_descriptor_set(struct sample_info &info)
+{
+    /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
+
+    VkResult res;
+
+    VkDescriptorTypeCount type_count[1];
+    type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    type_count[0].count = 1;
+
+    VkDescriptorPoolCreateInfo descriptor_pool = {};
+    descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool.pNext = NULL;
+    descriptor_pool.count = 1;
+    descriptor_pool.pTypeCount = type_count;
+
+    res = vkCreateDescriptorPool(info.device,
+        VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
+        &descriptor_pool, &info.desc_pool);
+    assert(!res);
+
+    uint32_t count;
+    res = vkAllocDescriptorSets(info.device, info.desc_pool,
+            VK_DESCRIPTOR_SET_USAGE_STATIC,
+            1, &info.desc_layout,
+            &info.desc_set, &count);
+    assert(!res && count == 1);
+
+    VkWriteDescriptorSet writes[1];
+
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].pNext = NULL;
+    writes[0].destSet = info.desc_set;
+    writes[0].count = 1;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].pDescriptors = &info.uniform_data.desc;
+    writes[0].destArrayElement = 0;
+    writes[0].destBinding = 0;
+
+    res = vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
+    assert(!res);
+}
