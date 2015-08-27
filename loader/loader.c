@@ -146,6 +146,33 @@ void loader_heap_free(
     free(pMem);
 }
 
+void* loader_heap_realloc(
+    struct loader_instance     *instance,
+    void                       *pMem,
+    size_t                      orig_size,
+    size_t                      size,
+    VkSystemAllocType           alloc_type)
+{
+    if (pMem == NULL  || orig_size == 0)
+        return loader_heap_alloc(instance, size, alloc_type);
+    if (size == 0) {
+        loader_heap_free(instance, pMem);
+        return NULL;
+    }
+    if (instance && instance->alloc_callbacks.pfnAlloc) {
+        if (size <= orig_size) {
+            memset(((uint8_t *)pMem) + size,  0, orig_size - size);
+            return pMem;
+        }
+        void *new_ptr = instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_type);
+        if (!new_ptr)
+            return NULL;
+        memcpy(new_ptr, pMem, orig_size);
+        instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
+    }
+    return realloc(pMem, size);
+}
+
 static void loader_log(VkFlags msg_type, int32_t msg_code,
     const char *format, ...)
 {
