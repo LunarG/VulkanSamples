@@ -254,6 +254,7 @@ static VkResult x11_get_surface_properties(
     pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
     pSurfaceProperties->maxImageArraySize = 0;
     pSurfaceProperties->supportedUsageFlags =
+        VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     return VK_SUCCESS;
