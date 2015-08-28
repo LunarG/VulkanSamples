@@ -1705,6 +1705,20 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
     return 1;
 }
 
+void* VKAPI myalloc(
+    void*                           pUserData,
+    size_t                          size,
+    size_t                          alignment,
+    VkSystemAllocType               allocType)
+{
+    return malloc(size);
+}
+void VKAPI myfree(
+    void*                           pUserData,
+    void*                           pMem)
+{
+    return free(pMem);
+}
 static void demo_init_vk(struct demo *demo)
 {
     VkResult err;
@@ -1785,11 +1799,16 @@ static void demo_init_vk(struct demo *demo)
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
     };
+    VkAllocCallbacks cb = {
+        .pUserData = NULL,
+        .pfnAlloc = myalloc,
+        .pfnFree = myfree,
+    };
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app,
-        .pAllocCb = NULL,
+        .pAllocCb = &cb,
         .layerCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) layer_names,
         .extensionCount = enabled_extension_count,
