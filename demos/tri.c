@@ -451,11 +451,11 @@ static void demo_draw(struct demo *demo)
     // return codes
     assert(!err);
 
-    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
-    assert(!err);
-
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
+
+    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+    assert(!err);
 }
 
 static void demo_prepare_buffers(struct demo *demo)
