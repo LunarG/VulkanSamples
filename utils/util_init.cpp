@@ -1257,3 +1257,91 @@ void init_descriptor_set(struct sample_info &info)
     res = vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
     assert(!res);
 }
+
+void init_shaders(struct sample_info &info)
+{
+    VkResult res;
+    bool retVal;
+
+    static const char *vertShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform bufferVals {\n"
+            "    mat4 mvp;\n"
+            "} myBufferVals;\n"
+            "layout (location = 0) in vec4 pos;\n"
+            "layout (location = 1) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   gl_Position = myBufferVals.mvp * pos;\n"
+            "   gl_Position.y = -gl_Position.y;\n"
+            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
+            "}\n";
+
+    static const char *fragShaderText =
+            "#version 140\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = color;\n"
+            "}\n";
+
+    std::vector<unsigned int> vtx_spv;
+    info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
+    info.shaderStages[0].pNext  = NULL;
+    info.shaderStages[0].pSpecializationInfo = NULL;
+
+    init_glslang();
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX, vertShaderText, vtx_spv);
+    assert(retVal);
+
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.flags = 0;
+    moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.pCode = vtx_spv.data();
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.vert_shader_module);
+    assert(!res);
+
+    VkShaderCreateInfo shaderCreateInfo;
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    shaderCreateInfo.pNext = NULL;
+    shaderCreateInfo.flags = 0;
+    shaderCreateInfo.module = info.vert_shader_module;
+    shaderCreateInfo.pName = "main";
+    res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
+    assert(!res);
+
+    std::vector<unsigned int> frag_spv;
+    info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
+    info.shaderStages[1].pNext  = NULL;
+    info.shaderStages[1].pSpecializationInfo = NULL;
+
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT, fragShaderText, frag_spv);
+    assert(retVal);
+
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.flags = 0;
+    moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.pCode = frag_spv.data();
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.frag_shader_module);
+    assert(!res);
+
+    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
+    shaderCreateInfo.pNext = NULL;
+    shaderCreateInfo.flags = 0;
+    shaderCreateInfo.module = info.frag_shader_module;
+    shaderCreateInfo.pName = "main";
+    res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
+    assert(!res);
+
+    finalize_glslang();
+}
