@@ -28,7 +28,7 @@ function(sampleWithGLSLShaders SNAME)
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}-frag.spv)
     endforeach(SFILE)
     add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp ${SHADER_FILES})
-    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME})
+    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} pthread)
 endfunction(sampleWithGLSLShaders)
 
 # function to build a single-source-file sample that uses spirv shaders
@@ -42,7 +42,7 @@ function(sampleWithSPIRVShaders SNAME)
         set(SHADER_FILES ${SHADER_FILES} ${SHADER_DIR}/${SFILE}.spv)
     endforeach(SFILE)
     add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp ${SHADER_FILES})
-    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME})
+    target_link_libraries(${SAMPLE_NAME} ${VULKAN_LOADER} ${UTILS_NAME} ${GLSLANG_LIBRARIES} pthread)
 endfunction(sampleWithSPIRVShaders)
 
 # function to build a simple single-source-file sample
@@ -53,10 +53,10 @@ function(sampleWithSingleFile)
         set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${XCB_LIBRARIES} ${VULKAN_LOADER})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} pthread)
         else()
             add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${VULKAN_LOADER} ${WINLIBS})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
         endif()
     endforeach(TARG)
 endfunction(sampleWithSingleFile)
@@ -129,6 +129,43 @@ else()
             VERBATIM
             )
     endif()
+endif()
+
+set(GLSLANG_LIBRARIES
+    glslang
+    OGLCompiler
+    OSDependent
+    SPIRV
+    )
+
+add_library(glslang     STATIC IMPORTED)
+add_library(OGLCompiler STATIC IMPORTED)
+add_library(OSDependent STATIC IMPORTED)
+add_library(SPIRV       STATIC IMPORTED)
+
+# On Windows, we must pair Debug and Release appropriately
+if (WIN32)
+   set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/Release/glslang.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/Debug/glslang.lib")
+   set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Release/OGLCompiler.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Debug/OGLCompiler.lib")
+   set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Release/OSDependent.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Debug/OSDependent.lib")
+   set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/SPIRV/Release/SPIRV.lib"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/SPIRV/Debug/SPIRV.lib")
+else ()
+   set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libglslang.a")
+   set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOGLCompiler.a")
+   set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libOSDependent.a")
+   set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/install/lib/libSPIRV.a")
 endif()
 
 #

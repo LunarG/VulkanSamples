@@ -1,7 +1,7 @@
 file(GLOB UTILS_SOURCE *.cpp)
 
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
-include_directories( ${SAMPLES_DATA_DIR} )
+include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} )
 
 if(WIN32)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
@@ -12,3 +12,4 @@ else()
 endif()
 
 add_library(${UTILS_NAME} STATIC ${UTILS_SOURCE})
+
