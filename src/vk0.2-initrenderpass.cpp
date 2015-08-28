@@ -104,10 +104,8 @@ int main(int argc, char **argv)
     rp_info.dependencyCount = 0;
     rp_info.pDependencies = NULL;
 
-    VkResult err;
-
-    err = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
-    assert(!err);
+    res = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
+    assert(!res);
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);
