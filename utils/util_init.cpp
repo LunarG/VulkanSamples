@@ -126,6 +126,91 @@ VkResult init_global_layer_properties(struct sample_info &info)
     return res;
 }
 
+VkResult init_device_extension_properties(
+        struct sample_info &info,
+        layer_properties &layer_props)
+{
+    VkExtensionProperties *device_extensions;
+    uint32_t device_extension_count;
+    VkResult res;
+    char *layer_name = NULL;
+
+    layer_name = layer_props.properties.layerName;
+
+    do {
+        res = vkGetPhysicalDeviceExtensionProperties(
+                  info.gpu,
+                  layer_name, &device_extension_count, NULL);
+        if (res)
+            return res;
+
+        if (device_extension_count == 0) {
+            return VK_SUCCESS;
+        }
+
+        layer_props.extensions.reserve(device_extension_count);
+        device_extensions = layer_props.extensions.data();
+        res = vkGetPhysicalDeviceExtensionProperties(
+                  info.gpu,
+                  layer_name,
+                  &device_extension_count,
+                  device_extensions);
+    } while (res == VK_INCOMPLETE);
+
+    return res;
+}
+
+/*
+ * TODO: function description here
+ */
+VkResult init_device_layer_properties(struct sample_info &info)
+{
+    uint32_t device_layer_count;
+    VkLayerProperties *vk_props = NULL;
+    VkResult res;
+
+    /*
+     * It's possible, though very rare, that the number of
+     * instance layers could change. For example, installing something
+     * could include new layers that the loader would pick up
+     * between the initial query for the count and the
+     * request for VkLayerProperties. The loader indicates that
+     * by returning a VK_INCOMPLETE status and will update the
+     * the count parameter.
+     * The count parameter will be updated with the number of
+     * entries loaded into the data pointer - in case the number
+     * of layers went down or is smaller than the size given.
+     */
+    do {
+        res = vkGetPhysicalDeviceLayerProperties(info.gpu, &device_layer_count, NULL);
+        if (res)
+            return res;
+
+        if (device_layer_count == 0) {
+            return VK_SUCCESS;
+        }
+
+        vk_props = (VkLayerProperties *) realloc(vk_props, device_layer_count * sizeof(VkLayerProperties));
+
+        res = vkGetPhysicalDeviceLayerProperties(info.gpu, &device_layer_count, vk_props);
+    } while (res == VK_INCOMPLETE);
+
+    /*
+     * Now gather the extension list for each instance layer.
+     */
+    for (uint32_t i = 0; i < device_layer_count; i++) {
+        layer_properties layer_props;
+        layer_props.properties = vk_props[i];
+        res = init_device_extension_properties(info, layer_props);
+        if (res)
+            return res;
+        info.device_layer_properties.push_back(layer_props);
+    }
+    free(vk_props);
+
+    return res;
+}
+
 VkResult init_instance(struct sample_info &info, char const*const app_short_name)
 {
     VkApplicationInfo app_info = {};
