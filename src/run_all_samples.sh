@@ -3,10 +3,18 @@ echo "Instance"
 ./vk0.2-instance
 echo "Instance Layer Properties"
 ./vk0.2-instance_layer_properties
+echo "Instance Extension Properties"
+./vk0.2-instance_extension_properties
+echo "Instance Layer ExtensionProperties"
+./vk0.2-instance_layer_extension_properties
+echo "Create Debug Message Callback"
+./vk0.2-dbgcreatemsgcallback
 echo "Enumerate"
 ./vk0.2-enumerate
 echo "Device"
 ./vk0.2-device
+echo "Enable Validation and Debug Message Callback"
+./vk0.2-enable_validation_with_callback
 echo "Init WSI"
 ./vk0.2-initwsi
 echo "Init Command Buffer"
