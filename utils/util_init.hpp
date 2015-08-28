@@ -58,6 +58,7 @@ void init_framebuffers(struct sample_info &info);
 void init_dynamic_state(struct sample_info &info);
 void init_descriptor_set(struct sample_info &info);
 void init_shaders(struct sample_info &info);
+void init_pipeline(struct sample_info &info);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);
