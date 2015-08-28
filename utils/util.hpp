@@ -122,14 +122,14 @@ struct sample_info {
     bool prepared;
     bool use_staging_buffer;
 
-    std::vector<char *> instance_layer_names;
-    std::vector<char *> instance_extension_names;
+    std::vector<const char *> instance_layer_names;
+    std::vector<const char *> instance_extension_names;
     std::vector<layer_properties> instance_layer_properties;
     std::vector<VkExtensionProperties> instance_extension_properties;
     VkInstance inst;
 
-    std::vector<char *> device_layer_names;
-    std::vector<char *> device_extension_names;
+    std::vector<const char *> device_layer_names;
+    std::vector<const char *> device_extension_names;
     std::vector<layer_properties> device_layer_properties;
     std::vector<VkExtensionProperties> device_extension_properties;
     VkPhysicalDevice gpu;
