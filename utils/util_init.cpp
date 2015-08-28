@@ -1033,13 +1033,12 @@ void init_framebuffers(struct sample_info &info)
     fb_info.height = info.height;
     fb_info.layers = 1;
 
-    VkResult err;
     uint32_t i;
 
     for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
         attachments[0].view = info.buffers[i].view;
-        err = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
-        assert(!err);
+        res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
+        assert(!res);
     }
 }
 
@@ -1202,6 +1201,7 @@ void init_dynamic_state(struct sample_info &info)
     assert(!res);
 
 }
+
 void init_descriptor_set(struct sample_info &info)
 {
     /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
