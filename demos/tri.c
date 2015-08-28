@@ -542,6 +542,7 @@ static void demo_prepare_buffers(struct demo *demo)
             .width = swapChainExtent.width,
             .height = swapChainExtent.height,
         },
+        .imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .preTransform = preTransform,
         .imageArraySize = 1,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,

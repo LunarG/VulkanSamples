@@ -873,6 +873,9 @@ void TestFrameworkVkPresent::CreateSwapChain()
         preTransform = surfProperties.currentTransform;
     }
 
+    // We want to blit to the swap chain, ensure the driver supports it.  Color is always supported, per WSI spec.
+    assert((surfProperties.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) != 0);
+
     VkSwapChainCreateInfoWSI swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
     swap_chain.pNext = NULL;
@@ -882,7 +885,6 @@ void TestFrameworkVkPresent::CreateSwapChain()
     swap_chain.imageColorSpace = m_color_space;
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
-    // Workaround: Some implementations need color attachment for blit targets
     swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.preTransform = preTransform;
