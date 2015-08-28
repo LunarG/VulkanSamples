@@ -297,6 +297,57 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
     return res;
 }
 
+VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc)
+{
+    VkResult res;
+    VkDbgMsgCallback msg_callback;
+
+    info.dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgCreateMsgCallback");
+    if (!info.dbgCreateMsgCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkDbgCreateMsgCallback function." << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    std::cout << "Got dbgCreateMsgCallback function\n";
+
+    info.dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgDestroyMsgCallback");
+    if (!info.dbgDestroyMsgCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkDbgDestroyMsgCallback function." << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    res = info.dbgCreateMsgCallback(
+              info.inst,
+              VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+              dbgFunc, NULL,
+              &msg_callback);
+    switch (res) {
+    case VK_SUCCESS:
+        std::cout << "Successfully created message calback object\n";
+        info.msg_callbacks.push_back(msg_callback);
+        break;
+    case VK_ERROR_INVALID_POINTER:
+        std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+        break;
+    case VK_ERROR_OUT_OF_HOST_MEMORY:
+        std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+        break;
+    default:
+        std::cout << "dbgCreateMsgCallback: unknown failure\n" << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+        break;
+    }
+}
+
+void destroy_debug_msg_callback(struct sample_info &info)
+{
+    while (info.msg_callbacks.size() > 0) {
+        info.dbgDestroyMsgCallback(info.inst, info.msg_callbacks.back());
+        info.msg_callbacks.pop_back();
+    }
+}
+
 void init_connection(struct sample_info &info)
 {
 #ifndef _WIN32
