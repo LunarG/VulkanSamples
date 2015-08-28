@@ -1085,7 +1085,7 @@ void init_vertex_buffer(struct sample_info &info)
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = sizeof(info.MVP);
+    buf_info.size = sizeof(g_vb_solid_face_colors_Data);
     res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
     assert(!res);
 
@@ -1133,6 +1133,19 @@ void init_vertex_buffer(struct sample_info &info)
     assert(!res);
 
     info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
+
+    info.vi_binding.binding = 0;
+    info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
+    info.vi_binding.strideInBytes = sizeof(g_vb_solid_face_colors_Data[0]);
+
+    info.vi_attribs[0].binding = 0;
+    info.vi_attribs[0].location = 0;
+    info.vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[0].offsetInBytes = 0;
+    info.vi_attribs[1].binding = 0;
+    info.vi_attribs[1].location = 1;
+    info.vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[1].offsetInBytes = 16;
 }
 
 void init_dynamic_state(struct sample_info &info)

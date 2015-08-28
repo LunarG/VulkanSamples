@@ -118,6 +118,20 @@ int main(int argc, char **argv)
 
     info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
 
+    /* We won't use these here, but we will need this info when creating the pipeline */
+    info.vi_binding.binding = 0;
+    info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
+    info.vi_binding.strideInBytes = sizeof(g_vb_solid_face_colors_Data[0]);
+
+    info.vi_attribs[0].binding = 0;
+    info.vi_attribs[0].location = 0;
+    info.vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[0].offsetInBytes = 0;
+    info.vi_attribs[1].binding = 0;
+    info.vi_attribs[1].location = 1;
+    info.vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[1].offsetInBytes = 16;
+
     VkCmdBufferBeginInfo cmd_begin_info = {};
     cmd_begin_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_begin_info.pNext = NULL;
