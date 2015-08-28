@@ -210,6 +210,30 @@ VkResult init_device_layer_properties(struct sample_info &info)
 
     return res;
 }
+/*
+ * Return 1 (true) if all layer names specified in check_names
+ * can be found in given layer properties.
+ */
+VkBool32 demo_check_layers(
+        const std::vector<layer_properties> &layer_props,
+        const std::vector<const char *> &layer_names)
+{
+    uint32_t check_count = layer_names.size();
+    uint32_t layer_count = layer_props.size();
+    for (uint32_t i = 0; i < check_count; i++) {
+        VkBool32 found = 0;
+        for (uint32_t j = 0; j < layer_count; j++) {
+            if (!strcmp(layer_names[i], layer_props[j].properties.layerName)) {
+                found = 1;
+            }
+        }
+        if (!found) {
+            std::cout << "Cannot find layer: " <<  layer_names[i] << std::endl;
+            return 0;
+        }
+    }
+    return 1;
+}
 
 VkResult init_instance(struct sample_info &info, char const*const app_short_name)
 {
