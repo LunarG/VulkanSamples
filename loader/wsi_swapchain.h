@@ -32,6 +32,7 @@
 #include "vk_ext_khr_swapchain.h"
 
 void wsi_swapchain_add_instance_extensions(
+        const struct loader_instance *inst,
         struct loader_extension_list *ext_list);
 
 void wsi_swapchain_create_instance(

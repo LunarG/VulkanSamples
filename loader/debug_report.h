@@ -91,6 +91,7 @@
      */
 
 void debug_report_add_instance_extensions(
+        const struct loader_instance *inst,
         struct loader_extension_list *ext_list);
 
 void debug_report_create_instance(

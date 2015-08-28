@@ -46,9 +46,10 @@ static const VkExtensionProperties debug_report_extension_info = {
 };
 
 void debug_report_add_instance_extensions(
+        const struct loader_instance *inst,
         struct loader_extension_list *ext_list)
 {
-    loader_add_to_ext_list(ext_list, 1, &debug_report_extension_info);
+    loader_add_to_ext_list(inst, ext_list, 1, &debug_report_extension_info);
 }
 
 void debug_report_create_instance(
@@ -72,7 +73,7 @@ static VkResult debug_report_DbgCreateMsgCallback(
         void* pUserData,
         VkDbgMsgCallback* pMsgCallback)
 {
-    VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) malloc(sizeof(VkLayerDbgFunctionNode));
+    VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc((struct loader_instance *)instance, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -87,7 +88,7 @@ static VkResult debug_report_DbgCreateMsgCallback(
         pNewDbgFuncNode->pNext = inst->DbgFunctionHead;
         inst->DbgFunctionHead = pNewDbgFuncNode;
     } else {
-        free(pNewDbgFuncNode);
+        loader_heap_free((struct loader_instance *) instance, pNewDbgFuncNode);
     }
     loader_platform_thread_unlock_mutex(&loader_lock);
     return result;
@@ -109,7 +110,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
             pPrev->pNext = pTrav->pNext;
             if (inst->DbgFunctionHead == pTrav)
                 inst->DbgFunctionHead = pTrav->pNext;
-            free(pTrav);
+            loader_heap_free((struct loader_instance *) instance, pTrav);
             break;
         }
         pPrev = pTrav;

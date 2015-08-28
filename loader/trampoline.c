@@ -44,6 +44,8 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     struct loader_instance *ptr_instance = NULL;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
+    if (pCreateInfo == NULL)
+        return VK_ERROR_INVALID_POINTER;
     loader_platform_thread_once(&once_init, loader_initialize);
 
     if (pCreateInfo->pAllocCb
@@ -77,7 +79,11 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
      * get layer list (both instance and device) via loader_layer_scan(). */
     memset(&ptr_instance->instance_layer_list, 0, sizeof(ptr_instance->instance_layer_list));
     memset(&ptr_instance->device_layer_list, 0, sizeof(ptr_instance->device_layer_list));
-    loader_layer_scan(&ptr_instance->instance_layer_list, &ptr_instance->device_layer_list);
+    loader_layer_scan(ptr_instance,
+
+
+                      &ptr_instance->instance_layer_list,
+                      &ptr_instance->device_layer_list);
 
     /* validate the app requested layers to be enabled */
     if (pCreateInfo->layerCount > 0) {
@@ -91,16 +97,22 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
 
     /* Scan/discover all ICD libraries */
     memset(&ptr_instance->icd_libs, 0, sizeof(ptr_instance->icd_libs));
-    loader_icd_scan(&ptr_instance->icd_libs);
+    loader_icd_scan(ptr_instance, &ptr_instance->icd_libs);
 
     /* get extensions from all ICD's, merge so no duplicates, then validate */
-    loader_get_icd_loader_instance_extensions(&ptr_instance->icd_libs, &ptr_instance->ext_list);
-    res = loader_validate_instance_extensions(&ptr_instance->ext_list, &ptr_instance->instance_layer_list, pCreateInfo);
+    loader_get_icd_loader_instance_extensions(ptr_instance,
+                                              &ptr_instance->icd_libs,
+                                              &ptr_instance->ext_list);
+    res = loader_validate_instance_extensions(&ptr_instance->ext_list,
+                                              &ptr_instance->instance_layer_list,
+                                              pCreateInfo);
     if (res != VK_SUCCESS) {
-        loader_delete_layer_properties(&ptr_instance->device_layer_list);
-        loader_delete_layer_properties(&ptr_instance->instance_layer_list);
-        loader_scanned_icd_clear(&ptr_instance->icd_libs);
-        loader_destroy_ext_list(&ptr_instance->ext_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->device_layer_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->instance_layer_list);
+        loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
+        loader_destroy_ext_list(ptr_instance, &ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
@@ -111,10 +123,14 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
                              sizeof(VkLayerInstanceDispatchTable),
                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (ptr_instance->disp == NULL) {
-        loader_delete_layer_properties(&ptr_instance->device_layer_list);
-        loader_delete_layer_properties(&ptr_instance->instance_layer_list);
-        loader_scanned_icd_clear(&ptr_instance->icd_libs);
-        loader_destroy_ext_list(&ptr_instance->ext_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->device_layer_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->instance_layer_list);
+        loader_scanned_icd_clear(ptr_instance,
+                                 &ptr_instance->icd_libs);
+        loader_destroy_ext_list(ptr_instance,
+                                &ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -124,12 +140,18 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     loader.instances = ptr_instance;
 
     /* activate any layers on instance chain */
-    res = loader_enable_instance_layers(ptr_instance, pCreateInfo, &ptr_instance->instance_layer_list);
+    res = loader_enable_instance_layers(ptr_instance,
+                                        pCreateInfo,
+                                        &ptr_instance->instance_layer_list);
     if (res != VK_SUCCESS) {
-        loader_delete_layer_properties(&ptr_instance->device_layer_list);
-        loader_delete_layer_properties(&ptr_instance->instance_layer_list);
-        loader_scanned_icd_clear(&ptr_instance->icd_libs);
-        loader_destroy_ext_list(&ptr_instance->ext_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->device_layer_list);
+        loader_delete_layer_properties(ptr_instance,
+                                       &ptr_instance->instance_layer_list);
+        loader_scanned_icd_clear(ptr_instance,
+                                 &ptr_instance->icd_libs);
+        loader_destroy_ext_list(ptr_instance,
+                                &ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance->disp);
@@ -303,12 +325,14 @@ LOADER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 {
     const VkLayerDispatchTable *disp;
     VkResult res;
-
+    struct loader_device *dev;
+    struct loader_icd *icd = loader_get_icd_and_device(device, &dev);
+    const struct loader_instance *inst = icd->this_instance;
     disp = loader_get_dispatch(device);
 
     loader_platform_thread_lock_mutex(&loader_lock);
     res =  disp->DestroyDevice(device);
-    loader_remove_logical_device(device);
+    loader_remove_logical_device(inst, device);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }

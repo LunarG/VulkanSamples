@@ -40,9 +40,10 @@ static const VkExtensionProperties wsi_swapchain_extension_info = {
 };
 
 void wsi_swapchain_add_instance_extensions(
+        const struct loader_instance *inst,
         struct loader_extension_list *ext_list)
 {
-    loader_add_to_ext_list(ext_list, 1, &wsi_swapchain_extension_info);
+    loader_add_to_ext_list(inst, ext_list, 1, &wsi_swapchain_extension_info);
 }
 
 void wsi_swapchain_create_instance(

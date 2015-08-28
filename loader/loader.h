@@ -193,6 +193,7 @@ struct loader_struct {
     struct loader_instance *instances;
 
     unsigned int loaded_layer_lib_count;
+    unsigned int loaded_layer_lib_capacity;
     struct loader_lib_info *loaded_layer_lib_list;
     // TODO add ref counting of ICD libraries
     char *layer_dirs;
@@ -345,28 +346,44 @@ bool has_vk_extension_property(
         const struct loader_extension_list *ext_list);
 
 void loader_add_to_ext_list(
+        const struct loader_instance *inst,
         struct loader_extension_list *ext_list,
         uint32_t prop_list_count,
         const VkExtensionProperties *props);
-void loader_destroy_ext_list(struct loader_extension_list *ext_info);
-void loader_delete_layer_properties(struct loader_layer_list *layer_list);
+void loader_destroy_ext_list(
+        const struct loader_instance *inst,
+        struct loader_extension_list *ext_info);
+void loader_delete_layer_properties(
+        const struct loader_instance *inst,
+        struct loader_layer_list *layer_list);
 void loader_add_to_layer_list(
+        const struct loader_instance *inst,
         struct loader_layer_list *list,
         uint32_t prop_list_count,
         const struct loader_layer_properties *props);
-void loader_scanned_icd_clear(struct loader_icd_libs *icd_libs);
-void loader_icd_scan(struct loader_icd_libs *icds);
+void loader_scanned_icd_clear(
+        const struct loader_instance *inst,
+        struct loader_icd_libs *icd_libs);
+void loader_icd_scan(
+        const struct loader_instance *inst,
+        struct loader_icd_libs *icds);
 void loader_layer_scan(
+        const struct loader_instance *inst,
         struct loader_layer_list *instance_layers,
         struct loader_layer_list *device_layers);
 void loader_get_icd_loader_instance_extensions(
+        const struct loader_instance *inst,
         struct loader_icd_libs *icd_libs,
         struct loader_extension_list *inst_exts);
-
+struct loader_icd *loader_get_icd_and_device(
+        const VkDevice device,
+        struct loader_device **found_dev);
 struct loader_icd * loader_get_icd(
         const VkPhysicalDevice gpu,
         uint32_t *gpu_index);
-void loader_remove_logical_device(VkDevice device);
+void loader_remove_logical_device(
+        const struct loader_instance *inst,
+        VkDevice device);
 VkResult loader_enable_instance_layers(
         struct loader_instance *inst,
         const VkInstanceCreateInfo *pCreateInfo,
@@ -376,17 +393,17 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst);
 void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 
 void* loader_heap_alloc(
-        struct loader_instance      *instance,
+        const struct loader_instance *instance,
         size_t                       size,
         VkSystemAllocType            allocType);
 
 void* loader_aligned_heap_alloc(
-        struct loader_instance      *instance,
+        const struct loader_instance *instance,
         size_t                       size,
         size_t                       alignment,
         VkSystemAllocType            allocType);
 
 void loader_heap_free(
-        struct loader_instance      *instance,
-        void                        *pMem);
+        const struct loader_instance *instance,
+        void                         *pMem);
 #endif /* LOADER_H */
