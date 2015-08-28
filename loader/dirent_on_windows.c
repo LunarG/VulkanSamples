@@ -7,13 +7,14 @@
     Rights:  See end of file.
 
 */
-
 #include <dirent_on_windows.h>
 #include <errno.h>
 #include <io.h> /* _findfirst and _findnext set errno iff they return -1 */
 #include <stdlib.h>
 #include <string.h>
+#include "vk_loader_platform.h"
 #include "loader.h"
+
 #ifdef __cplusplus
 extern "C"
 {

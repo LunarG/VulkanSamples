@@ -35,6 +35,7 @@
 #include <signal.h>
 #else
 #endif
+#include "vk_loader_platform.h"
 #include "debug_report.h"
 #include "vk_layer.h"
 

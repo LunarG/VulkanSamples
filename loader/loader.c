@@ -1659,7 +1659,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
         }
         strcpy(loc, location);
 #if defined (_WIN32)
-        loc = loader_get_registry_files(loc);
+        loc = loader_get_registry_files(inst, loc);
         if (loc == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Registry lookup failed can't get manifest files");
             return;
