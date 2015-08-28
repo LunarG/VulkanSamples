@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 158, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 159, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -2068,18 +2068,18 @@ typedef struct {
 } VkDispatchIndirectCmd;
 
 typedef struct {
-    uint32_t                                    indexCount;
-    uint32_t                                    instanceCount;
     uint32_t                                    firstIndex;
+    uint32_t                                    indexCount;
     int32_t                                     vertexOffset;
     uint32_t                                    firstInstance;
+    uint32_t                                    instanceCount;
 } VkDrawIndexedIndirectCmd;
 
 typedef struct {
-    uint32_t                                    vertexCount;
-    uint32_t                                    instanceCount;
     uint32_t                                    firstVertex;
+    uint32_t                                    vertexCount;
     uint32_t                                    firstInstance;
+    uint32_t                                    instanceCount;
 } VkDrawIndirectCmd;
 
 typedef struct {
