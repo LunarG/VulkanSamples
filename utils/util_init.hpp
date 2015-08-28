@@ -40,6 +40,9 @@ VkResult init_device_layer_properties(struct sample_info &info);
 VkResult init_instance(struct sample_info &info, char const*const app_short_name);
 VkResult init_device(struct sample_info &info);
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count = 1);
+VkBool32 demo_check_layers(
+        const std::vector<layer_properties> &layer_props,
+        const std::vector<const char *> &layer_names);
 void init_connection(struct sample_info &info);
 void init_window(struct sample_info &info);
 void init_wsi(struct sample_info &info);
