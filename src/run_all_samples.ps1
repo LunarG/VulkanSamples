@@ -48,6 +48,8 @@ echo "Alloc Descriptor Sets"
 & $dPath\vk0.2-allocdescriptorsets
 echo "Initialize Shaders"
 & $dPath\vk0.2-initshaders
+echo "Initialize Pipeline"
+& $dPath\vk0.2-initpipeline
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"

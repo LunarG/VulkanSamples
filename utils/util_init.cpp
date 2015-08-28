@@ -1345,3 +1345,102 @@ void init_shaders(struct sample_info &info)
 
     finalize_glslang();
 }
+
+void init_pipeline(struct sample_info &info)
+{
+    VkResult res;
+
+    VkPipelineCacheCreateInfo pipelineCache;
+    pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    pipelineCache.pNext = NULL;
+    pipelineCache.initialData = 0;
+    pipelineCache.initialSize = 0;
+    pipelineCache.maxSize = 0;
+
+    res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
+    assert(!res);
+
+    VkPipelineVertexInputStateCreateInfo vi;
+    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vi.pNext = NULL;
+    vi.bindingCount = 1;
+    vi.pVertexBindingDescriptions = &info.vi_binding;
+    vi.attributeCount = 2;
+    vi.pVertexAttributeDescriptions = info.vi_attribs;
+
+    VkPipelineInputAssemblyStateCreateInfo ia;
+    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    ia.pNext = NULL;
+    ia.primitiveRestartEnable = VK_FALSE;
+    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    VkPipelineRasterStateCreateInfo rs;
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+    rs.pNext = NULL;
+    rs.fillMode = VK_FILL_MODE_SOLID;
+    rs.cullMode = VK_CULL_MODE_BACK;
+    rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.depthClipEnable = VK_TRUE;
+    rs.rasterizerDiscardEnable = VK_FALSE;
+
+    VkPipelineColorBlendStateCreateInfo cb;
+    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    cb.pNext = NULL;
+    VkPipelineColorBlendAttachmentState att_state[1];
+    att_state[0].channelWriteMask = 0xf;
+    att_state[0].blendEnable = VK_FALSE; /* All the other fields in att_state should be ignored if this is false */
+    cb.attachmentCount = 1;
+    cb.pAttachments = att_state;
+    cb.logicOpEnable = VK_FALSE;
+    cb.alphaToCoverageEnable = VK_FALSE;
+
+    VkPipelineViewportStateCreateInfo vp;
+    vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vp.pNext = NULL;
+    vp.viewportCount = 1;
+
+    VkPipelineDepthStencilStateCreateInfo ds;
+    ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    ds.pNext = NULL;
+    ds.depthTestEnable = VK_TRUE;
+    ds.depthWriteEnable = VK_TRUE;
+    ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds.depthBoundsEnable = VK_FALSE;
+    ds.stencilTestEnable = VK_FALSE;
+    ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
+    ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
+    ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds.stencilTestEnable = VK_FALSE;
+    ds.front = ds.back;
+
+    VkPipelineMultisampleStateCreateInfo   ms;
+    ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    ms.pNext = NULL;
+    ms.sampleMask = 1;
+    ms.rasterSamples = 1;
+    ms.sampleShadingEnable = VK_FALSE;
+    ms.minSampleShading = 0.0;
+
+    VkGraphicsPipelineCreateInfo pipeline;
+    pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline.pNext               = NULL;
+    pipeline.layout              = info.pipeline_layout;
+    pipeline.basePipelineHandle  = 0;
+    pipeline.basePipelineIndex   = 0;
+    pipeline.flags               = 0;
+    pipeline.pVertexInputState   = &vi;
+    pipeline.pInputAssemblyState = &ia;
+    pipeline.pRasterState        = &rs;
+    pipeline.pColorBlendState    = &cb;
+    pipeline.pTessellationState  = NULL;
+    pipeline.pMultisampleState   = &ms;
+    pipeline.pViewportState      = &vp;
+    pipeline.pDepthStencilState  = &ds;
+    pipeline.pStages             = info.shaderStages;
+    pipeline.stageCount          = 2;
+    pipeline.renderPass          = info.render_pass;
+    pipeline.subpass             = 0;
+
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
+    assert(!res);
+}

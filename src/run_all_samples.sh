@@ -39,6 +39,8 @@ echo "Alloc Descriptor Sets"
 ./vk0.2-allocdescriptorsets
 echo "Initialize Shaders"
 ./vk0.2-initshaders
+echo "Initialize Pipeline"
+./vk0.2-initpipeline
 echo "Use GLSL Shader"
 ./vk0.2-useglslshader
 echo "Use SPIR-V Shader"
