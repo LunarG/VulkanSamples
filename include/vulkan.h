@@ -128,8 +128,8 @@ VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
 VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 
 #define VK_LOD_CLAMP_NONE                 1000.0f
-#define VK_LAST_MIP_LEVEL                 (~0U)
-#define VK_LAST_ARRAY_SLICE               (~0U)
+#define VK_REMAINING_MIP_LEVELS           (~0U)
+#define VK_REMAINING_ARRAY_SLICES         (~0U)
 #define VK_WHOLE_SIZE                     (~0ULL)
 #define VK_ATTACHMENT_UNUSED              (~0U)
 #define VK_TRUE                           1
