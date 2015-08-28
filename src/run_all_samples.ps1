@@ -12,10 +12,18 @@ echo "Instance"
 & $dPath\vk0.2-instance
 echo "Instance Layer Properties"
 & $dPath\vk0.2-instance_layer_properties
+echo "Instance Layer Properties"
+& $dPath\vk0.2-instance_layer_properties
+echo "Instance Extension Properties"
+& $dPath\vk0.2-instance_extension_properties
+echo "Instance Layer ExtensionProperties"
+& $dPath\vk0.2-instance_layer_extension_properties
 echo "Enumerate"
 & $dPath\vk0.2-enumerate
 echo "Device"
 & $dPath\vk0.2-device
+echo "Enable Validation and Debug Message Callback"
+& $dPath\vk0.2-enable_validation_with_callback
 echo "Init WSI"
 & $dPath\vk0.2-initwsi
 echo "Init Command Buffer"
