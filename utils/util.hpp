@@ -181,6 +181,8 @@ struct sample_info {
         VkBufferView view;
         VkDescriptorInfo desc;
     } vertex_buffer;
+    VkVertexInputBindingDescription vi_binding;
+    VkVertexInputAttributeDescription vi_attribs[2];
 
     glm::mat4 Projection;
     glm::mat4 View;
