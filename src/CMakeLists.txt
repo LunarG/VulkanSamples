@@ -140,7 +140,14 @@ endif()
 set(VULKAN_VERSION vk0.2)
 
 # simple one file sample targets, no additional files
-set (S_TARGETS instance device enumerate enumerate-adv depthbuffer initwsi initTexture uniformbuffer descriptor_pipeline_layouts initcommandbuffer initrenderpass initframebuffers vertexbuffer dynamicstate)
+set (S_TARGETS instance device enumerate enumerate-adv
+    depthbuffer initwsi initTexture uniformbuffer
+    descriptor_pipeline_layouts initcommandbuffer
+    initrenderpass initframebuffers vertexbuffer
+    dynamicstate
+    instance_layer_properties instance_extension_properties
+    instance_layer_extension_properties dbgcreatemsgcallback
+    enable_validation_with_callback)
 sampleWithSingleFile()
 
 # targets that use spv shaders
@@ -156,10 +163,3 @@ set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 sampleWithGLSLShaders(useglslshader)
 
-# simple one file sample targets, no additional files
-set (S_TARGETS instance_layer_properties)
-set (S_TARGETS instance_extension_properties)
-set (S_TARGETS instance_layer_extension_properties)
-set (S_TARGETS dbgcreatemsgcallback)
-set (S_TARGETS enable_validation_with_callback)
-sampleWithSingleFile()
