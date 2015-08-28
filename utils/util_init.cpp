@@ -142,7 +142,10 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
     inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = 0;
+    inst_info.layerCount = info.instance_layer_names.size();
+    inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
+    inst_info.extensionCount = info.instance_extension_names.size();
+    inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
     inst_info.ppEnabledExtensionNames = NULL;
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
@@ -162,8 +165,12 @@ VkResult init_device(struct sample_info &info)
     device_info.pNext = NULL;
     device_info.queueRecordCount = 1;
     device_info.pRequestedQueues = &queue_info;
-    device_info.extensionCount = 0;
-    device_info.ppEnabledExtensionNames = NULL;
+    device_info.layerCount = info.device_layer_names.size();
+    device_info.ppEnabledLayerNames =
+            device_info.layerCount ? info.device_layer_names.data() : NULL;
+    device_info.extensionCount = info.device_extension_names.size();
+    device_info.ppEnabledExtensionNames =
+            device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.flags = 0;
 
     VkResult res = vkCreateDevice(info.gpu, &device_info, &info.device);
