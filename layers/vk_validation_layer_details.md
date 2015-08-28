@@ -151,6 +151,7 @@ need to be tracked for each subresource.
 10.  Re-enable INFO messages that were disabled during v138 integration
 11. Warn on image/buffer deletion if USAGE bits were set that were not needed
 12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
+13. Report destroy or modify of resources in use on queues and not cleared by fence or WaitIdle. Could be fence, semaphore, or objects used by submitted CommandBuffers.
 
 
 ## ShaderChecker
