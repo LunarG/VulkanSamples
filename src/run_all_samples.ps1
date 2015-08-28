@@ -46,6 +46,8 @@ echo "Dynamic State"
 & $dPath\vk0.2-dynamicstate
 echo "Alloc Descriptor Sets"
 & $dPath\vk0.2-allocdescriptorsets
+echo "Initialize Shaders"
+& $dPath\vk0.2-initshaders
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"
