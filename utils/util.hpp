@@ -203,6 +203,7 @@ struct sample_info {
 
     VkShaderModule vert_shader_module;
     VkShaderModule frag_shader_module;
+    VkPipelineShaderStageCreateInfo shaderStages[2];
 
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;

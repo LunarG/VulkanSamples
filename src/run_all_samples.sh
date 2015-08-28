@@ -37,6 +37,8 @@ echo "Dynamic State"
 ./vk0.2-dynamicstate
 echo "Alloc Descriptor Sets"
 ./vk0.2-allocdescriptorsets
+echo "Initialize Shaders"
+./vk0.2-initshaders
 echo "Use GLSL Shader"
 ./vk0.2-useglslshader
 echo "Use SPIR-V Shader"
