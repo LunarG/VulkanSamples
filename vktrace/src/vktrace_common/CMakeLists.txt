@@ -1,7 +1,7 @@
 project(vktrace_common)
 cmake_minimum_required(VERSION 2.8)
 
-include("${SRC_DIR}/build_options.cmake")
+include(${SRC_DIR}/build_options.cmake)
 
 include_directories(
     ${SRC_DIR}/vktrace_common

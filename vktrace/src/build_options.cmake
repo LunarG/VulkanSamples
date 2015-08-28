@@ -62,7 +62,7 @@ else()
 endif()
 
 
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+if (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
 
   # clang doesn't print colored diagnostics when invoked from Ninja
   if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
@@ -172,7 +172,7 @@ endfunction()
 ## -march=corei7 -msse -mfpmath=sse
 
 set(MARCH_STR "-march=corei7")
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+if (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
    if ( NOT BUILD_X64 )
       # Fix startup crash in dlopen_notify_callback (called indirectly from our dlopen() function) when tracing glxspheres on my AMD dev box (x86 release only)
       # Also fixes tracing Q3 Arena using release tracer
@@ -220,7 +220,7 @@ else()
     if (WITH_HARDENING)
         # http://gcc.gnu.org/ml/gcc-patches/2004-09/msg02055.html
         add_definitions(-D_FORTIFY_SOURCE=2 -fpic)
-        if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+        if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
             # During program load, several ELF memory sections need to be written to by the
             # linker, but can be turned read-only before turning over control to the
             # program. This prevents some GOT (and .dtors) overwrite attacks, but at least
@@ -423,15 +423,15 @@ function(request_backtrace)
 endfunction()
 
 # What compiler toolchain are we building on?
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
     add_compiler_flag("-DCOMPILER_GCC=1")
     add_compiler_flag("-DCOMPILER_GCCLIKE=1")
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "mingw")
+elseif (${CMAKE_C_COMPILER_ID} STREQUAL "mingw")
     add_compiler_flag("-DCOMPILER_MINGW=1")
     add_compiler_flag("-DCOMPILER_GCCLIKE=1")
 elseif (MSVC)
     add_compiler_flag("-DCOMPILER_MSVC=1")
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+elseif (${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
     add_compiler_flag("-DCOMPILER_CLANG=1")
     add_compiler_flag("-DCOMPILER_GCCLIKE=1")
 else()
