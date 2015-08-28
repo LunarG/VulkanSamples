@@ -821,7 +821,6 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tshaderCullDistance                      = %u\n", features->shaderCullDistance                     );
     printf("\tshaderFloat64                           = %u\n", features->shaderFloat64                          );
     printf("\tshaderInt64                             = %u\n", features->shaderInt64                            );
-    printf("\tshaderFloat16                           = %u\n", features->shaderFloat16                          );
     printf("\tshaderInt16                             = %u\n", features->shaderInt16                            );
     printf("\tshaderResourceResidency                 = %u\n", features->shaderResourceResidency                );
     printf("\tshaderResourceMinLOD                    = %u\n", features->shaderResourceMinLOD                   );

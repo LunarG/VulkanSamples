@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 157, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 158, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -1184,7 +1184,6 @@ typedef struct {
     VkBool32                                    shaderCullDistance;
     VkBool32                                    shaderFloat64;
     VkBool32                                    shaderInt64;
-    VkBool32                                    shaderFloat16;
     VkBool32                                    shaderInt16;
     VkBool32                                    shaderResourceResidency;
     VkBool32                                    shaderResourceMinLOD;
