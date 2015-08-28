@@ -59,11 +59,9 @@ int main(int argc, char **argv)
     descriptor_layout.count = 1;
     descriptor_layout.pBinding = &layout_binding;
 
-    VkResult err;
-
-    err = vkCreateDescriptorSetLayout(info.device,
+    res = vkCreateDescriptorSetLayout(info.device,
             &descriptor_layout, &info.desc_layout);
-    assert(!err);
+    assert(!res);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
@@ -72,10 +70,10 @@ int main(int argc, char **argv)
     pPipelineLayoutCreateInfo.descriptorSetCount = 1;
     pPipelineLayoutCreateInfo.pSetLayouts        = &info.desc_layout;
 
-    err = vkCreatePipelineLayout(info.device,
+    res = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,
                                  &info.pipeline_layout);
-    assert(!err);
+    assert(!res);
     /* VULKAN_KEY_END */
 
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
