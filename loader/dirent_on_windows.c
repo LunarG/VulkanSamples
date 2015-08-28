@@ -13,7 +13,7 @@
 #include <io.h> /* _findfirst and _findnext set errno iff they return -1 */
 #include <stdlib.h>
 #include <string.h>
-
+#include "loader.h"
 #ifdef __cplusplus
 extern "C"
 {
@@ -39,8 +39,8 @@ DIR *opendir(const char *name)
         const char *all = /* search pattern must end with suitable wildcard */
             strchr("/\\", name[base_length - 1]) ? "*" : "/*";
 
-        if((dir = (DIR *) malloc(sizeof *dir)) != 0 &&
-           (dir->name = (char *) malloc(base_length + strlen(all) + 1)) != 0)
+        if((dir = (DIR *) loader_tls_heap_alloc(sizeof *dir)) != 0 &&
+           (dir->name = (char *) loader_tls_heap_alloc(base_length + strlen(all) + 1)) != 0)
         {
             strcat(strcpy(dir->name, name), all);
 
@@ -51,14 +51,14 @@ DIR *opendir(const char *name)
             }
             else /* rollback */
             {
-                free(dir->name);
-                free(dir);
+                loader_tls_heap_free(dir->name);
+                loader_tls_heap_free(dir);
                 dir = 0;
             }
         }
         else /* rollback */
         {
-            free(dir);
+            loader_tls_heap_free(dir);
             dir   = 0;
             errno = ENOMEM;
         }

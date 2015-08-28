@@ -63,6 +63,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
+    tls_instance = ptr_instance;
     loader_platform_thread_lock_mutex(&loader_lock);
     memset(ptr_instance, 0, sizeof(struct loader_instance));
 
@@ -195,7 +196,6 @@ LOADER_EXPORT VkResult VKAPI vkDestroyInstance(
     loader_deactivate_instance_layers(ptr_instance);
     loader_heap_free(ptr_instance, ptr_instance->disp);
     loader_heap_free(ptr_instance, ptr_instance);
-
     loader_platform_thread_unlock_mutex(&loader_lock);
 
     return res;

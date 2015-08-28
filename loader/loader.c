@@ -58,6 +58,8 @@ static void loader_remove_layer_lib(
         struct loader_layer_properties *layer_prop);
 
 struct loader_struct loader = {0};
+// TLS for instance for alloc/free callbacks
+THREAD_LOCAL_DECL struct loader_instance *tls_instance;
 
 static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(
         VkInstance instance,
@@ -171,6 +173,16 @@ void* loader_heap_realloc(
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
     }
     return realloc(pMem, size);
+}
+
+void *loader_tls_heap_alloc(size_t size)
+{
+    return loader_heap_alloc(tls_instance, size, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+}
+
+void loader_tls_heap_free(void *pMem)
+{
+    return loader_heap_free(tls_instance, pMem);
 }
 
 static void loader_log(VkFlags msg_type, int32_t msg_code,
@@ -1172,6 +1184,13 @@ void loader_initialize(void)
 
     // initialize logging
     loader_debug_init();
+
+    // initial cJSON to use alloc callbacks
+    cJSON_Hooks alloc_fns = {
+        .malloc_fn = loader_tls_heap_alloc,
+        .free_fn = loader_tls_heap_free,
+    };
+    cJSON_InitHooks(&alloc_fns);
 }
 
 struct loader_manifest_files {
@@ -1384,7 +1403,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                filename, file_vers);
     if (strcmp(file_vers, "\"0.9.0\"") != 0)
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 0.9.0), may cause errors");
-    free(file_vers);
+    loader_tls_heap_free(file_vers);
 
     layer_node = cJSON_GetObjectItem(json, "layer");
     if (layer_node == NULL) {
@@ -1411,7 +1430,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         temp[strlen(temp) - 1] = '\0';                \
         var = loader_stack_alloc(strlen(temp) + 1);   \
         strcpy(var, &temp[1]);                        \
-        free(temp);                                   \
+        loader_tls_heap_free(temp);                   \
         }
         GET_JSON_ITEM(layer_node, name)
         GET_JSON_ITEM(layer_node, type)
@@ -1504,7 +1523,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         temp[strlen(temp) - 1] = '\0';                \
         var = loader_stack_alloc(strlen(temp) + 1);   \
         strcpy(var, &temp[1]);                        \
-        free(temp);                                   \
+        loader_tls_heap_free(temp);                   \
         }
 
         cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
@@ -1798,7 +1817,7 @@ void loader_icd_scan(
                    file_str, file_vers);
         if (strcmp(file_vers, "\"1.0.0\"") != 0)
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
-        free(file_vers);
+        loader_tls_heap_free(file_vers);
         item = cJSON_GetObjectItem(json, "ICD");
         if (item != NULL) {
             item = cJSON_GetObjectItem(item, "library_path");
@@ -1806,7 +1825,7 @@ void loader_icd_scan(
                 char *temp= cJSON_Print(item);
                 if (!temp || strlen(temp) == 0) {
                     loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
-                    free(temp);
+                    loader_tls_heap_free(temp);
                     loader_heap_free(inst, file_str);
                     cJSON_Delete(json);
                     continue;
@@ -1815,7 +1834,7 @@ void loader_icd_scan(
                 temp[strlen(temp) - 1] = '\0';
                 char *library_path = loader_stack_alloc(strlen(temp) + 1);
                 strcpy(library_path, &temp[1]);
-                free(temp);
+                loader_tls_heap_free(temp);
                 if (!library_path || strlen(library_path) == 0) {
                     loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" in ICD JSON file %s, skipping", file_str);
                     loader_heap_free(inst, file_str);
@@ -3075,6 +3094,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     struct loader_icd_libs icd_libs;
     uint32_t copy_size;
 
+    tls_instance = NULL;
     if (pCount == NULL) {
         return VK_ERROR_INVALID_POINTER;
     }
@@ -3141,6 +3161,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
 {
 
     struct loader_layer_list instance_layer_list;
+    tls_instance = NULL;
 
     loader_platform_thread_once(&once_init, loader_initialize);
 

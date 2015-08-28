@@ -149,6 +149,7 @@ static inline char * loader_platform_get_proc_address_error(const char *name)
 
 // Threads:
 typedef pthread_t loader_platform_thread;
+#define THREAD_LOCAL_DECL __thread
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) \
     pthread_once_t var = PTHREAD_ONCE_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) \
@@ -333,6 +334,7 @@ static char * loader_platform_get_proc_address_error(const char *name)
 
 // Threads:
 typedef HANDLE loader_platform_thread;
+#define THREAD_LOCAL_DECL __declspec(thread)
 #define LOADER_PLATFORM_THREAD_ONCE_DECLARATION(var) \
     INIT_ONCE var = INIT_ONCE_STATIC_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) \

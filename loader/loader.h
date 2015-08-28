@@ -242,6 +242,7 @@ static inline void loader_init_dispatch(void* obj, const void *data)
 
 /* global variables used across files */
 extern struct loader_struct loader;
+extern THREAD_LOCAL_DECL struct loader_instance *tls_instance;
 extern LOADER_PLATFORM_THREAD_ONCE_DEFINITION(once_init);
 extern loader_platform_thread_mutex loader_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
@@ -406,4 +407,8 @@ void* loader_aligned_heap_alloc(
 void loader_heap_free(
         const struct loader_instance *instance,
         void                         *pMem);
+
+void *loader_tls_heap_alloc(size_t size);
+
+void loader_tls_heap_free(void *pMem);
 #endif /* LOADER_H */
