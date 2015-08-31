@@ -255,7 +255,6 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
     inst_info.extensionCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
-    inst_info.ppEnabledExtensionNames = NULL;
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
     assert(!res);
@@ -848,6 +847,7 @@ void init_swap_chain(struct sample_info &info)
         info.buffers.push_back(sc_buffer);
         assert(!res);
     }
+    info.current_buffer = 0;
 }
 
 void init_uniform_buffer(struct sample_info &info)
@@ -973,9 +973,9 @@ void init_renderpass(struct sample_info &info)
     attachments[1].format = info.depth.format;
     attachments[1].samples = 1;
     attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -1379,7 +1379,7 @@ void init_pipeline(struct sample_info &info)
     rs.pNext = NULL;
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
-    rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClipEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
 
