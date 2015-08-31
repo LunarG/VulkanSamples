@@ -26,3 +26,7 @@ libs/Win32/Debug/*
 *.filters
 build
 dbuild
+vktrace/src/vktrace_extensions/vktracevulkan/codegen_vktrace_utils
+vktrace/src/vktrace_extensions/vktracevulkan/vkreplay/codegen
+vktrace/src/vktrace_extensions/vktracevulkan/vktrace/codegen
+vktrace/src/vktrace_extensions/vktracevulkan/vulkan/codegen_utils
