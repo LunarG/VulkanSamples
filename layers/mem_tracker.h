@@ -41,7 +41,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS,  // Clearing bindings on mem obj that doesn't have any bindings
     MEMTRACK_MISSING_MEM_BINDINGS,          // Trying to retrieve mem bindings, but none found (may be internal error)
     MEMTRACK_INVALID_OBJECT,                // Attempting to reference generic VK Object that is invalid
-    MEMTRACK_DESTROY_OBJECT_ERROR,          // Destroying an object that has a memory reference
+    //MEMTRACK_DESTROY_OBJECT_ERROR,          // Destroying an object that has a memory reference TODO : Is this still an error? We don't flag it anywhere
     MEMTRACK_MEMORY_BINDING_ERROR,          // Error during one of many calls that bind memory to object or CB
     MEMTRACK_MEMORY_LEAK,                   // Failure to call vkFreeMemory on Mem Obj prior to DestroyDevice
     MEMTRACK_INVALID_STATE,                 // Memory not in the correct state

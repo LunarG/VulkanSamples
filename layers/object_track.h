@@ -33,7 +33,6 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_UNKNOWN_OBJECT,                    // Updating uses of object that's not in global object list
     OBJTRACK_INTERNAL_ERROR,                    // Bug with data tracking within the layer
     OBJTRACK_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
-    OBJTRACK_OBJECT_TYPE_MISMATCH,              // Object did not match corresponding Object Type
     OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
     OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
     OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
