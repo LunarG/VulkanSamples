@@ -168,9 +168,7 @@ static void writePPM( const char *filename, VkImage image1)
         VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         NULL,
         0,     // allocationSize, queried later
-        (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
-            VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT)
+        0      // memoryTypeIndex, queried later
     };
     const VkCmdBufferCreateInfo createCommandBufferInfo = {
         VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
@@ -225,9 +223,7 @@ static void writePPM( const char *filename, VkImage image1)
 
     err = memory_type_from_properties(&memory_properties,
                                 memRequirements.memoryTypeBits,
-                                (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT),
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                 &memAllocInfo.memoryTypeIndex);
 	assert(!err);
 
@@ -246,8 +242,9 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableCmdBuffer->BeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo);
     assert(!err);
 
-    pTableCmdBuffer->CmdCopyImage(cmdBuffer, image1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                   image2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, &imageCopyRegion);
+    // TODO: We need to transition images to match these layouts, then restore the original layouts
+    pTableCmdBuffer->CmdCopyImage(cmdBuffer, image1, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                   image2, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL, 1, &imageCopyRegion);
 
     err = pTableCmdBuffer->EndCommandBuffer(cmdBuffer);
     assert(!err);
