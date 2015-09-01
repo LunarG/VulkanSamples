@@ -326,7 +326,7 @@ debug_report_data *mdd(void* object)
 debug_report_data *mid(VkInstance object)
 {
     dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(object), layer_data_map);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
 #endif
