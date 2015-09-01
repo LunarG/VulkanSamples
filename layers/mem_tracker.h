@@ -103,9 +103,6 @@ struct MT_OBJ_BINDING_INFO {
     union create_info {
         VkImageCreateInfo  image;
         VkBufferCreateInfo buffer;
-        // VkSwapChainCreateInfoWSI swapchain;
-
-        // create_info() : image() {}
     } create_info;
 };
 

@@ -415,13 +415,15 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
             memcpy(&pCI->create_info.image, pCreateInfo, sizeof(VkImageCreateInfo));
             break;
         }
-        // Swap Chain is very unique, use imageMap, but copy in SwapChainCreatInfo
-        //  This is used by vkCreateImageView to distinguish swap chain images
+        // Swap Chain is very unique, use imageMap, but copy in
+        // SwapChainCreatInfo's usage flags. This is used by vkCreateImageView
+        // to distinguish swap chain images
         case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
         {
             auto pCI = &imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
-            // memcpy(&pCI->create_info.swapchain, pCreateInfo, sizeof(VkSwapChainCreateInfoWSI));
+            pCI->create_info.image.usage =
+                const_cast<VkSwapChainCreateInfoWSI*>(static_cast<const VkSwapChainCreateInfoWSI *>(pCreateInfo))->imageUsageFlags;
             break;
         }
         // All other non-disp objects store their Create info struct as map value
@@ -2215,7 +2217,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
         // Validate that img has correct usage flags set
         validate_image_usage_flags(
                     device, pCreateInfo->image,
-                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -3025,9 +3027,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapChainWSI(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        MT_SWAP_CHAIN_INFO *new_rec = new MT_SWAP_CHAIN_INFO;
-        new_rec->createInfo = *pCreateInfo;
-        swapChainMap[pSwapChain->handle]= new_rec;
+        add_swap_chain_info(*pSwapChain, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
