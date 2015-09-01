@@ -33,6 +33,8 @@
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:console")
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX              /* Don't let Windows define min() or max() */
 #include <windows.h>
 #include <vulkan.h>
 #include <vk_wsi_swapchain.h>
@@ -41,6 +43,7 @@
 #define APP_NAME_STR_LEN 80
 #else  // _WIN32
 #include <xcb/xcb.h>
+#include <unistd.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_wsi_swapchain.h>
 #include <vulkan/vk_wsi_device_swapchain.h>
@@ -231,3 +234,4 @@ void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_
 bool GLSLtoSPV(const VkShaderStage shader_type, const char *pshader, std::vector<unsigned int> &spirv);
 void init_glslang();
 void finalize_glslang();
+void wait_seconds(int seconds);

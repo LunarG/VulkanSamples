@@ -373,3 +373,11 @@ bool GLSLtoSPV(const VkShaderStage shader_type,
 
     return true;
 }
+void wait_seconds(int seconds)
+{
+#ifdef WIN32
+    Sleep(seconds * 1000);
+#else
+    sleep(seconds);
+#endif
+}

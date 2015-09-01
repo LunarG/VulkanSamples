@@ -58,7 +58,7 @@ void dbgFunc(
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
 
 #ifdef _WIN32
-    MessageBox(NULL, message, "Alert", MB_OK);
+    MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
 #else
     std::cout << message.str() << std::endl;
 #endif
