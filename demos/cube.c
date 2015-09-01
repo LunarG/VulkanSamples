@@ -43,6 +43,7 @@
 
 #include "icd-spv.h"
 
+#include "vk_sdk_platform.h"
 #include "linmath.h"
 #include <png.h>
 

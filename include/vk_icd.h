@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "vk_platform.h"
+#include "vk_sdk_platform.h"
 
 /*
  * The ICD must reserve space for a pointer for the loader's dispatch

@@ -33,6 +33,7 @@
 #include <vk_debug_report_lunarg.h>
 #include "vk_wsi_swapchain.h"
 #include "vk_wsi_device_swapchain.h"
+#include "vk_sdk_platform.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define ICD_EXPORT __attribute__((visibility("default")))
