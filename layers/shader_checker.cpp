@@ -29,6 +29,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <iostream>
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
@@ -218,8 +219,11 @@ init_shader_checker(layer_data *my_data)
         {
             log_output = fopen(option_str, "w");
         }
-        if (log_output == NULL)
+        if (log_output == NULL) {
+            if (option_str)
+                std::cout << std::endl << "ShaderChecker ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << std::endl << std::endl;
             log_output = stdout;
+        }
 
         layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }

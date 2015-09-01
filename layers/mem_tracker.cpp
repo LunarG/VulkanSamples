@@ -1308,6 +1308,8 @@ static void init_mem_tracker(
             log_output = fopen(option_str, "w");
         }
         if (log_output == NULL) {
+            if (option_str)
+                cout << endl << "MemTracker ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << endl << endl;
             log_output = stdout;
         }
 

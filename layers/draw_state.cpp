@@ -1308,8 +1308,11 @@ static void init_draw_state(layer_data *my_data)
         {
             log_output = fopen(option_str, "w");
         }
-        if (log_output == NULL)
+        if (log_output == NULL) {
+            if (option_str)
+                cout << endl << "DrawState ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << endl << endl;
             log_output = stdout;
+        }
 
         layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }

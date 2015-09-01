@@ -93,8 +93,9 @@ static void InitParamChecker(layer_data *data)
         {
             log_output = fopen(option_str, "w");
         }
-        if(log_output == NULL)
-        {
+        if (log_output == NULL) {
+            if (option_str)
+                std::cout << std::endl << "ParamChecker ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << std::endl << std::endl;
             log_output = stdout;
         }
 
