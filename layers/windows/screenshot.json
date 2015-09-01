@@ -2,7 +2,7 @@
     "file_format_version" : "0.9.0",
     "layer" : {
         "name": "ScreenShot",
-        "type": "DEVICE",
+        "type": "GLOBAL",
         "library_path": ".\\VKLayerScreenShot.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
