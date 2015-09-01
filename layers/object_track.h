@@ -95,6 +95,83 @@ static uint32_t                         queueCount                    = 0;
 template layer_data *get_my_data_ptr<layer_data>(
         void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
+static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
+{
+    switch ((VkDbgObjectType)input_value)
+    {
+        case VK_OBJECT_TYPE_CMD_POOL:
+            return "VK_OBJECT_TYPE_CMD_POOL";
+        case VK_OBJECT_TYPE_BUFFER:
+            return "VK_OBJECT_TYPE_BUFFER";
+        case VK_OBJECT_TYPE_BUFFER_VIEW:
+            return "VK_OBJECT_TYPE_BUFFER_VIEW";
+        case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
+            return "VK_OBJECT_TYPE_ATTACHMENT_VIEW";
+        case VK_OBJECT_TYPE_COMMAND_BUFFER:
+            return "VK_OBJECT_TYPE_COMMAND_BUFFER";
+        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+            return "VK_OBJECT_TYPE_DESCRIPTOR_POOL";
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+            return "VK_OBJECT_TYPE_DESCRIPTOR_SET";
+        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+            return "VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT";
+        case VK_OBJECT_TYPE_DEVICE:
+            return "VK_OBJECT_TYPE_DEVICE";
+        case VK_OBJECT_TYPE_DEVICE_MEMORY:
+            return "VK_OBJECT_TYPE_DEVICE_MEMORY";
+        case VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE";
+        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE";
+        case VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE";
+        case VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE";
+        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE";
+        case VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
+            return "VK_OBJECT_TYPE_DYNAMIC_VIEPORT_STATE";
+        case VK_OBJECT_TYPE_EVENT:
+            return "VK_OBJECT_TYPE_EVENT";
+        case VK_OBJECT_TYPE_FENCE:
+            return "VK_OBJECT_TYPE_FENCE";
+        case VK_OBJECT_TYPE_FRAMEBUFFER:
+            return "VK_OBJECT_TYPE_FRAMEBUFFER";
+        case VK_OBJECT_TYPE_IMAGE:
+            return "VK_OBJECT_TYPE_IMAGE";
+        case VK_OBJECT_TYPE_IMAGE_VIEW:
+            return "VK_OBJECT_TYPE_IMAGE_VIEW";
+        case VK_OBJECT_TYPE_INSTANCE:
+            return "VK_OBJECT_TYPE_INSTANCE";
+        case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
+            return "VK_OBJECT_TYPE_PHYSICAL_DEVICE";
+        case VK_OBJECT_TYPE_PIPELINE:
+            return "VK_OBJECT_TYPE_PIPELINE";
+        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
+            return "VK_OBJECT_TYPE_PIPELINE_LAYOUT";
+        case VK_OBJECT_TYPE_PIPELINE_CACHE:
+            return "VK_OBJECT_TYPE_PIPELINE_CACHE";
+        case VK_OBJECT_TYPE_QUERY_POOL:
+            return "VK_OBJECT_TYPE_QUERY_POOL";
+        case VK_OBJECT_TYPE_QUEUE:
+            return "VK_OBJECT_TYPE_QUEUE";
+        case VK_OBJECT_TYPE_RENDER_PASS:
+            return "VK_OBJECT_TYPE_RENDER_PASS";
+        case VK_OBJECT_TYPE_SAMPLER:
+            return "VK_OBJECT_TYPE_SAMPLER";
+        case VK_OBJECT_TYPE_SEMAPHORE:
+            return "VK_OBJECT_TYPE_SEMAPHORE";
+        case VK_OBJECT_TYPE_SHADER:
+            return "VK_OBJECT_TYPE_SHADER";
+        case VK_OBJECT_TYPE_SHADER_MODULE:
+            return "VK_OBJECT_TYPE_SHADER_MODULE";
+        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+            return "VK_OBJECT_TYPE_SWAP_CHAIN_WSI";
+        default:
+            return "Unhandled VkObjectType";
+    }
+}
+
 //
 // Internal Object Tracker Functions
 //
