@@ -46,8 +46,6 @@ int main(int argc, char **argv)
     init_enumerate_device(info);
     init_device(info);
     info.width = info.height = 500;
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
     init_connection(info);
     init_window(info);
     init_wsi(info);

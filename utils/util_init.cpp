@@ -257,6 +257,12 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
 
 VkResult init_device(struct sample_info &info)
 {
+    VkResult res;
+
+    /* This is as good a place as any to do this */
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
+    assert(!res);
+
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
@@ -274,7 +280,7 @@ VkResult init_device(struct sample_info &info)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.flags = 0;
 
-    VkResult res = vkCreateDevice(info.gpu, &device_info, &info.device);
+    res = vkCreateDevice(info.gpu, &device_info, &info.device);
     assert(!res);
 
     return res;
