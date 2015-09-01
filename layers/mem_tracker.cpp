@@ -77,7 +77,7 @@ unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> bufferMap;
 
 // Maps for non-dispatchable objects that store createInfo based on handle
-unordered_map<uint64_t, VkAttachmentViewCreateInfo>      attachmentViewMap;
+unordered_map<uint64_t, VkImageViewCreateInfo>           attachmentViewMap;
 unordered_map<uint64_t, VkImageViewCreateInfo>           imageViewMap;
 // TODO : If we ever really care about Compute pipelines, split them into own map
 unordered_map<uint64_t, VkGraphicsPipelineCreateInfo>    pipelineMap;
@@ -416,7 +416,7 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
             break;
         }
         // Swap Chain is very unique, use imageMap, but copy in SwapChainCreatInfo
-        //  This is used by vkCreateAttachmentView to distinguish swap chain images
+        //  This is used by vkCreateImageView to distinguish swap chain images
         case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
         {
             auto pCI = &imageMap[handle];
@@ -428,7 +428,7 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
         case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
         {
             auto pCI = &attachmentViewMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkAttachmentViewCreateInfo));
+            memcpy(pCI, pCreateInfo, sizeof(VkImageViewCreateInfo));
             break;
         }
         case VK_OBJECT_TYPE_IMAGE_VIEW:
@@ -1149,7 +1149,6 @@ static void print_object_list(
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "Details of Object lists:");
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "========================");
 
-    print_object_map_members(dispObj, attachmentViewMap,           VK_OBJECT_TYPE_ATTACHMENT_VIEW,             "AttachmentView");
     print_object_map_members(dispObj, imageViewMap,                VK_OBJECT_TYPE_IMAGE_VIEW,                  "ImageView");
     print_object_map_members(dispObj, samplerMap,                  VK_OBJECT_TYPE_SAMPLER,                     "Sampler");
     print_object_map_members(dispObj, semaphoreMap,                VK_OBJECT_TYPE_SEMAPHORE,                   "Semaphore");
@@ -1645,18 +1644,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImage(VkDevice device, VkImage image)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImage(device, image);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyAttachmentView(VkDevice device, VkAttachmentView attachmentView)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = attachmentViewMap.find(attachmentView.handle);
-    if (item != attachmentViewMap.end()) {
-        attachmentViewMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyAttachmentView(device, attachmentView);
     return result;
 }
 
@@ -2226,36 +2213,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info(pView->handle, VK_OBJECT_TYPE_IMAGE_VIEW, pCreateInfo);
         // Validate that img has correct usage flags set
-        validate_image_usage_flags(device, pCreateInfo->image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-                                   false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE]_BIT");
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                          device,
-    const VkAttachmentViewCreateInfo *pCreateInfo,
-    VkAttachmentView                 *pView)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pView->handle, VK_OBJECT_TYPE_ATTACHMENT_VIEW, pCreateInfo);
-        // Validate that img has correct usage flags set
-        //  We don't use the image helper function here as it's a special case that checks struct type
-        MT_OBJ_BINDING_INFO* pInfo = get_object_binding_info(pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE);
-        if (pInfo) {
-            if (VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO == pInfo->create_info.image.sType) {
-                // TODO : Now that this is generalized for all Attachments, need to only check COLOR or DS USAGE bits
-                //  if/when we know that Image being attached to is Color or DS. Can probably do this for DS based on format
-//                validate_usage_flags(device, pInfo->create_info.image.usage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
-//                                     pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
-            }// else if (VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI == pInfo->create_info.swapchain.sType) {
-             //   validate_usage_flags(device, pInfo->create_info.swapchain.imageUsageFlags, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, true,
-             //                        pCreateInfo->image.handle, VK_OBJECT_TYPE_IMAGE, "image", "vkCreateAttachmentView()", "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT");
-             //}
-        }
+        validate_image_usage_flags(
+                    device, pCreateInfo->image,
+                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                    false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -3168,8 +3129,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkDestroyBuffer;
     if (!strcmp(funcName, "vkDestroyImage"))
         return (PFN_vkVoidFunction) vkDestroyImage;
-    if (!strcmp(funcName, "vkDestroyAttachmentView"))
-        return (PFN_vkVoidFunction) vkDestroyAttachmentView;
     if (!strcmp(funcName, "vkDestroyImageView"))
         return (PFN_vkVoidFunction) vkDestroyImageView;
     if (!strcmp(funcName, "vkDestroyPipeline"))
@@ -3248,8 +3207,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateAttachmentView"))
-        return (PFN_vkVoidFunction) vkCreateAttachmentView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))

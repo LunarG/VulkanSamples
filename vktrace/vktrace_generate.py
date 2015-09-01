@@ -980,8 +980,8 @@ class Subcommand(object):
                                                                                ]},
                              'CreateGraphicsPipelines' : {'param': 'pCreateInfos', 'txt': create_gfx_pipe},
                              'CreateComputePipeline' : {'param': 'pCreateInfo', 'txt': ['interpret_VkPipelineShaderStageCreateInfo(pHeader, (VkPipelineShaderStageCreateInfo*)(&pPacket->pCreateInfo->cs));']},
-                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkAttachmentView** ppAV = (VkAttachmentView**)&(pPacket->pCreateInfo->pAttachments);\n',
-                                                                                    '*ppAV = (VkAttachmentView*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
+                             'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkImageView** ppAV = (VkImageView**)&(pPacket->pCreateInfo->pAttachments);\n',
+                                                                                    '*ppAV = (VkImageView*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pAttachments));']},
                              'CmdBeginRenderPass' : {'param': 'pRenderPassBegin', 'txt': ['VkClearValue** ppCV = (VkClearValue**)&(pPacket->pRenderPassBegin->pClearValues);\n',
                                                                                           '*ppCV = (VkClearValue*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pClearValues));']},
                              'CreateShaderModule' : {'param': 'pCreateInfo', 'txt': ['void** ppCode = (void**)&(pPacket->pCreateInfo->pCode);\n',
@@ -1626,7 +1626,7 @@ class Subcommand(object):
                               'OpenPeerMemory': (-1,),
                               'OpenPeerImage': (-1, -2,)}
         # Functions that create views are unique from other create functions
-        create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateAttachmentView', 'CreateComputePipeline']
+        create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
         special_create_list = ['LoadPipeline', 'LoadPipelineDerivative', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
         # A couple funcs use do while loops

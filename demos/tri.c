@@ -141,7 +141,7 @@ void dbgFunc(
 typedef struct _SwapChainBuffers {
     VkImage image;
     VkCmdBuffer cmd;
-    VkAttachmentView view;
+    VkImageView view;
 } SwapChainBuffers;
 
 struct demo {
@@ -194,7 +194,7 @@ struct demo {
 
         VkImage image;
         VkDeviceMemory mem;
-        VkAttachmentView view;
+        VkImageView view;
     } depth;
 
     struct texture_object textures[DEMO_TEXTURE_COUNT];
@@ -573,13 +573,25 @@ static void demo_prepare_buffers(struct demo *demo)
     assert(demo->buffers);
 
     for (i = 0; i < demo->swapChainImageCount; i++) {
-        VkAttachmentViewCreateInfo color_attachment_view = {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+        VkImageViewCreateInfo color_attachment_view = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
             .format = demo->format,
-            .mipLevel = 0,
-            .baseArraySlice = 0,
-            .arraySize = 1,
+            .channels = {
+                .r = VK_CHANNEL_SWIZZLE_R,
+                .g = VK_CHANNEL_SWIZZLE_G,
+                .b = VK_CHANNEL_SWIZZLE_B,
+                .a = VK_CHANNEL_SWIZZLE_A,
+            },
+            .subresourceRange = {
+                .aspect = VK_IMAGE_ASPECT_COLOR,
+                .baseMipLevel = 0,
+                .mipLevels = 1,
+                .baseArraySlice = 0,
+                .arraySize = 1
+            },
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .flags = 0,
         };
 
         demo->buffers[i].image = swapChainImages[i];
@@ -591,7 +603,7 @@ static void demo_prepare_buffers(struct demo *demo)
 
         color_attachment_view.image = demo->buffers[i].image;
 
-        err = vkCreateAttachmentView(demo->device,
+        err = vkCreateImageView(demo->device,
                 &color_attachment_view, &demo->buffers[i].view);
         assert(!err);
     }
@@ -621,15 +633,20 @@ static void demo_prepare_depth(struct demo *demo)
         .allocationSize = 0,
         .memoryTypeIndex = 0,
     };
-    VkAttachmentViewCreateInfo view = {
-        .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+    VkImageViewCreateInfo view = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = NULL,
         .image.handle = VK_NULL_HANDLE,
         .format = depth_format,
-        .mipLevel = 0,
-        .baseArraySlice = 0,
-        .arraySize = 1,
+        .subresourceRange = {
+            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .baseMipLevel = 0,
+            .mipLevels = 1,
+            .baseArraySlice = 0,
+            .arraySize = 1
+        },
         .flags = 0,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
     };
 
     VkMemoryRequirements mem_reqs;
@@ -670,7 +687,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     /* create image view */
     view.image = demo->depth.image;
-    err = vkCreateAttachmentView(demo->device, &view, &demo->depth.view);
+    err = vkCreateImageView(demo->device, &view, &demo->depth.view);
     assert(!err);
 }
 
@@ -865,6 +882,7 @@ static void demo_prepare_textures(struct demo *demo)
                           VK_CHANNEL_SWIZZLE_B,
                           VK_CHANNEL_SWIZZLE_A, },
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR, 0, 1, 0, 1 },
+            .flags = 0,
         };
 
         /* create sampler */
@@ -1436,7 +1454,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
 static void demo_prepare_framebuffers(struct demo *demo)
 {
-    VkAttachmentView attachments[2];
+    VkImageView attachments[2];
     attachments[1] = demo->depth.view;
 
     const VkFramebufferCreateInfo fb_info = {
@@ -2147,10 +2165,10 @@ static void demo_cleanup(struct demo *demo)
     }
 
     for (i = 0; i < demo->swapChainImageCount; i++) {
-        vkDestroyAttachmentView(demo->device, demo->buffers[i].view);
+        vkDestroyImageView(demo->device, demo->buffers[i].view);
     }
 
-    vkDestroyAttachmentView(demo->device, demo->depth.view);
+    vkDestroyImageView(demo->device, demo->depth.view);
     vkDestroyImage(demo->device, demo->depth.image);
     vkFreeMemory(demo->device, demo->depth.mem);
 

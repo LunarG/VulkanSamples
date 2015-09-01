@@ -76,8 +76,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkGetImageSubresourceLayout GetImageSubresourceLayout;
     PFN_vkCreateImageView CreateImageView;
     PFN_vkDestroyImageView DestroyImageView;
-    PFN_vkCreateAttachmentView CreateAttachmentView;
-    PFN_vkDestroyAttachmentView DestroyAttachmentView;
     PFN_vkCreateShaderModule CreateShaderModule;
     PFN_vkDestroyShaderModule DestroyShaderModule;
     PFN_vkCreateShader CreateShader;

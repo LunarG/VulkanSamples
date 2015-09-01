@@ -62,7 +62,7 @@ static instance_table_map draw_state_instance_table_map;
 
 unordered_map<uint64_t, SAMPLER_NODE*> sampleMap;
 unordered_map<uint64_t, VkImageViewCreateInfo> imageMap;
-unordered_map<uint64_t, VkAttachmentViewCreateInfo> viewMap;
+unordered_map<uint64_t, VkImageViewCreateInfo> viewMap;
 unordered_map<uint64_t, BUFFER_NODE*> bufferMap;
 unordered_map<uint64_t, VkDynamicViewportStateCreateInfo> dynamicVpStateMap;
 unordered_map<uint64_t, VkDynamicLineWidthStateCreateInfo> dynamicLineWidthStateMap;
@@ -1564,13 +1564,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView i
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyAttachmentView(VkDevice device, VkAttachmentView attachmentView)
-{
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyAttachmentView(device, attachmentView);
-    // TODO : Clean up any internal data structures using this obj.
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
 {
     VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyShaderModule(device, shaderModule);
@@ -1703,20 +1696,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         imageMap[pView->handle] = *pCreateInfo;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                                    device,
-    const VkAttachmentViewCreateInfo*           pCreateInfo,
-    VkAttachmentView*                           pView)
-{
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        viewMap[pView->handle] = *pCreateInfo;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2905,8 +2884,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
         if (pCreateInfo->pAttachments) {
-            localFBCI->pAttachments = new VkAttachmentView[localFBCI->attachmentCount];
-            memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkAttachmentView));
+            localFBCI->pAttachments = new VkImageView[localFBCI->attachmentCount];
+            memcpy((void*)localFBCI->pAttachments, pCreateInfo->pAttachments, localFBCI->attachmentCount*sizeof(VkImageView));
         }
         frameBufferMap[pFramebuffer->handle] = localFBCI;
     }
@@ -3159,8 +3138,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyImage;
     if (!strcmp(funcName, "vkDestroyImageView"))
         return (PFN_vkVoidFunction) vkDestroyImageView;
-    if (!strcmp(funcName, "vkDestroyAttachmentView"))
-        return (PFN_vkVoidFunction) vkDestroyAttachmentView;
     if (!strcmp(funcName, "vkDestroyShaderModule"))
         return (PFN_vkVoidFunction) vkDestroyShaderModule;
     if (!strcmp(funcName, "vkDestroyShader"))
@@ -3197,8 +3174,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCreateBufferView;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateAttachmentView"))
-        return (PFN_vkVoidFunction) vkCreateAttachmentView;
     if (!strcmp(funcName, "CreatePipelineCache"))
         return (PFN_vkVoidFunction) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))

@@ -1625,7 +1625,6 @@ class ThreadingSubcommand(Subcommand):
         'VkQueryPool' : 'VK_OBJECT_TYPE_QUERY_POOL',
         'VkBufferView' : 'VK_OBJECT_TYPE_BUFFER_VIEW',
         'VkImageView' : 'VK_OBJECT_TYPE_IMAGE_VIEW',
-        'VkAttachmentView' : 'VK_OBJECT_TYPE_ATTACHMENT_VIEW',
         'VkShaderModule' : 'VK_OBJECT_TYPE_SHADER_MODULE',
         'VkShader' : 'VK_OBJECT_TYPE_SHADER',
         'VkPipelineCache' : 'VK_OBJECT_TYPE_PIPELINE_CACHE',

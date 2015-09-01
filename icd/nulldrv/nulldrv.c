@@ -235,7 +235,7 @@ static struct nulldrv_gpu *nulldrv_gpu(VkPhysicalDevice gpu)
 }
 
 static VkResult nulldrv_rt_view_create(struct nulldrv_dev *dev,
-                                const VkAttachmentViewCreateInfo *info,
+                                const VkImageViewCreateInfo *info,
                                 struct nulldrv_rt_view **view_ret)
 {
     struct nulldrv_rt_view *view;
@@ -2251,26 +2251,6 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
 ICD_EXPORT VkResult VKAPI vkDestroyImageView(
     VkDevice                                  device,
     VkImageView                               imageView)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                                  device,
-    const VkAttachmentViewCreateInfo* pCreateInfo,
-    VkAttachmentView*                  pView)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_rt_view_create(dev, pCreateInfo,
-            (struct nulldrv_rt_view **) pView);
-}
-
-ICD_EXPORT VkResult VKAPI vkDestroyAttachmentView(
-    VkDevice                                  device,
-    VkAttachmentView                          attachmentView)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;

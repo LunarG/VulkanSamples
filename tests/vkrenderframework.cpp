@@ -173,7 +173,7 @@ void VkRenderFramework::ShutdownFramework()
         vkDestroyDynamicViewportState(device(), m_stateViewport);
     }
     while (!m_renderTargets.empty()) {
-        vkDestroyAttachmentView(device(), m_renderTargets.back()->targetView(m_render_target_fmt));
+        vkDestroyImageView(device(), m_renderTargets.back()->targetView(m_render_target_fmt));
         vkDestroyImage(device(), m_renderTargets.back()->image());
         vkFreeMemory(device(), m_renderTargets.back()->memory());
         m_renderTargets.pop_back();
@@ -307,16 +307,16 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets)
     InitRenderTarget(targets, NULL);
 }
 
-void VkRenderFramework::InitRenderTarget(VkAttachmentView *dsBinding)
+void VkRenderFramework::InitRenderTarget(VkImageView *dsBinding)
 {
     InitRenderTarget(1, dsBinding);
 }
 
-void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsBinding)
+void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBinding)
 {
     std::vector<VkAttachmentDescription> attachments;
     std::vector<VkAttachmentReference> color_references;
-    std::vector<VkAttachmentView> bindings;
+    std::vector<VkImageView> bindings;
     attachments.reserve(targets + 1); // +1 for dsBinding
     color_references.reserve(targets);
     bindings.reserve(targets + 1);     // +1 for dsBinding
@@ -340,7 +340,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkAttachmentView *dsB
     VkClearValue clear = {};
     clear.color = m_clear_color;
 
-    VkAttachmentView bind = {};
+    VkImageView bind = {};
 
     for (uint32_t i = 0; i < targets; i++) {
         attachments.push_back(att);
@@ -1576,7 +1576,7 @@ bool VkDepthStencilObj::Initialized()
     return m_initialized;
 }
 
-VkAttachmentView* VkDepthStencilObj::BindInfo()
+VkImageView* VkDepthStencilObj::BindInfo()
 {
     return &m_attachmentBindInfo;
 }
@@ -1584,7 +1584,7 @@ VkAttachmentView* VkDepthStencilObj::BindInfo()
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format)
 {
     VkImageCreateInfo image_info;
-    VkAttachmentViewCreateInfo view_info;
+    VkImageViewCreateInfo view_info;
 
     m_device = device;
     m_initialized = true;
@@ -1608,16 +1608,18 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.pQueueFamilyIndices = NULL;
     init(*m_device, image_info);
 
-    view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
     view_info.image = VK_NULL_HANDLE;
-    view_info.mipLevel = 0;
-    view_info.baseArraySlice = 0;
-    view_info.arraySize = 1;
+    view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_DEPTH;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.baseArraySlice = 0;
+    view_info.subresourceRange.arraySize = 1;
     view_info.flags = 0;
     view_info.format = m_depth_stencil_fmt;
     view_info.image = handle();
-    m_attachmentView.init(*m_device, view_info);
+    m_imageView.init(*m_device, view_info);
 
-    m_attachmentBindInfo = m_attachmentView.handle();
+    m_attachmentBindInfo = m_imageView.handle();
 }

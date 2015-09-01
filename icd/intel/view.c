@@ -1213,20 +1213,13 @@ static void img_view_destroy(struct intel_obj *obj)
     intel_img_view_destroy(view);
 }
 
-VkResult intel_img_view_create(struct intel_dev *dev,
-                               const VkImageViewCreateInfo *info,
-                               struct intel_img_view **view_ret)
+void intel_img_view_init(struct intel_dev *dev,
+                         const VkImageViewCreateInfo *info,
+                         struct intel_img_view *view)
 {
-    struct intel_img *img = intel_img(info->image);
-    struct intel_img_view *view;
-    uint32_t mip_levels, array_size;
     VkChannelMapping state_swizzles;
-
-    if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
-        info->subresourceRange.baseArraySlice >= img->array_size ||
-        !info->subresourceRange.mipLevels ||
-        !info->subresourceRange.arraySize)
-        return VK_ERROR_INVALID_VALUE;
+    uint32_t mip_levels, array_size;
+    struct intel_img *img = intel_img(info->image);
 
     mip_levels = info->subresourceRange.mipLevels;
     if (mip_levels > img->mip_levels - info->subresourceRange.baseMipLevel)
@@ -1236,52 +1229,73 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     if (array_size > img->array_size - info->subresourceRange.baseArraySlice)
         array_size = img->array_size - info->subresourceRange.baseArraySlice;
 
+    view->obj.destroy = img_view_destroy;
+
+    view->img = img;
+
+    if (!(img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+        if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
+            state_swizzles = info->channels;
+            view->shader_swizzles.r = VK_CHANNEL_SWIZZLE_R;
+            view->shader_swizzles.g = VK_CHANNEL_SWIZZLE_G;
+            view->shader_swizzles.b = VK_CHANNEL_SWIZZLE_B;
+            view->shader_swizzles.a = VK_CHANNEL_SWIZZLE_A;
+        } else {
+            state_swizzles.r = VK_CHANNEL_SWIZZLE_R;
+            state_swizzles.g = VK_CHANNEL_SWIZZLE_G;
+            state_swizzles.b = VK_CHANNEL_SWIZZLE_B;
+            state_swizzles.a = VK_CHANNEL_SWIZZLE_A;
+            view->shader_swizzles = info->channels;
+        }
+
+        /* shader_swizzles is ignored by the compiler */
+        if (view->shader_swizzles.r != VK_CHANNEL_SWIZZLE_R ||
+            view->shader_swizzles.g != VK_CHANNEL_SWIZZLE_G ||
+            view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
+            view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
+            intel_dev_log(dev, VK_DBG_REPORT_WARN_BIT,
+                          view, 0, 0,
+                          "image data swizzling is ignored");
+        }
+
+        if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
+            surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
+                    info->subresourceRange.baseMipLevel, mip_levels,
+                    info->subresourceRange.baseArraySlice, array_size,
+                    state_swizzles, false, view->cmd);
+            view->cmd_len = 8;
+        } else {
+            surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
+                    info->subresourceRange.baseMipLevel, mip_levels,
+                    info->subresourceRange.baseArraySlice, array_size,
+                    false, view->cmd);
+            view->cmd_len = 6;
+        }
+    }
+}
+
+VkResult intel_img_view_create(struct intel_dev *dev,
+                               const VkImageViewCreateInfo *info,
+                               struct intel_img_view **view_ret)
+{
+    struct intel_img *img = intel_img(info->image);
+    struct intel_img_view *view;
+
+    if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
+        info->subresourceRange.baseArraySlice >= img->array_size ||
+        !info->subresourceRange.mipLevels ||
+        !info->subresourceRange.arraySize)
+        return VK_ERROR_INVALID_VALUE;
+
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_IMAGE_VIEW, info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    view->obj.destroy = img_view_destroy;
+    intel_img_view_init(dev, info, view);
 
-    view->img = img;
-
-    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
-        state_swizzles = info->channels;
-        view->shader_swizzles.r = VK_CHANNEL_SWIZZLE_R;
-        view->shader_swizzles.g = VK_CHANNEL_SWIZZLE_G;
-        view->shader_swizzles.b = VK_CHANNEL_SWIZZLE_B;
-        view->shader_swizzles.a = VK_CHANNEL_SWIZZLE_A;
-    } else {
-        state_swizzles.r = VK_CHANNEL_SWIZZLE_R;
-        state_swizzles.g = VK_CHANNEL_SWIZZLE_G;
-        state_swizzles.b = VK_CHANNEL_SWIZZLE_B;
-        state_swizzles.a = VK_CHANNEL_SWIZZLE_A;
-        view->shader_swizzles = info->channels;
-    }
-
-    /* shader_swizzles is ignored by the compiler */
-    if (view->shader_swizzles.r != VK_CHANNEL_SWIZZLE_R ||
-        view->shader_swizzles.g != VK_CHANNEL_SWIZZLE_G ||
-        view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
-        view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
-        intel_dev_log(dev, VK_DBG_REPORT_WARN_BIT,
-                      VK_NULL_HANDLE, 0, 0,
-                      "image data swizzling is ignored");
-    }
-
-    if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
-        surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
-                info->subresourceRange.baseMipLevel, mip_levels,
-                info->subresourceRange.baseArraySlice, array_size,
-                state_swizzles, false, view->cmd);
-        view->cmd_len = 8;
-    } else {
-        surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
-                info->subresourceRange.baseMipLevel, mip_levels,
-                info->subresourceRange.baseArraySlice, array_size,
-                false, view->cmd);
-        view->cmd_len = 6;
-    }
+    /* Initialize attachment view info in case it's needed */
+    intel_att_view_init(dev, info, &view->att_view);
 
     *view_ret = view;
 
@@ -1293,63 +1307,47 @@ void intel_img_view_destroy(struct intel_img_view *view)
     intel_base_destroy(&view->obj.base);
 }
 
-static void att_view_destroy(struct intel_obj *obj)
-{
-    struct intel_att_view *view = intel_att_view_from_obj(obj);
-
-    intel_att_view_destroy(view);
-}
-
-VkResult intel_att_view_create(struct intel_dev *dev,
-                               const VkAttachmentViewCreateInfo *info,
-                               struct intel_att_view **view_ret)
+void intel_att_view_init(struct intel_dev *dev,
+                           const VkImageViewCreateInfo *info,
+                           struct intel_att_view *att_view)
 {
     struct intel_img *img = intel_img(info->image);
-    struct intel_att_view *view;
     VkImageViewType view_type;
 
-    view = (struct intel_att_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_ATTACHMENT_VIEW,
-            info, 0);
-    if (!view)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    att_view->img = img;
 
-    view->obj.destroy = att_view_destroy;
-
-    view->img = img;
-
-    view->mipLevel = info->mipLevel;
-    view->baseArraySlice = info->baseArraySlice;
-    view->array_size = info->arraySize;
+    att_view->mipLevel = info->subresourceRange.baseMipLevel;
+    att_view->baseArraySlice = info->subresourceRange.baseArraySlice;
+    att_view->array_size = info->subresourceRange.arraySize;
 
     view_type = img_type_to_view_type(img->type,
-            info->baseArraySlice, info->arraySize);
+                                      info->subresourceRange.baseArraySlice,
+                                      info->subresourceRange.arraySize);
 
-    att_view_init_for_input(view, dev->gpu, img, view_type, info->format,
-            info->mipLevel, info->baseArraySlice, info->arraySize);
+    att_view_init_for_input(att_view, dev->gpu, img, view_type, info->format,
+                            info->subresourceRange.baseMipLevel,
+                            info->subresourceRange.baseArraySlice,
+                            info->subresourceRange.arraySize);
 
     if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
-        att_view_init_for_ds(view, dev->gpu, img, view_type, img->layout.format,
-                info->mipLevel, info->baseArraySlice, info->arraySize);
+        att_view_init_for_ds(att_view, dev->gpu, img, view_type, img->layout.format,
+                             info->subresourceRange.baseMipLevel,
+                             info->subresourceRange.baseArraySlice,
+                             info->subresourceRange.arraySize);
     } else {
-        att_view_init_for_rt(view, dev->gpu, img, view_type, info->format,
-                info->mipLevel, info->baseArraySlice, info->arraySize);
+        att_view_init_for_rt(att_view, dev->gpu, img, view_type, info->format,
+                             info->subresourceRange.baseMipLevel,
+                             info->subresourceRange.baseArraySlice,
+                             info->subresourceRange.arraySize);
     }
-
-    *view_ret = view;
 
     return VK_SUCCESS;
 }
 
-void intel_att_view_destroy(struct intel_att_view *view)
-{
-    intel_base_destroy(&view->obj.base);
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
-    VkDevice                                  device,
-    const VkBufferViewCreateInfo*          pCreateInfo,
-    VkBufferView*                            pView)
+    VkDevice                            device,
+    const VkBufferViewCreateInfo*       pCreateInfo,
+    VkBufferView*                       pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1358,8 +1356,8 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroyBufferView(
-    VkDevice                                device,
-    VkBufferView                            bufferView)
+    VkDevice                            device,
+    VkBufferView                        bufferView)
 
  {
     struct intel_obj *obj = intel_obj(bufferView.handle);
@@ -1369,9 +1367,9 @@ ICD_EXPORT VkResult VKAPI vkDestroyBufferView(
  }
 
 ICD_EXPORT VkResult VKAPI vkCreateImageView(
-    VkDevice                                  device,
-    const VkImageViewCreateInfo*           pCreateInfo,
-    VkImageView*                             pView)
+    VkDevice                            device,
+    const VkImageViewCreateInfo*        pCreateInfo,
+    VkImageView*                        pView)
 {
     struct intel_dev *dev = intel_dev(device);
 
@@ -1380,35 +1378,13 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
 }
 
 ICD_EXPORT VkResult VKAPI vkDestroyImageView(
-    VkDevice                                device,
-    VkImageView                             imageView)
+    VkDevice                            device,
+    VkImageView                         imageView)
 
- {
+{
     struct intel_obj *obj = intel_obj(imageView.handle);
 
     obj->destroy(obj);
     return VK_SUCCESS;
- }
-
-ICD_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                                    device,
-    const VkAttachmentViewCreateInfo*           pCreateInfo,
-    VkAttachmentView*                           pView)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_att_view_create(dev, pCreateInfo,
-            (struct intel_att_view **) pView);
 }
-
-ICD_EXPORT VkResult VKAPI vkDestroyAttachmentView(
-    VkDevice                                device,
-    VkAttachmentView                        attachmentView)
-
- {
-    struct intel_obj *obj = intel_obj(attachmentView.handle);
-
-    obj->destroy(obj);
-    return VK_SUCCESS;
- }
 

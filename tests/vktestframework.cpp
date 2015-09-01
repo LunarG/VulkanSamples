@@ -90,7 +90,7 @@ enum TOptions {
 typedef struct _SwapChainBuffers {
     VkImage image;
     VkCmdBuffer cmd;
-    VkAttachmentView view;
+    VkImageView view;
 } SwapChainBuffers;
 
 class TestFrameworkVkPresent
@@ -915,19 +915,21 @@ void TestFrameworkVkPresent::CreateSwapChain()
     assert(m_buffers);
 
     for (i = 0; i < m_swapChainImageCount; i++) {
-        VkAttachmentViewCreateInfo color_attachment_view = {};
-        color_attachment_view.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-        color_attachment_view.pNext = NULL;
-        color_attachment_view.format = m_format;
-        color_attachment_view.mipLevel = 0;
-        color_attachment_view.baseArraySlice = 0;
-        color_attachment_view.arraySize = 1;
+        VkImageViewCreateInfo color_image_view = {};
+        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view.pNext = NULL;
+        color_image_view.format = m_format;
+        color_image_view.subresourceRange.aspect = VK_IMAGE_ASPECT_DEPTH;
+        color_image_view.subresourceRange.baseMipLevel = 0;
+        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.baseArraySlice = 0;
+        color_image_view.subresourceRange.arraySize = 1;
 
         m_buffers[i].image = swapChainImages[i];
 
-        color_attachment_view.image = m_buffers[i].image;
-        err = vkCreateAttachmentView(m_device.handle(),
-                &color_attachment_view, &m_buffers[i].view);
+        color_image_view.image = m_buffers[i].image;
+        err = vkCreateImageView(m_device.handle(),
+                &color_image_view, &m_buffers[i].view);
         assert(!err);
     }
 }

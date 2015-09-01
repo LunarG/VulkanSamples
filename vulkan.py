@@ -198,7 +198,6 @@ core = Extension(
         "VkQueryPool",
         "VkBufferView",
         "VkImageView",
-        "VkAttachmentView",
         "VkShaderModule",
         "VkShader",
         "VkPipelineCache",
@@ -532,15 +531,6 @@ core = Extension(
         Proto("VkResult", "DestroyImageView",
             [Param("VkDevice", "device"),
              Param("VkImageView", "imageView")]),
-
-        Proto("VkResult", "CreateAttachmentView",
-            [Param("VkDevice", "device"),
-             Param("const VkAttachmentViewCreateInfo*", "pCreateInfo"),
-             Param("VkAttachmentView*", "pView")]),
-
-        Proto("VkResult", "DestroyAttachmentView",
-            [Param("VkDevice", "device"),
-             Param("VkAttachmentView", "attachmentView")]),
 
         Proto("VkResult", "CreateShaderModule",
             [Param("VkDevice", "device"),
@@ -1184,7 +1174,6 @@ object_non_dispatch_list = [
     "VkQueryPool",
     "VkBufferView",
     "VkImageView",
-    "VkAttachmentView",
     "VkShaderModule",
     "VkShader",
     "VkPipelineCache",

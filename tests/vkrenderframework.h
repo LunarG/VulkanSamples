@@ -57,14 +57,14 @@ public:
     VkDepthStencilObj();
     void Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format);
     bool Initialized();
-    VkAttachmentView* BindInfo();
+    VkImageView* BindInfo();
 
 protected:
     VkDeviceObj                        *m_device;
     bool                                m_initialized;
-    vk_testing::AttachmentView          m_attachmentView;
+    vk_testing::ImageView               m_imageView;
     VkFormat                            m_depth_stencil_fmt;
-    VkAttachmentView                    m_attachmentBindInfo;
+    VkImageView                         m_attachmentBindInfo;
 };
 
 class VkCommandBufferObj;
@@ -84,8 +84,8 @@ public:
     void InitViewport();
     void InitRenderTarget();
     void InitRenderTarget(uint32_t targets);
-    void InitRenderTarget(VkAttachmentView *dsBinding);
-    void InitRenderTarget(uint32_t targets, VkAttachmentView *dsBinding);
+    void InitRenderTarget(VkImageView *dsBinding);
+    void InitRenderTarget(uint32_t targets, VkImageView *dsBinding);
     void InitFramework();
     void InitFramework(
             std::vector<const char *> instance_layer_names,
@@ -292,19 +292,21 @@ public:
         return handle();
     }
 
-    VkAttachmentView targetView(VkFormat format)
+    VkImageView targetView(VkFormat format)
     {
         if (!m_targetView.initialized())
         {
-            VkAttachmentViewCreateInfo createView = {
-                VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
-                VK_NULL_HANDLE,
-                handle(),
-                format,
-                0,
-                0,
-                1
-            };
+            VkImageViewCreateInfo createView = {};
+            createView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createView.image = handle();
+            createView.viewType =  VK_IMAGE_VIEW_TYPE_2D;
+            createView.format = format;
+            createView.channels.r = VK_CHANNEL_SWIZZLE_R;
+            createView.channels.g = VK_CHANNEL_SWIZZLE_G;
+            createView.channels.b = VK_CHANNEL_SWIZZLE_B;
+            createView.channels.a = VK_CHANNEL_SWIZZLE_A;
+            createView.subresourceRange = {VK_IMAGE_ASPECT_COLOR, 0, 1, 0, 1};
+            createView.flags = 0;
             m_targetView.init(*m_device, createView);
         }
         return m_targetView.handle();
@@ -333,7 +335,7 @@ public:
 protected:
     VkDeviceObj                        *m_device;
 
-    vk_testing::AttachmentView          m_targetView;
+    vk_testing::ImageView               m_targetView;
     VkDescriptorInfo                    m_descriptorInfo;
 };
 

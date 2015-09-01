@@ -3097,7 +3097,7 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 static void gen6_meta_depth_buffer(struct intel_cmd *cmd)
 {
     const struct intel_cmd_meta *meta = cmd->bind.meta;
-    const struct intel_att_view *view = meta->ds.view;
+    const struct intel_att_view *view = &meta->ds.view;
 
     CMD_ASSERT(cmd, 6, 7.5);
 

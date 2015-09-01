@@ -618,13 +618,6 @@ void ImageView::init(const Device &dev, const VkImageViewCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateImageView, dev, &info);
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(AttachmentView, vkDestroyAttachmentView)
-
-void AttachmentView::init(const Device &dev, const VkAttachmentViewCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateAttachmentView, dev, &info);
-}
-
 NON_DISPATCHABLE_HANDLE_DTOR(ShaderModule, vkDestroyShaderModule)
 
 void ShaderModule::init(const Device &dev, const VkShaderModuleCreateInfo &info)

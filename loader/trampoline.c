@@ -762,24 +762,6 @@ LOADER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView ima
     return disp->DestroyImageView(device, imageView);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateAttachmentView(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateAttachmentView(device, pCreateInfo, pView);
-}
-
-LOADER_EXPORT VkResult VKAPI vkDestroyAttachmentView(VkDevice device, VkAttachmentView attachmentView)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->DestroyAttachmentView(device, attachmentView);
-}
-
 LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShader)
 {
     const VkLayerDispatchTable *disp;

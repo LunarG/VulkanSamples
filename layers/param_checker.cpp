@@ -1212,10 +1212,10 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkAttachmentViewCreateFlagBits const& enumerator)
+bool ValidateEnumerator(VkImageViewCreateFlagBits const& enumerator)
 {
-    VkAttachmentViewCreateFlagBits allFlags = (VkAttachmentViewCreateFlagBits)(VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT |
-        VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT);
+    VkImageViewCreateFlagBits allFlags = (VkImageViewCreateFlagBits)(VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT |
+        VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1225,7 +1225,7 @@ bool ValidateEnumerator(VkAttachmentViewCreateFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkAttachmentViewCreateFlagBits const& enumerator)
+std::string EnumeratorString(VkImageViewCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1233,13 +1233,13 @@ std::string EnumeratorString(VkAttachmentViewCreateFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT)
+    if(enumerator & VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT)
     {
-        strings.push_back("VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT");
+        strings.push_back("VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT");
     }
-    if(enumerator & VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT)
+    if(enumerator & VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT)
     {
-        strings.push_back("VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT");
+        strings.push_back("VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT");
     }
 
     std::string enumeratorString;
@@ -4320,92 +4320,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyImageView(device, imageView);
 
     PostDestroyImageView(device, imageView, result);
-
-    return result;
-}
-
-bool PreCreateAttachmentView(
-    VkDevice device,
-    const VkAttachmentViewCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
-        pCreateInfo->format > VK_FORMAT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateAttachmentView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateAttachmentView(
-    VkDevice device,
-    VkAttachmentView* pView,
-    VkResult result)
-{
-
-    if(pView != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateAttachmentView(
-    VkDevice device,
-    const VkAttachmentViewCreateInfo* pCreateInfo,
-    VkAttachmentView* pView)
-{
-    PreCreateAttachmentView(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateAttachmentView(device, pCreateInfo, pView);
-
-    PostCreateAttachmentView(device, pView, result);
-
-    return result;
-}
-
-bool PostDestroyAttachmentView(
-    VkDevice device,
-    VkAttachmentView attachmentView,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyAttachmentView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyAttachmentView(
-    VkDevice device,
-    VkAttachmentView attachmentView)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyAttachmentView(device, attachmentView);
-
-    PostDestroyAttachmentView(device, attachmentView, result);
 
     return result;
 }
@@ -8438,8 +8352,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkGetImageSubresourceLayout;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateAttachmentView"))
-        return (PFN_vkVoidFunction) vkCreateAttachmentView;
+    if (!strcmp(funcName, "vkDestroyImageView"))
+        return (PFN_vkVoidFunction) vkDestroyImageView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))

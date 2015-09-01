@@ -45,7 +45,6 @@ class Buffer;
 class BufferView;
 class Image;
 class ImageView;
-class ColorAttachmentView;
 class DepthStencilView;
 class Shader;
 class Pipeline;
@@ -446,15 +445,6 @@ public:
 
     // vkCreateImageView()
     void init(const Device &dev, const VkImageViewCreateInfo &info);
-};
-
-//class AttachmentView : public DerivedObject<VkAttachmentView, Object, VK_OBJECT_TYPE_ATTACHMENT_VIEW> {
-class AttachmentView : public internal::NonDispHandle<VkAttachmentView> {
-public:
-    ~AttachmentView();
-
-    // vkCreateAttachmentView()
-    void init(const Device &dev, const VkAttachmentViewCreateInfo &info);
 };
 
 class ShaderModule : public internal::NonDispHandle<VkShaderModule> {

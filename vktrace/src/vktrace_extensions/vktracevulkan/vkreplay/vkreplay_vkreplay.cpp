@@ -1317,16 +1317,16 @@ VkResult vkReplay::manually_replay_vkCreateFramebuffer(packet_vkCreateFramebuffe
         return VK_ERROR_UNKNOWN;
 
     VkFramebufferCreateInfo *pInfo = (VkFramebufferCreateInfo *) pPacket->pCreateInfo;
-    VkAttachmentView *pAttachments, *pSavedAttachments = (VkAttachmentView*)pInfo->pAttachments;
+    VkImageView *pAttachments, *pSavedAttachments = (VkImageView*)pInfo->pAttachments;
     bool allocatedAttachments = false;
     if (pSavedAttachments != NULL)
     {
         allocatedAttachments = true;
-        pAttachments = VKTRACE_NEW_ARRAY(VkAttachmentView, pInfo->attachmentCount);
-        memcpy(pAttachments, pSavedAttachments, sizeof(VkAttachmentView) * pInfo->attachmentCount);
+        pAttachments = VKTRACE_NEW_ARRAY(VkImageView, pInfo->attachmentCount);
+        memcpy(pAttachments, pSavedAttachments, sizeof(VkImageView) * pInfo->attachmentCount);
         for (uint32_t i = 0; i < pInfo->attachmentCount; i++)
         {
-            pAttachments[i].handle = m_objMapper.remap_attachmentviews(pInfo->pAttachments[i].handle);
+            pAttachments[i].handle = m_objMapper.remap_imageviews(pInfo->pAttachments[i].handle);
         }
         pInfo->pAttachments = pAttachments;
     }

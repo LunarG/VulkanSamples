@@ -53,21 +53,7 @@ struct intel_buf_view {
     uint32_t cmd_len;
 };
 
-struct intel_img_view {
-    struct intel_obj obj;
-
-    struct intel_img *img;
-
-    VkChannelMapping shader_swizzles;
-
-    /* SURFACE_STATE */
-    uint32_t cmd[8];
-    uint32_t cmd_len;
-};
-
 struct intel_att_view {
-    struct intel_obj obj;
-
     struct intel_img *img;
 
     uint32_t mipLevel;
@@ -91,6 +77,20 @@ struct intel_att_view {
     bool has_hiz;
 };
 
+struct intel_img_view {
+    struct intel_obj obj;
+
+    struct intel_img *img;
+
+    VkChannelMapping shader_swizzles;
+
+    /* SURFACE_STATE */
+    uint32_t cmd[8];
+    uint32_t cmd_len;
+
+    struct intel_att_view att_view;
+};
+
 static inline struct intel_buf_view *intel_buf_view(VkBufferView view)
 {
     return *(struct intel_buf_view **) &view;
@@ -111,16 +111,6 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
     return (struct intel_img_view *) obj;
 }
 
-static inline struct intel_att_view *intel_att_view(VkAttachmentView view)
-{
-    return *(struct intel_att_view **) &view;
-}
-
-static inline struct intel_att_view *intel_att_view_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_att_view *) obj;
-}
-
 void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev);
 
@@ -130,14 +120,17 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
 
 void intel_buf_view_destroy(struct intel_buf_view *view);
 
+void intel_img_view_init(struct intel_dev *dev, const VkImageViewCreateInfo *info,
+                         struct intel_img_view *view);
+
 VkResult intel_img_view_create(struct intel_dev *dev,
                                  const VkImageViewCreateInfo *info,
                                  struct intel_img_view **view_ret);
 void intel_img_view_destroy(struct intel_img_view *view);
 
-VkResult intel_att_view_create(struct intel_dev *dev,
-                               const VkAttachmentViewCreateInfo *info,
-                               struct intel_att_view **view_ret);
+void intel_att_view_init(struct intel_dev *dev,
+                         const VkImageViewCreateInfo *info,
+                         struct intel_att_view *att_view);
 void intel_att_view_destroy(struct intel_att_view *view);
 
 #endif /* VIEW_H */

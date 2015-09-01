@@ -124,7 +124,7 @@ struct intel_cmd_meta {
     } src, dst;
 
     struct {
-        struct intel_att_view *view;
+        struct intel_att_view view;
         uint32_t stencil_ref;
         VkImageAspect aspect;
 

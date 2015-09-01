@@ -84,8 +84,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->GetImageSubresourceLayout = (PFN_vkGetImageSubresourceLayout) gpa(dev, "vkGetImageSubresourceLayout");
     table->CreateImageView = (PFN_vkCreateImageView) gpa(dev, "vkCreateImageView");
     table->DestroyImageView = (PFN_vkDestroyImageView) gpa(dev, "vkDestroyImageView");
-    table->CreateAttachmentView = (PFN_vkCreateAttachmentView) gpa(dev, "vkCreateAttachmentView");
-    table->DestroyAttachmentView = (PFN_vkDestroyAttachmentView) gpa(dev, "vkDestroyAttachmentView");
     table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
     table->DestroyShaderModule = (PFN_vkDestroyShaderModule) gpa(dev, "vkDestroyShaderModule");
     table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
@@ -294,10 +292,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateImageView;
     if (!strcmp(name, "DestroyImageView"))
         return (void *) table->DestroyImageView;
-    if (!strcmp(name, "CreateAttachmentView"))
-        return (void *) table->CreateAttachmentView;
-    if (!strcmp(name, "DestroyAttachmentView"))
-        return (void *) table->DestroyAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void *) table->CreateShaderModule;
     if (!strcmp(name, "DestroyShaderModule"))

@@ -90,10 +90,6 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkImageViewCreateInfo);
         break;
-    case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
-        shallow_copy = sizeof(VkAttachmentViewCreateInfo);
-        break;
     case VK_OBJECT_TYPE_SAMPLER:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
         shallow_copy = sizeof(VkSamplerCreateInfo);

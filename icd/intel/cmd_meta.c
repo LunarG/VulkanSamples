@@ -126,8 +126,8 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
                                      struct intel_cmd_meta *meta)
 {
     VkImageViewCreateInfo info;
-    struct intel_img_view *view;
-    VkResult ret;
+    struct intel_img_view tmp_view;
+    struct intel_img_view *view = &tmp_view;
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -171,11 +171,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.subresourceRange.baseArraySlice = 0;
     info.subresourceRange.arraySize = VK_REMAINING_ARRAY_SLICES;
 
-    ret = intel_img_view_create(cmd->dev, &info, &view);
-    if (ret != VK_SUCCESS) {
-        cmd_fail(cmd, ret);
-        return;
-    }
+    intel_img_view_init(cmd->dev, &info, view);
 
     meta->src.valid = true;
 
@@ -187,7 +183,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     meta->src.reloc_offset = 0;
     meta->src.reloc_flags = 0;
 
-    intel_img_view_destroy(view);
+    /* Don't need tmp_view anymore */
 }
 
 static void cmd_meta_adjust_compressed_dst(struct intel_cmd *cmd,
@@ -258,23 +254,20 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
                                      uint32_t lod, uint32_t layer,
                                      struct intel_cmd_meta *meta)
 {
-    VkAttachmentViewCreateInfo info;
-    struct intel_att_view *view;
-    VkResult ret;
+    struct intel_att_view tmp_view;
+    struct intel_att_view *view = &tmp_view;
+    VkImageViewCreateInfo info;
 
     memset(&info, 0, sizeof(info));
-    info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image.handle = (uint64_t) img;
     info.format = format;
-    info.mipLevel = lod;
-    info.baseArraySlice = layer;
-    info.arraySize = 1;
+    info.subresourceRange.baseMipLevel = lod;
+    info.subresourceRange.mipLevels = 1;
+    info.subresourceRange.baseArraySlice = layer;
+    info.subresourceRange.arraySize = 1;
 
-    ret = intel_att_view_create(cmd->dev, &info, &view);
-    if (ret != VK_SUCCESS) {
-        cmd_fail(cmd, ret);
-        return;
-    }
+    intel_att_view_init(cmd->dev, &info, view);
 
     meta->dst.valid = true;
 
@@ -288,8 +281,6 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     if (icd_format_is_compressed(img->layout.format))
         cmd_meta_adjust_compressed_dst(cmd, img, meta);
-
-    intel_att_view_destroy(view);
 }
 
 static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
@@ -328,24 +319,17 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
                                  uint32_t lod, uint32_t layer,
                                  struct intel_cmd_meta *meta)
 {
-    VkAttachmentViewCreateInfo info;
-    struct intel_att_view *view;
-    VkResult ret;
+    VkImageViewCreateInfo info;
 
     memset(&info, 0, sizeof(info));
-    info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image.handle = (uint64_t)img;
-    info.mipLevel = lod;
-    info.baseArraySlice = layer;
-    info.arraySize = 1;
+    info.subresourceRange.baseMipLevel = lod;
+    info.subresourceRange.mipLevels = 1;
+    info.subresourceRange.baseArraySlice = layer;
+    info.subresourceRange.arraySize = 1;
 
-    ret = intel_att_view_create(cmd->dev, &info, &view);
-    if (ret != VK_SUCCESS) {
-        cmd_fail(cmd, ret);
-        return;
-    }
-
-    meta->ds.view = view;
+    intel_att_view_init(cmd->dev, &info, &meta->ds.view);
 }
 
 static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
@@ -869,8 +853,6 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
                         meta->clear_val[1], meta);
 
                 cmd_draw_meta(cmd, meta);
-
-                intel_att_view_destroy(meta->ds.view);
             }
 
             meta->dst.layer++;

@@ -159,10 +159,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateImageView;
     if (!strcmp(name, "DestroyImageView"))
         return (void*) vkDestroyImageView;
-    if (!strcmp(name, "CreateAttachmentView"))
-        return (void*) vkCreateAttachmentView;
-    if (!strcmp(name, "DestroyAttachmentView"))
-        return (void*) vkDestroyAttachmentView;
     if (!strcmp(name, "CreateShaderModule"))
         return (void*) vkCreateShaderModule;
     if (!strcmp(name, "DestroyShaderModule"))

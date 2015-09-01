@@ -61,13 +61,13 @@ VkResult intel_fb_create(struct intel_dev *dev,
     array_size = info->layers;
 
     for (i = 0; i < info->attachmentCount; i++) {
-        const VkAttachmentView *att = &info->pAttachments[i];
-        const struct intel_att_view *view = intel_att_view(*att);
+        const VkImageView *att = &info->pAttachments[i];
+        const struct intel_img_view *view = intel_img_view(*att);
 
-        if (array_size > view->array_size)
-            array_size = view->array_size;
+        if (array_size > view->att_view.array_size)
+            array_size = view->att_view.array_size;
 
-        fb->views[i] = view;
+        fb->views[i] = &view->att_view;
     }
 
     fb->width = width;
