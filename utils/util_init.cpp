@@ -33,13 +33,6 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#define APP_NAME_STR_LEN 80
-#else  // _WIN32
-#include <xcb/xcb.h>
-#endif // _WIN32
-
 using namespace std;
 
 /*
@@ -64,7 +57,7 @@ VkResult init_global_extension_properties(
             return VK_SUCCESS;
         }
 
-        layer_props.extensions.reserve(instance_extension_count);
+        layer_props.extensions.resize(instance_extension_count);
         instance_extensions = layer_props.extensions.data();
         res = vkGetGlobalExtensionProperties(
                   layer_name,
@@ -148,7 +141,7 @@ VkResult init_device_extension_properties(
             return VK_SUCCESS;
         }
 
-        layer_props.extensions.reserve(device_extension_count);
+        layer_props.extensions.resize(device_extension_count);
         device_extensions = layer_props.extensions.data();
         res = vkGetPhysicalDeviceExtensionProperties(
                   info.gpu,
@@ -403,6 +396,7 @@ void init_window(struct sample_info &info)
     assert(info.height > 0);
 
     info.connection = GetModuleHandle(NULL);
+    sprintf(info.name, "Sample");
 
     // Initialize the window class structure:
     win_class.cbSize = sizeof(WNDCLASSEX);
@@ -599,7 +593,7 @@ void init_wsi(struct sample_info &info)
     assert(!res);
     assert(info.queue_count >= 1);
 
-    info.queue_props.reserve(info.queue_count);
+    info.queue_props.resize(info.queue_count);
     res = vkGetPhysicalDeviceQueueProperties(info.gpu, info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
@@ -817,8 +811,6 @@ void init_swap_chain(struct sample_info &info)
     // The number of images within the swap chain is determined based on the size of the info returned
     info.swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
 #endif // WORK_AROUND_CODE
-
-    info.buffers.reserve(info.swapChainImageCount);
 
     for (int i = 0; i < info.swapChainImageCount; i++) {
         swap_chain_buffer sc_buffer;

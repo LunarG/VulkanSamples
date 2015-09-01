@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     assert(!res);
     assert(info.queue_count >= 1);
 
-    info.queue_props.reserve(info.queue_count);
+    info.queue_props.resize(info.queue_count);
     res = vkGetPhysicalDeviceQueueProperties(info.gpu, info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
     info.swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
 #endif // WORK_AROUND_CODE
 
-    info.buffers.reserve(info.swapChainImageCount);
+    info.buffers.resize(info.swapChainImageCount);
 
     init_command_buffer(info); /* Going to need command buffer and device queue to */
     init_device_queue(info);   /* send memory barriers in set_image_layout()       */

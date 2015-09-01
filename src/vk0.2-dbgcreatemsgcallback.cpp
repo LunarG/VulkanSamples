@@ -33,7 +33,6 @@ create and destroy Vulkan instance
 #include <string>
 #include <string.h>
 #include "util.hpp"
-#include "vulkan/vk_debug_report_lunarg.h"
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 
@@ -63,7 +62,7 @@ void dbgFunc(
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
 
 #ifdef _WIN32
-    MessageBox(NULL, message, "Alert", MB_OK);
+    MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
 #else
     std::cout << message << std::endl;
 #endif

@@ -30,7 +30,6 @@ Draw Cube
 #include <util_init.hpp>
 #include <assert.h>
 #include <string.h>
-#include <unistd.h>
 #include <cstdlib>
 #include "cube_data.h"
 
@@ -175,8 +174,9 @@ int main(int argc, char **argv)
 
     res = vkQueueWaitIdle(info.queue);
     assert(res == VK_SUCCESS);
-    sleep(1);
-     /* VULKAN_KEY_END */
+
+    wait_seconds(1);
+    /* VULKAN_KEY_END */
 
     vkDestroyDynamicViewportState(info.device, info.dyn_viewport);
     vkDestroyDynamicRasterState(info.device, info.dyn_raster);
