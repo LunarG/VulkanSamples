@@ -43,8 +43,6 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info);
 

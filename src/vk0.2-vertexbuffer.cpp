@@ -55,8 +55,6 @@ int main(int argc, char **argv)
     init_depth_buffer(info);
     init_renderpass(info);
     init_framebuffers(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
 
     /* VULKAN_KEY_START */
     /*

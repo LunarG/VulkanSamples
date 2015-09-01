@@ -42,8 +42,6 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
     info.width = info.height = 50;
 
     /* VULKAN_KEY_START */

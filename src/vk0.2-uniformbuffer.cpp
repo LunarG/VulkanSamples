@@ -42,8 +42,6 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
     info.width = info.height = 50;
 
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);

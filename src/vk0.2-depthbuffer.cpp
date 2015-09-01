@@ -56,8 +56,6 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_wsi(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
     init_command_buffer(info);
     init_device_queue(info);
 
