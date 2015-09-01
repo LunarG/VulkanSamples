@@ -590,7 +590,6 @@ void init_wsi(struct sample_info &info)
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportWSI);
     GET_DEVICE_PROC_ADDR(info.device, GetSurfaceInfoWSI);
     GET_DEVICE_PROC_ADDR(info.device, CreateSwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapChainWSI);
     GET_DEVICE_PROC_ADDR(info.device, DestroySwapChainWSI);
     GET_DEVICE_PROC_ADDR(info.device, GetSwapChainInfoWSI);
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageWSI);
