@@ -94,7 +94,7 @@ int main(int argc, char **argv)
                     break;
                 }
 
-                layer_props.extensions.reserve(instance_extension_count);
+                layer_props.extensions.resize(instance_extension_count);
                 instance_extensions = layer_props.extensions.data();
                 res = vkGetGlobalExtensionProperties(
                           layer_name,
