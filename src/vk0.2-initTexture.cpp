@@ -49,8 +49,6 @@ int main(int argc, char **argv)
     init_wsi(info);
     init_command_buffer(info);
     init_device_queue(info);
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
-    assert(!res);
 
     /* VULKAN_KEY_START */
     /*
