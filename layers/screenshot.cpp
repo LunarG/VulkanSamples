@@ -527,7 +527,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
         pSwapChainImages &&
         !swapchainMap.empty() && swapchainMap.find(swapChain.handle) != swapchainMap.end())
     {
-        int i;
+        unsigned i;
 
         for (i=0; i<*pCount; i++)
         {
@@ -548,7 +548,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapChainImagesWSI(
         {
             VkImage *imageList = new VkImage[i];
             swapchainMapElem->imageList = imageList;
-            for (int j=0; j<i; j++)
+            for (unsigned j=0; j<i; j++)
             {
                 swapchainMapElem->imageList[j] = pSwapChainImages[j].handle;
             }
