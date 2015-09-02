@@ -125,36 +125,6 @@ int main(int argc, char **argv)
 
     /* Now present the image in the window */
 
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            &presentCompleteSemaphore);
-    assert(!res);
-
-    // Get the index of the next available swapchain image:
-    res = info.fpAcquireNextImageWSI(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      &info.current_buffer);
-    // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
-    // return codes
-    assert(!res);
-
-    // Wait for the present complete semaphore to be signaled to ensure
-    // that the image won't be rendered to until the presentation
-    // engine has fully released ownership to the application, and it is
-    // okay to render to the image.
-    vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
-
-// FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_WSI
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
-
     VkPresentInfoWSI present;
     present.sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI;
     present.pNext = NULL;
@@ -165,9 +135,6 @@ int main(int argc, char **argv)
     res = info.fpQueuePresentWSI(info.queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
-    assert(!res);
-
-    res = vkDestroySemaphore(info.device, presentCompleteSemaphore);
     assert(!res);
 
     res = vkQueueWaitIdle(info.queue);
