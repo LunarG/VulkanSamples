@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 160, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 162, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -886,6 +886,17 @@ typedef enum {
 typedef VkFlags VkImageUsageFlags;
 
 typedef enum {
+    VK_SAMPLE_COUNT_1 = 0x00000001,
+    VK_SAMPLE_COUNT_2 = 0x00000002,
+    VK_SAMPLE_COUNT_4 = 0x00000004,
+    VK_SAMPLE_COUNT_8 = 0x00000008,
+    VK_SAMPLE_COUNT_16 = 0x00000010,
+    VK_SAMPLE_COUNT_32 = 0x00000020,
+    VK_SAMPLE_COUNT_64 = 0x00000040,
+} VkSampleCountFlagBits;
+typedef VkFlags VkSampleCountFlags;
+
+typedef enum {
     VK_QUEUE_GRAPHICS_BIT = 0x00000001,
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
     VK_QUEUE_DMA_BIT = 0x00000004,
@@ -1210,8 +1221,8 @@ typedef struct {
 } VkFormatProperties;
 
 typedef struct {
+    VkSampleCountFlags                          sampleCounts;
     uint64_t                                    maxResourceSize;
-    uint32_t                                    maxSamples;
 } VkImageFormatProperties;
 
 typedef struct {
@@ -1220,6 +1231,7 @@ typedef struct {
     uint32_t                                    maxImageDimension3D;
     uint32_t                                    maxImageDimensionCube;
     uint32_t                                    maxImageArrayLayers;
+    VkSampleCountFlags                          sampleCounts;
     uint32_t                                    maxTexelBufferSize;
     uint32_t                                    maxUniformBufferSize;
     uint32_t                                    maxStorageBufferSize;
