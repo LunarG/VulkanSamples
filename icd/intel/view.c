@@ -1254,7 +1254,7 @@ void intel_img_view_init(struct intel_dev *dev,
             view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
             view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
             intel_dev_log(dev, VK_DBG_REPORT_WARN_BIT,
-                          view, 0, 0,
+                          (struct intel_base*)view, 0, 0,
                           "image data swizzling is ignored");
         }
 
@@ -1340,8 +1340,6 @@ void intel_att_view_init(struct intel_dev *dev,
                              info->subresourceRange.baseArraySlice,
                              info->subresourceRange.arraySize);
     }
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
