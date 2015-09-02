@@ -384,9 +384,9 @@ static void add_VkComputePipelineCreateInfos_to_trace_packet(vktrace_trace_packe
         for (i = 0; i < count; i++) {
 
             // shader stage
-            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->cs), sizeof(VkPipelineShaderStageCreateInfo), &pParam[i].cs);
-            add_VkPipelineShaderStageCreateInfo_to_trace_packet(pHeader, (VkPipelineShaderStageCreateInfo*)&pPacket->cs, &pParam[i].cs);
-            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->cs));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->stage), sizeof(VkPipelineShaderStageCreateInfo), &pParam[i].stage);
+            add_VkPipelineShaderStageCreateInfo_to_trace_packet(pHeader, (VkPipelineShaderStageCreateInfo*)&pPacket->stage, &pParam[i].stage);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->stage));
 
 /*
             // Vertex Input State

@@ -4949,25 +4949,25 @@ bool PreCreateComputePipelines(
         "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->cs.sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
+    if(pCreateInfos->stage.sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->cs.sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->cs.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfos->cs.stage > VK_SHADER_STAGE_END_RANGE)
+    if(pCreateInfos->stage.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
+        pCreateInfos->stage.stage > VK_SHADER_STAGE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateComputePipelines parameter, VkShaderStage pCreateInfos->cs.stage, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->cs.pSpecializationInfo != nullptr)
+    if(pCreateInfos->stage.pSpecializationInfo != nullptr)
     {
-    if(pCreateInfos->cs.pSpecializationInfo->pMap != nullptr)
+    if(pCreateInfos->stage.pSpecializationInfo->pMap != nullptr)
     {
     }
-    if(pCreateInfos->cs.pSpecializationInfo->pData != nullptr)
+    if(pCreateInfos->stage.pSpecializationInfo->pData != nullptr)
     {
     }
     }

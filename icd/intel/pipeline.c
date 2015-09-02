@@ -283,9 +283,9 @@ static VkResult pipeline_build_shaders(struct intel_pipeline *pipeline,
     if (ret == VK_SUCCESS && info->fs.shader.handle)
         ret = pipeline_build_shader(pipeline, &info->fs, &pipeline->fs);
 
-    if (ret == VK_SUCCESS && info->compute.cs.shader.handle) {
+    if (ret == VK_SUCCESS && info->compute.stage.shader.handle) {
         ret = pipeline_build_shader(pipeline,
-                &info->compute.cs, &pipeline->cs);
+                &info->compute.stage, &pipeline->cs);
     }
 
     return ret;
