@@ -1166,6 +1166,7 @@ typedef struct {
     VkBool32                                    textureCompressionETC2;
     VkBool32                                    textureCompressionASTC_LDR;
     VkBool32                                    textureCompressionBC;
+    VkBool32                                    occlusionQueryNonConservative;
     VkBool32                                    pipelineStatisticsQuery;
     VkBool32                                    vertexSideEffects;
     VkBool32                                    tessellationSideEffects;
