@@ -639,7 +639,7 @@ static void demo_prepare_depth(struct demo *demo)
         .image.handle = VK_NULL_HANDLE,
         .format = depth_format,
         .subresourceRange = {
-            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .aspect = VK_IMAGE_ASPECT_DEPTH,
             .baseMipLevel = 0,
             .mipLevels = 1,
             .baseArraySlice = 0,
