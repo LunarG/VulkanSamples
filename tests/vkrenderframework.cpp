@@ -394,6 +394,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         att.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        att.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        att.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(att);
 
         clear.depthStencil.depth = m_depth_clear_color;
@@ -403,6 +405,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         bindings.push_back(*dsBinding);
 
         subpass.depthStencilAttachment.attachment = targets;
+        subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     } else {
         subpass.depthStencilAttachment.attachment = VK_ATTACHMENT_UNUSED;
     }
@@ -1583,8 +1586,8 @@ VkImageView* VkDepthStencilObj::BindInfo()
 
 void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height, VkFormat format)
 {
-    VkImageCreateInfo image_info;
-    VkImageViewCreateInfo view_info;
+    VkImageCreateInfo image_info = {};
+    VkImageViewCreateInfo view_info = {};
 
     m_device = device;
     m_initialized = true;
@@ -1619,6 +1622,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.flags = 0;
     view_info.format = m_depth_stencil_fmt;
     view_info.image = handle();
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     m_imageView.init(*m_device, view_info);
 
     m_attachmentBindInfo = m_imageView.handle();
