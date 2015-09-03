@@ -934,20 +934,28 @@ void init_uniform_buffer(struct sample_info &info)
     info.uniform_data.desc.bufferView = info.uniform_data.view;
 }
 
-void init_descriptor_and_pipeline_layouts(struct sample_info &info)
+void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture)
 {
-    VkDescriptorSetLayoutBinding layout_binding = {};
-    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_binding.arraySize = 1;
-    layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    layout_binding.pImmutableSamplers = NULL;
+    VkDescriptorSetLayoutBinding layout_bindings[2];
+    layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[0].arraySize = 1;
+    layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[0].pImmutableSamplers = NULL;
+
+    if (use_texture)
+    {
+        layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        layout_bindings[1].arraySize = 1;
+        layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        layout_bindings[1].pImmutableSamplers = NULL;
+    }
 
     /* Next take layout bindings and use them to create a descriptor set layout */
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
-    descriptor_layout.count = 1;
-    descriptor_layout.pBinding = &layout_binding;
+    descriptor_layout.count = use_texture?2:1;
+    descriptor_layout.pBinding = layout_bindings;
 
     VkResult U_ASSERT_ONLY err;
 
@@ -1125,7 +1133,7 @@ void init_device_queue(struct sample_info &info)
     assert(!res);
 }
 
-void init_vertex_buffer(struct sample_info &info)
+void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture)
 {
     VkResult U_ASSERT_ONLY res;
 
@@ -1164,7 +1172,7 @@ void init_vertex_buffer(struct sample_info &info)
     res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, 0, 0, (void **) &pData);
     assert(!res);
 
-    memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
+    memcpy(pData, vertexData, dataSize);
 
     res = vkUnmapMemory(info.device, info.vertex_buffer.mem);
     assert(!res);
@@ -1188,7 +1196,7 @@ void init_vertex_buffer(struct sample_info &info)
 
     info.vi_binding.binding = 0;
     info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
-    info.vi_binding.strideInBytes = sizeof(g_vb_solid_face_colors_Data[0]);
+    info.vi_binding.strideInBytes = dataStride;
 
     info.vi_attribs[0].binding = 0;
     info.vi_attribs[0].location = 0;
@@ -1196,7 +1204,7 @@ void init_vertex_buffer(struct sample_info &info)
     info.vi_attribs[0].offsetInBytes = 0;
     info.vi_attribs[1].binding = 0;
     info.vi_attribs[1].location = 1;
-    info.vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    info.vi_attribs[1].format = use_texture?VK_FORMAT_R32G32_SFLOAT:VK_FORMAT_R32G32B32A32_SFLOAT;
     info.vi_attribs[1].offsetInBytes = 16;
 }
 
@@ -1267,20 +1275,26 @@ void init_dynamic_state(struct sample_info &info)
 
 }
 
-void init_descriptor_set(struct sample_info &info)
+void init_descriptor_set(struct sample_info &info, bool use_texture)
 {
     /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
 
     VkResult U_ASSERT_ONLY res;
+    VkDescriptorInfo tex_desc;
 
-    VkDescriptorTypeCount type_count[1];
+    VkDescriptorTypeCount type_count[2];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].count = 1;
+    if (use_texture)
+    {
+        type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        type_count[1].count = 1;
+    }
 
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
-    descriptor_pool.count = 1;
+    descriptor_pool.count = use_texture?2:1;
     descriptor_pool.pTypeCount = type_count;
 
     res = vkCreateDescriptorPool(info.device,
@@ -1295,7 +1309,7 @@ void init_descriptor_set(struct sample_info &info)
             &info.desc_set, &count);
     assert(!res && count == 1);
 
-    VkWriteDescriptorSet writes[1];
+    VkWriteDescriptorSet writes[2];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
@@ -1306,41 +1320,31 @@ void init_descriptor_set(struct sample_info &info)
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 
-    res = vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
+    if (use_texture)
+    {
+        tex_desc.attachmentView = 0;
+        tex_desc.bufferView = 0;
+        tex_desc.imageView = info.textures[0].view;
+        tex_desc.sampler = info.textures[0].sampler;
+        tex_desc.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].destSet = info.desc_set;
+        writes[1].destBinding = 1;
+        writes[1].count = 1;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writes[1].pDescriptors = &tex_desc;
+        writes[1].destArrayElement = 0;
+    }
+
+    res = vkUpdateDescriptorSets(info.device, use_texture?2:1, writes, 0, NULL);
     assert(!res);
 }
 
-void init_shaders(struct sample_info &info)
+void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText)
 {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY retVal;
-
-    static const char *vertShaderText =
-            "#version 140\n"
-            "#extension GL_ARB_separate_shader_objects : enable\n"
-            "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (std140, binding = 0) uniform bufferVals {\n"
-            "    mat4 mvp;\n"
-            "} myBufferVals;\n"
-            "layout (location = 0) in vec4 pos;\n"
-            "layout (location = 1) in vec4 inColor;\n"
-            "layout (location = 0) out vec4 outColor;\n"
-            "void main() {\n"
-            "   outColor = inColor;\n"
-            "   gl_Position = myBufferVals.mvp * pos;\n"
-            "   gl_Position.y = -gl_Position.y;\n"
-            "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-            "}\n";
-
-    static const char *fragShaderText =
-            "#version 140\n"
-            "#extension GL_ARB_separate_shader_objects : enable\n"
-            "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (location = 0) in vec4 color;\n"
-            "layout (location = 0) out vec4 outColor;\n"
-            "void main() {\n"
-            "   outColor = color;\n"
-            "}\n";
 
     std::vector<unsigned int> vtx_spv;
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1495,4 +1499,255 @@ void init_pipeline(struct sample_info &info)
 
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
     assert(!res);
+}
+
+void init_texture(struct sample_info &info)
+{
+    VkResult U_ASSERT_ONLY res;
+    struct texture_object texObj;
+    std::string filename = get_base_data_dir();
+    filename.append("lunarg.ppm");
+    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, 0, NULL))
+    {
+        std::cout << "Could not read texture file lunarg.ppm\n";
+        exit(-1);
+    }
+
+    VkFormatProperties formatProps;
+    res = vkGetPhysicalDeviceFormatProperties(info.gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+    assert(!res);
+
+    /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
+    bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext = NULL;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_create_info.extent.width = texObj.tex_width;
+    image_create_info.extent.height = texObj.tex_height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arraySize = 1;
+    image_create_info.samples = 1;
+    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
+                                          VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.queueFamilyCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.flags = 0;
+
+
+    VkMemoryAllocInfo mem_alloc = {};
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.allocationSize = 0;
+    mem_alloc.memoryTypeIndex = 0;
+
+    VkImage mappableImage;
+    VkDeviceMemory mappableMemory;
+
+    VkMemoryRequirements mem_reqs;
+
+    /* Create a mappable image.  It will be the texture if linear images are ok to be textures */
+    /* or it will be the staging image if they are not.                                        */
+    res = vkCreateImage(info.device, &image_create_info,
+            &mappableImage);
+    assert(!res);
+
+    res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+    assert(!res);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+
+    /* Find the memory type that is host mappable */
+    res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
+    assert(!res);
+
+    /* allocate memory */
+    res = vkAllocMemory(info.device, &mem_alloc,
+                &(mappableMemory));
+    assert(!res);
+
+    /* bind memory */
+    res = vkBindImageMemory(info.device, mappableImage,
+            mappableMemory, 0);
+    assert(!res);
+
+    VkImageSubresource subres = {};
+    subres.aspect = VK_IMAGE_ASPECT_COLOR;
+    subres.mipLevel = 0;
+    subres.arraySlice = 0;
+
+    VkSubresourceLayout layout;
+    void *data;
+
+    /* Get the subresource layout so we know what the row pitch is */
+    res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
+    assert(!res);
+
+    res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
+    assert(!res);
+
+    /* Read the ppm file into the mappable image's memory */
+    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
+        std::cout << "Could not load texture file lunarg.ppm\n";
+        exit(-1);
+    }
+
+    res = vkUnmapMemory(info.device, mappableMemory);
+    assert(!res);
+
+    if (!needStaging) {
+        /* If we can use the linear tiled image as a texture, just do it */
+        texObj.image = mappableImage;
+        texObj.mem = mappableMemory;
+        texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        set_image_layout(info, texObj.image,
+                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_LAYOUT_UNDEFINED,
+                               texObj.imageLayout);
+    } else {
+        /* The mappable image cannot be our texture, so create an optimally tiled image and blit to it */
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+        res = vkCreateImage(info.device, &image_create_info,
+                &texObj.image);
+        assert(!res);
+
+        res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
+        assert(!res);
+
+        mem_alloc.allocationSize = mem_reqs.size;
+
+        /* Find memory type with DEVICE_ONLY property */
+        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
+        assert(!res);
+
+        /* allocate memory */
+        res = vkAllocMemory(info.device, &mem_alloc,
+                    &texObj.mem);
+        assert(!res);
+
+        /* bind memory */
+        res = vkBindImageMemory(info.device, texObj.image,
+                texObj.mem, 0);
+        assert(!res);
+
+        /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
+        /* Side effect is that this will create info.cmd                                       */
+        set_image_layout(info, mappableImage,
+                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
+
+        /* Since we're going to blit to the texture image, set its layout to DESTINATION_OPTIMAL */
+        set_image_layout(info, texObj.image,
+                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
+
+        VkImageCopy copy_region;
+        copy_region.srcSubresource.arraySlice = 0;
+        copy_region.srcSubresource.mipLevel = 0;
+        copy_region.srcOffset.x = 0;
+        copy_region.srcOffset.y = 0;
+        copy_region.srcOffset.z = 0;
+        copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+        copy_region.destSubresource.arraySlice = 0;
+        copy_region.destSubresource.mipLevel = 0;
+        copy_region.destOffset.x = 0;
+        copy_region.destOffset.y = 0;
+        copy_region.destOffset.z = 0;
+        copy_region.extent.width = texObj.tex_width;
+        copy_region.extent.height = texObj.tex_height;
+        copy_region.extent.depth = 1;
+
+        VkCmdBufferBeginInfo cmd_buf_info = {};
+        cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+        cmd_buf_info.pNext = NULL;
+        cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+
+        res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+        assert(!res);
+
+        /* Put the copy command into the command buffer */
+        vkCmdCopyImage(info.cmd,
+                        mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                        texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        1, &copy_region);
+
+        res = vkEndCommandBuffer(info.cmd);
+        assert(!res);
+        const VkCmdBuffer cmd_bufs[] = { info.cmd };
+        VkFence nullFence;
+        nullFence.handle = VK_NULL_HANDLE;
+
+        /* Queue the command buffer for execution */
+        res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+        assert(!res);
+
+        res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
+        assert(!res);                      /* using command buffers                             */
+
+        /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
+        texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        set_image_layout(info, texObj.image,
+                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                               texObj.imageLayout);
+
+        /* Release the resources for the staging image */
+        vkFreeMemory(info.device, mappableMemory);
+        vkDestroyImage(info.device, mappableImage);
+    }
+
+    VkSamplerCreateInfo samplerCreateInfo = {};
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
+    samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
+    samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+    samplerCreateInfo.addressU = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.mipLodBias = 0.0;
+    samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
+    samplerCreateInfo.minLod = 0.0;
+    samplerCreateInfo.maxLod = 0.0;
+    samplerCreateInfo.compareEnable = VK_FALSE;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    /* create sampler */
+    res = vkCreateSampler(info.device, &samplerCreateInfo,
+            &texObj.sampler);
+    assert(!res);
+
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.pNext = NULL;
+    view_info.image = VK_NULL_HANDLE;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    view_info.channels.r = VK_CHANNEL_SWIZZLE_R;
+    view_info.channels.g = VK_CHANNEL_SWIZZLE_G;
+    view_info.channels.b = VK_CHANNEL_SWIZZLE_B;
+    view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
+    view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.baseArraySlice = 0;
+    view_info.subresourceRange.arraySize = 1;
+
+    /* create image view */
+    view_info.image = texObj.image;
+    res = vkCreateImageView(info.device, &view_info,
+            &texObj.view);
+    assert(!res);
+
+    info.textures.push_back(texObj);
 }
