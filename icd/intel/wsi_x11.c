@@ -26,6 +26,8 @@
  *   Ian Elliott <ian@lunarg.com>
  */
 
+#define _GNU_SOURCE 1
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -600,34 +602,75 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
     }
 }
 
+/*
+ * Wait for an event on a swap chain.
+ * Uses polling because xcb_wait_for_special_event won't time out.
+ */
 static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
                                     uint32_t serial, int64_t timeout)
 {
-    const bool wait = (timeout != 0);
+    struct timespec start_time; // time at start of call
+    struct timespec stop_time;  // time when timeout will elapse
+    struct timespec sleep_time; // time for next poll of events
+    bool wait;
+    if (timeout == 0){
+        wait = false;
+    } else {
+        wait = true;
+        clock_gettime(CLOCK_MONOTONIC, &start_time);
+        if (timeout == -1) {
+            // wait approximately forever
+            stop_time.tv_nsec = start_time.tv_nsec;
+            stop_time.tv_sec = start_time.tv_sec + 10*365*24*60*60;
+        } else {
+            stop_time.tv_nsec = start_time.tv_nsec + (timeout % 1000000000);
+            stop_time.tv_sec = start_time.tv_sec + (timeout / 1000000000);
+            // Carry overflow from tv_nsec to tv_sec
+            while (stop_time.tv_nsec > 1000000000) {
+                stop_time.tv_sec += 1;
+                stop_time.tv_nsec -= 1000000000;
+            }
+        }
+        sleep_time = start_time;
+    }
 
     while (sc->remote.serial < serial) {
         xcb_present_generic_event_t *ev;
         xcb_intern_atom_reply_t *reply;
 
+        ev = (xcb_present_generic_event_t *)
+            xcb_poll_for_special_event(sc->c, sc->present_special_event);
         if (wait) {
-            ev = (xcb_present_generic_event_t *)
-                xcb_wait_for_special_event(sc->c, sc->present_special_event);
-            /* use xcb_intern_atom_reply just to wake other threads waiting on sc->c */
-            reply = xcb_intern_atom_reply(sc->c, xcb_intern_atom(sc->c, 1, 1, "a"), NULL);
-            if (reply) {
-                free(reply);
-            }
+            while (!ev) {
+                if (sleep_time.tv_sec > stop_time.tv_sec ||
+                    (sleep_time.tv_sec == stop_time.tv_sec && sleep_time.tv_nsec > stop_time.tv_nsec)) {
+                    // Time has run out
+                    return VK_TIMEOUT;
+                }
+                sleep_time.tv_nsec += 100000000; // add 0.1 seconds
+                // Carry overflow from tv_nsec to tv_sec
+                while (sleep_time.tv_nsec > 1000000000) {
+                    sleep_time.tv_sec += 1;
+                    sleep_time.tv_nsec -= 1000000000;
+                }
+                if (sleep_time.tv_sec > stop_time.tv_sec ||
+                    (sleep_time.tv_sec == stop_time.tv_sec && sleep_time.tv_nsec > stop_time.tv_nsec)) {
+                    // Cap sleep time at original stop time
+                    sleep_time = stop_time;
+                }
+                clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &sleep_time, NULL);
 
-            if (!ev)
-                return VK_ERROR_UNKNOWN;
-        } else {
-            /* use xcb_intern_atom_reply just to check socket for special event */
-            reply = xcb_intern_atom_reply(sc->c, xcb_intern_atom(sc->c, 1, 1, "a"), NULL);
-            if (reply) {
-                free(reply);
+                // Use xcb_intern_atom_reply just to make xcb really read events from socket.
+                // Calling xcb_poll_for_special_event fails to actually look for new packets.
+                reply = xcb_intern_atom_reply(sc->c, xcb_intern_atom(sc->c, 1, 1, "a"), NULL);
+                if (reply) {
+                    free(reply);
+                }
+
+                ev = (xcb_present_generic_event_t *)
+                    xcb_poll_for_special_event(sc->c, sc->present_special_event);
             }
-            ev = (xcb_present_generic_event_t *)
-                xcb_poll_for_special_event(sc->c, sc->present_special_event);
+        } else {
             if (!ev)
                 return VK_NOT_READY;
         }
