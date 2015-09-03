@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     init_enumerate_device(info);
     init_device(info);
     init_uniform_buffer(info);
-    init_descriptor_and_pipeline_layouts(info);
+    init_descriptor_and_pipeline_layouts(info, false);
 
     /* VULKAN_KEY_START */
     VkDescriptorTypeCount type_count[1];
