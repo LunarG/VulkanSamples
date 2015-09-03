@@ -1060,6 +1060,10 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentWSI(
     uint32_t i;
     uint32_t num_swapchains = pPresentInfo->swapChainCount;
 
+    // Wait for queue to idle before out-of-band xcb present operation.
+    const VkResult r = intel_queue_wait(queue, -1);
+    (void) r;
+
     for (i = 0; i < num_swapchains; i++) {
         struct intel_x11_swap_chain *sc =
             x11_swap_chain(pPresentInfo->swapChains[i]);
