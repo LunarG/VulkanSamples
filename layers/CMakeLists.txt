@@ -27,6 +27,7 @@ set(LAYER_JSON_FILES
     screenshot
     shader_checker
     threading
+    device_limits
     )
 
 set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
@@ -139,6 +140,7 @@ endif()
 add_vk_layer(Basic basic.cpp vk_layer_table.cpp)
 add_vk_layer(Multi multi.cpp vk_layer_table.cpp)
 add_vk_layer(DrawState draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
+add_vk_layer(DeviceLimits device_limits.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(MemTracker mem_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(ShaderChecker shader_checker.cpp vk_layer_table.cpp)
 add_vk_layer(Image image.cpp vk_layer_table.cpp)

@@ -250,18 +250,27 @@ It cannot insure that there is no latent race condition.
 ### Threading Pending Work
 Additional work to be done
 
-## General Pending Work
-A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
-
- 1. For Upcoming Dynamic State overhaul (if approved): If dynamic state value that is consumed is never set prior to consumption, flag an error
- 2. For Upcoming Dynamic State overhaul (if approved): If dynamic state that was bound as "static" in current PSO is attempted to be set with vkCmdSet* flag an error
- 3. Need a WSI validation layer(s) to validate correct usage of WSI API. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties. Tons of other stuff including semaphore and synchronization validation.
-
 ## Device Limitations
 
 ### Device Limitations Overview
 
-This layer does not yet exist. The general idea is that at the beginning of time this layer would query device limitations in terms of memory size, format and feature support, and so on. This entails making a complete set of vkGetPhysicalDevice* calls and storing the results. If, later on, the app violates these limitations, then this layer would flag those violations.
+This layer is a work in progress. DeviceLimits layer is intended to capture two broad categories of errors:
+ 1. Incorrect use of APIs to query device capabilities
+ 2. Attempt to use API functionality beyond the capability of the underlying device
+
+For the first category, the layer tracks which calls are made and flags errors if calls are excluded that should not be, or if call sequencing is incorrect. An example is an app that assumes attempts to Query and use queues without ever having called vkGetPhysicalDeviceQueueFamilyProperties(). Also, if an app is calling vkGetPhysicalDeviceQueueFamilyProperties() to retrieve properties with some assumed count for array size instead of first calling vkGetPhysicalDeviceQueueFamilyProperties() w/ a NULL pQueueFamilyProperties parameter in order to query the actual count.
+For the second category of errors, DeviceLimits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
+
+### Device Limitations Details Table
+
+| Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
+| ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
+| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | NA | ObjectTracker should also catch this so if we made sure ObjectTracker was always on top, we could avoid this check |
+| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | NA | ObjectTracker should also catch this so if we made sure ObjectTracker was always on top, we could avoid this check |
+| Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
+| Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
+| Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
+| NA | Enum used for informational messages | NONE | | NA | None |
 
 ### Device Limitations Pending Work
 
@@ -276,3 +285,12 @@ APIDump layer is used for dumping a stream of all the Vulkan API calls that are 
 ### APIDump Pending Work
 
  1. vkAllocDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
+
+## General Pending Work
+A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
+
+ 1. For Upcoming Dynamic State overhaul (if approved): If dynamic state value that is consumed is never set prior to consumption, flag an error
+ 2. For Upcoming Dynamic State overhaul (if approved): If dynamic state that was bound as "static" in current PSO is attempted to be set with vkCmdSet* flag an error
+ 3. Need a WSI validation layer(s) to validate correct usage of WSI API. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties. Tons of other stuff including semaphore and synchronization validation.
+
+
