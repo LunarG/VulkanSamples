@@ -1523,6 +1523,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
 
     pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     pFormatInfo->optimalTilingFeatures = pFormatInfo->linearTilingFeatures;
+    pFormatInfo->bufferFeatures = 0;
 
     return ret;
 }

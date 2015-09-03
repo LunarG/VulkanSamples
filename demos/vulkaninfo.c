@@ -725,39 +725,39 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
     struct {
         const char *name;
         VkFlags flags;
-    } tilings[2];
+    } features[3];
     uint32_t i;
 
-    if (!props->linearTilingFeatures && !props->optimalTilingFeatures)
-        return;
+    features[0].name  = "linearTiling   FormatFeatureFlags";
+    features[0].flags = props->linearTilingFeatures;
+    features[1].name  = "optimalTiling  FormatFeatureFlags";
+    features[1].flags = props->optimalTilingFeatures;
+    features[2].name  = "bufferFeatures FormatFeatureFlags";
+    features[2].flags = props->bufferFeatures;
 
-    tilings[0].name = "linear ";
-    tilings[0].flags = props->linearTilingFeatures;
-    tilings[1].name = "optimal";
-    tilings[1].flags = props->optimalTilingFeatures;
-
-    printf("\nFORMAT_%s:\n", vk_format_string(fmt));
-    for (i = 0; i < ARRAY_SIZE(tilings); i++) {
-        if (!tilings[i].flags)
-            continue;
-
-        printf("\t%s tiling image      =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)      ? " sampled" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)   ? " storage" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT) ? " atomic" : "");
-        printf("\t%s tiling texel      =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)      ? " TBO" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)   ? " IBO" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? " atomic" : "");
-        printf("\t%s tiling attachment =%s%s%s\n", tilings[i].name,
-                (tilings[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ? " color" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT) ? " blend" : "",
-                (tilings[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)       ? " depth/stencil" : "");
-        printf("\t%s tiling vertex     = %u\n", tilings[i].name,
-                (bool) (tilings[i].flags & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT));
-        printf("\t%s tiling conversion = %u\n", tilings[i].name,
-                (bool) (tilings[i].flags & VK_FORMAT_FEATURE_CONVERSION_BIT));
+    printf("\nFORMAT_%s:", vk_format_string(fmt));
+    for (i = 0; i < ARRAY_SIZE(features); i++) {
+        printf("\n\t%s:", features[i].name);
+        if (features[i].flags == 0) {
+            printf("\n\t\tNone");
+        } else {
+            printf("%s%s%s%s%s%s%s%s%s%s%s%s%s",
+               ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT"               : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_BIT"               : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT"        : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT"            : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)      ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT"      : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)    ? "\n\t\tVK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT"    : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_CONVERSION_BIT)                  ? "\n\t\tVK_FORMAT_FEATURE_CONVERSION_BIT"                  : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SOURCE_BIT)                 ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SOURCE_BIT"                 : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DESTINATION_BIT"            : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT"        : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT"        : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT" : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_VERTEX_BUFFER_BIT"               : ""));
+        }
     }
+    printf("\n");
 }
 
 

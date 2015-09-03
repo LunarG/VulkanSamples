@@ -1218,6 +1218,7 @@ typedef struct {
 typedef struct {
     VkFormatFeatureFlags                        linearTilingFeatures;
     VkFormatFeatureFlags                        optimalTilingFeatures;
+    VkFormatFeatureFlags                        bufferFeatures;
 } VkFormatProperties;
 
 typedef struct {

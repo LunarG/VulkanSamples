@@ -649,25 +649,35 @@ static VkFlags intel_format_get_raw_features(const struct intel_gpu *gpu,
         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT : 0;
 }
 
+// These format features flags are supported by buffers.  Remaining flags
+// are supported by optimal/linear tiling images.
+static VkFlags bufferFormatsFlagMask =  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
+                                        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
+                                        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
+                                        VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+
 static void intel_format_get_props(const struct intel_gpu *gpu,
                                    VkFormat format,
                                    VkFormatProperties *props)
 {
     if (icd_format_is_undef(format)) {
-        props->linearTilingFeatures =
-            intel_format_get_raw_features(gpu, format);
+        props->linearTilingFeatures  = intel_format_get_raw_features(gpu, format);
         props->optimalTilingFeatures = 0;
+        props->bufferFeatures        = 0;
     } else if(icd_format_is_color(format)) {
-        props->linearTilingFeatures =
-            intel_format_get_color_features(gpu, format);
-        props->optimalTilingFeatures = props->linearTilingFeatures;
+        VkFlags formatFlags = NULL;
+        formatFlags = intel_format_get_color_features(gpu, format);
+        props->linearTilingFeatures  = formatFlags & ~bufferFormatsFlagMask;
+        props->optimalTilingFeatures = formatFlags & ~bufferFormatsFlagMask;
+        props->bufferFeatures        = formatFlags &  bufferFormatsFlagMask;
     } else if(icd_format_is_ds(format)) {
-        props->linearTilingFeatures = 0;
-        props->optimalTilingFeatures =
-            intel_format_get_ds_features(gpu, format);
+        props->linearTilingFeatures  = 0;
+        props->optimalTilingFeatures = intel_format_get_ds_features(gpu, format);
+        props->bufferFeatures        = 0;
     } else {
-        props->linearTilingFeatures = 0;
+        props->linearTilingFeatures  = 0;
         props->optimalTilingFeatures = 0;
+        props->bufferFeatures        = 0;
     }
 }
 
