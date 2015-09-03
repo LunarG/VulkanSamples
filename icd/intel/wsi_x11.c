@@ -1033,7 +1033,7 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageWSI(
     }
 
     // If no image is ready, wait for a present to finish
-    ret = x11_swap_chain_wait(sc, sc->present_serial, timeout);
+    ret = x11_swap_chain_wait(sc, sc->remote.serial+1, timeout);
     if (ret != VK_SUCCESS) {
         return ret;
     }
