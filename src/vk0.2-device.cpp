@@ -37,7 +37,6 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     init_instance(info, "vulkansamples_device");
 
-    std::cout << "calling vkEnumeratePhysicalDevices\n";
     init_enumerate_device(info);
 
 /* VULKAN_KEY_START */
@@ -56,11 +55,9 @@ int main(int argc, char **argv)
     device_info.flags = 0;
 
     VkDevice device;
-    std::cout << "calling vkCreateDevice\n";
     VkResult res = vkCreateDevice(info.gpu, &device_info, &device);
     assert(!res);
 
-    std::cout << "calling vkDestroyDevice\n";
     vkDestroyDevice(device);
 
 /* VULKAN_KEY_END */
