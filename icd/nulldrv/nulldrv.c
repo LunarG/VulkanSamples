@@ -45,7 +45,7 @@ static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
 static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
     {
         .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_SWAPCHAIN_VERSION,
+        .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
     }
 };
 
