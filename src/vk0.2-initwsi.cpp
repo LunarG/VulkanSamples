@@ -321,5 +321,8 @@ int main(int argc, char **argv)
         vkDestroyAttachmentView(info.device, info.buffers[i].view);
     }
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
+
     return 0;
 }

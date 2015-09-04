@@ -92,4 +92,5 @@ int main(int argc, char **argv)
     vkFreeDescriptorSets(info.device, info.desc_pool, 1, &info.desc_set);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
 }

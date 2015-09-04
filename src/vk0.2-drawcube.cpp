@@ -177,5 +177,6 @@ int main(int argc, char **argv)
     }
     vkDestroyRenderPass(info.device, info.render_pass);
     vkDestroyDevice(info.device);
-
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
 }

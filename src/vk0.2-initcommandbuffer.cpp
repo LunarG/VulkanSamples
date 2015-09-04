@@ -76,4 +76,6 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
 }
