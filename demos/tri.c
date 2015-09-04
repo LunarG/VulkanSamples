@@ -107,7 +107,7 @@ struct texture_object {
     int32_t tex_width, tex_height;
 };
 
-void dbgFunc(
+VkBool32 dbgFunc(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -126,7 +126,7 @@ void dbgFunc(
     } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
         sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else {
-        return;
+        return false;
     }
 
 #ifdef _WIN32
@@ -136,6 +136,7 @@ void dbgFunc(
     fflush(stdout);
 #endif
     free(message);
+    return true;
 }
 
 typedef struct _SwapchainBuffers {

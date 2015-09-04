@@ -2428,17 +2428,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     VkCmdBuffer cmdBuffer,
     VkCmdBufferResetFlags flags)
 {
+    VkBool32 bail = false;
+
     loader_platform_thread_lock_mutex(&globalLock);
     // Verify that CB is complete (not in-flight)
     if (!checkCBCompleted(cmdBuffer)) {
         // TODO : Want cmdBuffer to be srcObj here
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
+        bail = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
                 "Resetting CB %p before it has completed. You must check CB flag before "
                      "calling vkResetCommandBuffer().", cmdBuffer);
     }
     // Clear memory references as this point.
     clear_cmd_buf_and_mem_references(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
+    if (bail) {
+        return VK_ERROR_UNKNOWN;
+    }
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
     return result;
 }

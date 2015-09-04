@@ -253,7 +253,7 @@ void dumpVec4(const char *note, vec4 vector)
     fflush(stdout);
 }
 
-void dbgFunc(
+VkBool32 dbgFunc(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -263,20 +263,22 @@ void dbgFunc(
     const char*                         pMsg,
     void*                               pUserData)
 {
+    VkBool32 bail = false;
     char *message = (char *) malloc(strlen(pMsg)+100);
 
     assert (message);
 
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+        bail = true;
     } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
         // We know that we're submitting queues without fences, ignore this warning
         if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer")){
-            return;
+            return false;
         }
         sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else {
-        return;
+        return false;
     }
 
 #ifdef _WIN32
@@ -286,6 +288,8 @@ void dbgFunc(
     fflush(stdout);
 #endif
     free(message);
+
+    return bail;
 }
 
 typedef struct _SwapchainBuffers {

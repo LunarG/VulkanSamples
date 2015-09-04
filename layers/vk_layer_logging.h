@@ -48,7 +48,7 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(
         std::unordered_map<void *, debug_report_data *> &data_map);
 
 // Utility function to handle reporting
-static inline void debug_report_log_msg(
+static inline VkBool32 debug_report_log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkDbgObjectType             objectType,
@@ -58,19 +58,24 @@ static inline void debug_report_log_msg(
     const char*                 pLayerPrefix,
     const char*                 pMsg)
 {
+    VkBool32 bail = false;
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     while (pTrav) {
         if (pTrav->msgFlags & msgFlags) {
-            pTrav->pfnMsgCallback(msgFlags,
+            if (pTrav->pfnMsgCallback(msgFlags,
                                   objectType, srcObject,
                                   location,
                                   msgCode,
                                   pLayerPrefix,
                                   pMsg,
-                                  (void *) pTrav->pUserData);
+                                  (void *) pTrav->pUserData)) {
+                bail = true;
+            }
         }
         pTrav = pTrav->pNext;
     }
+
+    return bail;
 }
 
 static inline debug_report_data *debug_report_create_instance(
@@ -227,7 +232,7 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(
  * Takes format and variable arg list so that output string
  * is only computed if a message needs to be logged
  */
-static inline void log_msg(
+static inline VkBool32 log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
     VkDbgObjectType             objectType,
@@ -240,7 +245,7 @@ static inline void log_msg(
 {
     if (!debug_data || !(debug_data->active_flags & msgFlags)) {
         /* message is not wanted */
-        return;
+        return false;
     }
 
     char str[1024];
@@ -248,12 +253,13 @@ static inline void log_msg(
     va_start(argptr, format);
     vsnprintf(str, 1024, format, argptr);
     va_end(argptr);
-    debug_report_log_msg(debug_data, msgFlags, objectType,
-                         srcObject, location, msgCode,
-                         pLayerPrefix, str);
+    return debug_report_log_msg(
+                debug_data, msgFlags, objectType,
+                srcObject, location, msgCode,
+                pLayerPrefix, str);
 }
 
-static inline void VKAPI log_callback(
+static inline VkBool32 VKAPI log_callback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -269,5 +275,8 @@ static inline void VKAPI log_callback(
 
     fprintf((FILE *) pUserData, "%s(%s): object: %#" PRIx64 " type: %d location: %zu msgCode: %d: %s\n",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
+    fflush((FILE *) pUserData);
+
+    return false;
 }
 #endif // LAYER_LOGGING_H

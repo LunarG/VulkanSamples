@@ -62,7 +62,7 @@ static const char bindStateFragShaderText[] =
         "   uFragColor = vec4(0,1,0,1);\n"
         "}\n";
 
-static void myDbgFunc(
+static VkBool32 myDbgFunc(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -119,7 +119,7 @@ private:
     bool*                      m_bailout;
 };
 
-static void myDbgFunc(
+static VkBool32 myDbgFunc(
     VkFlags                    msgFlags,
     VkDbgObjectType            objType,
     uint64_t                   srcObject,
@@ -132,7 +132,10 @@ static void myDbgFunc(
     if (msgFlags & (VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_ERROR_BIT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
         errMonitor->SetState(msgFlags, pMsg);
+        return true;
     }
+
+    return false;
 }
 
 class VkLayerTest : public VkRenderFramework
@@ -643,9 +646,8 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 //
 //    // Introduce validation failure, free memory while still bound to object
 //    vkFreeMemory(m_device->device(), mem);
-//    ASSERT_VK_SUCCESS(err);
-//
 //    msgFlags = m_errorMonitor->GetState(&msgString);
+//
 //    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an warning while tring to free bound memory";
 //    if (!strstr(msgString.c_str(),"Freeing memory object while it still has references")) {
 //        FAIL() << "Warning received did not match expected message from freeMemObjInfo  in MemTracker";

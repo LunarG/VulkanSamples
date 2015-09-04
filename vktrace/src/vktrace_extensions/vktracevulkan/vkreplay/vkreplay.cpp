@@ -37,7 +37,7 @@ VKTRACE_CRITICAL_SECTION g_handlerLock;
 PFN_vkDbgMsgCallback g_fpDbgMsgCallback;
 vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
-static void VKAPI vkErrorHandler(
+static VkBool32 VKAPI vkErrorHandler(
                                 VkFlags             msgFlags,
                                 VkDbgObjectType     objType,
                                 uint64_t            srcObjectHandle,
@@ -47,6 +47,8 @@ static void VKAPI vkErrorHandler(
                                 const char*         pMsg,
                                 void*               pUserData)
 {
+    VkBool32 bail = false;
+
     vktrace_enter_critical_section(&g_handlerLock);
     if ((msgFlags & VK_DBG_REPORT_ERROR_BIT) == VK_DBG_REPORT_ERROR_BIT)
     {
@@ -57,6 +59,11 @@ static void VKAPI vkErrorHandler(
         {
             g_fpVktraceCallback(vktrace_replay::VKTRACE_DBG_MSG_ERROR, pMsg);
         }
+        /* TODO: bailing out of the call chain due to this error should allow
+         * the app to continue in some fashion.
+         * Is that needed here?
+         */
+        bail = true;
     }
     else if ((msgFlags & VK_DBG_REPORT_WARN_BIT) == VK_DBG_REPORT_WARN_BIT ||
              (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) == VK_DBG_REPORT_PERF_WARN_BIT)
@@ -74,6 +81,8 @@ static void VKAPI vkErrorHandler(
         }
     }
     vktrace_leave_critical_section(&g_handlerLock);
+
+    return bail;
 }
 
 void VkReplaySetLogCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback)

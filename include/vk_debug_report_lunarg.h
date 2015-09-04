@@ -116,7 +116,7 @@ typedef enum _DEBUG_REPORT_ERROR
 // ------------------------------------------------------------------------------------------------
 // Vulkan function pointers
 
-typedef void (*PFN_vkDbgMsgCallback)(
+typedef VkBool32 (*PFN_vkDbgMsgCallback)(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
