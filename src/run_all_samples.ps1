@@ -31,7 +31,7 @@ echo "Init Command Buffer"
 echo "Depth Buffer"
 & $dPath\vk0.2-depthbuffer
 echo "Init Texture"
-& $dPath\vk0.2-initTexture
+& $dPath\vk0.2-inittexture
 echo "Uniform Buffer"
 & $dPath\vk0.2-uniformbuffer
 echo "Init RenderPass"

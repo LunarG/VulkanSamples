@@ -22,7 +22,7 @@ echo "Init Command Buffer"
 echo "Depth Buffer"
 ./vk0.2-depthbuffer
 echo "Init Texture"
-./vk0.2-initTexture
+./vk0.2-inittexture
 echo "Uniform Buffer"
 ./vk0.2-uniformbuffer
 echo "Init RenderPass"
