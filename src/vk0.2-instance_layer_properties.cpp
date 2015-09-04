@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     uint32_t instance_layer_count;
     VkLayerProperties *vk_props = NULL;
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     /*
      * It's possible, though very rare, that the number of
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
     free(vk_props);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     return 0;
 }
