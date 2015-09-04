@@ -36,7 +36,7 @@ create and destroy Vulkan instance
 int main(int argc, char **argv)
 {
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
     vkDestroyInstance(inst);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     return 0;
 }

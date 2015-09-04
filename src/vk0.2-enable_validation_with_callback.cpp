@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     init_global_layer_properties(info);
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     /* Common validation layers
      * Loader will chain them together in the order given,
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     /* Clean up callback */
     info.dbgDestroyMsgCallback(info.inst, msg_callback);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     vkDestroyInstance(info.inst);
 

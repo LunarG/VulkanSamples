@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 
     init_enumerate_device(info);
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.queueFamilyIndex = 0;
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
     vkDestroyDevice(device);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     vkDestroyInstance(info.inst);
 

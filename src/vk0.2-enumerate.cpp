@@ -36,13 +36,13 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     init_instance(info, "vulkansamples_enumerate");
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     uint32_t gpu_count = 1;
     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
     assert(!res && gpu_count == 1);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     vkDestroyInstance(info.inst);
 

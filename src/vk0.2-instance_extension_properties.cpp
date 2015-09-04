@@ -37,7 +37,7 @@ int main(int argc, char **argv)
     VkExtensionProperties *vk_props = NULL;
     uint32_t instance_extension_count;
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     /*
      * It's possible, though very rare, that the number of
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
     std::cout << std::endl;
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     return 0;
 }

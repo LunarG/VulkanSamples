@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     init_instance(info, "vulkansamples_enumerate");
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     // Query the count.
     uint32_t gpu_count = 0;
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 
     delete [] gpu;
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     vkDestroyInstance(info.inst);
 
