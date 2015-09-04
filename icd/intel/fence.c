@@ -113,7 +113,7 @@ VkResult intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
         return ret;
     }
 
-    return VK_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateFence(

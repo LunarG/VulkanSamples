@@ -102,7 +102,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     struct intel_render_pass *rp;
     uint32_t i;
 
-    /* TODO */
+    /* TODOVV: Move to validation layer */
     if (info->dependencyCount)
 	    return VK_ERROR_UNKNOWN;
 

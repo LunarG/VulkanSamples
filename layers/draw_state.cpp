@@ -1733,7 +1733,7 @@ VkResult VKAPI vkMergePipelineCaches(
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
-    VkResult result = VK_ERROR_BAD_PIPELINE_DATA;
+    VkResult result = VK_SUCCESS;
     //TODO handle count > 1  and handle pipelineCache
     // The order of operations here is a little convoluted but gets the job done
     //  1. Pipeline create state is first shadowed into PIPELINE_NODE struct
@@ -1743,6 +1743,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfos, NULL);
     VkBool32 valid = verifyPipelineCreateState(device, pPipeNode);
     loader_platform_thread_unlock_mutex(&globalLock);
+    /* TODO: preference is to make API call after reporting any validation errors */
     if (VK_TRUE == valid) {
         result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
         log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, (*pPipelines).handle, 0, DRAWSTATE_NONE, "DS",
@@ -2061,8 +2062,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
 
 VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
-    VkResult result = VK_ERROR_BUILDING_COMMAND_BUFFER;
+    VkResult result = VK_SUCCESS;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    /* TODO: preference is to always call API function after reporting any validation errors */
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);

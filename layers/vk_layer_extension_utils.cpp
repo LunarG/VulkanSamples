@@ -42,10 +42,6 @@ VkResult util_GetExtensionProperties(
 {
     uint32_t copy_size;
 
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     if (pProperties == NULL || layer_extensions == NULL) {
         *pCount = count;
         return VK_SUCCESS;
@@ -68,10 +64,6 @@ VkResult util_GetLayerProperties(
         VkLayerProperties* pProperties)
 {
     uint32_t copy_size;
-
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
 
     if (pProperties == NULL || layer_properties == NULL) {
         *pCount = count;

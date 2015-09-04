@@ -71,8 +71,9 @@ static VkResult dev_create_queues(struct intel_dev *dev,
 {
     uint32_t i;
 
-    if (!count)
-        return VK_ERROR_INVALID_POINTER;
+    /* TODOVV: make sure test is covered by validation layer */
+//    if (!count)
+//        return VK_ERROR_INVALID_POINTER;
 
     for (i = 0; i < count; i++) {
         const VkDeviceQueueCreateInfo *q = &queues[i];
@@ -84,7 +85,9 @@ static VkResult dev_create_queues(struct intel_dev *dev,
                     &dev->queues[q->queueFamilyIndex]);
         }
         else {
-            ret = VK_ERROR_INVALID_POINTER;
+            /* TODOVV: make sure test is covered by validation layer */
+//            ret = VK_ERROR_INVALID_POINTER;
+            return VK_ERROR_UNKNOWN;
         }
 
         if (ret != VK_SUCCESS) {
@@ -107,8 +110,9 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
     uint32_t i;
     VkResult ret;
 
-    if (gpu->winsys)
-        return VK_ERROR_DEVICE_ALREADY_CREATED;
+    /* TODOVV: Make sure test is covered by validation layer */
+//    if (gpu->winsys)
+//        return VK_ERROR_DEVICE_ALREADY_CREATED;
 
     dev = (struct intel_dev *) intel_base_create(&gpu->handle,
             sizeof(*dev), false,
@@ -234,18 +238,20 @@ ICD_EXPORT VkResult VKAPI vkDestroyDevice(
 
 ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
     VkDevice                                  device,
-    uint32_t                                    queueNodeIndex,
-    uint32_t                                    queueIndex,
+    uint32_t                                  queueNodeIndex,
+    uint32_t                                  queueIndex,
     VkQueue*                                  pQueue)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    if (queueNodeIndex >= INTEL_GPU_ENGINE_COUNT) {
-        return VK_ERROR_UNAVAILABLE;
-    }
+    /* TODOVV: Move to validation layer */
+//    if (queueNodeIndex >= INTEL_GPU_ENGINE_COUNT) {
+//        return VK_ERROR_UNAVAILABLE;
+//    }
 
-    if (queueIndex > 0)
-        return VK_ERROR_UNAVAILABLE;
+    /* TODOVV: Move to validation layer */
+//    if (queueIndex > 0)
+//        return VK_ERROR_UNAVAILABLE;
 
     *pQueue = (VkQueue) dev->queues[queueNodeIndex];
     return VK_SUCCESS;

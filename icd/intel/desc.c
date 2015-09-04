@@ -195,7 +195,6 @@ static VkResult desc_region_get_desc_size(const struct intel_desc_region *region
         break;
     default:
         assert(!"unknown descriptor type");
-        return VK_ERROR_INVALID_VALUE;
         break;
     }
 
@@ -891,8 +890,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
 
         if (!desc_iter_init_for_writing(&iter, set, write->destBinding,
                     write->destArrayElement) ||
-            iter.type != write->descriptorType)
-            return VK_ERROR_INVALID_VALUE;
+            iter.type != write->descriptorType) {
+            /* TODOVV: is this covered in validation? */
+//            return VK_ERROR_INVALID_VALUE;
+            return VK_ERROR_UNKNOWN;
+        }
 
         switch (write->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -903,8 +905,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_sampler(set, &iter, sampler);
 
-                if (!intel_desc_iter_advance(&iter))
-                    return VK_ERROR_INVALID_VALUE;
+                if (!intel_desc_iter_advance(&iter)) {
+                    /* TODOVV: is this covered in validation? */
+//                    return VK_ERROR_INVALID_VALUE;
+                    return VK_ERROR_UNKNOWN;
+                }
             }
             break;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -936,8 +941,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 desc_set_write_combined_image_sampler(set, &iter,
                         img_view, info->imageLayout, sampler);
 
-                if (!intel_desc_iter_advance(&iter))
-                    return VK_ERROR_INVALID_VALUE;
+                if (!intel_desc_iter_advance(&iter)) {
+                    /* TODOVV: Move test to validation */
+//                    return VK_ERROR_INVALID_VALUE;
+                    return VK_ERROR_UNKNOWN;
+                }
             }
             break;
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
@@ -949,8 +957,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_image(set, &iter, img_view, info->imageLayout);
 
-                if (!intel_desc_iter_advance(&iter))
-                    return VK_ERROR_INVALID_VALUE;
+                if (!intel_desc_iter_advance(&iter)) {
+                    /* TODOVV: Move test to validation */
+//                    return VK_ERROR_INVALID_VALUE;
+                    return VK_ERROR_UNKNOWN;
+                }
             }
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -966,12 +977,16 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_buffer(set, &iter, buf_view);
 
-                if (!intel_desc_iter_advance(&iter))
-                    return VK_ERROR_INVALID_VALUE;
+                if (!intel_desc_iter_advance(&iter)) {
+                    /* TODOVV: Move test to validation */
+//                    return VK_ERROR_INVALID_VALUE;
+                    return VK_ERROR_UNKNOWN;
+                }
             }
             break;
         default:
-            return VK_ERROR_INVALID_VALUE;
+            /* TODOVV: Make sure validation layer covers this case */
+            return VK_ERROR_UNKNOWN;
             break;
         }
     }
@@ -987,8 +1002,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                     copy->srcBinding, copy->srcArrayElement) ||
             !desc_iter_init_for_writing(&dst_iter, dst_set,
                     copy->destBinding, copy->destArrayElement) ||
-            src_iter.type != dst_iter.type)
-            return VK_ERROR_INVALID_VALUE;
+            src_iter.type != dst_iter.type) {
+            /* TODOVV: Move test to validation layer */
+//            return VK_ERROR_INVALID_VALUE;
+            return VK_ERROR_UNKNOWN;
+        }
 
         /* disallow combined image samplers */
         if (dst_iter.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
@@ -1001,8 +1019,11 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
         /* advance to the end */
         for (j = 0; j < copy->count; j++) {
             if (!intel_desc_iter_advance(&src_iter) ||
-                !intel_desc_iter_advance(&dst_iter))
-                return VK_ERROR_INVALID_VALUE;
+                !intel_desc_iter_advance(&dst_iter)) {
+                /* TODOVV: Move test to validation layer */
+//                return VK_ERROR_INVALID_VALUE;
+                return VK_ERROR_UNKNOWN;
+            }
         }
 
         intel_desc_region_copy(dst_set->region, &dst_begin,

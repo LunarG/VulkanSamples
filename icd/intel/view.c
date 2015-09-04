@@ -1284,8 +1284,11 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
         info->subresourceRange.baseArraySlice >= img->array_size ||
         !info->subresourceRange.mipLevels ||
-        !info->subresourceRange.arraySize)
-        return VK_ERROR_INVALID_VALUE;
+        !info->subresourceRange.arraySize) {
+        /* TODOVV: Move test to validation layer */
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
+    }
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_IMAGE_VIEW, info, 0);

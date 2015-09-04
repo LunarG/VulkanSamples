@@ -239,10 +239,6 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
 {
     uint32_t copy_size;
 
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     if (pProperties == NULL) {
         *pCount = INTEL_GLOBAL_EXT_COUNT;
         return VK_SUCCESS;
@@ -262,10 +258,6 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     *pCount = 0;
     return VK_SUCCESS;
 }
@@ -320,7 +312,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
     *pPhysicalDeviceCount = count;
 
-    return (count > 0) ? VK_SUCCESS : VK_ERROR_UNAVAILABLE;
+    return (count > 0) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(

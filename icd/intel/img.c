@@ -85,7 +85,9 @@ VkResult intel_img_create(struct intel_dev *dev,
         intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
                 VK_NULL_HANDLE, 0, 0, "image too big");
         intel_img_destroy(img);
-        return VK_ERROR_INVALID_MEMORY_SIZE;
+        /* TODOVV: Move test to validation layer */
+//        return VK_ERROR_INVALID_MEMORY_SIZE;
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
     }
 
     img->total_size = img->layout.bo_stride * img->layout.bo_height;

@@ -199,16 +199,6 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_ERROR_INVALID_LAYER";
             break;
         }
-        case VK_ERROR_MEMORY_NOT_BOUND:
-        {
-            return "VK_ERROR_MEMORY_NOT_BOUND";
-            break;
-        }
-        case VK_ERROR_BUILDING_COMMAND_BUFFER:
-        {
-            return "VK_ERROR_BUILDING_COMMAND_BUFFER";
-            break;
-        }
         case VK_ERROR_INCOMPATIBLE_DRIVER:
         {
             return "VK_ERROR_INCOMPATIBLE_DRIVER";
@@ -222,36 +212,6 @@ std::string EnumeratorString(VkResult const& enumerator)
         case VK_ERROR_MEMORY_MAP_FAILED:
         {
             return "VK_ERROR_MEMORY_MAP_FAILED";
-            break;
-        }
-        case VK_ERROR_BAD_PIPELINE_DATA:
-        {
-            return "VK_ERROR_BAD_PIPELINE_DATA";
-            break;
-        }
-        case VK_ERROR_INVALID_QUEUE_TYPE:
-        {
-            return "VK_ERROR_INVALID_QUEUE_TYPE";
-            break;
-        }
-        case VK_ERROR_BAD_SHADER_CODE:
-        {
-            return "VK_ERROR_BAD_SHADER_CODE";
-            break;
-        }
-        case VK_ERROR_INVALID_IMAGE:
-        {
-            return "VK_ERROR_INVALID_IMAGE";
-            break;
-        }
-        case VK_ERROR_INVALID_FORMAT:
-        {
-            return "VK_ERROR_INVALID_FORMAT";
-            break;
-        }
-        case VK_ERROR_UNAVAILABLE:
-        {
-            return "VK_ERROR_UNAVAILABLE";
             break;
         }
         case VK_INCOMPLETE:
@@ -269,11 +229,6 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_ERROR_UNKNOWN";
             break;
         }
-        case VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION:
-        {
-            return "VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION";
-            break;
-        }
         case VK_ERROR_INITIALIZATION_FAILED:
         {
             return "VK_ERROR_INITIALIZATION_FAILED";
@@ -282,21 +237,6 @@ std::string EnumeratorString(VkResult const& enumerator)
         case VK_NOT_READY:
         {
             return "VK_NOT_READY";
-            break;
-        }
-        case VK_ERROR_INVALID_POINTER:
-        {
-            return "VK_ERROR_INVALID_POINTER";
-            break;
-        }
-        case VK_ERROR_INVALID_VALUE:
-        {
-            return "VK_ERROR_INVALID_VALUE";
-            break;
-        }
-        case VK_ERROR_NOT_MAPPABLE:
-        {
-            return "VK_ERROR_NOT_MAPPABLE";
             break;
         }
         case VK_ERROR_OUT_OF_DEVICE_MEMORY:
@@ -314,29 +254,14 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_TIMEOUT";
             break;
         }
-        case VK_ERROR_INVALID_FLAGS:
-        {
-            return "VK_ERROR_INVALID_FLAGS";
-            break;
-        }
         case VK_EVENT_RESET:
         {
             return "VK_EVENT_RESET";
             break;
         }
-        case VK_ERROR_INVALID_DESCRIPTOR_SET_DATA:
-        {
-            return "VK_ERROR_INVALID_DESCRIPTOR_SET_DATA";
-            break;
-        }
         case VK_UNSUPPORTED:
         {
             return "VK_UNSUPPORTED";
-            break;
-        }
-        case VK_ERROR_INVALID_HANDLE:
-        {
-            return "VK_ERROR_INVALID_HANDLE";
             break;
         }
         case VK_ERROR_INCOMPATIBLE_DEVICE:
@@ -349,44 +274,14 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_SUCCESS";
             break;
         }
-        case VK_ERROR_INCOMPATIBLE_QUEUE:
-        {
-            return "VK_ERROR_INCOMPATIBLE_QUEUE";
-            break;
-        }
         case VK_ERROR_INVALID_EXTENSION:
         {
             return "VK_ERROR_INVALID_EXTENSION";
             break;
         }
-        case VK_ERROR_DEVICE_ALREADY_CREATED:
-        {
-            return "VK_ERROR_DEVICE_ALREADY_CREATED";
-            break;
-        }
         case VK_ERROR_DEVICE_LOST:
         {
             return "VK_ERROR_DEVICE_LOST";
-            break;
-        }
-        case VK_ERROR_INVALID_ORDINAL:
-        {
-            return "VK_ERROR_INVALID_ORDINAL";
-            break;
-        }
-        case VK_ERROR_INVALID_MEMORY_SIZE:
-        {
-            return "VK_ERROR_INVALID_MEMORY_SIZE";
-            break;
-        }
-        case VK_ERROR_INCOMPLETE_COMMAND_BUFFER:
-        {
-            return "VK_ERROR_INCOMPLETE_COMMAND_BUFFER";
-            break;
-        }
-        case VK_ERROR_INVALID_ALIGNMENT:
-        {
-            return "VK_ERROR_INVALID_ALIGNMENT";
             break;
         }
         default:

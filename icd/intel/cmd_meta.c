@@ -575,7 +575,7 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
     /*
      * TODO: Implement actual blit function.
      */
-    cmd_fail(cmd, VK_ERROR_UNAVAILABLE);
+    cmd_fail(cmd, VK_ERROR_UNKNOWN);
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(

@@ -1932,10 +1932,6 @@ static void demo_init_vk(struct demo *demo)
         switch (err) {
         case VK_SUCCESS:
             break;
-        case VK_ERROR_INVALID_POINTER:
-            ERR_EXIT("dbgCreateMsgCallback: Invalid pointer\n",
-                     "dbgCreateMsgCallback Failure");
-            break;
         case VK_ERROR_OUT_OF_HOST_MEMORY:
             ERR_EXIT("dbgCreateMsgCallback: out of host memory\n",
                      "dbgCreateMsgCallback Failure");

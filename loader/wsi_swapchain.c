@@ -95,7 +95,7 @@ VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_UNAVAILABLE;
+    VkResult res = VK_ERROR_UNKNOWN;
     *pSupported = false;
 
     if (icd->GetPhysicalDeviceSurfaceSupportKHR) {

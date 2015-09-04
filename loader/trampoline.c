@@ -44,8 +44,6 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     struct loader_instance *ptr_instance = NULL;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
-    if (pCreateInfo == NULL)
-        return VK_ERROR_INVALID_POINTER;
     loader_platform_thread_once(&once_init, loader_initialize);
 
     if (pCreateInfo->pAllocCb

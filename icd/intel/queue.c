@@ -110,7 +110,9 @@ static VkResult queue_select_pipeline(struct intel_queue *queue,
         bo = queue->select_compute_bo;
         break;
     default:
-        return VK_ERROR_INVALID_VALUE;
+        /* TODOVV: Make sure coved in validation test */
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
         break;
     }
 
@@ -267,7 +269,8 @@ VkResult intel_queue_create(struct intel_dev *dev,
         ring = INTEL_RING_RENDER;
         break;
     default:
-        return VK_ERROR_INVALID_VALUE;
+        /* TODOVV: Verify test in validation layer */
+        return VK_ERROR_UNKNOWN;
         break;
     }
 

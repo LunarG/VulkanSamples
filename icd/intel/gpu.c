@@ -466,8 +466,11 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
        return VK_SUCCESS;
    }
 
-   if (*pCount > INTEL_GPU_ENGINE_COUNT)
-       return VK_ERROR_INVALID_VALUE;
+   /* TODOVV: Move test to validation layer */
+   if (*pCount > INTEL_GPU_ENGINE_COUNT) {
+//       return VK_ERROR_INVALID_VALUE;
+       return VK_ERROR_UNKNOWN;
+   }
 
    for (engine = 0; engine < *pCount; engine++) {
        intel_gpu_get_queue_props(gpu, engine, pProperties);
@@ -512,12 +515,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     uint32_t copy_size;
     uint32_t extension_count = ARRAY_SIZE(intel_phy_dev_gpu_exts);
 
-    /* TODO: Do we want to check that pLayerName is null? */
-
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     if (pProperties == NULL) {
         *pCount = INTEL_PHY_DEV_EXT_COUNT;
         return VK_SUCCESS;
@@ -538,10 +535,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     *pCount = 0;
     return VK_SUCCESS;
 }

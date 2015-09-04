@@ -263,13 +263,15 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
         offset_align = 4;
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        /* TODOVV: Make sure covered in validation test */
+//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
         return;
         break;
     }
 
     if (offset % offset_align) {
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        /* TODOVV: Make sure covered in validation test */
+//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
         return;
     }
 
@@ -3470,7 +3472,8 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
         cmd_bind_graphics_pipeline(cmd, intel_pipeline(pipeline));
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        /* TODOVV: Move test to validation layer */
+//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
         break;
     }
 }
@@ -3561,7 +3564,8 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
         data = &cmd->bind.dset.graphics_data;
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        /* TODOVV: Move test to validation layer */
+//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
         return;
         break;
     }
@@ -3803,7 +3807,9 @@ ICD_EXPORT void VKAPI vkCmdExecuteCommands(
        const struct intel_cmd *secondary = intel_cmd(pCmdBuffers[i]);
 
        if (secondary->primary) {
-           cmd->result = VK_ERROR_INVALID_VALUE;
+           /* TODOVV: Move test to validation layer */
+//           cmd->result = VK_ERROR_INVALID_VALUE;
+           cmd->result = VK_ERROR_UNKNOWN;
            break;
        }
 

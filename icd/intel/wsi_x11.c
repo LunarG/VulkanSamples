@@ -723,20 +723,27 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     struct intel_x11_swap_chain *sc;
     int fd;
 
+    /* TODOVV: Add test to validation layer */
     if (!x11_is_format_presentable(dev, info->imageFormat)) {
         intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
                       VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
-        return VK_ERROR_INVALID_VALUE;
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
     }
 
-    if (!x11_is_dri3_and_present_supported(c))
-        return VK_ERROR_INVALID_VALUE;
+    /* TODOVV: Can we add test to validation layer? */
+    if (!x11_is_dri3_and_present_supported(c)) {
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
+    }
 
+    /* TODOVV: Can we add test to validation layer? */
     fd = x11_dri3_open(c, window, provider);
     if (fd < 0 || !x11_gpu_match_fd(dev->gpu, fd)) {
         if (fd >= 0)
             close(fd);
-        return VK_ERROR_INVALID_VALUE;
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
     }
 
     close(fd);
@@ -874,13 +881,13 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
 
     *pSupported = false;
 
-    // TODO: Move this check to a validation layer (i.e. the driver should
+    // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR) {
-        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
     }
 
-    // TODO: NEED TO ALSO CHECK:
+    // TODOVV: NEED TO ALSO CHECK:
     // - queueNodeIndex
     // - pSurfaceDescriptionWindow->pPlatformHandle (can try to use it)
     // - pSurfaceDescriptionWindow->pPlatformWindow (can try to use it)
@@ -896,7 +903,7 @@ VkResult VKAPI vkGetSurfacePropertiesKHR(
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     VkSurfacePropertiesKHR*                  pSurfaceProperties)
 {
-    // TODO: Move this check to a validation layer (i.e. the driver should
+    // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     assert(pSurfaceProperties);
 
@@ -911,10 +918,11 @@ VkResult VKAPI vkGetSurfaceFormatsKHR(
 {
     VkResult ret = VK_SUCCESS;
 
-    // TODO: Move this check to a validation layer (i.e. the driver should
+    // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     if (!pCount) {
-        return VK_ERROR_INVALID_POINTER;
+//        return VK_ERROR_INVALID_POINTER;
+        return VK_ERROR_UNKNOWN;
     }
 
     if (pSurfaceFormats) {
@@ -938,10 +946,11 @@ VkResult VKAPI vkGetSurfacePresentModesKHR(
 {
     VkResult ret = VK_SUCCESS;
 
-    // TODO: Move this check to a validation layer (i.e. the driver should
+    // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     if (!pCount) {
-        return VK_ERROR_INVALID_POINTER;
+//        return VK_ERROR_INVALID_POINTER;
+        return VK_ERROR_UNKNOWN;
     }
 
     if (pPresentModes) {
@@ -995,10 +1004,11 @@ ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
     VkResult ret = VK_SUCCESS;
 
-    // TODO: Move this check to a validation layer (i.e. the driver should
+    // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     if (!pCount) {
-        return VK_ERROR_INVALID_POINTER;
+//        return VK_ERROR_INVALID_POINTER;
+        return VK_ERROR_UNKNOWN;
     }
 
     if (pSwapchainImages) {

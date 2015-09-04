@@ -560,7 +560,9 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
                 "compile error: UBO mismatch, %s shader may read from global, non-block uniform", shader_stage_to_string(stage));
 
         assert(0);
-        return VK_ERROR_BAD_PIPELINE_DATA;
+        /* TODO: Move this test to validation layer, is this already covered in shader_checker? */
+//        return VK_ERROR_BAD_PIPELINE_DATA;
+        return VK_ERROR_UNKNOWN;
     }
 
     // Sampler mapping data
@@ -886,11 +888,11 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         case GL_COMPUTE_SHADER:
         default:
             assert(0);
-            status = VK_ERROR_BAD_PIPELINE_DATA;
+            status = VK_ERROR_UNKNOWN;
         }
     } else {
         assert(0);
-        status = VK_ERROR_BAD_PIPELINE_DATA;
+        status = VK_ERROR_UNKNOWN;
     }
 
     if (status == VK_SUCCESS) {

@@ -270,7 +270,8 @@ VkResult intel_cmd_create(struct intel_dev *dev,
         pipeline_select = GEN6_PIPELINE_SELECT_DW0_SELECT_3D;
         break;
     default:
-        return VK_ERROR_INVALID_VALUE;
+        /* TODOVV: Add validation check for this */
+        return VK_ERROR_UNKNOWN;
         break;
     }
 
@@ -319,13 +320,8 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
 
     cmd_reset(cmd);
 
-    if (cmd->primary) {
-        if (info->renderPass.handle || info->framebuffer.handle)
-            return VK_ERROR_INVALID_VALUE;
-    } else {
-        if (!info->renderPass.handle || !info->framebuffer.handle)
-            return VK_ERROR_INVALID_VALUE;
-
+    /* TODOVV: Check that render pass is defined */
+    if (!cmd->primary) {
         cmd_begin_render_pass(cmd,
                 intel_render_pass(info->renderPass),
                 intel_fb(info->framebuffer),
@@ -370,8 +366,10 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
     uint32_t i;
 
     /* no matching intel_cmd_begin() */
-    if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr)
-        return VK_ERROR_INCOMPLETE_COMMAND_BUFFER;
+    if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr) {
+        /* TODOVV: Move this to validation layer */
+        return VK_ERROR_UNKNOWN;
+    }
 
     cmd_batch_end(cmd);
 

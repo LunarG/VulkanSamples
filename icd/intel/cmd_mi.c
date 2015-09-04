@@ -236,7 +236,8 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
         cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        /* TODOVV: This should be covered by validation error */
+        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         break;
     }
 }

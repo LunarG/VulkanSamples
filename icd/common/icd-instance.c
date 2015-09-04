@@ -123,9 +123,10 @@ VkResult icd_instance_create_logger(
 {
     struct icd_instance_logger *logger;
 
-    if (msg_obj == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
+    /* TODOVV: Move this test to a validation layer */
+//    if (msg_obj == NULL) {
+//        return VK_ERROR_INVALID_POINTER;
+//    }
 
     logger = icd_instance_alloc(instance, sizeof(*logger), 0,
             VK_SYSTEM_ALLOC_TYPE_DEBUG);
@@ -157,8 +158,9 @@ VkResult icd_instance_destroy_logger(
             break;
     }
 
-    if (!logger)
-        return VK_ERROR_INVALID_POINTER;
+    /* TODOVV: Move this to validation layer */
+//    if (!logger)
+//        return VK_ERROR_INVALID_POINTER;
 
     if (prev)
         prev->next = logger->next;

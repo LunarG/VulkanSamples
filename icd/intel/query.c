@@ -110,7 +110,9 @@ VkResult intel_query_create(struct intel_dev *dev,
 
     if (!query->slot_stride) {
         intel_query_destroy(query);
-        return VK_ERROR_INVALID_VALUE;
+        /* TODOVV: Move test to validation layer */
+//        return VK_ERROR_INVALID_VALUE;
+        return VK_ERROR_UNKNOWN;
     }
 
     VkMemoryAllocInfo mem_reqs;
@@ -240,7 +242,9 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
         *pDataSize = query->slot_stride * queryCount;
         break;
     default:
-        return VK_ERROR_INVALID_HANDLE;
+        /* TODOVV: Move test to validation layer */
+//        return VK_ERROR_INVALID_HANDLE;
+        return VK_ERROR_UNKNOWN;
         break;
     }
 

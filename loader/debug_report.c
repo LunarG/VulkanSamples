@@ -141,16 +141,18 @@ VkResult VKAPI loader_DbgCreateMsgCallback(
     VkResult res;
     uint32_t storage_idx;
 
-    if (instance == VK_NULL_HANDLE)
-        return VK_ERROR_INVALID_HANDLE;
+    /* TODOVV: move to validation layer */
+//    if (instance == VK_NULL_HANDLE)
+//        return VK_ERROR_INVALID_HANDLE;
 
     for (inst = loader.instances; inst; inst = inst->next) {
         if ((VkInstance) inst == instance)
             break;
     }
 
-    if (inst == VK_NULL_HANDLE)
-        return VK_ERROR_INVALID_HANDLE;
+    /* TODOVV: move to validation layer */
+//    if (inst == VK_NULL_HANDLE)
+//        return VK_ERROR_INVALID_HANDLE;
 
     icd_info = calloc(sizeof(VkDbgMsgCallback), inst->total_icd_count);
     if (!icd_info) {
@@ -210,16 +212,18 @@ VkResult VKAPI loader_DbgDestroyMsgCallback(
     VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
 
-    if (instance == VK_NULL_HANDLE)
-        return VK_ERROR_INVALID_HANDLE;
+    /* TODOVV: Move to validation layer */
+//    if (instance == VK_NULL_HANDLE)
+//        return VK_ERROR_INVALID_HANDLE;
 
     for (inst = loader.instances; inst; inst = inst->next) {
         if ((VkInstance) inst == instance)
             break;
     }
 
-    if (inst == VK_NULL_HANDLE)
-        return VK_ERROR_INVALID_HANDLE;
+    /* TODOVV: Move to validation layer */
+//    if (inst == VK_NULL_HANDLE)
+//        return VK_ERROR_INVALID_HANDLE;
 
     icd_info = *(VkDbgMsgCallback **) &msgCallback;
     storage_idx = 0;

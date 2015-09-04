@@ -52,10 +52,16 @@ static VkResult shader_module_create(struct intel_dev *dev,
     if (!sm)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    if (info->codeSize < sizeof(*spv))
-        return VK_ERROR_INVALID_MEMORY_SIZE;
-    if (spv->magic != ICD_SPV_MAGIC)
-        return VK_ERROR_BAD_SHADER_CODE;
+    /* TODOVV: Move test to validation layer */
+    if (info->codeSize < sizeof(*spv)) {
+//        return VK_ERROR_INVALID_MEMORY_SIZE;
+        return VK_ERROR_UNKNOWN;
+    }
+    /* TODOVV: Move test to validation layer */
+    if (spv->magic != ICD_SPV_MAGIC) {
+//        return VK_ERROR_BAD_SHADER_CODE;
+        return VK_ERROR_UNKNOWN;
+    }
 
     sm->code_size = info->codeSize;
     sm->code = malloc(info->codeSize);
@@ -119,7 +125,9 @@ static VkResult shader_create(struct intel_dev *dev,
     sh->ir = shader_create_ir(dev->gpu, sm->code, sm->code_size, info->stage);
     if (!sh->ir) {
         shader_destroy(&sh->obj);
-        return VK_ERROR_BAD_SHADER_CODE;
+        /* TODOVV: Can this move to validation layer? */
+//        return VK_ERROR_BAD_SHADER_CODE;
+        return VK_ERROR_UNKNOWN;
     }
 
     sh->obj.destroy = shader_destroy;

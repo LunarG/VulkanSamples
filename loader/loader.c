@@ -2664,10 +2664,11 @@ VkResult VKAPI loader_DestroyInstance(
         prev = next;
         next = next->next;
     }
-    if (next  == NULL) {
-        // This must be an invalid instance handle or empty list
-        return VK_ERROR_INVALID_HANDLE;
-    }
+    /* TODOVV: Move this test to validation layer */
+//    if (next  == NULL) {
+//        // This must be an invalid instance handle or empty list
+//        return VK_ERROR_INVALID_HANDLE;
+//    }
 
     while (icds) {
         if (icds->instance) {
@@ -3088,10 +3089,6 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     uint32_t copy_size;
 
     tls_instance = NULL;
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     memset(&icd_extensions, 0, sizeof(icd_extensions));
     loader_platform_thread_once(&once_init, loader_initialize);
 
@@ -3160,10 +3157,6 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
 
     uint32_t copy_size;
 
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     /* TODO: do we still need to lock */
     loader_platform_thread_lock_mutex(&loader_lock);
 
@@ -3202,10 +3195,6 @@ VkResult VKAPI loader_GetPhysicalDeviceExtensionProperties(
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     uint32_t copy_size;
-
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
 
     uint32_t count;
     struct loader_extension_list *dev_ext_list;
@@ -3252,10 +3241,6 @@ VkResult VKAPI loader_GetPhysicalDeviceLayerProperties(
     uint32_t copy_size;
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
 
     uint32_t count = icd->this_instance->device_layer_list.count;
 
