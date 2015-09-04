@@ -62,6 +62,7 @@ void init_pipeline(struct sample_info &info);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);
+void destroy_window(struct sample_info &info);
 
 #endif // UTIL_INIT
 

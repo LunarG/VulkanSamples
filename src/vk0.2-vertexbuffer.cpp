@@ -204,4 +204,6 @@ int main(int argc, char **argv)
     vkDestroyBufferView(info.device, info.vertex_buffer.view);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
 }

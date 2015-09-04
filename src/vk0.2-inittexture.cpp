@@ -315,4 +315,6 @@ int main(int argc, char **argv)
     vkDestroyImageView(info.device, texObj.view);
     vkDestroyImage(info.device, texObj.image);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
 }

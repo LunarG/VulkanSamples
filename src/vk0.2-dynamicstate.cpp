@@ -114,4 +114,5 @@ int main(int argc, char **argv)
     vkDestroyDynamicColorBlendState(info.device, info.dyn_blend);
     vkDestroyDynamicDepthStencilState(info.device, info.dyn_depth);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
 }

@@ -111,4 +111,5 @@ int main(int argc, char **argv)
     vkDestroyBufferView(info.device, info.uniform_data.view);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
 }
