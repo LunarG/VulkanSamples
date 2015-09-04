@@ -36,7 +36,7 @@
 
 static const VkExtensionProperties wsi_swapchain_extension_info = {
         .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_SWAPCHAIN_VERSION,
+        .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
 };
 
 void wsi_swapchain_add_instance_extensions(
