@@ -153,6 +153,8 @@ int main(int argc, char **argv)
     vkDestroyAttachmentView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
     return 0;
 
 }

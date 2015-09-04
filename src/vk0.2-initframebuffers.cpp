@@ -93,4 +93,6 @@ int main(int argc, char **argv)
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkDestroyRenderPass(info.device, info.render_pass);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
+    destroy_window(info);
 }

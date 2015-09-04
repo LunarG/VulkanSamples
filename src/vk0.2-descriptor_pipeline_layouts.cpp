@@ -79,5 +79,6 @@ int main(int argc, char **argv)
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDevice(info.device);
+    vkDestroyInstance(info.inst);
 }
 

@@ -448,6 +448,11 @@ void init_window(struct sample_info &info)
     }
     SetWindowLongPtr(info.window, GWLP_USERDATA, (LONG_PTR) &info);
 }
+
+void destroy_window(struct sample_info &info)
+{
+    DestroyWindow(info.window);
+}
 #else
 void init_window(struct sample_info &info)
 {
@@ -491,6 +496,13 @@ void init_window(struct sample_info &info)
     xcb_configure_window(info.connection, info.window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
 }
+
+void destroy_window(struct sample_info &info)
+{
+    xcb_destroy_window(info.connection, info.window);
+    xcb_disconnect(info.connection);
+}
+
 #endif // _WIN32
 
 void init_depth_buffer(struct sample_info &info)
