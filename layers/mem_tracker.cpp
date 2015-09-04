@@ -2056,7 +2056,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
                 if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                     log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, pFences[i].handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                             "Fence %#" PRIxLEAST64 " submitted to VkResetFences in UNSIGNALED STATE", pFences[i].handle);
-                    result = VK_ERROR_UNKNOWN;
+                    /* TODOVV: The validation layer probably should not be messing with return value.
+                     * Error should be detailed in validation notification. */
+//                    result = VK_ERROR_INVALID_VALUE;
                 }
                 else {
                     fence_item->second.createInfo.flags =
