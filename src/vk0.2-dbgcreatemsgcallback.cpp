@@ -111,9 +111,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (found_extension) {
-        std::cout << "Found Extension: " << VK_DEBUG_REPORT_EXTENSION_NAME << std::endl;
-    } else {
+    if (!found_extension) {
         std::cout << "Something went very wrong, cannot find DEBUG_REPORT extension" << std::endl;
         exit(1);
     }
@@ -141,7 +139,6 @@ int main(int argc, char **argv)
 
     VkInstance inst;
 
-    std::cout << "calling vkCreateInstance\n";
     res = vkCreateInstance(&inst_info, &inst);
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "cannot find a compatible Vulkan ICD\n";
@@ -150,8 +147,6 @@ int main(int argc, char **argv)
         std::cout << "unknown error\n";
         exit(-1);
     }
-
-    std::cout << "Created an Instance\n";
 
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
@@ -162,14 +157,12 @@ int main(int argc, char **argv)
         std::cout << "GetInstanceProcAddr: Unable to find vkDbgCreateMsgCallback function." << std::endl;
         exit(1);
     }
-    std::cout << "Got dbgCreateMsgCallback function\n";
 
     dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(inst, "vkDbgDestroyMsgCallback");
     if (!dbgDestroyMsgCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find vkDbgDestroyMsgCallback function." << std::endl;
         exit(1);
     }
-    std::cout << "Got dbgDestroyMsgCallback function\n";
 
     res = dbgCreateMsgCallback(
               inst,
@@ -178,7 +171,6 @@ int main(int argc, char **argv)
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
-        std::cout << "Successfully created message calback object\n";
         break;
     case VK_ERROR_INVALID_POINTER:
         std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
@@ -196,7 +188,6 @@ int main(int argc, char **argv)
 
     /* Clean up callback */
     dbgDestroyMsgCallback(inst, msg_callback);
-    std::cout << "Destroyed message calback object\n";
 
     vkDestroyInstance(inst);
 

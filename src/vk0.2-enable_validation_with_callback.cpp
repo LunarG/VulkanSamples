@@ -113,7 +113,6 @@ int main(int argc, char **argv)
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
     assert(!res);
 
-    std::cout << "calling vkEnumeratePhysicalDevices\n";
     init_enumerate_device(info);
 
     init_device_layer_properties(info);
@@ -154,7 +153,6 @@ int main(int argc, char **argv)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.flags = 0;
 
-    std::cout << "calling vkCreateDevice\n";
     res = vkCreateDevice(info.gpu, &device_info, &info.device);
     assert(!res);
 
@@ -165,14 +163,12 @@ int main(int argc, char **argv)
         std::cout << "GetInstanceProcAddr: Unable to find vkDbgCreateMsgCallback function." << std::endl;
         exit(1);
     }
-    std::cout << "Got dbgCreateMsgCallback function\n";
 
     info.dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgDestroyMsgCallback");
     if (!info.dbgDestroyMsgCallback) {
         std::cout << "GetInstanceProcAddr: Unable to find vkDbgDestroyMsgCallback function." << std::endl;
         exit(1);
     }
-    std::cout << "Got dbgDestroyMsgCallback function\n";
 
     res = info.dbgCreateMsgCallback(
               info.inst,
@@ -181,7 +177,6 @@ int main(int argc, char **argv)
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
-        std::cout << "Successfully created message calback object\n";
         break;
     case VK_ERROR_INVALID_POINTER:
         std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
@@ -211,12 +206,12 @@ int main(int argc, char **argv)
      * Destroying the device before destroying the command pool above
      * will trigger a validation error.
      */
-    std::cout << "calling vkDestroyDevice\n";
+    std::cout << "calling vkDestroyDevice before destroying command pool\n";
+    std::cout << "this should result in an error\n";
     vkDestroyDevice(info.device);
 
     /* Clean up callback */
     info.dbgDestroyMsgCallback(info.inst, msg_callback);
-    std::cout << "Destroyed message calback object\n";
 
 /* VULKAN_KEY_END */
 

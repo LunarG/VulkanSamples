@@ -75,12 +75,8 @@ int main(int argc, char **argv)
     }
 
     /* VULKAN_KEY_START */
-    std::cout << "calling get_base_data_dir\n";
     std::string basedatadir = get_base_data_dir();
-    std::cout << "  base data dir is " << basedatadir << "\n";
-    std::cout << "calling get_data_dir\n";
     std::string reldatadir = get_data_dir( __FILE__ );
-    std::cout << "  release data dir is " << reldatadir << "\n";
     /* VULKAN_KEY_END */
 
     vkDestroyInstance(inst);

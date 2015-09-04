@@ -60,7 +60,6 @@ int main(int argc, char **argv)
     VkInstance inst;
     VkResult res;
 
-    std::cout << "calling vkCreateInstance\n";
     res = vkCreateInstance(&inst_info, &inst);
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "cannot find a compatible Vulkan ICD\n";
@@ -70,7 +69,6 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    std::cout << "calling vkDestroyInstance\n";
     vkDestroyInstance(inst);
 
 /* VULKAN_KEY_END */
