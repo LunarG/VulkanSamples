@@ -96,32 +96,6 @@ static VkResult layer_destroy_msg_callback(
     return result;
 }
 
-static inline void debug_report_init_instance_extension_dispatch_table(
-        VkLayerInstanceDispatchTable *table,
-        PFN_vkGetInstanceProcAddr gpa,
-        VkInstance inst)
-{
-    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
-    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
-}
-
-static PFN_vkVoidFunction msg_callback_get_proc_addr(
-        const char      *funcName)
-{
-    if (!g_DEBUG_REPORT) {
-        return NULL;
-    }
-
-    if (!strcmp(funcName, "vkDbgCreateMsgCallback")) {
-        return (PFN_vkVoidFunction) vkDbgCreateMsgCallback;
-    }
-    if (!strcmp(funcName, "vkDbgDestroyMsgCallback")) {
-        return (PFN_vkVoidFunction) vkDbgDestroyMsgCallback;
-    }
-
-    return NULL;
-}
-
 // Utility function to handle reporting
 //  If callbacks are enabled, use them, otherwise use printf
 static void layerCbMsg(
