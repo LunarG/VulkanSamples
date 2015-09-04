@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     uint32_t instance_extension_count;
     VkResult res;
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     /*
      * It's possible, though very rare, that the number of
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 
     vkDestroyInstance(inst);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     return 0;
 }

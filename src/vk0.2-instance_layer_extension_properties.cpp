@@ -64,7 +64,7 @@ int main(int argc, char **argv)
         res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
-/* VULKAN_KEY_START */
+    /* VULKAN_KEY_START */
 
     /*
      * Now gather the extension list for each instance layer.
@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     }
     free(vk_props);
 
-/* VULKAN_KEY_END */
+    /* VULKAN_KEY_END */
 
     std::cout << "Instance Layers:" << std::endl;
     for (std::vector<layer_properties>::iterator it = instance_layer_properties.begin();
