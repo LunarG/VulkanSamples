@@ -286,8 +286,10 @@ int main(int argc, char **argv)
 
     info.buffers.resize(info.swapChainImageCount);
 
-    init_command_buffer(info); /* Going to need command buffer and device queue to */
-    init_device_queue(info);   /* send memory barriers in set_image_layout()       */
+    /* Going to need a command buffer to send the memory barriers in set_image_layout       */
+    /* but we couldn't have created one before we knew what our graphics_queue_family_index */
+    /* is, but now that we have it, create the command buffer                               */
+    init_command_buffer(info);
 
     for (int i = 0; i < info.swapChainImageCount; i++) {
         VkAttachmentViewCreateInfo color_attachment_view = {};
