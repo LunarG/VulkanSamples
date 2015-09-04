@@ -34,8 +34,8 @@
 #include "vulkan.h"
 #include "vk_debug_report_lunarg.h"
 
-#define VK_DEBUG_MARKER_EXTENSION_NUMBER 3
-#define VK_DEBUG_MARKER_EXTENSION_VERSION VK_MAKE_VERSION(0, 1, 0)
+#define VK_DEBUG_MARKER_EXTENSION_NUMBER 6
+#define VK_DEBUG_MARKER_EXTENSION_REVISION 1
 #ifdef __cplusplus
 extern "C"
 {

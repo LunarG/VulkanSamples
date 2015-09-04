@@ -980,18 +980,14 @@ static void app_dump_extensions(
     }
     printf("\tcount = %d\n", extension_count);
     for (i=0; i< extension_count; i++) {
-        uint32_t major, minor, patch;
-        char spec_version[64];
         VkExtensionProperties const *ext_prop = &extension_properties[i];
 
         if (i>0)
             printf("\n"); // separator between extensions
 
         printf("%s\t", indent);
-        extract_version(ext_prop->specVersion, &major, &minor, &patch);
-        snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        printf("%s: extension version %s",
-                       ext_prop->extName, spec_version);
+        printf("%-32s: extension revision %2d",
+                       ext_prop->extName, ext_prop->specVersion);
     }
     printf("\n");
     fflush(stdout);

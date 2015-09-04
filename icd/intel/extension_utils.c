@@ -31,7 +31,7 @@
 const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {
         .extName = VK_DEBUG_REPORT_EXTENSION_NAME,
-        .specVersion = VK_DEBUG_REPORT_EXTENSION_VERSION,
+        .specVersion = VK_DEBUG_REPORT_EXTENSION_REVISION,
     },
     {
         .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
