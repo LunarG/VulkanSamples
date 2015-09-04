@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
-    char sample_title[] = "Depth Buffer Sample";
+    char sample_title[] = "Command Buffer Sample";
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
