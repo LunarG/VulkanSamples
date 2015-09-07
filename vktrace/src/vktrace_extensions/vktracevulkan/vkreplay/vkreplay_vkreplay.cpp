@@ -263,6 +263,8 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             }
             else
             {
+                VkAllocCallbacks **pACB = (VkAllocCallbacks**) &pPacket->pCreateInfo->pAllocCb;
+                *pACB = NULL;
                 replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
             }
             release_enableLayer_list(userLayerNames);
