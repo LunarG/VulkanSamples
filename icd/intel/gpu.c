@@ -215,6 +215,53 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     return VK_SUCCESS;
 }
 
+void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
+{
+    // TODO: fill out more limits
+    memset(pLimits, 0, sizeof(*pLimits));
+
+    // no size limit, but no bounded buffer could exceed 2GB
+    pLimits->maxBoundDescriptorSets         = 1;
+    pLimits->maxComputeWorkGroupInvocations = 512;
+
+    // incremented every 80ns
+    pLimits->timestampFrequency = 1000 * 1000 * 1000 / 80;
+
+    // hardware is limited to 16 viewports
+    pLimits->maxViewports        = INTEL_MAX_VIEWPORTS;
+    pLimits->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
+
+    // ?
+    pLimits->maxDescriptorSets     = 2;
+    pLimits->maxImageDimension1D   = 8192;
+    pLimits->maxImageDimension2D   = 8192;
+    pLimits->maxImageDimension3D   = 8192;
+    pLimits->maxImageDimensionCube = 8192;
+    pLimits->maxImageArrayLayers   = 2048;
+    pLimits->maxTexelBufferSize    = 128 * 1024 * 1024;  // 128M texels hard limit
+    pLimits->maxUniformBufferSize  = 64 * 1024;          // not hard limit
+
+    /* HW has two per-stage resource tables:
+     * - samplers, 16 per stage on IVB; blocks of 16 on HSW+ via shader hack, as the
+     *   table base ptr used by the sampler hw is under shader sw control.
+     *
+     * - binding table entries, 250 total on all gens, shared between
+     *   textures, RT, images, SSBO, UBO, ...
+     *   the top few indices (250-255) are used for 'stateless' access with various cache
+     *   options, and for SLM access.
+     */
+    pLimits->maxPerStageDescriptorSamplers       = 16;        // technically more on HSW+..
+    pLimits->maxDescriptorSetSamplers            = 16;
+
+    pLimits->maxPerStageDescriptorUniformBuffers = 128;
+    pLimits->maxDescriptorSetUniformBuffers      = 128;
+
+    pLimits->maxPerStageDescriptorSampledImages  = 128;
+    pLimits->maxDescriptorSetSampledImages       = 128;
+
+    // storage images and buffers not implemented; left at zero
+}
+
 void intel_gpu_get_props(const struct intel_gpu *gpu,
                          VkPhysicalDeviceProperties *props)
 {
@@ -236,6 +283,10 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
         name_len = sizeof(props->deviceName) - 1;
     memcpy(props->deviceName, name, name_len);
     props->deviceName[name_len] = '\0';
+
+    intel_gpu_get_limits(&props->limits);
+
+    intel_gpu_get_sparse_properties(&props->sparseProperties);
 }
 
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
@@ -447,59 +498,9 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
-                                               VkPhysicalDevice physicalDevice,
-                                               VkPhysicalDeviceLimits* pLimits)
+void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
 {
-    VkResult ret = VK_SUCCESS;
-
-    /* TODO: fill out more limits */
-    memset(pLimits, 0, sizeof(*pLimits));
-
-    /* no size limit, but no bounded buffer could exceed 2GB */
-    pLimits->maxBoundDescriptorSets = 1;
-    pLimits->maxComputeWorkGroupInvocations = 512;
-
-    /* incremented every 80ns */
-    pLimits->timestampFrequency = 1000 * 1000 * 1000 / 80;
-
-    /* hardware is limited to 16 viewports */
-    pLimits->maxViewports = INTEL_MAX_VIEWPORTS;
-
-    pLimits->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
-
-    /* ? */
-    pLimits->maxDescriptorSets = 2;
-
-    pLimits->maxImageDimension1D = 8192;
-    pLimits->maxImageDimension2D = 8192;
-    pLimits->maxImageDimension3D = 8192;
-    pLimits->maxImageDimensionCube = 8192;
-    pLimits->maxImageArrayLayers = 2048;
-    pLimits->maxTexelBufferSize = 128 * 1024 * 1024;    /* 128M texels hard limit */
-    pLimits->maxUniformBufferSize = 64 * 1024;          /* not hard limit */
-
-    /* HW has two per-stage resource tables:
-     * - samplers, 16 per stage on IVB; blocks of 16 on HSW+ via shader hack, as the
-     *   table base ptr used by the sampler hw is under shader sw control.
-     *
-     * - binding table entries, 250 total on all gens, shared between
-     *   textures, RT, images, SSBO, UBO, ...
-     *   the top few indices (250-255) are used for 'stateless' access with various cache
-     *   options, and for SLM access.
-     */
-    pLimits->maxPerStageDescriptorSamplers = 16;        /* technically more on HSW+.. */
-    pLimits->maxDescriptorSetSamplers = 16;
-
-    pLimits->maxPerStageDescriptorUniformBuffers = 128;
-    pLimits->maxDescriptorSetUniformBuffers = 128;
-
-    pLimits->maxPerStageDescriptorSampledImages = 128;
-    pLimits->maxDescriptorSetSampledImages = 128;
-
-    /* storage images and buffers not implemented; left at zero */
-
-    return ret;
+    memset(pProps, 0, sizeof(*pProps));
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(

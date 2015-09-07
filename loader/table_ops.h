@@ -493,7 +493,6 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceFeatures = (PFN_vkGetPhysicalDeviceFeatures) gpa(inst, "vkGetPhysicalDeviceFeatures");
     table->GetPhysicalDeviceImageFormatProperties = (PFN_vkGetPhysicalDeviceImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceImageFormatProperties");
     table->GetPhysicalDeviceFormatProperties = (PFN_vkGetPhysicalDeviceFormatProperties) gpa(inst, "vkGetPhysicalDeviceFormatProperties");
-    table->GetPhysicalDeviceLimits = (PFN_vkGetPhysicalDeviceLimits) gpa(inst, "vkGetPhysicalDeviceLimits");
     table->GetPhysicalDeviceSparseImageFormatProperties = (PFN_vkGetPhysicalDeviceSparseImageFormatProperties) gpa(inst, "vkGetPhysicalDeviceSparseImageFormatProperties");
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
     table->GetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties) gpa(inst, "vkGetPhysicalDeviceQueueFamilyProperties");
@@ -531,8 +530,6 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
         return (void *) table->GetPhysicalDeviceFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLimits"))
-        return (void *) table->GetPhysicalDeviceLimits;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (void *) table->GetPhysicalDeviceSparseImageFormatProperties;
     if (!strcmp(name, "GetPhysicalDeviceProperties"))

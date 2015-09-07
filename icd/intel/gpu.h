@@ -96,8 +96,14 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
                             struct intel_gpu **gpu_ret);
 void intel_gpu_destroy(struct intel_gpu *gpu);
 
+
 void intel_gpu_get_props(const struct intel_gpu *gpu,
                          VkPhysicalDeviceProperties *props);
+
+void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps);
+
+void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits);
+
 void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
                                enum intel_gpu_engine_type engine,
                                VkQueueFamilyProperties *props);

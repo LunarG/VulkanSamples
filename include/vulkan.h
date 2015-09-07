@@ -1198,7 +1198,7 @@ typedef struct {
     VkBool32                                    shaderResourceResidency;
     VkBool32                                    shaderResourceMinLOD;
     VkBool32                                    alphaToOne;
-    VkBool32                                    sparse;
+    VkBool32                                    sparseBinding;
     VkBool32                                    sparseResidencyBuffer;
     VkBool32                                    sparseResidencyImage2D;
     VkBool32                                    sparseResidencyImage3D;
@@ -1206,12 +1206,6 @@ typedef struct {
     VkBool32                                    sparseResidency4Samples;
     VkBool32                                    sparseResidency8Samples;
     VkBool32                                    sparseResidency16Samples;
-    VkBool32                                    sparseResidencyStandard2DBlockShape;
-    VkBool32                                    sparseResidencyStandard2DMSBlockShape;
-    VkBool32                                    sparseResidencyStandard3DBlockShape;
-    VkBool32                                    sparseResidencyAlignedMipSize;
-    VkBool32                                    sparseResidencyNonResident;
-    VkBool32                                    sparseResidencyNonResidentStrict;
     VkBool32                                    sparseResidencyAliased;
 } VkPhysicalDeviceFeatures;
 
@@ -1324,6 +1318,15 @@ typedef struct {
 } VkPhysicalDeviceLimits;
 
 typedef struct {
+    VkBool32                                    sparseResidencyStandard2DBlockShape;
+    VkBool32                                    sparseResidencyStandard2DMSBlockShape;
+    VkBool32                                    sparseResidencyStandard3DBlockShape;
+    VkBool32                                    sparseResidencyAlignedMipSize;
+    VkBool32                                    sparseResidencyNonResident;
+    VkBool32                                    sparseResidencyNonResidentStrict;
+} VkPhysicalDeviceSparseProperties;
+
+typedef struct {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
@@ -1331,6 +1334,8 @@ typedef struct {
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
     uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
+    VkPhysicalDeviceLimits                      limits;
+    VkPhysicalDeviceSparseProperties            sparseProperties;
 } VkPhysicalDeviceProperties;
 
 typedef struct {
@@ -2110,7 +2115,6 @@ typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, ui
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageFormatProperties* pImageFormatProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueFamilyProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkQueueFamilyProperties* pQueueFamilyProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties);
@@ -2289,10 +2293,6 @@ VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
     VkImageFormatProperties*                    pImageFormatProperties);
-
-VkResult VKAPI vkGetPhysicalDeviceLimits(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceLimits*                     pLimits);
 
 VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,

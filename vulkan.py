@@ -246,10 +246,6 @@ core = Extension(
              Param("VkImageUsageFlags", "usage"),
              Param("VkImageFormatProperties*", "pImageFormatProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceLimits",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("VkPhysicalDeviceLimits*", "pLimits")]),
-
         Proto("PFN_vkVoidFunction", "GetInstanceProcAddr",
             [Param("VkInstance", "instance"),
              Param("const char*", "pName")]),

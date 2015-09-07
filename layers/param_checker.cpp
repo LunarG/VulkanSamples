@@ -2232,37 +2232,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     return result;
 }
 
-bool PostGetPhysicalDeviceLimits(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceLimits* pLimits,
-    VkResult result)
-{
-
-    if(pLimits != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceLimits parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
-    VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceLimits* pLimits)
-{
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceLimits(physicalDevice, pLimits);
-
-    PostGetPhysicalDeviceLimits(physicalDevice, pLimits, result);
-
-    return result;
-}
-
 bool PostGetPhysicalDeviceProperties(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceProperties* pProperties,
@@ -8489,8 +8458,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceFeatures;
     if (!strcmp(funcName, "vkGetPhysicalDeviceFormatProperties"))
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceFormatProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceLimits"))
-        return (PFN_vkVoidFunction) vkGetPhysicalDeviceLimits;
     if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
         return (PFN_vkVoidFunction) vkGetGlobalLayerProperties;
     if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))

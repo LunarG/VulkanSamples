@@ -257,18 +257,6 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysical
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
-                                            VkPhysicalDevice gpu,
-                                            VkPhysicalDeviceLimits *pLimits)
-{
-    const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
-
-    disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceLimits(gpu, pLimits);
-    return res;
-}
-
 LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceProperties* pProperties)

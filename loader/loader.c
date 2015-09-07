@@ -95,7 +95,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceFeatures = loader_GetPhysicalDeviceFeatures,
     .GetPhysicalDeviceFormatProperties = loader_GetPhysicalDeviceFormatProperties,
     .GetPhysicalDeviceImageFormatProperties = loader_GetPhysicalDeviceImageFormatProperties,
-    .GetPhysicalDeviceLimits = loader_GetPhysicalDeviceLimits,
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
     .GetPhysicalDeviceQueueFamilyProperties = loader_GetPhysicalDeviceQueueFamilyProperties,
     .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
@@ -1115,7 +1114,6 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceFeatures, true);
     LOOKUP_GIPA(GetPhysicalDeviceFormatProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceImageFormatProperties, true);
-    LOOKUP_GIPA(GetPhysicalDeviceLimits, true);
     LOOKUP_GIPA(CreateDevice, true);
     LOOKUP_GIPA(GetPhysicalDeviceProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceMemoryProperties, true);
@@ -2874,20 +2872,6 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
     if (icd->GetPhysicalDeviceImageFormatProperties)
         res = icd->GetPhysicalDeviceImageFormatProperties(physicalDevice, format,
                                 type, tiling, usage, pImageFormatProperties);
-
-    return res;
-}
-
-VkResult VKAPI loader_GetPhysicalDeviceLimits(
-        VkPhysicalDevice                        physicalDevice,
-        VkPhysicalDeviceLimits*                 pLimits)
-{
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-
-    if (icd->GetPhysicalDeviceLimits)
-        res = icd->GetPhysicalDeviceLimits(physicalDevice, pLimits);
 
     return res;
 }

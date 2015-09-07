@@ -116,7 +116,7 @@ struct app_gpu {
 
     VkPhysicalDeviceMemoryProperties memory_props;
     VkPhysicalDeviceFeatures features;
-    VkPhysicalDeviceLimits limits;
+    VkPhysicalDevice limits;
 
     uint32_t device_layer_count;
     struct layer_extension_list *device_layers;
@@ -703,10 +703,6 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     if (err)
         ERR_EXIT(err);
 
-    err = vkGetPhysicalDeviceLimits(gpu->obj, &gpu->limits);
-    if (err)
-        ERR_EXIT(err);
-
     app_dev_init(&gpu->dev, gpu);
     app_dev_init_formats(&gpu->dev);
 }
@@ -825,7 +821,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tshaderResourceResidency                 = %u\n", features->shaderResourceResidency                );
     printf("\tshaderResourceMinLOD                    = %u\n", features->shaderResourceMinLOD                   );
     printf("\talphaToOne                              = %u\n", features->alphaToOne                             );
-    printf("\tsparse                                  = %u\n", features->sparse                                 );
+    printf("\tsparseBinding                           = %u\n", features->sparseBinding                          );
     printf("\tsparseResidencyBuffer                   = %u\n", features->sparseResidencyBuffer                  );
     printf("\tsparseResidencyImage2D                  = %u\n", features->sparseResidencyImage2D                 );
     printf("\tsparseResidencyImage3D                  = %u\n", features->sparseResidencyImage3D                 );
@@ -833,122 +829,128 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tsparseResidency4Samples                 = %u\n", features->sparseResidency4Samples                );
     printf("\tsparseResidency8Samples                 = %u\n", features->sparseResidency8Samples                );
     printf("\tsparseResidency16Samples                = %u\n", features->sparseResidency16Samples               );
-    printf("\tsparseResidencyStandard2DBlockShape     = %u\n", features->sparseResidencyStandard2DBlockShape    );
-    printf("\tsparseResidencyStandard2DMSBlockShape   = %u\n", features->sparseResidencyStandard2DMSBlockShape  );
-    printf("\tsparseResidencyStandard3DBlockShape     = %u\n", features->sparseResidencyStandard3DBlockShape    );
-    printf("\tsparseResidencyAlignedMipSize           = %u\n", features->sparseResidencyAlignedMipSize          );
-    printf("\tsparseResidencyNonResident              = %u\n", features->sparseResidencyNonResident             );
-    printf("\tsparseResidencyNonResidentStrict        = %u\n", features->sparseResidencyNonResidentStrict       );
     printf("\tsparseResidencyAliased                  = %u\n", features->sparseResidencyAliased                 );
 }
 
-static void app_gpu_dump_limits(const struct app_gpu *gpu)
+static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparseProps)
 {
-    const VkPhysicalDeviceLimits *limits = &gpu->limits;
 
-    printf("VkPhysicalDeviceLimits:\n");
-    printf("=======================\n");
+    printf("\tVkPhysicalDeviceSparseProperties:\n");
+    printf("\t---------------------------------\n");
 
-    printf("\tmaxImageDimension1D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension1D                    );
-    printf("\tmaxImageDimension2D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension2D                    );
-    printf("\tmaxImageDimension3D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension3D                    );
-    printf("\tmaxImageDimensionCube                   = 0x%" PRIxLEAST32 "\n", limits->maxImageDimensionCube                  );
-    printf("\tmaxImageArrayLayers                     = 0x%" PRIxLEAST32 "\n", limits->maxImageArrayLayers                    );
-    printf("\tmaxTexelBufferSize                      = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferSize                     );
-    printf("\tmaxUniformBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferSize                   );
-    printf("\tmaxStorageBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferSize                   );
-    printf("\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );
-    printf("\tmaxMemoryAllocationCount                = 0x%" PRIxLEAST32 "\n", limits->maxMemoryAllocationCount               );
-    printf("\tbufferImageGranularity                  = 0x%" PRIxLEAST64 "\n", limits->bufferImageGranularity                 );
-    printf("\tmaxBoundDescriptorSets                  = 0x%" PRIxLEAST32 "\n", limits->maxBoundDescriptorSets                 );
-    printf("\tmaxDescriptorSets                       = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSets                      );
-    printf("\tmaxPerStageDescriptorSamplers           = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSamplers          );
-    printf("\tmaxPerStageDescriptorUniformBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorUniformBuffers    );
-    printf("\tmaxPerStageDescriptorStorageBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageBuffers    );
-    printf("\tmaxPerStageDescriptorSampledImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSampledImages     );
-    printf("\tmaxPerStageDescriptorStorageImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageImages     );
-    printf("\tmaxDescriptorSetSamplers                = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetSamplers               );
-    printf("\tmaxDescriptorSetUniformBuffers          = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetUniformBuffers         );
-    printf("\tmaxDescriptorSetStorageBuffers          = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetStorageBuffers         );
-    printf("\tmaxDescriptorSetSampledImages           = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetSampledImages          );
-    printf("\tmaxDescriptorSetStorageImages           = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetStorageImages          );
-    printf("\tmaxVertexInputAttributes                = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributes               );
-    printf("\tmaxVertexInputAttributeOffset           = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributeOffset          );
-    printf("\tmaxVertexInputBindingStride             = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputBindingStride            );
-    printf("\tmaxVertexOutputComponents               = 0x%" PRIxLEAST32 "\n", limits->maxVertexOutputComponents              );
-    printf("\tmaxTessGenLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessGenLevel                        );
-    printf("\tmaxTessPatchSize                        = 0x%" PRIxLEAST32 "\n", limits->maxTessPatchSize                       );
-    printf("\tmaxTessControlPerVertexInputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerVertexInputComponents );
-    printf("\tmaxTessControlPerVertexOutputComponents = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerVertexOutputComponents);
-    printf("\tmaxTessControlPerPatchOutputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerPatchOutputComponents );
-    printf("\tmaxTessControlTotalOutputComponents     = 0x%" PRIxLEAST32 "\n", limits->maxTessControlTotalOutputComponents    );
-    printf("\tmaxTessEvaluationInputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxTessEvaluationInputComponents       );
-    printf("\tmaxTessEvaluationOutputComponents       = 0x%" PRIxLEAST32 "\n", limits->maxTessEvaluationOutputComponents      );
-    printf("\tmaxGeometryShaderInvocations            = 0x%" PRIxLEAST32 "\n", limits->maxGeometryShaderInvocations           );
-    printf("\tmaxGeometryInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxGeometryInputComponents             );
-    printf("\tmaxGeometryOutputComponents             = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputComponents            );
-    printf("\tmaxGeometryOutputVertices               = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputVertices              );
-    printf("\tmaxGeometryTotalOutputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxGeometryTotalOutputComponents       );
-    printf("\tmaxFragmentInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxFragmentInputComponents             );
-    printf("\tmaxFragmentOutputBuffers                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputBuffers               );
-    printf("\tmaxFragmentDualSourceBuffers            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSourceBuffers           );
-    printf("\tmaxFragmentCombinedOutputResources      = 0x%" PRIxLEAST32 "\n", limits->maxFragmentCombinedOutputResources     );
-    printf("\tmaxComputeSharedMemorySize              = 0x%" PRIxLEAST32 "\n", limits->maxComputeSharedMemorySize             );
-    printf("\tmaxComputeWorkGroupCount[0]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[0]            );
-    printf("\tmaxComputeWorkGroupCount[1]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[1]            );
-    printf("\tmaxComputeWorkGroupCount[2]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[2]            );
-    printf("\tmaxComputeWorkGroupInvocations          = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupInvocations         );
-    printf("\tmaxComputeWorkGroupSize[0]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[0]             );
-    printf("\tmaxComputeWorkGroupSize[1]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[1]             );
-    printf("\tmaxComputeWorkGroupSize[2]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[2]             );
-    printf("\tsubPixelPrecisionBits                   = 0x%" PRIxLEAST32 "\n", limits->subPixelPrecisionBits                  );
-    printf("\tsubTexelPrecisionBits                   = 0x%" PRIxLEAST32 "\n", limits->subTexelPrecisionBits                  );
-    printf("\tmipmapPrecisionBits                     = 0x%" PRIxLEAST32 "\n", limits->mipmapPrecisionBits                    );
-    printf("\tmaxDrawIndexedIndexValue                = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndexedIndexValue               );
-    printf("\tmaxDrawIndirectInstanceCount            = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndirectInstanceCount           );
-    printf("\tprimitiveRestartForPatches              = 0x%" PRIxLEAST32 "\n", limits->primitiveRestartForPatches             );
-    printf("\tmaxSamplerLodBias                       = %f\n",                 limits->maxSamplerLodBias                      );
-    printf("\tmaxSamplerAnisotropy                    = %f\n",                 limits->maxSamplerAnisotropy                   );
-    printf("\tmaxViewports                            = 0x%" PRIxLEAST32 "\n", limits->maxViewports                           );
-    printf("\tmaxDynamicViewportStates                = 0x%" PRIxLEAST32 "\n", limits->maxDynamicViewportStates               );
-    printf("\tmaxViewportDimensions[0]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[0]               );
-    printf("\tmaxViewportDimensions[1]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[1]               );
-    printf("\tviewportBoundsRange[0]                  = %f\n",                 limits->viewportBoundsRange[0]                 );
-    printf("\tviewportBoundsRange[1]                  = %f\n",                 limits->viewportBoundsRange[1]                 );
-    printf("\tviewportSubPixelBits                    = 0x%" PRIxLEAST32 "\n", limits->viewportSubPixelBits                   );
-    printf("\tminMemoryMapAlignment                   = 0x%" PRIxLEAST32 "\n", limits->minMemoryMapAlignment                  );
-    printf("\tminTexelBufferOffsetAlignment           = 0x%" PRIxLEAST32 "\n", limits->minTexelBufferOffsetAlignment          );
-    printf("\tminUniformBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minUniformBufferOffsetAlignment        );
-    printf("\tminStorageBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minStorageBufferOffsetAlignment        );
-    printf("\tminTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->minTexelOffset                         );
-    printf("\tmaxTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->maxTexelOffset                         );
-    printf("\tminTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->minTexelGatherOffset                   );
-    printf("\tmaxTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->maxTexelGatherOffset                   );
-    printf("\tminInterpolationOffset                  = %f\n",                 limits->minInterpolationOffset                 );
-    printf("\tmaxInterpolationOffset                  = %f\n",                 limits->maxInterpolationOffset                 );
-    printf("\tsubPixelInterpolationOffsetBits         = 0x%" PRIxLEAST32 "\n", limits->subPixelInterpolationOffsetBits        );
-    printf("\tmaxFramebufferWidth                     = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferWidth                    );
-    printf("\tmaxFramebufferHeight                    = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferHeight                   );
-    printf("\tmaxFramebufferLayers                    = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferLayers                   );
-    printf("\tmaxFramebufferColorSamples              = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferColorSamples             );
-    printf("\tmaxFramebufferDepthSamples              = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferDepthSamples             );
-    printf("\tmaxFramebufferStencilSamples            = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferStencilSamples           );
-    printf("\tmaxColorAttachments                     = 0x%" PRIxLEAST32 "\n", limits->maxColorAttachments                    );
-    printf("\tmaxSampledImageColorSamples             = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageColorSamples            );
-    printf("\tmaxSampledImageDepthSamples             = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageDepthSamples            );
-    printf("\tmaxSampledImageIntegerSamples           = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageIntegerSamples          );
-    printf("\tmaxStorageImageSamples                  = 0x%" PRIxLEAST32 "\n", limits->maxStorageImageSamples                 );
-    printf("\tmaxSampleMaskWords                      = 0x%" PRIxLEAST32 "\n", limits->maxSampleMaskWords                     );
-    printf("\ttimestampFrequency                      = 0x%" PRIxLEAST64 "\n", limits->timestampFrequency                     );
-    printf("\tmaxClipDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxClipDistances                       );
-    printf("\tmaxCullDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxCullDistances                       );
-    printf("\tmaxCombinedClipAndCullDistances         = 0x%" PRIxLEAST32 "\n", limits->maxCombinedClipAndCullDistances        );
-    printf("\tpointSizeRange[0]                       = %f\n",                 limits->pointSizeRange[0]                      );
-    printf("\tpointSizeRange[1]                       = %f\n",                 limits->pointSizeRange[1]                      );
-    printf("\tlineWidthRange[0]                       = %f\n",                 limits->lineWidthRange[0]                      );
-    printf("\tlineWidthRange[1]                       = %f\n",                 limits->lineWidthRange[1]                      );
-    printf("\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
-    printf("\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
+    printf("\t\tsparseResidencyStandard2DBlockShape     = %u\n", sparseProps->sparseResidencyStandard2DBlockShape    );
+    printf("\t\tsparseResidencyStandard2DMSBlockShape   = %u\n", sparseProps->sparseResidencyStandard2DMSBlockShape  );
+    printf("\t\tsparseResidencyStandard3DBlockShape     = %u\n", sparseProps->sparseResidencyStandard3DBlockShape    );
+    printf("\t\tsparseResidencyAlignedMipSize           = %u\n", sparseProps->sparseResidencyAlignedMipSize          );
+    printf("\t\tsparseResidencyNonResident              = %u\n", sparseProps->sparseResidencyNonResident             );
+    printf("\t\tsparseResidencyNonResidentStrict        = %u\n", sparseProps->sparseResidencyNonResidentStrict       );
+}
+
+static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
+{
+    printf("\tVkPhysicalDeviceLimits:\n");
+    printf("\t-----------------------\n");
+
+    printf("\t\tmaxImageDimension1D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension1D                    );
+    printf("\t\tmaxImageDimension2D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension2D                    );
+    printf("\t\tmaxImageDimension3D                     = 0x%" PRIxLEAST32 "\n", limits->maxImageDimension3D                    );
+    printf("\t\tmaxImageDimensionCube                   = 0x%" PRIxLEAST32 "\n", limits->maxImageDimensionCube                  );
+    printf("\t\tmaxImageArrayLayers                     = 0x%" PRIxLEAST32 "\n", limits->maxImageArrayLayers                    );
+    printf("\t\tmaxTexelBufferSize                      = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferSize                     );
+    printf("\t\tmaxUniformBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferSize                   );
+    printf("\t\tmaxStorageBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferSize                   );
+    printf("\t\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );
+    printf("\t\tmaxMemoryAllocationCount                = 0x%" PRIxLEAST32 "\n", limits->maxMemoryAllocationCount               );
+    printf("\t\tbufferImageGranularity                  = 0x%" PRIxLEAST64 "\n", limits->bufferImageGranularity                 );
+    printf("\t\tmaxBoundDescriptorSets                  = 0x%" PRIxLEAST32 "\n", limits->maxBoundDescriptorSets                 );
+    printf("\t\tmaxDescriptorSets                       = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSets                      );
+    printf("\t\tmaxPerStageDescriptorSamplers           = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSamplers          );
+    printf("\t\tmaxPerStageDescriptorUniformBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorUniformBuffers    );
+    printf("\t\tmaxPerStageDescriptorStorageBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageBuffers    );
+    printf("\t\tmaxPerStageDescriptorSampledImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSampledImages     );
+    printf("\t\tmaxPerStageDescriptorStorageImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageImages     );
+    printf("\t\tmaxDescriptorSetSamplers                = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetSamplers               );
+    printf("\t\tmaxDescriptorSetUniformBuffers          = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetUniformBuffers         );
+    printf("\t\tmaxDescriptorSetStorageBuffers          = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetStorageBuffers         );
+    printf("\t\tmaxDescriptorSetSampledImages           = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetSampledImages          );
+    printf("\t\tmaxDescriptorSetStorageImages           = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetStorageImages          );
+    printf("\t\tmaxVertexInputAttributes                = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributes               );
+    printf("\t\tmaxVertexInputAttributeOffset           = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributeOffset          );
+    printf("\t\tmaxVertexInputBindingStride             = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputBindingStride            );
+    printf("\t\tmaxVertexOutputComponents               = 0x%" PRIxLEAST32 "\n", limits->maxVertexOutputComponents              );
+    printf("\t\tmaxTessGenLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessGenLevel                        );
+    printf("\t\tmaxTessPatchSize                        = 0x%" PRIxLEAST32 "\n", limits->maxTessPatchSize                       );
+    printf("\t\tmaxTessControlPerVertexInputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerVertexInputComponents );
+    printf("\t\tmaxTessControlPerVertexOutputComponents = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerVertexOutputComponents);
+    printf("\t\tmaxTessControlPerPatchOutputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessControlPerPatchOutputComponents );
+    printf("\t\tmaxTessControlTotalOutputComponents     = 0x%" PRIxLEAST32 "\n", limits->maxTessControlTotalOutputComponents    );
+    printf("\t\tmaxTessEvaluationInputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxTessEvaluationInputComponents       );
+    printf("\t\tmaxTessEvaluationOutputComponents       = 0x%" PRIxLEAST32 "\n", limits->maxTessEvaluationOutputComponents      );
+    printf("\t\tmaxGeometryShaderInvocations            = 0x%" PRIxLEAST32 "\n", limits->maxGeometryShaderInvocations           );
+    printf("\t\tmaxGeometryInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxGeometryInputComponents             );
+    printf("\t\tmaxGeometryOutputComponents             = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputComponents            );
+    printf("\t\tmaxGeometryOutputVertices               = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputVertices              );
+    printf("\t\tmaxGeometryTotalOutputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxGeometryTotalOutputComponents       );
+    printf("\t\tmaxFragmentInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxFragmentInputComponents             );
+    printf("\t\tmaxFragmentOutputBuffers                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputBuffers               );
+    printf("\t\tmaxFragmentDualSourceBuffers            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSourceBuffers           );
+    printf("\t\tmaxFragmentCombinedOutputResources      = 0x%" PRIxLEAST32 "\n", limits->maxFragmentCombinedOutputResources     );
+    printf("\t\tmaxComputeSharedMemorySize              = 0x%" PRIxLEAST32 "\n", limits->maxComputeSharedMemorySize             );
+    printf("\t\tmaxComputeWorkGroupCount[0]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[0]            );
+    printf("\t\tmaxComputeWorkGroupCount[1]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[1]            );
+    printf("\t\tmaxComputeWorkGroupCount[2]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[2]            );
+    printf("\t\tmaxComputeWorkGroupInvocations          = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupInvocations         );
+    printf("\t\tmaxComputeWorkGroupSize[0]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[0]             );
+    printf("\t\tmaxComputeWorkGroupSize[1]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[1]             );
+    printf("\t\tmaxComputeWorkGroupSize[2]              = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupSize[2]             );
+    printf("\t\tsubPixelPrecisionBits                   = 0x%" PRIxLEAST32 "\n", limits->subPixelPrecisionBits                  );
+    printf("\t\tsubTexelPrecisionBits                   = 0x%" PRIxLEAST32 "\n", limits->subTexelPrecisionBits                  );
+    printf("\t\tmipmapPrecisionBits                     = 0x%" PRIxLEAST32 "\n", limits->mipmapPrecisionBits                    );
+    printf("\t\tmaxDrawIndexedIndexValue                = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndexedIndexValue               );
+    printf("\t\tmaxDrawIndirectInstanceCount            = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndirectInstanceCount           );
+    printf("\t\tprimitiveRestartForPatches              = 0x%" PRIxLEAST32 "\n", limits->primitiveRestartForPatches             );
+    printf("\t\tmaxSamplerLodBias                       = %f\n",                 limits->maxSamplerLodBias                      );
+    printf("\t\tmaxSamplerAnisotropy                    = %f\n",                 limits->maxSamplerAnisotropy                   );
+    printf("\t\tmaxViewports                            = 0x%" PRIxLEAST32 "\n", limits->maxViewports                           );
+    printf("\t\tmaxDynamicViewportStates                = 0x%" PRIxLEAST32 "\n", limits->maxDynamicViewportStates               );
+    printf("\t\tmaxViewportDimensions[0]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[0]               );
+    printf("\t\tmaxViewportDimensions[1]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[1]               );
+    printf("\t\tviewportBoundsRange[0]                  = %f\n",                 limits->viewportBoundsRange[0]                 );
+    printf("\t\tviewportBoundsRange[1]                  = %f\n",                 limits->viewportBoundsRange[1]                 );
+    printf("\t\tviewportSubPixelBits                    = 0x%" PRIxLEAST32 "\n", limits->viewportSubPixelBits                   );
+    printf("\t\tminMemoryMapAlignment                   = 0x%" PRIxLEAST32 "\n", limits->minMemoryMapAlignment                  );
+    printf("\t\tminTexelBufferOffsetAlignment           = 0x%" PRIxLEAST32 "\n", limits->minTexelBufferOffsetAlignment          );
+    printf("\t\tminUniformBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minUniformBufferOffsetAlignment        );
+    printf("\t\tminStorageBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minStorageBufferOffsetAlignment        );
+    printf("\t\tminTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->minTexelOffset                         );
+    printf("\t\tmaxTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->maxTexelOffset                         );
+    printf("\t\tminTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->minTexelGatherOffset                   );
+    printf("\t\tmaxTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->maxTexelGatherOffset                   );
+    printf("\t\tminInterpolationOffset                  = %f\n",                 limits->minInterpolationOffset                 );
+    printf("\t\tmaxInterpolationOffset                  = %f\n",                 limits->maxInterpolationOffset                 );
+    printf("\t\tsubPixelInterpolationOffsetBits         = 0x%" PRIxLEAST32 "\n", limits->subPixelInterpolationOffsetBits        );
+    printf("\t\tmaxFramebufferWidth                     = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferWidth                    );
+    printf("\t\tmaxFramebufferHeight                    = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferHeight                   );
+    printf("\t\tmaxFramebufferLayers                    = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferLayers                   );
+    printf("\t\tmaxFramebufferColorSamples              = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferColorSamples             );
+    printf("\t\tmaxFramebufferDepthSamples              = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferDepthSamples             );
+    printf("\t\tmaxFramebufferStencilSamples            = 0x%" PRIxLEAST32 "\n", limits->maxFramebufferStencilSamples           );
+    printf("\t\tmaxColorAttachments                     = 0x%" PRIxLEAST32 "\n", limits->maxColorAttachments                    );
+    printf("\t\tmaxSampledImageColorSamples             = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageColorSamples            );
+    printf("\t\tmaxSampledImageDepthSamples             = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageDepthSamples            );
+    printf("\t\tmaxSampledImageIntegerSamples           = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageIntegerSamples          );
+    printf("\t\tmaxStorageImageSamples                  = 0x%" PRIxLEAST32 "\n", limits->maxStorageImageSamples                 );
+    printf("\t\tmaxSampleMaskWords                      = 0x%" PRIxLEAST32 "\n", limits->maxSampleMaskWords                     );
+    printf("\t\ttimestampFrequency                      = 0x%" PRIxLEAST64 "\n", limits->timestampFrequency                     );
+    printf("\t\tmaxClipDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxClipDistances                       );
+    printf("\t\tmaxCullDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxCullDistances                       );
+    printf("\t\tmaxCombinedClipAndCullDistances         = 0x%" PRIxLEAST32 "\n", limits->maxCombinedClipAndCullDistances        );
+    printf("\t\tpointSizeRange[0]                       = %f\n",                 limits->pointSizeRange[0]                      );
+    printf("\t\tpointSizeRange[1]                       = %f\n",                 limits->pointSizeRange[1]                      );
+    printf("\t\tlineWidthRange[0]                       = %f\n",                 limits->lineWidthRange[0]                      );
+    printf("\t\tlineWidthRange[1]                       = %f\n",                 limits->lineWidthRange[1]                      );
+    printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
+    printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
 }
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
@@ -963,6 +965,10 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("\tdeviceId       = 0x%04x\n",            props->deviceId);
     printf("\tdeviceType     = %s\n",                vk_physical_device_type_string(props->deviceType));
     printf("\tdeviceName     = %s\n",                props->deviceName);
+
+    app_dump_limits(&gpu->props.limits);
+    app_dump_sparse_props(&gpu->props.sparseProperties);
+
     fflush(stdout);
 }
 
@@ -1069,8 +1075,6 @@ static void app_gpu_dump(const struct app_gpu *gpu)
     app_gpu_dump_memory_props(gpu);
     printf("\n");
     app_gpu_dump_features(gpu);
-    printf("\n");
-    app_gpu_dump_limits(gpu);
     printf("\n");
     app_dev_dump(&gpu->dev);
 }

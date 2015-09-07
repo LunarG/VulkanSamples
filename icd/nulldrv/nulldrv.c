@@ -1497,6 +1497,9 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     pProperties->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
     strncpy(pProperties->deviceName, "nulldrv", strlen("nulldrv"));
 
+    /* TODO: fill out limits */
+    memset(&pProperties->limits, 0, sizeof(VkPhysicalDeviceLimits));
+    memset(&pProperties->sparseProperties, 0, sizeof(VkPhysicalDeviceSparseProperties));
     return ret;
 }
 
@@ -1524,19 +1527,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     pFormatInfo->optimalTilingFeatures = pFormatInfo->linearTilingFeatures;
     pFormatInfo->bufferFeatures = 0;
-
-    return ret;
-}
-
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLimits(
-    VkPhysicalDevice                          physicalDevice,
-    VkPhysicalDeviceLimits*                   pLimits)
-{
-    NULLDRV_LOG_FUNC;
-    VkResult ret = VK_SUCCESS;
-
-    /* TODO: fill out limits */
-    memset(pLimits, 0, sizeof(*pLimits));
 
     return ret;
 }
