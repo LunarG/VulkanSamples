@@ -12,12 +12,19 @@ issue a merge request to integrate that work back into the repo.
 Note: If you are doing ICD (driver) development, please make sure to look at documentation in the [ICD Loader](loader/README.md) and the [Sample Driver](icd).
 
 ## Linux System Requirements
-Ubuntu 14.10 needed for DRI 3
+Ubuntu 14.10 and 15.04 have been used with the sample driver.
 
+These packages are used for building and running the samples.
 ```
 sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libpng12-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev
 sudo apt-get build-dep mesa
 ```
+
+The sample driver uses DRI3 for its window system interface.
+That requires extra configuration of Ubuntu systems.
+
+### Ubuntu 14.10 support of DRI 3
+
 Warning: Recent versions of 14.10 have **REMOVED** DRI 3.
 Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.
 To see status of this package:
@@ -46,6 +53,69 @@ sudo bash -c "echo $'Package: xserver-xorg-video-intel\nPin: version 2:2.99.914-
 ```
 
 - Either restart Ubuntu or just X11.
+
+
+### Ubuntu 15.04 support of DRI 3
+
+Ubuntu 15.04 has never shipped a xserver-xorg-video-intel package with supported DRI 3 on intel graphics.
+The xserver-xorg-video-intel package can be built from source with DRI 3 enabled.
+Use the following commands to enable DRI3 on ubuntu 15.04.
+
+- Install packages used to build:
+```
+sudo apt-get update
+sudo apt-get dist-upgrade
+sudo apt-get install devscripts
+sudo apt-get build-dep xserver-xorg-video-intel
+```
+
+- Get the source code for xserver-xorg-video-intel
+```
+mkdir xserver-xorg-video-intel_source
+cd xserver-xorg-video-intel_source
+apt-get source xserver-xorg-video-intel
+cd xserver-xorg-video-intel-2.99.917
+debian/rules patch
+quilt new 'enable-DRI3'
+quilt edit configure.ac
+```
+
+- Use the editor to make these changes.
+```
+--- a/configure.ac
++++ b/configure.ac
+@@ -340,9 +340,9 @@
+ 	      [DRI2=yes])
+ AC_ARG_ENABLE(dri3,
+ 	      AS_HELP_STRING([--enable-dri3],
+-			     [Enable DRI3 support [[default=no]]]),
++			     [Enable DRI3 support [[default=yes]]]),
+ 	      [DRI3=$enableval],
+-	      [DRI3=no])
++	      [DRI3=yes])
+
+ AC_ARG_ENABLE(xvmc, AS_HELP_STRING([--disable-xvmc],
+                                   [Disable XvMC support [[default=yes]]]),
+```
+- Build and install xserver-xorg-video-intel
+```
+quilt refresh
+debian/rules clean
+debuild -us -uc
+sudo dpkg -i ../xserver-xorg-video-intel_2.99.917-1~exp1ubuntu2.2_amd64.deb
+```
+- Prevent updates from replacing this version of the package.
+```
+sudo bash -c 'echo xserver-xorg-video-intel hold | dpkg --set-selections'
+```
+- save your work then restart the X server with the next command.
+```
+sudo service lightdm restart
+```
+- After logging in again, check for success with this command and look for DRI3.
+```
+xdpyinfo | grep DRI
+```
 
 ## Clone the repository
 
