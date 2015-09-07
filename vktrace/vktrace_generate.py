@@ -1769,6 +1769,7 @@ class Subcommand(object):
                 rbody.append(rr_string)
 
                 # handle return values or anything that needs to happen after the real_*(..) call
+                get_ext_layers_proto = ['GetGlobalExtensionProperties', 'GetPhysicalDeviceExtensionProperties','GetGlobalLayerProperties', 'GetPhysicalDeviceLayerProperties']
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
@@ -1778,6 +1779,11 @@ class Subcommand(object):
                     #rbody.append('                m_pVktraceSnapshotPrint = NULL;')
                     rbody.append('                m_objMapper.rm_from_devices_map(pPacket->device);')
                     rbody.append('                m_display->m_initedVK = false;')
+                    rbody.append('            }')
+                elif proto.name in get_ext_layers_proto:
+                    rbody.append('            if (replayResult == VK_ERROR_INVALID_LAYER || replayResult == VK_INCOMPLETE)')
+                    rbody.append('            { // ignore errors caused by trace config != replay config')
+                    rbody.append('                replayResult = VK_SUCCESS;')
                     rbody.append('            }')
                 elif 'DestroySwapchainKHR' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
