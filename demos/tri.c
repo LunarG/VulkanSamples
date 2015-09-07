@@ -1727,6 +1727,7 @@ static void demo_init_vk(struct demo *demo)
     char *extension_names[64];
     char *layer_names[64];
     VkExtensionProperties *instance_extensions;
+    VkPhysicalDevice *physical_devices;
     VkLayerProperties *instance_layers;
     VkLayerProperties *device_layers;
     uint32_t instance_extension_count = 0;
@@ -1842,9 +1843,15 @@ static void demo_init_vk(struct demo *demo)
     free(instance_layers);
     free(instance_extensions);
 
-    gpu_count = 1;
-    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, &demo->gpu);
-    assert(!err && gpu_count == 1);
+    /* Make initial call to query gpu_count, then second call for gpu info*/
+    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, NULL);
+    assert(!err && gpu_count > 0);
+    physical_devices = malloc(sizeof(VkPhysicalDevice) * gpu_count);
+    err = vkEnumeratePhysicalDevices(demo->inst, &gpu_count, physical_devices);
+    assert(!err);
+    /* For tri demo we just grab the first physical device */
+    demo->gpu = physical_devices[0];
+    free(physical_devices);
 
     /* Look for validation layers */
     validation_found = 0;
