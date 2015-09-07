@@ -226,14 +226,12 @@ ICD_EXPORT VkResult VKAPI vkCreateDevice(
     return intel_dev_create(gpu, pCreateInfo, (struct intel_dev **) pDevice);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDevice(
+ICD_EXPORT void VKAPI vkDestroyDevice(
     VkDevice                                  device)
 {
     struct intel_dev *dev = intel_dev(device);
 
     intel_dev_destroy(dev);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(

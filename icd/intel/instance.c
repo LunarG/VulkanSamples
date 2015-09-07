@@ -222,14 +222,12 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
     return intel_instance_create(pCreateInfo, (struct intel_instance **) pInstance);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyInstance(
+ICD_EXPORT void VKAPI vkDestroyInstance(
     VkInstance                                pInstance)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 
     intel_instance_destroy(instance);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(

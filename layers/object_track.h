@@ -629,7 +629,7 @@ explicit_MapMemory(
     return result;
 }
 
-VkResult
+void
 explicit_UnmapMemory(
     VkDevice       device,
     VkDeviceMemory mem)
@@ -639,9 +639,7 @@ explicit_UnmapMemory(
     validate_object(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->UnmapMemory(device, mem);
-
-    return result;
+    get_dispatch_table(ObjectTracker_device_table_map, device)->UnmapMemory(device, mem);
 }
 
 VkResult
@@ -774,7 +772,7 @@ explicit_DestroySwapchainKHR(
     return result;
 }
 
-VkResult
+void
 explicit_FreeMemory(
     VkDevice       device,
     VkDeviceMemory mem)
@@ -783,13 +781,11 @@ explicit_FreeMemory(
     validate_object(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->FreeMemory(device, mem);
+    get_dispatch_table(ObjectTracker_device_table_map, device)->FreeMemory(device, mem);
 
     loader_platform_thread_lock_mutex(&objLock);
     destroy_obj(device, mem);
     loader_platform_thread_unlock_mutex(&objLock);
-
-    return result;
 }
 
 VkResult

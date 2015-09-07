@@ -106,9 +106,9 @@ private:
     //VkResult manually_replay_vkGetObjectInfo(packet_vkGetObjectInfo* pPacket);
     //VkResult manually_replay_vkGetImageSubresourceInfo(packet_vkGetImageSubresourceInfo* pPacket);
     VkResult manually_replay_vkCreateShader(packet_vkCreateShader* pPacket);
-    VkResult manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket);
+    void manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket);
     VkResult manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket);
-    VkResult manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket);
+    void manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket);
     VkResult manually_replay_vkAllocDescriptorSets(packet_vkAllocDescriptorSets* pPacket);
     VkResult manually_replay_vkFreeDescriptorSets(packet_vkFreeDescriptorSets* pPacket);
     void manually_replay_vkCmdBindDescriptorSets(packet_vkCmdBindDescriptorSets* pPacket);
@@ -124,9 +124,9 @@ private:
     VkResult manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandBuffer* pPacket);
     VkResult manually_replay_vkWaitForFences(packet_vkWaitForFences* pPacket);
     VkResult manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket);
-    VkResult manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket);
+    void manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket);
     VkResult manually_replay_vkMapMemory(packet_vkMapMemory* pPacket);
-    VkResult manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket);
+    void manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket);
     VkResult manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket);
     // TODO138: Update these functions for new WSI
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket);

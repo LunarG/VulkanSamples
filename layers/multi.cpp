@@ -40,16 +40,15 @@ static device_table_map multi1_device_table_map;
 /******************************** Layer multi1 functions **************************/
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT VkResult VKAPI multi1DestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
     dispatch_key key = get_dispatch_key(device);
 
     printf("At start of multi1 layer vkDestroyDevice()\n");
-    VkResult res = pDisp->DestroyDevice(device);
+    pDisp->DestroyDevice(device);
     multi1_device_table_map.erase(key);
     printf("Completed multi1 layer vkDestroyDevice()\n");
-    return res;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
@@ -144,16 +143,15 @@ VK_LAYER_EXPORT VkResult VKAPI multi2GetPhysicalDeviceFeatures(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT VkResult VKAPI multi2DestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, instance);
     dispatch_key key = get_dispatch_key(instance);
 
     printf("At start of wrapped multi2 vkDestroyInstance()\n");
-    VkResult res = pDisp->DestroyInstance(instance);
+    pDisp->DestroyInstance(instance);
     multi2_instance_table_map.erase(key);
     printf("Completed multi2 layer vkDestroyInstance()\n");
-    return res;
 }
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi2GetInstanceProcAddr(VkInstance inst, const char* pName)

@@ -463,8 +463,7 @@ static void demo_draw(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
 
-    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
-    assert(!err);
+    vkDestroySemaphore(demo->device, presentCompleteSemaphore);
 }
 
 static void demo_prepare_buffers(struct demo *demo)
@@ -778,8 +777,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                 row[x] = tex_colors[(x & 1) ^ (y & 1)];
         }
 
-        err = vkUnmapMemory(demo->device, tex_obj->mem);
-        assert(!err);
+        vkUnmapMemory(demo->device, tex_obj->mem);
     }
 
     tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -955,8 +953,7 @@ static void demo_prepare_vertices(struct demo *demo)
 
     memcpy(data, vb, sizeof(vb));
 
-    err = vkUnmapMemory(demo->device, demo->vertices.mem);
-    assert(!err);
+    vkUnmapMemory(demo->device, demo->vertices.mem);
 
     err = vkBindBufferMemory(demo->device, demo->vertices.buf,
             demo->vertices.mem, 0);
@@ -1322,8 +1319,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
     assert(!err);
 
-    err = vkDestroyPipelineCache(demo->device, demo->pipelineCache);
-    assert(!err);
+    vkDestroyPipelineCache(demo->device, demo->pipelineCache);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
         vkDestroyShader(demo->device, shaderStages[i].shader);
@@ -1457,8 +1453,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     write.pDescriptors = tex_descs;
 
-    err = vkUpdateDescriptorSets(demo->device, 1, &write, 0, NULL);
-    assert(!err);
+    vkUpdateDescriptorSets(demo->device, 1, &write, 0, NULL);
 }
 
 static void demo_prepare_framebuffers(struct demo *demo)

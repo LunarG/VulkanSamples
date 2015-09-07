@@ -406,7 +406,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
             (struct intel_sampler **) pSampler);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroySampler(
+ICD_EXPORT void VKAPI vkDestroySampler(
     VkDevice                                device,
     VkSampler                                 sampler)
 
@@ -414,5 +414,4 @@ ICD_EXPORT VkResult VKAPI vkDestroySampler(
     struct intel_obj *obj = intel_obj(sampler.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
  }

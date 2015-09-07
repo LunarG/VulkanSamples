@@ -400,12 +400,11 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroySemaphore(
+ICD_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore)
 
  {
-    return VK_SUCCESS;
  }
 
 ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(

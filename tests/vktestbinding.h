@@ -184,8 +184,8 @@ public:
     VkResult wait(const Fence &fence) { return wait(std::vector<const Fence *>(1, &fence), true, (uint64_t) -1); }
 
     // vkUpdateDescriptorSets()
-    VkResult update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies);
-    VkResult update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes) { return update_descriptor_sets(writes, std::vector<VkCopyDescriptorSet>()); }
+    void update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies);
+    void update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes) { return update_descriptor_sets(writes, std::vector<VkCopyDescriptorSet>()); }
 
     static VkWriteDescriptorSet write_descriptor_set(const DescriptorSet &set, uint32_t binding, uint32_t array_element,
                                                      VkDescriptorType type, uint32_t count, const VkDescriptorInfo *descriptors);

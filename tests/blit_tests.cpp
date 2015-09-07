@@ -821,8 +821,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].memory().unmap();
 
-    err = vkDestroyEvent(dev_.handle(), event);
-    ASSERT_VK_SUCCESS(err);
+    vkDestroyEvent(dev_.handle(), event);
 
 }
 

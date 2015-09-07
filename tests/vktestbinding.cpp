@@ -35,11 +35,11 @@ namespace {
             NonDispHandle::init(dev.handle(), handle);                              \
     } while (0)
 
-#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func)                        \
+#define NON_DISPATCHABLE_HANDLE_DTOR(cls, destroy_func)                             \
     cls::~cls()                                                                     \
     {                                                                               \
         if (initialized())                                                          \
-            EXPECT(destroy_func(device(), handle()) == VK_SUCCESS);    \
+            destroy_func(device(), handle());                                       \
     }
 
 #define STRINGIFY(x) #x
@@ -263,7 +263,7 @@ Device::~Device()
         queues_[i].clear();
     }
 
-    EXPECT(vkDestroyDevice(handle()) == VK_SUCCESS);
+    vkDestroyDevice(handle());
 }
 
 void Device::init(std::vector<const char *> &layers, std::vector<const char *> &extensions)
@@ -391,9 +391,9 @@ VkResult Device::wait(const std::vector<const Fence *> &fences, bool wait_all, u
     return err;
 }
 
-VkResult Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies)
+void Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &writes, const std::vector<VkCopyDescriptorSet> &copies)
 {
-    return vkUpdateDescriptorSets(handle(), writes.size(), writes.data(), copies.size(), copies.data());
+    vkUpdateDescriptorSets(handle(), writes.size(), writes.data(), copies.size(), copies.data());
 }
 
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
@@ -431,7 +431,7 @@ void Queue::wait_semaphore(Semaphore &sem)
 DeviceMemory::~DeviceMemory()
 {
     if (initialized())
-        EXPECT(vkFreeMemory(device(), handle()) == VK_SUCCESS);
+        vkFreeMemory(device(), handle());
 }
 
 void DeviceMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
@@ -459,7 +459,7 @@ void *DeviceMemory::map(VkFlags flags)
 
 void DeviceMemory::unmap() const
 {
-    EXPECT(vkUnmapMemory(device(), handle()) == VK_SUCCESS);
+    vkUnmapMemory(device(), handle());
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(Fence, vkDestroyFence)
@@ -830,7 +830,7 @@ void CmdPool::init(const Device &dev, const VkCmdPoolCreateInfo &info)
 CmdBuffer::~CmdBuffer()
 {
     if (initialized())
-        EXPECT(vkDestroyCommandBuffer(dev_handle_, handle()) == VK_SUCCESS);
+        vkDestroyCommandBuffer(dev_handle_, handle());
 }
 
 void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)

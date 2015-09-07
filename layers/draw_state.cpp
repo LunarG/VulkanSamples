@@ -1330,11 +1330,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
-    VkResult res = pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -1346,7 +1346,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     layer_data_map.erase(pTable);
 
     draw_state_instance_table_map.erase(key);
-    return res;
 }
 
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
@@ -1379,7 +1378,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 {
     // Free all the memory
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1395,11 +1394,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
 
     dispatch_key key = get_dispatch_key(device);
     VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
-    VkResult result = pDisp->DestroyDevice(device);
+    pDisp->DestroyDevice(device);
     deviceExtMap.erase(pDisp);
     draw_state_device_table_map.erase(key);
     tableDebugMarkerMap.erase(pDisp);
-    return result;
 }
 
 static const VkLayerProperties ds_global_layers[] = {
@@ -1493,172 +1491,148 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFence(VkDevice device, VkFence fence)
+VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyFence(device, fence);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyFence(device, fence);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
+VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroySemaphore(device, semaphore);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroySemaphore(device, semaphore);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
+VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyEvent(device, event);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyEvent(device, event);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyQueryPool(device, queryPool);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyQueryPool(device, queryPool);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyBuffer(device, buffer);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyBuffer(device, buffer);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
+VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyBufferView(device, bufferView);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyBufferView(device, bufferView);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImage(VkDevice device, VkImage image)
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyImage(device, image);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyImage(device, image);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
+VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyImageView(device, imageView);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyImageView(device, imageView);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
+VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyShaderModule(device, shaderModule);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyShaderModule(device, shaderModule);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShader(VkDevice device, VkShader shader)
+VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyShader(device, shader);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyShader(device, shader);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyPipeline(device, pipeline);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipeline(device, pipeline);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
+VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroySampler(device, sampler);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroySampler(device, sampler);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicViewportState(device, dynamicViewportState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicViewportState(device, dynamicViewportState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicLineWidthState(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDynamicBlendState dynamicBlendState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDynamicBlendState dynamicBlendState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicBlendState(device, dynamicBlendState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicBlendState(device, dynamicBlendState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyCommandBuffer(device, commandBuffer);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyCommandBuffer(device, commandBuffer);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyRenderPass(device, renderPass);
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyRenderPass(device, renderPass);
     // TODO : Clean up any internal data structures using this obj.
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
@@ -1696,12 +1670,11 @@ VkResult VKAPI vkCreatePipelineCache(
     return result;
 }
 
-VkResult VKAPI vkDestroyPipelineCache(
+void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
-    return result;
+    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
 }
 
 size_t VKAPI vkGetPipelineCacheSize(
@@ -1930,13 +1903,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     if (dsUpdate(device, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
         dsUpdate(device, VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies)) {
-        return get_dispatch_table(draw_state_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+        get_dispatch_table(draw_state_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
     }
-    return VK_ERROR_UNKNOWN;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState)

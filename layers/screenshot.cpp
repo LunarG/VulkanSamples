@@ -302,12 +302,9 @@ static void writePPM( const char *filename, VkImage image1)
     file.close();
 
     // Clean up
-    err = pTableDevice->UnmapMemory(device, mem2);
-    assert(!err);
-    err = pTableDevice->FreeMemory(device, mem2);
-    assert(!err);
-    err = pTableDevice->DestroyCommandBuffer(device, cmdBuffer);
-    assert(!err);
+    pTableDevice->UnmapMemory(device, mem2);
+    pTableDevice->FreeMemory(device, mem2);
+    pTableDevice->DestroyCommandBuffer(device, cmdBuffer);
 }
 
 

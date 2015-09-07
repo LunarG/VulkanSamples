@@ -101,12 +101,11 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(
+VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     VkDevice device,
     VkDeviceMemory mem)
 {
     vktrace_trace_packet_header* pHeader;
-    VkResult result;
     packet_vkUnmapMemory* pPacket;
     VKAllocInfo *entry;
     size_t siz = 0, off = 0;
@@ -133,34 +132,29 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUnmapMemory(
         entry->pData = NULL;
     }
     vktrace_leave_critical_section(&g_memInfoLock);
-    result = real_vkUnmapMemory(device, mem);
+    real_vkUnmapMemory(device, mem);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket->device = device;
     pPacket->mem = mem;
-    pPacket->result = result;
     FINISH_TRACE_PACKET();
-    return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeMemory(
+VKTRACER_EXPORT void VKAPI __HOOKED_vkFreeMemory(
     VkDevice device,
     VkDeviceMemory mem)
 {
     vktrace_trace_packet_header* pHeader;
-    VkResult result;
     packet_vkFreeMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkFreeMemory, 0);
-    result = real_vkFreeMemory(device, mem);
+    real_vkFreeMemory(device, mem);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkFreeMemory(pHeader);
     pPacket->device = device;
     pPacket->mem = mem;
-    pPacket->result = result;
     FINISH_TRACE_PACKET();
     // begin custom code
     rm_handle_from_mem_info(mem);
     // end custom code
-    return result;
 }
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
@@ -788,15 +782,15 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUpdateDescriptorSets(
+VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
 VkDevice device,
-        uint32_t writeCount, 
-        const VkWriteDescriptorSet* pDescriptorWrites, 
-        uint32_t copyCount, 
+        uint32_t writeCount,
+        const VkWriteDescriptorSet* pDescriptorWrites,
+        uint32_t copyCount,
         const VkCopyDescriptorSet* pDescriptorCopies);
 // Manually written because it needs to use get_struct_chain_size and allocate some extra pointers (why?)
 // Also since it needs to app the array of pointers and sub-buffers (see comments in function)
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUpdateDescriptorSets(
+VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     VkDevice device,
     uint32_t writeCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
@@ -804,7 +798,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUpdateDescriptorSets(
     const VkCopyDescriptorSet* pDescriptorCopies )
 {
     vktrace_trace_packet_header* pHeader;
-    VkResult result;
     packet_vkUpdateDescriptorSets* pPacket = NULL;
     // begin custom code
     size_t arrayByteCount = 0;
@@ -822,7 +815,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUpdateDescriptorSets(
 
     CREATE_TRACE_PACKET(vkUpdateDescriptorSets, arrayByteCount);
     // end custom code
-    result = real_vkUpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    real_vkUpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkUpdateDescriptorSets(pHeader);
     pPacket->device = device;
@@ -840,9 +833,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkUpdateDescriptorSets(
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorCopies), copyCount * sizeof(VkCopyDescriptorSet), pDescriptorCopies);
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorCopies));
     // end custom code
-    pPacket->result = result;
     FINISH_TRACE_PACKET();
-    return result;
 }
 
 VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(

@@ -646,19 +646,17 @@ class GenericLayerSubcommand(Subcommand):
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(device);\n'
                          '    VkLayerDispatchTable *pDisp  =  device_dispatch_table(device);\n'
-                         '    VkResult res = pDisp->DestroyDevice(device);\n'
+                         '    pDisp->DestroyDevice(device);\n'
                          '    deviceExtMap.erase(pDisp);\n'
                          '    destroy_device_dispatch_table(key);\n'
-                         '    return res;\n'
                          '}\n' % (qual, decl))
         elif proto.name == "DestroyInstance":
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n'
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(instance);\n'
-                         '    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);\n'
+                         '    instance_dispatch_table(instance)->DestroyInstance(instance);\n'
                          '    destroy_instance_dispatch_table(key);\n'
-                         '    return res;\n'
                          '}\n' % (qual, decl))
         else:
             funcs.append('%s' % self.lineinfo.get())
@@ -1336,7 +1334,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_instance(self):
         gedi_txt = []
         gedi_txt.append('%s' % self.lineinfo.get())
-        gedi_txt.append('VkResult vkDestroyInstance(')
+        gedi_txt.append('void vkDestroyInstance(')
         gedi_txt.append('VkInstance instance)')
         gedi_txt.append('{')
         gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
@@ -1356,7 +1354,7 @@ class ObjectTrackerSubcommand(Subcommand):
             gedi_txt.append('')
         gedi_txt.append('    dispatch_key key = get_dispatch_key(instance);')
         gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, instance);')
-        gedi_txt.append('    VkResult result = pInstanceTable->DestroyInstance(instance);')
+        gedi_txt.append('    pInstanceTable->DestroyInstance(instance);')
         gedi_txt.append('')
         gedi_txt.append('    // Clean up logging callback, if any')
         gedi_txt.append('    layer_data *my_data = get_my_data_ptr(key, layer_data_map);')
@@ -1371,7 +1369,6 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    assert(ObjectTracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedi_txt.append('')
         gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
-        gedi_txt.append('    return result;')
         gedi_txt.append('}')
         gedi_txt.append('')
         return "\n".join(gedi_txt)
@@ -1379,7 +1376,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_destroy_device(self):
         gedd_txt = []
         gedd_txt.append('%s' % self.lineinfo.get())
-        gedd_txt.append('VkResult vkDestroyDevice(')
+        gedd_txt.append('void vkDestroyDevice(')
         gedd_txt.append('VkDevice device)')
         gedd_txt.append('{')
         gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
@@ -1404,11 +1401,10 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('')
         gedd_txt.append('    dispatch_key key = get_dispatch_key(device);')
         gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);')
-        gedd_txt.append('    VkResult result = pDisp->DestroyDevice(device);')
+        gedd_txt.append('    pDisp->DestroyDevice(device);')
         gedd_txt.append('    ObjectTracker_device_table_map.erase(key);')
         gedd_txt.append('    assert(ObjectTracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedd_txt.append('')
-        gedd_txt.append('    return result;')
         gedd_txt.append('}')
         gedd_txt.append('')
         return "\n".join(gedd_txt)
@@ -1524,12 +1520,12 @@ class ObjectTrackerSubcommand(Subcommand):
                 create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if 'Destroy' in proto.name:
                 destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-                destroy_line += '    if (result == VK_SUCCESS) {\n'
+#                destroy_line += '    if (result == VK_SUCCESS) {\n'
                 if 'DestroyCommandBuffer' in proto.name:
-                    destroy_line += '        destroy_obj(%s, %s);\n' % (proto.params[-1].name, proto.params[-1].name)
+                    destroy_line += '    destroy_obj(%s, %s);\n' % (proto.params[-1].name, proto.params[-1].name)
                 else:
-                    destroy_line += '        destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
-                destroy_line += '    }\n'
+                    destroy_line += '    destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
+#                destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if len(loop_params) > 0:
                 if not mutex_unlock:
@@ -1817,7 +1813,6 @@ class ThreadingSubcommand(Subcommand):
                          '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                          '    %spDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
                          '    Threading_device_table_map.erase(key);\n'
-                         '    return result;\n'
                          '}\n')
             return "\n".join(funcs);
         elif proto.name == "DestroyInstance":
@@ -1838,8 +1833,6 @@ class ThreadingSubcommand(Subcommand):
                          '    layer_data_map.erase(pInstanceTable);\n'
                          '\n'
                          '    Threading_instance_table_map.erase(key);\n'
-                         '\n'
-                         '    return result;\n'
                          '}\n')
             return "\n".join(funcs);
         elif proto.name == "CreateInstance":

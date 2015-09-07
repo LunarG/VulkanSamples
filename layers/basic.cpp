@@ -107,21 +107,19 @@ VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const Vk
 }
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT VkResult VKAPI basic_DestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI basic_DestroyDevice(VkDevice device)
 {
     dispatch_key key = get_dispatch_key(device);
-    VkResult res = device_dispatch_table(device)->DestroyDevice(device);
+    device_dispatch_table(device)->DestroyDevice(device);
     destroy_device_dispatch_table(key);
-    return res;
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT VkResult VKAPI basic_DestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI basic_DestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
-    VkResult res = instance_dispatch_table(instance)->DestroyInstance(instance);
+    instance_dispatch_table(instance)->DestroyInstance(instance);
     destroy_instance_dispatch_table(key);
-    return res;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI basic_GetPhysicalDeviceFormatProperties(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)

@@ -464,7 +464,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
             (struct intel_dynamic_viewport **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
+ICD_EXPORT void VKAPI vkDestroyDynamicViewportState(
     VkDevice                                device,
     VkDynamicViewportState                  dynamicViewportState)
 
@@ -472,7 +472,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
     struct intel_obj *obj = intel_obj(dynamicViewportState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
@@ -486,7 +485,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
             (struct intel_dynamic_line_width **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(
+ICD_EXPORT void VKAPI vkDestroyDynamicLineWidthState(
     VkDevice                                device,
     VkDynamicLineWidthState                 dynamicLineWidthState)
 
@@ -494,7 +493,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(
     struct intel_obj *obj = intel_obj(dynamicLineWidthState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
@@ -508,7 +506,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
             (struct intel_dynamic_depth_bias **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(
+ICD_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(
     VkDevice                                device,
     VkDynamicDepthBiasState                 dynamicDepthBiasState)
 
@@ -516,7 +514,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(
     struct intel_obj *obj = intel_obj(dynamicDepthBiasState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
@@ -530,7 +527,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
             (struct intel_dynamic_blend **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(
+ICD_EXPORT void VKAPI vkDestroyDynamicBlendState(
     VkDevice                                device,
     VkDynamicBlendState                     dynamicBlendState)
 
@@ -538,7 +535,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(
     struct intel_obj *obj = intel_obj(dynamicBlendState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
@@ -552,7 +548,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
             (struct intel_dynamic_depth_bounds **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(
+ICD_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(
     VkDevice                                device,
     VkDynamicDepthBoundsState               dynamicDepthBoundsState)
 
@@ -560,7 +556,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(
     struct intel_obj *obj = intel_obj(dynamicDepthBoundsState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
@@ -575,7 +570,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
             (struct intel_dynamic_stencil **) pState);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(
+ICD_EXPORT void VKAPI vkDestroyDynamicStencilState(
     VkDevice                                device,
     VkDynamicStencilState                   dynamicStencilState)
 
@@ -583,5 +578,4 @@ ICD_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(
     struct intel_obj *obj = intel_obj(dynamicStencilState.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }

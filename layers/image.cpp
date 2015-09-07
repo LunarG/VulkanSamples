@@ -145,12 +145,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(image_instance_table_map, instance);
-    VkResult result = pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
     layer_data *data = get_my_data_ptr(key, layer_data_map);
@@ -164,8 +164,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 
     image_instance_table_map.erase(key);
     assert(image_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
@@ -183,7 +181,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 {
     layer_debug_report_destroy_device(device);
 
@@ -192,11 +190,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
 
-    VkResult result = get_dispatch_table(image_device_table_map, device)->DestroyDevice(device);
+    get_dispatch_table(image_device_table_map, device)->DestroyDevice(device);
     image_device_table_map.erase(key);
     assert(image_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-
-    return result;
 }
 
 static const VkLayerProperties pc_global_layers[] = {

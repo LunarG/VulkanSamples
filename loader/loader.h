@@ -270,7 +270,7 @@ VkResult VKAPI loader_CreateInstance(
         const VkInstanceCreateInfo*             pCreateInfo,
         VkInstance*                             pInstance);
 
-VkResult VKAPI loader_DestroyInstance(
+void VKAPI loader_DestroyInstance(
         VkInstance                              instance);
 
 VkResult VKAPI loader_EnumeratePhysicalDevices(

@@ -98,7 +98,7 @@ ICD_EXPORT VkResult VKAPI vkCreateBuffer(
     return intel_buf_create(dev, pCreateInfo, (struct intel_buf **) pBuffer);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyBuffer(
+ICD_EXPORT void VKAPI vkDestroyBuffer(
     VkDevice                                device,
     VkBuffer                                buffer)
 
@@ -106,5 +106,4 @@ ICD_EXPORT VkResult VKAPI vkDestroyBuffer(
     struct intel_obj *obj = intel_obj(buffer.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
  }

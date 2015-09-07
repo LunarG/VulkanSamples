@@ -785,9 +785,8 @@ VkResult vkReplay::manually_replay_vkCreateShader(packet_vkCreateShader* pPacket
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket)
+void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket)
 {
-    VkResult replayResult = VK_ERROR_UNKNOWN;
     // We have to remap handles internal to the structures so save the handles prior to remap and then restore
     // Rather than doing a deep memcpy of the entire struct and fixing any intermediate pointers, do save and restores via STL queue
 
@@ -795,7 +794,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
     if (remappedDevice == VK_NULL_HANDLE)
     {
         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkDevice.");
-        return VK_ERROR_UNKNOWN;
+        return;
     }
 
     VkWriteDescriptorSet* pRemappedWrites = VKTRACE_NEW_ARRAY(VkWriteDescriptorSet, pPacket->writeCount);
@@ -812,7 +811,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
             vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped write VkDescriptorSet.");
             VKTRACE_DELETE(pRemappedWrites);
             VKTRACE_DELETE(pRemappedCopies);
-            return VK_ERROR_UNKNOWN;
+            return;
         }
 
         pRemappedWrites[i].pDescriptors = VKTRACE_NEW_ARRAY(VkDescriptorInfo, pPacket->pDescriptorWrites[i].count);
@@ -828,7 +827,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
                     vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkBufferView.");
                     VKTRACE_DELETE(pRemappedWrites);
                     VKTRACE_DELETE(pRemappedCopies);
-                    return VK_ERROR_UNKNOWN;
+                    return;
                 }
             }
 
@@ -840,7 +839,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
                     vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkSampler.");
                     VKTRACE_DELETE(pRemappedWrites);
                     VKTRACE_DELETE(pRemappedCopies);
-                    return VK_ERROR_UNKNOWN;
+                    return;
                 }
             }
 
@@ -852,7 +851,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
                     vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkImageView.");
                     VKTRACE_DELETE(pRemappedWrites);
                     VKTRACE_DELETE(pRemappedCopies);
-                    return VK_ERROR_UNKNOWN;
+                    return;
                 }
             }
         }
@@ -866,7 +865,7 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
             vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped destination VkDescriptorSet.");
             VKTRACE_DELETE(pRemappedWrites);
             VKTRACE_DELETE(pRemappedCopies);
-            return VK_ERROR_UNKNOWN;
+            return;
         }
 
         pRemappedCopies[i].srcSet.handle = m_objMapper.remap_descriptorsets(pPacket->pDescriptorCopies[i].srcSet.handle);
@@ -875,13 +874,11 @@ VkResult vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescrip
             vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped source VkDescriptorSet.");
             VKTRACE_DELETE(pRemappedWrites);
             VKTRACE_DELETE(pRemappedCopies);
-            return VK_ERROR_UNKNOWN;
+            return;
         }
     }
 
-    replayResult = m_vkFuncs.real_vkUpdateDescriptorSets(remappedDevice, pPacket->writeCount, pRemappedWrites, pPacket->copyCount, pRemappedCopies);
-
-    return replayResult;
+    m_vkFuncs.real_vkUpdateDescriptorSets(remappedDevice, pPacket->writeCount, pRemappedWrites, pPacket->copyCount, pRemappedCopies);
 }
 
 VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket)
@@ -922,20 +919,16 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket)
+void vkReplay::manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket)
 {
-    VkResult replayResult = VK_ERROR_UNKNOWN;
-
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
-    if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_UNKNOWN;
-
-    replayResult = m_vkFuncs.real_vkDestroyDescriptorSetLayout(remappedDevice, pPacket->descriptorSetLayout);
-    if(replayResult == VK_SUCCESS)
-    {
-        m_objMapper.rm_from_descriptorsetlayouts_map(pPacket->descriptorSetLayout.handle);
+    if (remappedDevice == VK_NULL_HANDLE) {
+        vktrace_LogError("Skipping vkDestroyDescriptorSetLayout() due to invalid remapped VkDevice.");
+        return;
     }
-    return replayResult;
+
+    m_vkFuncs.real_vkDestroyDescriptorSetLayout(remappedDevice, pPacket->descriptorSetLayout);
+    m_objMapper.rm_from_descriptorsetlayouts_map(pPacket->descriptorSetLayout.handle);
 }
 
 VkResult vkReplay::manually_replay_vkAllocDescriptorSets(packet_vkAllocDescriptorSets* pPacket)
@@ -1501,24 +1494,20 @@ VkResult vkReplay::manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket)
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket)
+void vkReplay::manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket)
 {
-    VkResult replayResult = VK_ERROR_UNKNOWN;
-
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
-    if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_UNKNOWN;
+    if (remappedDevice == VK_NULL_HANDLE) {
+        vktrace_LogError("Skipping vkFreeMemory() due to invalid remapped VkDevice.");
+        return;
+    }
 
     gpuMemObj local_mem;
     local_mem = m_objMapper.m_devicememorys.find(pPacket->mem.handle)->second;
     // TODO how/when to free pendingAlloc that did not use and existing gpuMemObj
-    replayResult = m_vkFuncs.real_vkFreeMemory(remappedDevice, local_mem.replayGpuMem);
-    if (replayResult == VK_SUCCESS)
-    {
-        delete local_mem.pGpuMem;
-        m_objMapper.rm_from_devicememorys_map(pPacket->mem.handle);
-    }
-    return replayResult;
+    m_vkFuncs.real_vkFreeMemory(remappedDevice, local_mem.replayGpuMem);
+    delete local_mem.pGpuMem;
+    m_objMapper.rm_from_devicememorys_map(pPacket->mem.handle);
 }
 
 VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
@@ -1552,13 +1541,13 @@ VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
+void vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
 {
-    VkResult replayResult = VK_ERROR_UNKNOWN;
-
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
-    if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_UNKNOWN;
+    if (remappedDevice == VK_NULL_HANDLE) {
+        vktrace_LogError("Skipping vkUnmapMemory() due to invalid remapped VkDevice.");
+        return;
+    }
 
     gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->mem.handle)->second;
     if (!local_mem.pGpuMem->isPendingAlloc())
@@ -1568,7 +1557,7 @@ VkResult vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
             if (pPacket->pData)
                 local_mem.pGpuMem->copyMappingData(pPacket->pData, true, 0, 0);  // copies data from packet into memory buffer
         }
-        replayResult = m_vkFuncs.real_vkUnmapMemory(remappedDevice, local_mem.replayGpuMem);
+        m_vkFuncs.real_vkUnmapMemory(remappedDevice, local_mem.replayGpuMem);
     }
     else
     {
@@ -1583,7 +1572,6 @@ VkResult vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
             local_mem.pGpuMem->copyMappingData(pPacket->pData, true, 0, 0);
         }
     }
-    return replayResult;
 }
 
 VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket)

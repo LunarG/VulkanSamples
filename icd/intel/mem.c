@@ -72,15 +72,13 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
     return intel_mem_alloc(dev, pAllocInfo, (struct intel_mem **) pMem);
 }
 
-ICD_EXPORT VkResult VKAPI vkFreeMemory(
+ICD_EXPORT void VKAPI vkFreeMemory(
     VkDevice                                  device,
     VkDeviceMemory                            mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_mem_free(mem);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
@@ -99,15 +97,13 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
     return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT VkResult VKAPI vkUnmapMemory(
+ICD_EXPORT void VKAPI vkUnmapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_mem_unmap(mem);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(

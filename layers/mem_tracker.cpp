@@ -1332,12 +1332,12 @@ static void init_mem_tracker(
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
-    VkResult res = pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -1350,7 +1350,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
 
     mem_tracker_instance_table_map.erase(key);
     assert(mem_tracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-    return res;
 }
 
 VkResult VKAPI vkCreateInstance(
@@ -1399,7 +1398,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     VkDevice device)
 {
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1438,11 +1437,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
-    VkResult result = pDisp->DestroyDevice(device);
+    pDisp->DestroyDevice(device);
     mem_tracker_device_table_map.erase(key);
     assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
@@ -1560,7 +1557,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
+VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
@@ -1579,8 +1576,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
                 "Freeing memory object while it still has references: mem obj %#" PRIxLEAST64, mem.handle);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->FreeMemory(device, mem);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->FreeMemory(device, mem);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
@@ -1604,17 +1600,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(
+VK_LAYER_EXPORT void VKAPI vkUnmapMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
     // TODO : Track as memory gets unmapped, do we want to check what changed following map?
     //   Make sure that memory was ever mapped to begin with
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->UnmapMemory(device, mem);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->UnmapMemory(device, mem);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFence(VkDevice device, VkFence fence)
+VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     delete_fence_info(fence);
@@ -1623,11 +1618,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyFence(VkDevice device, VkFence fence)
         fenceMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFence(device, fence);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFence(device, fence);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = bufferMap.find(buffer.handle);
@@ -1635,11 +1629,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
         bufferMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBuffer(device, buffer);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBuffer(device, buffer);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImage(VkDevice device, VkImage image)
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = imageMap.find(image.handle);
@@ -1647,11 +1640,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImage(VkDevice device, VkImage image)
         imageMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImage(device, image);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImage(device, image);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
+VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = imageViewMap.find(imageView.handle);
@@ -1659,11 +1651,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(VkDevice device, VkImageView i
         imageViewMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImageView(device, imageView);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImageView(device, imageView);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = pipelineMap.find(pipeline.handle);
@@ -1671,11 +1662,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pip
         pipelineMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipeline(device, pipeline);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipeline(device, pipeline);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
+VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = samplerMap.find(sampler.handle);
@@ -1683,11 +1673,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySampler(VkDevice device, VkSampler sampl
         samplerMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroySampler(device, sampler);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySampler(device, sampler);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
+VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = semaphoreMap.find(semaphore.handle);
@@ -1695,11 +1684,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore s
         semaphoreMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroySemaphore(device, semaphore);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySemaphore(device, semaphore);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
+VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = eventMap.find(event.handle);
@@ -1707,11 +1695,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
         eventMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyEvent(device, event);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyEvent(device, event);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = queryPoolMap.find(queryPool.handle);
@@ -1719,11 +1706,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool q
         queryPoolMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyQueryPool(device, queryPool);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyQueryPool(device, queryPool);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
+VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = bufferViewMap.find(bufferView.handle);
@@ -1731,11 +1717,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyBufferView(VkDevice device, VkBufferView
         bufferViewMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBufferView(device, bufferView);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBufferView(device, bufferView);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
+VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = shaderModuleMap.find(shaderModule.handle);
@@ -1743,11 +1728,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyShaderModule(VkDevice device, VkShaderMo
         shaderModuleMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShaderModule(device, shaderModule);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShaderModule(device, shaderModule);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShader(VkDevice device, VkShader shader)
+VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = shaderMap.find(shader.handle);
@@ -1755,11 +1739,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyShader(VkDevice device, VkShader shader)
         shaderMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShader(device, shader);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShader(device, shader);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = pipelineLayoutMap.find(pipelineLayout.handle);
@@ -1767,11 +1750,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipeli
         pipelineLayoutMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = descriptorSetLayoutMap.find(descriptorSetLayout.handle);
@@ -1779,11 +1761,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkD
         descriptorSetLayoutMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = descriptorPoolMap.find(descriptorPool.handle);
@@ -1791,11 +1772,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescri
         descriptorPoolMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
 }
 
-//VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorSet(VkDevice device, VkDescriptorSet descriptorSet)
+//VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSet(VkDevice device, VkDescriptorSet descriptorSet)
 //{
 //    loader_platform_thread_lock_mutex(&globalLock);
 //    auto item = descriptorSetMap.find(descriptorSet.handle);
@@ -1807,7 +1787,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescri
 //    return result;
 //}
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = renderPassMap.find(renderPass.handle);
@@ -1815,11 +1795,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass
         renderPassMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyRenderPass(device, renderPass);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyRenderPass(device, renderPass);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = framebufferMap.find(framebuffer.handle);
@@ -1827,11 +1806,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuff
         framebufferMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicViewportStateMap.find(dynamicViewportState.handle);
@@ -1839,11 +1817,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(VkDevice device, Vk
         dynamicViewportStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicViewportState(device, dynamicViewportState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicViewportState(device, dynamicViewportState);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicLineWidthState(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicLineWidthStateMap.find(dynamicLineWidthState.handle);
@@ -1851,11 +1828,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(VkDevice device, V
         dynamicLineWidthStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicDepthBiasStateMap.find(dynamicDepthBiasState.handle);
@@ -1863,11 +1839,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, V
         dynamicDepthBiasStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDynamicBlendState dynamicBlendState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDynamicBlendState dynamicBlendState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicBlendStateMap.find(dynamicBlendState.handle);
@@ -1875,11 +1850,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDyn
         dynamicBlendStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicBlendState(device, dynamicBlendState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicBlendState(device, dynamicBlendState);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicDepthBoundsStateMap.find(dynamicDepthBoundsState.handle);
@@ -1887,11 +1861,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device,
         dynamicDepthBoundsStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
+VK_LAYER_EXPORT void VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
 {
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = dynamicStencilStateMap.find(dynamicStencilState.handle);
@@ -1899,8 +1872,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(VkDevice device, VkD
         dynamicStencilStateMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
 }
 
 VkResult VKAPI vkBindBufferMemory(

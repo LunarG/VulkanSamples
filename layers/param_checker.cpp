@@ -1930,13 +1930,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
         return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(
     VkInstance instance)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    VkResult result = pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
     layer_data *data = get_my_data_ptr(key, layer_data_map);
@@ -1950,8 +1950,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(
 
     pc_instance_table_map.erase(key);
     assert(pc_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-
-    return result;
 }
 
 bool PostEnumeratePhysicalDevices(
@@ -2257,7 +2255,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     VkDevice device)
 {
     layer_debug_report_destroy_device(device);
@@ -2267,11 +2265,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device);
+    get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device);
     pc_device_table_map.erase(key);
     assert(pc_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
-
-    return result;
 }
 
 bool PostGetDeviceQueue(
@@ -2457,34 +2453,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     return result;
 }
 
-bool PostFreeMemory(
-    VkDevice device,
-    VkDeviceMemory mem,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkFreeMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(
-    VkDevice device,
-    VkDeviceMemory mem)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->FreeMemory(device, mem);
-
-    PostFreeMemory(device, mem, result);
-
-    return result;
-}
-
 bool PostMapMemory(
     VkDevice device,
     VkDeviceMemory mem,
@@ -2524,34 +2492,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
 
     PostMapMemory(device, mem, offset, size, flags, ppData, result);
-
-    return result;
-}
-
-bool PostUnmapMemory(
-    VkDevice device,
-    VkDeviceMemory mem,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkUnmapMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(
-    VkDevice device,
-    VkDeviceMemory mem)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->UnmapMemory(device, mem);
-
-    PostUnmapMemory(device, mem, result);
 
     return result;
 }
@@ -3142,34 +3082,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     return result;
 }
 
-bool PostDestroyFence(
-    VkDevice device,
-    VkFence fence,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyFence parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFence(
-    VkDevice device,
-    VkFence fence)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyFence(device, fence);
-
-    PostDestroyFence(device, fence, result);
-
-    return result;
-}
-
 bool PreResetFences(
     VkDevice device,
     const VkFence* pFences)
@@ -3339,34 +3251,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     return result;
 }
 
-bool PostDestroySemaphore(
-    VkDevice device,
-    VkSemaphore semaphore,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroySemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySemaphore(
-    VkDevice device,
-    VkSemaphore semaphore)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroySemaphore(device, semaphore);
-
-    PostDestroySemaphore(device, semaphore, result);
-
-    return result;
-}
-
 bool PostQueueSignalSemaphore(
     VkQueue queue,
     VkSemaphore semaphore,
@@ -3470,34 +3354,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateEvent(device, pCreateInfo, pEvent);
 
     PostCreateEvent(device, pEvent, result);
-
-    return result;
-}
-
-bool PostDestroyEvent(
-    VkDevice device,
-    VkEvent event,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyEvent(
-    VkDevice device,
-    VkEvent event)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyEvent(device, event);
-
-    PostDestroyEvent(device, event, result);
 
     return result;
 }
@@ -3644,34 +3500,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
     return result;
 }
 
-bool PostDestroyQueryPool(
-    VkDevice device,
-    VkQueryPool queryPool,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyQueryPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyQueryPool(
-    VkDevice device,
-    VkQueryPool queryPool)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyQueryPool(device, queryPool);
-
-    PostDestroyQueryPool(device, queryPool, result);
-
-    return result;
-}
-
 bool PostGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
@@ -3782,34 +3610,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     return result;
 }
 
-bool PostDestroyBuffer(
-    VkDevice device,
-    VkBuffer buffer,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBuffer(
-    VkDevice device,
-    VkBuffer buffer)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyBuffer(device, buffer);
-
-    PostDestroyBuffer(device, buffer, result);
-
-    return result;
-}
-
 bool PreCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo)
@@ -3871,34 +3671,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
 
     PostCreateBufferView(device, pView, result);
-
-    return result;
-}
-
-bool PostDestroyBufferView(
-    VkDevice device,
-    VkBufferView bufferView,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyBufferView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyBufferView(
-    VkDevice device,
-    VkBufferView bufferView)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyBufferView(device, bufferView);
-
-    PostDestroyBufferView(device, bufferView, result);
 
     return result;
 }
@@ -3981,34 +3753,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
     PostCreateImage(device, pImage, result);
-
-    return result;
-}
-
-bool PostDestroyImage(
-    VkDevice device,
-    VkImage image,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyImage parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImage(
-    VkDevice device,
-    VkImage image)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyImage(device, image);
-
-    PostDestroyImage(device, image, result);
 
     return result;
 }
@@ -4168,62 +3912,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
-bool PostDestroyImageView(
-    VkDevice device,
-    VkImageView imageView,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyImageView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyImageView(
-    VkDevice device,
-    VkImageView imageView)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyImageView(device, imageView);
-
-    PostDestroyImageView(device, imageView, result);
-
-    return result;
-}
-
-bool PostDestroyShaderModule(
-    VkDevice device,
-    VkShaderModule shaderModule,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyShaderModule parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShaderModule(
-    VkDevice device,
-    VkShaderModule shaderModule)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyShaderModule(device, shaderModule);
-
-    PostDestroyShaderModule(device, shaderModule, result);
-
-    return result;
-}
-
 bool PreCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo)
@@ -4278,34 +3966,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     return result;
 }
 
-bool PostDestroyShader(
-    VkDevice device,
-    VkShader shader,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyShader parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyShader(
-    VkDevice device,
-    VkShader shader)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyShader(device, shader);
-
-    PostDestroyShader(device, shader, result);
-
-    return result;
-}
-
 bool PreCreatePipelineCache(
     VkDevice device,
     const VkPipelineCacheCreateInfo* pCreateInfo)
@@ -4356,34 +4016,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
 
     PostCreatePipelineCache(device, pPipelineCache, result);
-
-    return result;
-}
-
-bool PostDestroyPipelineCache(
-    VkDevice device,
-    VkPipelineCache pipelineCache,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyPipelineCache parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineCache(
-    VkDevice device,
-    VkPipelineCache pipelineCache)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
-
-    PostDestroyPipelineCache(device, pipelineCache, result);
 
     return result;
 }
@@ -4888,34 +4520,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     return result;
 }
 
-bool PostDestroyPipeline(
-    VkDevice device,
-    VkPipeline pipeline,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyPipeline parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipeline(
-    VkDevice device,
-    VkPipeline pipeline)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipeline(device, pipeline);
-
-    PostDestroyPipeline(device, pipeline, result);
-
-    return result;
-}
-
 bool PreCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo)
@@ -4969,34 +4573,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
 
     PostCreatePipelineLayout(device, pPipelineLayout, result);
-
-    return result;
-}
-
-bool PostDestroyPipelineLayout(
-    VkDevice device,
-    VkPipelineLayout pipelineLayout,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyPipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyPipelineLayout(
-    VkDevice device,
-    VkPipelineLayout pipelineLayout)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
-
-    PostDestroyPipelineLayout(device, pipelineLayout, result);
 
     return result;
 }
@@ -5108,34 +4684,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
     return result;
 }
 
-bool PostDestroySampler(
-    VkDevice device,
-    VkSampler sampler,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroySampler parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySampler(
-    VkDevice device,
-    VkSampler sampler)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroySampler(device, sampler);
-
-    PostDestroySampler(device, sampler, result);
-
-    return result;
-}
-
 bool PreCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo)
@@ -5196,34 +4744,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
 
     PostCreateDescriptorSetLayout(device, pSetLayout, result);
-
-    return result;
-}
-
-bool PostDestroyDescriptorSetLayout(
-    VkDevice device,
-    VkDescriptorSetLayout descriptorSetLayout,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(
-    VkDevice device,
-    VkDescriptorSetLayout descriptorSetLayout)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
-
-    PostDestroyDescriptorSetLayout(device, descriptorSetLayout, result);
 
     return result;
 }
@@ -5298,34 +4818,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
 
     PostCreateDescriptorPool(device, poolUsage, maxSets, pDescriptorPool, result);
-
-    return result;
-}
-
-bool PostDestroyDescriptorPool(
-    VkDevice device,
-    VkDescriptorPool descriptorPool,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDescriptorPool(
-    VkDevice device,
-    VkDescriptorPool descriptorPool)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
-
-    PostDestroyDescriptorPool(device, descriptorPool, result);
 
     return result;
 }
@@ -5509,26 +5001,7 @@ bool PreUpdateDescriptorSets(
     return true;
 }
 
-bool PostUpdateDescriptorSets(
-    VkDevice device,
-    uint32_t writeCount,
-    uint32_t copyCount,
-    VkResult result)
-{
-
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkUpdateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(
     VkDevice device,
     uint32_t writeCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
@@ -5537,11 +5010,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
 {
     PreUpdateDescriptorSets(device, pDescriptorWrites, pDescriptorCopies);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
-
-    PostUpdateDescriptorSets(device, writeCount, copyCount, result);
-
-    return result;
+    get_dispatch_table(pc_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
 }
 
 bool PreCreateDynamicViewportState(
@@ -5601,34 +5070,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
     return result;
 }
 
-bool PostDestroyDynamicViewportState(
-    VkDevice device,
-    VkDynamicViewportState dynamicViewportState,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicViewportState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicViewportState(
-    VkDevice device,
-    VkDynamicViewportState dynamicViewportState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicViewportState(device, dynamicViewportState);
-
-    PostDestroyDynamicViewportState(device, dynamicViewportState, result);
-
-    return result;
-}
-
 bool PreCreateDynamicLineWidthState(
     VkDevice device,
     const VkDynamicLineWidthStateCreateInfo* pCreateInfo)
@@ -5676,34 +5117,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicLineWidthState(device, pCreateInfo, pState);
 
     PostCreateDynamicLineWidthState(device, pState, result);
-
-    return result;
-}
-
-bool PostDestroyDynamicLineWidthState(
-    VkDevice device,
-    VkDynamicLineWidthState dynamicLineWidthState,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicLineWidthState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicLineWidthState(
-    VkDevice device,
-    VkDynamicLineWidthState dynamicLineWidthState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
-
-    PostDestroyDynamicLineWidthState(device, dynamicLineWidthState, result);
 
     return result;
 }
@@ -5759,34 +5172,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
     return result;
 }
 
-bool PostDestroyDynamicDepthBiasState(
-    VkDevice device,
-    VkDynamicDepthBiasState dynamicDepthBiasState,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicDepthBiasState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBiasState(
-    VkDevice device,
-    VkDynamicDepthBiasState dynamicDepthBiasState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
-
-    PostDestroyDynamicDepthBiasState(device, dynamicDepthBiasState, result);
-
-    return result;
-}
-
 bool PreCreateDynamicBlendState(
     VkDevice device,
     const VkDynamicBlendStateCreateInfo* pCreateInfo)
@@ -5838,34 +5223,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
     return result;
 }
 
-bool PostDestroyDynamicBlendState(
-    VkDevice device,
-    VkDynamicBlendState dynamicBlendState,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicBlendState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicBlendState(
-    VkDevice device,
-    VkDynamicBlendState dynamicBlendState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicBlendState(device, dynamicBlendState);
-
-    PostDestroyDynamicBlendState(device, dynamicBlendState, result);
-
-    return result;
-}
-
 bool PreCreateDynamicDepthBoundsState(
     VkDevice device,
     const VkDynamicDepthBoundsStateCreateInfo* pCreateInfo)
@@ -5913,32 +5270,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicDepthBoundsState(device, pCreateInfo, pState);
 
     PostCreateDynamicDepthBoundsState(device, pState, result);
-
-    return result;
-}
-
-bool PostDestroyDynamicDepthBoundsState(
-    VkDevice device,
-    VkDynamicDepthBoundsState dynamicDepthBoundsState,
-    VkResult result)
-{
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicDepthBoundsState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicDepthBoundsState(
-    VkDevice device,
-    VkDynamicDepthBoundsState dynamicDepthBoundsState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
-
-    PostDestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState, result);
 
     return result;
 }
@@ -6006,32 +5337,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
     return result;
 }
 
-bool PostDestroyDynamicStencilState(
-    VkDevice device,
-    VkDynamicStencilState dynamicStencilState,
-    VkResult result)
-{
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyDynamicStencilState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDynamicStencilState(
-    VkDevice device,
-    VkDynamicStencilState dynamicStencilState)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyDynamicStencilState(device, dynamicStencilState);
-
-    PostDestroyDynamicStencilState(device, dynamicStencilState, result);
-
-    return result;
-}
-
 bool PreCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo)
@@ -6082,34 +5387,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
 
     PostCreateFramebuffer(device, pFramebuffer, result);
-
-    return result;
-}
-
-bool PostDestroyFramebuffer(
-    VkDevice device,
-    VkFramebuffer framebuffer,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyFramebuffer(
-    VkDevice device,
-    VkFramebuffer framebuffer)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
-
-    PostDestroyFramebuffer(device, framebuffer, result);
 
     return result;
 }
@@ -6295,34 +5572,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
     return result;
 }
 
-bool PostDestroyRenderPass(
-    VkDevice device,
-    VkRenderPass renderPass,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyRenderPass parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyRenderPass(
-    VkDevice device,
-    VkRenderPass renderPass)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyRenderPass(device, renderPass);
-
-    PostDestroyRenderPass(device, renderPass, result);
-
-    return result;
-}
-
 bool PostGetRenderAreaGranularity(
     VkDevice device,
     VkRenderPass renderPass,
@@ -6404,34 +5653,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pCmdPool);
 
     PostCreateCommandPool(device, pCmdPool, result);
-
-    return result;
-}
-
-bool PostDestroyCommandPool(
-    VkDevice device,
-    VkCmdPool cmdPool,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyCommandPool(
-    VkDevice device,
-    VkCmdPool cmdPool)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyCommandPool(device, cmdPool);
-
-    PostDestroyCommandPool(device, cmdPool, result);
 
     return result;
 }
@@ -6521,34 +5742,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
 
     PostCreateCommandBuffer(device, pCmdBuffer, result);
-
-    return result;
-}
-
-bool PostDestroyCommandBuffer(
-    VkDevice device,
-    VkCmdBuffer commandBuffer,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkDestroyCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyCommandBuffer(
-    VkDevice device,
-    VkCmdBuffer commandBuffer)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->DestroyCommandBuffer(device, commandBuffer);
-
-    PostDestroyCommandBuffer(device, commandBuffer, result);
 
     return result;
 }
@@ -8178,12 +7371,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkDeviceWaitIdle;
     if (!strcmp(funcName, "vkAllocMemory"))
         return (PFN_vkVoidFunction) vkAllocMemory;
-    if (!strcmp(funcName, "vkFreeMemory"))
-        return (PFN_vkVoidFunction) vkFreeMemory;
     if (!strcmp(funcName, "vkMapMemory"))
         return (PFN_vkVoidFunction) vkMapMemory;
-    if (!strcmp(funcName, "vkUnmapMemory"))
-        return (PFN_vkVoidFunction) vkUnmapMemory;
     if (!strcmp(funcName, "vkFlushMappedMemoryRanges"))
         return (PFN_vkVoidFunction) vkFlushMappedMemoryRanges;
     if (!strcmp(funcName, "vkInvalidateMappedMemoryRanges"))
@@ -8224,8 +7413,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkGetImageSubresourceLayout;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkDestroyImageView"))
-        return (PFN_vkVoidFunction) vkDestroyImageView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))

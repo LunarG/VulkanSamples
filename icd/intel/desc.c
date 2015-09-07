@@ -763,7 +763,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(
+ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     VkDevice                                device,
     VkDescriptorSetLayout                   descriptorSetLayout)
 
@@ -771,7 +771,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDescriptorSetLayout(
     struct intel_obj *obj = intel_obj(descriptorSetLayout.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
@@ -786,7 +785,7 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
                                         (struct intel_pipeline_layout **) pPipelineLayout);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyPipelineLayout(
+ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     VkDevice                                device,
     VkPipelineLayout                        pipelineLayout)
 
@@ -794,7 +793,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyPipelineLayout(
     struct intel_obj *obj = intel_obj(pipelineLayout.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
@@ -810,7 +808,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
             (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyDescriptorPool(
+ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     VkDevice                                device,
     VkDescriptorPool                        descriptorPool)
 
@@ -818,7 +816,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyDescriptorPool(
     struct intel_obj *obj = intel_obj(descriptorPool.handle);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
@@ -873,7 +870,7 @@ ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
+ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
@@ -893,7 +890,7 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
             iter.type != write->descriptorType) {
             /* TODOVV: is this covered in validation? */
 //            return VK_ERROR_INVALID_VALUE;
-            return VK_ERROR_UNKNOWN;
+//            return VK_ERROR_UNKNOWN;
         }
 
         switch (write->descriptorType) {
@@ -908,7 +905,7 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: is this covered in validation? */
 //                    return VK_ERROR_INVALID_VALUE;
-                    return VK_ERROR_UNKNOWN;
+//                    return VK_ERROR_UNKNOWN;
                 }
             }
             break;
@@ -944,7 +941,7 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
 //                    return VK_ERROR_INVALID_VALUE;
-                    return VK_ERROR_UNKNOWN;
+//                    return VK_ERROR_UNKNOWN;
                 }
             }
             break;
@@ -960,7 +957,7 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
 //                    return VK_ERROR_INVALID_VALUE;
-                    return VK_ERROR_UNKNOWN;
+//                    return VK_ERROR_UNKNOWN;
                 }
             }
             break;
@@ -980,13 +977,13 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
 //                    return VK_ERROR_INVALID_VALUE;
-                    return VK_ERROR_UNKNOWN;
+//                    return VK_ERROR_UNKNOWN;
                 }
             }
             break;
         default:
             /* TODOVV: Make sure validation layer covers this case */
-            return VK_ERROR_UNKNOWN;
+//            return VK_ERROR_UNKNOWN;
             break;
         }
     }
@@ -1005,12 +1002,13 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
             src_iter.type != dst_iter.type) {
             /* TODOVV: Move test to validation layer */
 //            return VK_ERROR_INVALID_VALUE;
-            return VK_ERROR_UNKNOWN;
+//            return VK_ERROR_UNKNOWN;
         }
 
         /* disallow combined image samplers */
-        if (dst_iter.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            return VK_ERROR_UNKNOWN;
+        /* TODOVV: Move test to validation layer */
+        //if (dst_iter.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        //    return VK_ERROR_UNKNOWN;
 
         /* save the begin offsets */
         src_begin = src_iter.begin;
@@ -1022,7 +1020,7 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 !intel_desc_iter_advance(&dst_iter)) {
                 /* TODOVV: Move test to validation layer */
 //                return VK_ERROR_INVALID_VALUE;
-                return VK_ERROR_UNKNOWN;
+//                return VK_ERROR_UNKNOWN;
             }
         }
 
@@ -1030,5 +1028,5 @@ ICD_EXPORT VkResult VKAPI vkUpdateDescriptorSets(
                 &dst_iter.end, &src_begin);
     }
 
-    return VK_SUCCESS;
+//    return VK_SUCCESS;
 }

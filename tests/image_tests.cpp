@@ -239,12 +239,10 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
 void VkImageTest::DestroyImage()
 {
-    VkResult err;
     // All done with image memory, clean up
-    err = vkFreeMemory(device(), m_image_mem);
-    ASSERT_VK_SUCCESS(err);
+    vkFreeMemory(device(), m_image_mem);
 
-    ASSERT_VK_SUCCESS(vkDestroyImage(device(), m_image));
+    vkDestroyImage(device(), m_image);
 }
 
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
@@ -256,7 +254,7 @@ void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
 {
-    ASSERT_VK_SUCCESS(vkDestroyImageView(device(), imageView));
+    vkDestroyImageView(device(), imageView);
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {

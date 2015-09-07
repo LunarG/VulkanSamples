@@ -159,11 +159,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(device_limits_instance_table_map, instance);
-    VkResult res = pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -175,7 +175,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
     layer_data_map.erase(pTable);
     instanceMap.erase(instance);
     device_limits_instance_table_map.erase(key);
-    return res;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
@@ -330,16 +329,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 {
     // Free device lifetime allocations
     dispatch_key key = get_dispatch_key(device);
     VkLayerDispatchTable *pDisp =  get_dispatch_table(device_limits_device_table_map, device);
-    VkResult result = pDisp->DestroyDevice(device);
+    pDisp->DestroyDevice(device);
     deviceExtMap.erase(pDisp);
     device_limits_device_table_map.erase(key);
     tableDebugMarkerMap.erase(pDisp);
-    return result;
 }
 
 static const VkLayerProperties ds_global_layers[] = {

@@ -221,7 +221,7 @@ core = Extension(
             [Param("const VkInstanceCreateInfo*", "pCreateInfo"),
              Param("VkInstance*", "pInstance")]),
 
-        Proto("VkResult", "DestroyInstance",
+        Proto("void", "DestroyInstance",
             [Param("VkInstance", "instance")]),
 
         Proto("VkResult", "EnumeratePhysicalDevices",
@@ -259,7 +259,7 @@ core = Extension(
              Param("const VkDeviceCreateInfo*", "pCreateInfo"),
              Param("VkDevice*", "pDevice")]),
 
-        Proto("VkResult", "DestroyDevice",
+        Proto("void", "DestroyDevice",
             [Param("VkDevice", "device")]),
 
         Proto("VkResult", "GetPhysicalDeviceProperties",
@@ -318,7 +318,7 @@ core = Extension(
              Param("const VkMemoryAllocInfo*", "pAllocInfo"),
              Param("VkDeviceMemory*", "pMem")]),
 
-        Proto("VkResult", "FreeMemory",
+        Proto("void", "FreeMemory",
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "mem")]),
 
@@ -330,7 +330,7 @@ core = Extension(
              Param("VkMemoryMapFlags", "flags"),
              Param("void**", "ppData")]),
 
-        Proto("VkResult", "UnmapMemory",
+        Proto("void", "UnmapMemory",
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "mem")]),
 
@@ -410,7 +410,7 @@ core = Extension(
              Param("const VkFenceCreateInfo*", "pCreateInfo"),
              Param("VkFence*", "pFence")]),
 
-        Proto("VkResult", "DestroyFence",
+        Proto("void", "DestroyFence",
             [Param("VkDevice", "device"),
              Param("VkFence", "fence")]),
 
@@ -435,7 +435,7 @@ core = Extension(
              Param("const VkSemaphoreCreateInfo*", "pCreateInfo"),
              Param("VkSemaphore*", "pSemaphore")]),
 
-        Proto("VkResult", "DestroySemaphore",
+        Proto("void", "DestroySemaphore",
             [Param("VkDevice", "device"),
              Param("VkSemaphore", "semaphore")]),
 
@@ -452,7 +452,7 @@ core = Extension(
              Param("const VkEventCreateInfo*", "pCreateInfo"),
              Param("VkEvent*", "pEvent")]),
 
-        Proto("VkResult", "DestroyEvent",
+        Proto("void", "DestroyEvent",
             [Param("VkDevice", "device"),
              Param("VkEvent", "event")]),
 
@@ -473,7 +473,7 @@ core = Extension(
              Param("const VkQueryPoolCreateInfo*", "pCreateInfo"),
              Param("VkQueryPool*", "pQueryPool")]),
 
-        Proto("VkResult", "DestroyQueryPool",
+        Proto("void", "DestroyQueryPool",
             [Param("VkDevice", "device"),
              Param("VkQueryPool", "queryPool")]),
 
@@ -491,7 +491,7 @@ core = Extension(
              Param("const VkBufferCreateInfo*", "pCreateInfo"),
              Param("VkBuffer*", "pBuffer")]),
 
-        Proto("VkResult", "DestroyBuffer",
+        Proto("void", "DestroyBuffer",
             [Param("VkDevice", "device"),
              Param("VkBuffer", "buffer")]),
 
@@ -500,7 +500,7 @@ core = Extension(
              Param("const VkBufferViewCreateInfo*", "pCreateInfo"),
              Param("VkBufferView*", "pView")]),
 
-        Proto("VkResult", "DestroyBufferView",
+        Proto("void", "DestroyBufferView",
             [Param("VkDevice", "device"),
              Param("VkBufferView", "bufferView")]),
 
@@ -509,7 +509,7 @@ core = Extension(
              Param("const VkImageCreateInfo*", "pCreateInfo"),
              Param("VkImage*", "pImage")]),
 
-        Proto("VkResult", "DestroyImage",
+        Proto("void", "DestroyImage",
             [Param("VkDevice", "device"),
              Param("VkImage", "image")]),
 
@@ -524,7 +524,7 @@ core = Extension(
              Param("const VkImageViewCreateInfo*", "pCreateInfo"),
              Param("VkImageView*", "pView")]),
 
-        Proto("VkResult", "DestroyImageView",
+        Proto("void", "DestroyImageView",
             [Param("VkDevice", "device"),
              Param("VkImageView", "imageView")]),
 
@@ -533,7 +533,7 @@ core = Extension(
              Param("const VkShaderModuleCreateInfo*", "pCreateInfo"),
              Param("VkShaderModule*", "pShaderModule")]),
 
-        Proto("VkResult", "DestroyShaderModule",
+        Proto("void", "DestroyShaderModule",
             [Param("VkDevice", "device"),
              Param("VkShaderModule", "shaderModule")]),
 
@@ -542,7 +542,7 @@ core = Extension(
              Param("const VkShaderCreateInfo*", "pCreateInfo"),
              Param("VkShader*", "pShader")]),
 
-        Proto("VkResult", "DestroyShader",
+        Proto("void", "DestroyShader",
             [Param("VkDevice", "device"),
              Param("VkShader", "shader")]),
 
@@ -551,7 +551,7 @@ core = Extension(
              Param("const VkPipelineCacheCreateInfo*", "pCreateInfo"),
              Param("VkPipelineCache*", "pPipelineCache")]),
 
-        Proto("VkResult", "DestroyPipelineCache",
+        Proto("void", "DestroyPipelineCache",
             [Param("VkDevice", "device"),
              Param("VkPipelineCache", "pipelineCache")]),
 
@@ -584,7 +584,7 @@ core = Extension(
              Param("const VkComputePipelineCreateInfo*", "pCreateInfos"),
              Param("VkPipeline*", "pPipelines")]),
 
-        Proto("VkResult", "DestroyPipeline",
+        Proto("void", "DestroyPipeline",
             [Param("VkDevice", "device"),
              Param("VkPipeline", "pipeline")]),
 
@@ -593,7 +593,7 @@ core = Extension(
              Param("const VkPipelineLayoutCreateInfo*", "pCreateInfo"),
              Param("VkPipelineLayout*", "pPipelineLayout")]),
 
-        Proto("VkResult", "DestroyPipelineLayout",
+        Proto("void", "DestroyPipelineLayout",
             [Param("VkDevice", "device"),
              Param("VkPipelineLayout", "pipelineLayout")]),
 
@@ -602,7 +602,7 @@ core = Extension(
              Param("const VkSamplerCreateInfo*", "pCreateInfo"),
              Param("VkSampler*", "pSampler")]),
 
-        Proto("VkResult", "DestroySampler",
+        Proto("void", "DestroySampler",
             [Param("VkDevice", "device"),
              Param("VkSampler", "sampler")]),
 
@@ -611,7 +611,7 @@ core = Extension(
              Param("const VkDescriptorSetLayoutCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorSetLayout*", "pSetLayout")]),
 
-        Proto("VkResult", "DestroyDescriptorSetLayout",
+        Proto("void", "DestroyDescriptorSetLayout",
             [Param("VkDevice", "device"),
              Param("VkDescriptorSetLayout", "descriptorSetLayout")]),
 
@@ -622,7 +622,7 @@ core = Extension(
              Param("const VkDescriptorPoolCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorPool*", "pDescriptorPool")]),
 
-        Proto("VkResult", "DestroyDescriptorPool",
+        Proto("void", "DestroyDescriptorPool",
             [Param("VkDevice", "device"),
              Param("VkDescriptorPool", "descriptorPool")]),
 
@@ -644,7 +644,7 @@ core = Extension(
              Param("uint32_t", "count"),
              Param("const VkDescriptorSet*", "pDescriptorSets")]),
 
-        Proto("VkResult", "UpdateDescriptorSets",
+        Proto("void", "UpdateDescriptorSets",
             [Param("VkDevice", "device"),
              Param("uint32_t", "writeCount"),
              Param("const VkWriteDescriptorSet*", "pDescriptorWrites"),
@@ -656,7 +656,7 @@ core = Extension(
              Param("const VkDynamicViewportStateCreateInfo*", "pCreateInfo"),
              Param("VkDynamicViewportState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicViewportState",
+        Proto("void", "DestroyDynamicViewportState",
             [Param("VkDevice", "device"),
              Param("VkDynamicViewportState", "dynamicViewportState")]),
 
@@ -665,7 +665,7 @@ core = Extension(
              Param("const VkDynamicLineWidthStateCreateInfo*", "pCreateInfo"),
              Param("VkDynamicLineWidthState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicLineWidthState",
+        Proto("void", "DestroyDynamicLineWidthState",
             [Param("VkDevice", "device"),
              Param("VkDynamicLineWidthState", "dynamicLineWidthState")]),
 
@@ -674,7 +674,7 @@ core = Extension(
              Param("const VkDynamicDepthBiasStateCreateInfo*", "pCreateInfo"),
              Param("VkDynamicDepthBiasState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicDepthBiasState",
+        Proto("void", "DestroyDynamicDepthBiasState",
             [Param("VkDevice", "device"),
              Param("VkDynamicDepthBiasState", "dynamicDepthBiasState")]),
 
@@ -683,7 +683,7 @@ core = Extension(
              Param("const VkDynamicBlendStateCreateInfo*", "pCreateInfo"),
              Param("VkDynamicBlendState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicBlendState",
+        Proto("void", "DestroyDynamicBlendState",
             [Param("VkDevice", "device"),
              Param("VkDynamicBlendState", "DynamicBlendState")]),
 
@@ -692,7 +692,7 @@ core = Extension(
              Param("const VkDynamicDepthBoundsStateCreateInfo*", "pCreateInfo"),
              Param("VkDynamicDepthBoundsState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicDepthBoundsState",
+        Proto("void", "DestroyDynamicDepthBoundsState",
             [Param("VkDevice", "device"),
              Param("VkDynamicDepthBoundsState", "dynamicDepthBoundsState")]),
 
@@ -702,7 +702,7 @@ core = Extension(
              Param("const VkDynamicStencilStateCreateInfo*", "pCreateInfoBack"),
              Param("VkDynamicStencilState*", "pState")]),
 
-        Proto("VkResult", "DestroyDynamicStencilState",
+        Proto("void", "DestroyDynamicStencilState",
             [Param("VkDevice", "device"),
              Param("VkDynamicStencilState", "dynamicStencilState")]),
 
@@ -711,7 +711,7 @@ core = Extension(
              Param("const VkCmdPoolCreateInfo*", "pCreateInfo"),
              Param("VkCmdPool*", "pCmdPool")]),
 
-        Proto("VkResult", "DestroyCommandPool",
+        Proto("void", "DestroyCommandPool",
             [Param("VkDevice", "device"),
              Param("VkCmdPool", "cmdPool")]),
 
@@ -725,7 +725,7 @@ core = Extension(
              Param("const VkCmdBufferCreateInfo*", "pCreateInfo"),
              Param("VkCmdBuffer*", "pCmdBuffer")]),
 
-        Proto("VkResult", "DestroyCommandBuffer",
+        Proto("void", "DestroyCommandBuffer",
             [Param("VkDevice", "device"),
              Param("VkCmdBuffer", "commandBuffer")]),
 
@@ -996,7 +996,7 @@ core = Extension(
              Param("const VkFramebufferCreateInfo*", "pCreateInfo"),
              Param("VkFramebuffer*", "pFramebuffer")]),
 
-        Proto("VkResult", "DestroyFramebuffer",
+        Proto("void", "DestroyFramebuffer",
             [Param("VkDevice", "device"),
              Param("VkFramebuffer", "framebuffer")]),
 
@@ -1005,7 +1005,7 @@ core = Extension(
              Param("const VkRenderPassCreateInfo*", "pCreateInfo"),
              Param("VkRenderPass*", "pRenderPass")]),
 
-        Proto("VkResult", "DestroyRenderPass",
+        Proto("void", "DestroyRenderPass",
             [Param("VkDevice", "device"),
              Param("VkRenderPass", "renderPass")]),
 

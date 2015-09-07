@@ -472,13 +472,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
-    VkResult result = nextTable.DestroyInstance(instance);
+    nextTable.DestroyInstance(instance);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, instance);
     loader_platform_thread_unlock_mutex(&objLock);
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
@@ -514,9 +513,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 {
-    VkResult result = nextTable.DestroyDevice(device);
+    nextTable.DestroyDevice(device);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_device(&s_delta, device);
     loader_platform_thread_unlock_mutex(&objLock);
@@ -538,8 +537,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroyDevice(VkDevice device)
             pTrav = pTrav->pNextGlobal;
 //        }
     }
-
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateLayers(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pOutLayerCount, char* const* pOutLayers, void* pReserved)
@@ -663,13 +660,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(VkDevice device, const VkMemoryAllo
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem)
+VK_LAYER_EXPORT void VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem)
 {
-    VkResult result = nextTable.FreeMemory(device, mem);
+    nextTable.FreeMemory(device, mem);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, mem);
     loader_platform_thread_unlock_mutex(&objLock);
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkSetMemoryPriority(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority)
@@ -691,14 +687,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, 
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
+VK_LAYER_EXPORT void VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(mem, VK_OBJECT_TYPE_DEVICE_MEMORY);
     loader_platform_thread_unlock_mutex(&objLock);
     reset_status(mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
-    VkResult result = nextTable.UnmapMemory(device, mem);
-    return result;
+    nextTable.UnmapMemory(device, mem);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkPinSystemMemory(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem)
@@ -758,13 +753,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkOpenPeerImage(VkDevice device, const VkPeerImag
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
+VK_LAYER_EXPORT void VKAPI vkDestroyObject(VkDevice device, VkObjectType objType, VkObject object)
 {
-    VkResult result = nextTable.DestroyObject(device, objType, object);
+    nextTable.DestroyObject(device, objType, object);
     loader_platform_thread_lock_mutex(&objLock);
     snapshot_remove_object(&s_delta, object);
     loader_platform_thread_unlock_mutex(&objLock);
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetObjectInfo(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData)

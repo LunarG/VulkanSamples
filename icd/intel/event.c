@@ -150,7 +150,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
             (struct intel_event **) pEvent);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyEvent(
+ICD_EXPORT void VKAPI vkDestroyEvent(
     VkDevice                                device,
     VkEvent                                 event)
 
@@ -159,7 +159,6 @@ ICD_EXPORT VkResult VKAPI vkDestroyEvent(
 
     intel_mem_free(obj->mem);
     obj->destroy(obj);
-    return VK_SUCCESS;
  }
 
 ICD_EXPORT VkResult VKAPI vkGetEventStatus(

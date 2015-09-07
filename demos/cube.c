@@ -585,8 +585,7 @@ void demo_update_data_buffer(struct demo *demo)
 
     memcpy(pData, (const void*) &MVP[0][0], matrixSize);
 
-    err = vkUnmapMemory(demo->device, demo->uniform_data.mem);
-    assert(!err);
+    vkUnmapMemory(demo->device, demo->uniform_data.mem);
 }
 
 static void demo_draw(struct demo *demo)
@@ -642,8 +641,7 @@ static void demo_draw(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
 
-    err = vkDestroySemaphore(demo->device, presentCompleteSemaphore);
-    assert(!err);
+    vkDestroySemaphore(demo->device, presentCompleteSemaphore);
 }
 
 static void demo_prepare_buffers(struct demo *demo)
@@ -1131,8 +1129,7 @@ static void demo_prepare_texture_image(struct demo *demo,
             fprintf(stderr, "Error loading texture: %s\n", filename);
         }
 
-        err = vkUnmapMemory(demo->device, tex_obj->mem);
-        assert(!err);
+        vkUnmapMemory(demo->device, tex_obj->mem);
     }
 
     tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1317,8 +1314,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
 
     memcpy(pData, &data, sizeof data);
 
-    err = vkUnmapMemory(demo->device, demo->uniform_data.mem);
-    assert(!err);
+    vkUnmapMemory(demo->device, demo->uniform_data.mem);
 
     err = vkBindBufferMemory(demo->device,
             demo->uniform_data.buf,
@@ -1835,8 +1831,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     writes[1].pDescriptors = tex_descs;
 
-    err = vkUpdateDescriptorSets(demo->device, 2, writes, 0, NULL);
-    assert(!err);
+    vkUpdateDescriptorSets(demo->device, 2, writes, 0, NULL);
 }
 
 static void demo_prepare_framebuffers(struct demo *demo)

@@ -1325,11 +1325,10 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkDestroyPipelineCache(
+void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)
 {
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
@@ -1394,7 +1393,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     return VK_ERROR_UNKNOWN;
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyPipeline(
+ICD_EXPORT void VKAPI vkDestroyPipeline(
     VkDevice                                device,
     VkPipeline                              pipeline)
 
@@ -1403,5 +1402,4 @@ ICD_EXPORT VkResult VKAPI vkDestroyPipeline(
 
     intel_mem_free(obj->mem);
     obj->destroy(obj);
-    return VK_SUCCESS;
  }

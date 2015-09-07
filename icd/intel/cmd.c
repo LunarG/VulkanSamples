@@ -484,11 +484,10 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
             (struct intel_cmd_pool **) pCmdPool);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyCommandPool(
+ICD_EXPORT void VKAPI vkDestroyCommandPool(
     VkDevice                                    device,
     VkCmdPool                                   cmdPool)
 {
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandPool(
@@ -511,14 +510,13 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
             (struct intel_cmd **) pCmdBuffer);
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroyCommandBuffer(
+ICD_EXPORT void VKAPI vkDestroyCommandBuffer(
     VkDevice                                device,
     VkCmdBuffer                             cmdBuffer)
 {
     struct intel_obj *obj = intel_obj((uint64_t)cmdBuffer);
 
     obj->destroy(obj);
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(

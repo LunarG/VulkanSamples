@@ -165,11 +165,9 @@ TEST_F(VkTest, AllocMemory) {
     memset(pData, 0x55, alloc_info.allocationSize);
     EXPECT_EQ(0x55, pData[0]) << "Memory read not same as write";
 
-    err = vkUnmapMemory(device(), gpu_mem);
-    ASSERT_VK_SUCCESS(err);
+    vkUnmapMemory(device(), gpu_mem);
 
-    err = vkFreeMemory(device(), gpu_mem);
-    ASSERT_VK_SUCCESS(err);
+    vkFreeMemory(device(), gpu_mem);
 }
 
 TEST_F(VkTest, Event) {
@@ -204,8 +202,7 @@ TEST_F(VkTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    err = vkDestroyEvent(device(), event);
-    ASSERT_VK_SUCCESS(err);
+    vkDestroyEvent(device(), event);
 }
 
 #define MAX_QUERY_SLOTS 10
@@ -270,8 +267,7 @@ TEST_F(VkTest, Query) {
 
     }
 
-    err = vkDestroyQueryPool(device(), query_pool);
-    ASSERT_VK_SUCCESS(err);
+    vkDestroyQueryPool(device(), query_pool);
 }
 
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
@@ -480,11 +476,11 @@ void VkTest::CreateImageTest()
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    ASSERT_VK_SUCCESS(vkDestroyImageView(device(), view));
-    ASSERT_VK_SUCCESS(vkDestroyImage(device(), image));
+    vkDestroyImageView(device(), view);
+    vkDestroyImage(device(), image);
 
     if (mem_req.size) {
-        ASSERT_VK_SUCCESS(vkFreeMemory(device(), image_mem));
+        vkFreeMemory(device(), image_mem);
     }
 }
 
@@ -520,8 +516,8 @@ void VkTest::CreateCommandBufferTest()
     err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
 
-    ASSERT_VK_SUCCESS(vkDestroyCommandBuffer(device(), cmdBuffer));
-    ASSERT_VK_SUCCESS(vkDestroyCommandPool(device(), cmdPool));
+    vkDestroyCommandBuffer(device(), cmdBuffer);
+    vkDestroyCommandPool(device(), cmdPool);
 }
 
 TEST_F(VkTest, TestCommandBuffer) {
@@ -568,8 +564,7 @@ void VkTest::CreateShader(VkShader *pshader, VkShaderStage stage)
     err = vkCreateShader(device(), &createInfo, &shader);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkDestroyShaderModule(device(), module);
-    ASSERT_VK_SUCCESS(err);
+    vkDestroyShaderModule(device(), module);
 
     *pshader = shader;
 }

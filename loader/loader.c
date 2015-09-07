@@ -2641,13 +2641,12 @@ VkResult VKAPI loader_CreateInstance(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_DestroyInstance(
+void VKAPI loader_DestroyInstance(
         VkInstance                                instance)
 {
     struct loader_instance *ptr_instance = loader_instance(instance);
     struct loader_icd *icds = ptr_instance->icds;
     struct loader_icd *next_icd;
-    VkResult res;
 
     // Remove this instance from the list of instances:
     struct loader_instance *prev = NULL;
@@ -2672,10 +2671,11 @@ VkResult VKAPI loader_DestroyInstance(
 
     while (icds) {
         if (icds->instance) {
-            res = icds->DestroyInstance(icds->instance);
-            if (res != VK_SUCCESS)
-                loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-                            "ICD ignored: failed to DestroyInstance on device");
+            icds->DestroyInstance(icds->instance);
+            /* TODOVV: Move this test to validation layer */
+            //if (res != VK_SUCCESS)
+            //    loader_log(VK_DBG_REPORT_WARN_BIT, 0,
+            //                "ICD ignored: failed to DestroyInstance on device");
         }
         next_icd = icds->next;
         icds->instance = VK_NULL_HANDLE;
@@ -2687,7 +2687,6 @@ VkResult VKAPI loader_DestroyInstance(
     loader_delete_layer_properties(ptr_instance, &ptr_instance->instance_layer_list);
     loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
     loader_destroy_ext_list(ptr_instance, &ptr_instance->ext_list);
-    return VK_SUCCESS;
 }
 
 VkResult loader_init_physical_device_info(
