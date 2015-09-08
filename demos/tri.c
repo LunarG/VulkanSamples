@@ -136,7 +136,15 @@ VkBool32 dbgFunc(
     fflush(stdout);
 #endif
     free(message);
-    return true;
+
+    /*
+     * false indicates that layer should not bail-out of an
+     * API call that had validation failures. This may mean that the
+     * app dies inside the driver due to invalid parameter(s).
+     * That's what would happen without validation layers, so we'll
+     * keep that behavior here.
+     */
+    return false;
 }
 
 typedef struct _SwapchainBuffers {

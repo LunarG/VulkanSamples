@@ -263,14 +263,12 @@ VkBool32 dbgFunc(
     const char*                         pMsg,
     void*                               pUserData)
 {
-    VkBool32 bail = false;
     char *message = (char *) malloc(strlen(pMsg)+100);
 
     assert (message);
 
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-        bail = true;
     } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
         // We know that we're submitting queues without fences, ignore this warning
         if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer")){
@@ -289,7 +287,14 @@ VkBool32 dbgFunc(
 #endif
     free(message);
 
-    return bail;
+    /*
+     * false indicates that layer should not bail-out of an
+     * API call that had validation failures. This may mean that the
+     * app dies inside the driver due to invalid parameter(s).
+     * That's what would happen without validation layers, so we'll
+     * keep that behavior here.
+     */
+    return false;
 }
 
 typedef struct _SwapchainBuffers {
