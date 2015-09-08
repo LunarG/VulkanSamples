@@ -354,7 +354,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
     VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
     result = pTable->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
-    if (result==VK_SUCCESS && *pPhysicalDeviceCount > 0)
+    if (result==VK_SUCCESS && *pPhysicalDeviceCount > 0 && pPhysicalDevices)
     {
         for (uint32_t i=0; i<*pPhysicalDeviceCount ; i++)
         {
