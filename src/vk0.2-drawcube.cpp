@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_wsi(info);
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
@@ -64,12 +64,7 @@ int main(int argc, char **argv)
     init_dynamic_state(info);
 
     /* VULKAN_KEY_START */
-    VkCmdBufferBeginInfo cmd_buf_info;
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
-    cmd_buf_info.renderPass = 0;  /* May only set renderPass and framebuffer */
-    cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
+
     VkClearValue clear_values[2];
     clear_values[0].color.f32[0] = 0.2f;
     clear_values[0].color.f32[1] = 0.2f;
@@ -90,9 +85,6 @@ int main(int argc, char **argv)
     rp_begin.attachmentCount = 2;
     rp_begin.pAttachmentClearValues = clear_values;
 
-    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(!res);
-
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -111,17 +103,7 @@ int main(int argc, char **argv)
     vkCmdDraw(info.cmd, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(info.cmd);
 
-    res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
-
-    /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
-    assert(!res);
-
+    end_and_submit_command_buffer(info);
 
     /* Now present the image in the window */
 

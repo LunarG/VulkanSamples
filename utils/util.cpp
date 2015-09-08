@@ -105,19 +105,9 @@ void set_image_layout(
         VkImageLayout new_image_layout)
 {
     /* DEPENDS on info.cmd and info.queue initialized */
-    VkResult res;
 
     assert(info.cmd != VK_NULL_HANDLE);
     assert(info.queue != VK_NULL_HANDLE);
-
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-
-    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(!res);
 
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -149,17 +139,6 @@ void set_image_layout(
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
-    res = vkEndCommandBuffer(info.cmd);
-    assert(!res);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence;
-    nullFence.handle = VK_NULL_HANDLE;
-
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
-    assert(!res);
 }
 
 bool read_ppm(char const*const filename, int *width, int *height, uint64_t rowPitch, char *dataPtr)

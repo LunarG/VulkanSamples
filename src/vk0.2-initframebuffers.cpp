@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     info.width = info.height = 50;
     init_window(info);
     init_wsi(info);
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
@@ -76,6 +76,7 @@ int main(int argc, char **argv)
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
         assert(!res);
     }
+    end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);

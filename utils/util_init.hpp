@@ -46,7 +46,8 @@ VkBool32 demo_check_layers(
 void init_connection(struct sample_info &info);
 void init_window(struct sample_info &info);
 void init_wsi(struct sample_info &info);
-void init_command_buffer(struct sample_info &info);
+void init_and_begin_command_buffer(struct sample_info &info);
+void end_and_submit_command_buffer(struct sample_info &info);
 void init_device_queue(struct sample_info &info);
 void init_swap_chain(struct sample_info &info);
 void init_depth_buffer(struct sample_info &info);

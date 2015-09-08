@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_wsi(info);
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
     init_device_queue(info);
 
     /* VULKAN_KEY_START */
@@ -143,6 +143,7 @@ int main(int argc, char **argv)
     view_info.image = info.depth.image;
     res = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
     assert(!res);
+    end_and_submit_command_buffer(info);
 
     /* VULKAN_KEY_END */
 
