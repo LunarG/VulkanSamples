@@ -299,6 +299,7 @@ int main(int argc, char **argv)
         color_attachment_view.mipLevel = 0;
         color_attachment_view.baseArraySlice = 0;
         color_attachment_view.arraySize = 1;
+        color_attachment_view.flags = 0;
 
 
         info.buffers[i].image = swapChainImages[i].image;

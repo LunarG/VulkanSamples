@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     att_state[0].blendEnable = VK_FALSE; /* All the other fields in att_state should be ignored if this is false */
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
-    cb.logicOpEnable = VK_FALSE;
+    cb.logicOpEnable = VK_FALSE;         /* All logic op parameters should be ignored if this is false */
     cb.alphaToCoverageEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo vp;
@@ -122,7 +122,6 @@ int main(int argc, char **argv)
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
-    ds.stencilTestEnable = VK_FALSE;
     ds.front = ds.back;
 
     VkPipelineMultisampleStateCreateInfo   ms;
