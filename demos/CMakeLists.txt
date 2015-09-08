@@ -17,7 +17,7 @@ set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES")
 
 if(WIN32)
-    set (LIBRARIES "vulkan.${MAJOR}")
+    set (LIBRARIES "vulkan-${MAJOR}")
 else ()
     set (LIBRARIES "vulkan")
 endif()

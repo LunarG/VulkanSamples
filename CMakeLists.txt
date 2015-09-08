@@ -6,7 +6,7 @@ project (VULKAN)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
 # The MAJOR number of the version we're building, used in naming
-# vulkan.<major>.dll (and other files).
+# vulkan-<major>.dll (and other files).
 set(MAJOR "0")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")

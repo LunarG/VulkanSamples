@@ -110,7 +110,7 @@ else()
 endif()
 
 if (WIN32)
-    set (LIBVK "vulkan.${MAJOR}")
+    set (LIBVK "vulkan-${MAJOR}")
 else ()
     set (LIBVK "vulkan")
 endif()
