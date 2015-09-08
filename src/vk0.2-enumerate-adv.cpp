@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
     // Query the count.
     uint32_t gpu_count = 0;
-    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    VkResult U_ASSERT_ONLY res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
     assert(!res && gpu_count > 0);
 
     // Query the gpu info.
@@ -86,6 +86,8 @@ int main(int argc, char **argv)
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_CPU:
                 std::cout << "VK_PHYSICAL_DEVICE_TYPE_CPU";
+                break;
+            default:
                 break;
         }
         std::cout << '\n';

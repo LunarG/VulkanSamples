@@ -33,7 +33,7 @@ Create Descriptor Layout and Pipeline Layout
 
 int main(int argc, char **argv)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Descriptor / Pipeline Layout Sample";
 
