@@ -289,7 +289,7 @@ VkResult init_device(struct sample_info &info)
 
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
-    uint32_t const req_count = gpu_count;
+    uint32_t const U_ASSERT_ONLY req_count = gpu_count;
     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
     assert(!res && gpu_count >= req_count);
 
@@ -337,6 +337,7 @@ VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback 
         return VK_ERROR_INITIALIZATION_FAILED;
         break;
     }
+    return res;
 }
 
 void destroy_debug_msg_callback(struct sample_info &info)
@@ -508,7 +509,7 @@ void destroy_window(struct sample_info &info)
 
 void init_depth_buffer(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
@@ -601,7 +602,7 @@ void init_wsi(struct sample_info &info)
 {
     /* DEPENDS on init_connection() and init_window() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportWSI);
     GET_DEVICE_PROC_ADDR(info.device, GetSurfaceInfoWSI);
@@ -716,7 +717,7 @@ void init_swap_chain(struct sample_info &info)
 {
     /* DEPENDS on info.cmd and info.queue initialized */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     size_t capsSize;
     size_t presentModesSize;
     res = info.fpGetSurfaceInfoWSI(info.device,
@@ -866,7 +867,7 @@ void init_swap_chain(struct sample_info &info)
 
 void init_uniform_buffer(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View       = glm::lookAt(
                           glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
@@ -952,7 +953,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info)
     descriptor_layout.count = 1;
     descriptor_layout.pBinding = &layout_binding;
 
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorSetLayout(info.device,
             &descriptor_layout, &info.desc_layout);
@@ -977,7 +978,7 @@ void init_renderpass(struct sample_info &info)
 {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     /* Need attachments for render target and depth buffer */
     VkAttachmentDescription attachments[2];
     attachments[0].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
@@ -1039,7 +1040,7 @@ void init_framebuffers(struct sample_info &info)
 {
     /* DEPENDS on init_depth_buffer(), init_renderpass() and init_wsi() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     VkAttachmentBindInfo attachments[2];
     attachments[0].view.handle = VK_NULL_HANDLE;
     attachments[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -1069,7 +1070,7 @@ void init_and_begin_command_buffer(struct sample_info &info)
 {
     /* DEPENDS on init_wsi() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     VkCmdPoolCreateInfo cmd_pool_info = {};
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
@@ -1104,7 +1105,7 @@ void init_and_begin_command_buffer(struct sample_info &info)
 
 void end_and_submit_command_buffer(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
@@ -1122,7 +1123,7 @@ void init_device_queue(struct sample_info &info)
 {
     /* DEPENDS on init_wsi() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
     assert(!res);
@@ -1130,7 +1131,7 @@ void init_device_queue(struct sample_info &info)
 
 void init_vertex_buffer(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1207,7 +1208,7 @@ void init_vertex_buffer(struct sample_info &info)
 
 void init_dynamic_state(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     VkDynamicViewportStateCreateInfo viewport_create = {};
     viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
@@ -1276,7 +1277,7 @@ void init_descriptor_set(struct sample_info &info)
 {
     /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
 
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     VkDescriptorTypeCount type_count[1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1317,8 +1318,8 @@ void init_descriptor_set(struct sample_info &info)
 
 void init_shaders(struct sample_info &info)
 {
-    VkResult res;
-    bool retVal;
+    VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY retVal;
 
     static const char *vertShaderText =
             "#version 140\n"
@@ -1405,7 +1406,7 @@ void init_shaders(struct sample_info &info)
 
 void init_pipeline(struct sample_info &info)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
 
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;

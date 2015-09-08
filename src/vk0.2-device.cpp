@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     device_info.flags = 0;
 
     VkDevice device;
-    VkResult res = vkCreateDevice(info.gpu, &device_info, &device);
+    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpu, &device_info, &device);
     assert(!res);
 
     vkDestroyDevice(device);
