@@ -34,10 +34,10 @@ Initialize Vertex and Fragment Shaders
 
 int main(int argc, char **argv)
 {
-    VkResult res;
+    VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Initialize Shaders Sample";
-    bool retVal;
+    bool U_ASSERT_ONLY retVal;
 
     init_global_layer_properties(info);
     init_instance(info, sample_title);

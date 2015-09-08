@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_START */
 
     uint32_t gpu_count = 1;
-    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    VkResult U_ASSERT_ONLY res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
     assert(!res && gpu_count == 1);
 
     /* VULKAN_KEY_END */
