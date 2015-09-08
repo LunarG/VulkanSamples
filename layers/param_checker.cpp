@@ -2238,6 +2238,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo* pCreateInfo,
     VkDevice* pDevice)
 {
+    /*
+     * NOTE: The loader fills in the ICD's device object in *pDevice.
+     * Use that object to get the dispatch table.
+     *
+     * NOTE: We do not validate physicalDevice or any dispatchable
+     * object as the first parameter. We couldn't get here if it was wrong!
+     */
     VkLayerDispatchTable *pTable = get_dispatch_table(pc_device_table_map, *pDevice);
     VkResult result = pTable->CreateDevice(physicalDevice, pCreateInfo, pDevice);
     if(result == VK_SUCCESS)
