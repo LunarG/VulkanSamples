@@ -33,7 +33,6 @@ Inititalize Texture
 
 int main(int argc, char **argv)
 {
-    VkResult res;
     struct sample_info info = {};
     char sample_title[] = "Texture Initialization Sample";
 
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
     info.width = info.height = 50;
     init_window(info);
     init_wsi(info);
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
     init_device_queue(info);
 
     /* VULKAN_KEY_START */
@@ -222,33 +221,11 @@ int main(int argc, char **argv)
         copy_region.extent.height = texObj.tex_height;
         copy_region.extent.depth = 1;
 
-        VkCmdBufferBeginInfo cmd_buf_info = {};
-        cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-        cmd_buf_info.pNext = NULL;
-        cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-
-        res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-        assert(!res);
-
         /* Put the copy command into the command buffer */
         vkCmdCopyImage(info.cmd,
                         mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
                         texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                         1, &copy_region);
-
-        res = vkEndCommandBuffer(info.cmd);
-        assert(!res);
-        const VkCmdBuffer cmd_bufs[] = { info.cmd };
-        VkFence nullFence;
-        nullFence.handle = VK_NULL_HANDLE;
-
-        /* Queue the command buffer for execution */
-        res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-        assert(!res);
-
-        res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
-        assert(!res);                      /* using command buffers                             */
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -261,6 +238,7 @@ int main(int argc, char **argv)
         vkFreeMemory(info.device, mappableMemory);
         vkDestroyImage(info.device, mappableImage);
     }
+    end_and_submit_command_buffer(info);
 
     VkSamplerCreateInfo samplerCreateInfo = {};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
