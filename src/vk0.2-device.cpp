@@ -52,6 +52,9 @@ int main(int argc, char **argv)
     device_info.pRequestedQueues = &queue_info;
     device_info.extensionCount = 0;
     device_info.ppEnabledExtensionNames = NULL;
+    device_info.layerCount = 0;
+    device_info.ppEnabledLayerNames = NULL;
+    device_info.pEnabledFeatures = NULL;
     device_info.flags = 0;
 
     VkDevice device;

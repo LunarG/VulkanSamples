@@ -93,6 +93,9 @@ int main(int argc, char **argv)
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.queueFamilyCount = 0;
+    image_create_info.pQueueFamilyIndices = NULL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
 
     VkMemoryAllocInfo mem_alloc = {};
@@ -250,6 +253,7 @@ int main(int argc, char **argv)
     samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.compareEnable = VK_FALSE;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
     samplerCreateInfo.maxLod = 0.0;
