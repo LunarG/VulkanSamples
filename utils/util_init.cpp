@@ -1051,7 +1051,7 @@ void init_framebuffers(struct sample_info &info)
     }
 }
 
-void init_command_buffer(struct sample_info &info)
+void init_and_begin_command_buffer(struct sample_info &info)
 {
     /* DEPENDS on init_wsi() */
 
@@ -1074,6 +1074,33 @@ void init_command_buffer(struct sample_info &info)
     cmd.flags = 0;
 
     res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
+    assert(!res);
+
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.renderPass = 0;  /* May only set renderPass and framebuffer */
+    cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+
+    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+    assert(!res);
+}
+
+void end_and_submit_command_buffer(struct sample_info &info)
+{
+    VkResult res;
+
+    res = vkEndCommandBuffer(info.cmd);
+    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    VkFence nullFence = { VK_NULL_HANDLE };
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    assert(!res);
+
+    res = vkQueueWaitIdle(info.queue);
     assert(!res);
 }
 

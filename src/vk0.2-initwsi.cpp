@@ -289,7 +289,7 @@ int main(int argc, char **argv)
     /* Going to need a command buffer to send the memory barriers in set_image_layout       */
     /* but we couldn't have created one before we knew what our graphics_queue_family_index */
     /* is, but now that we have it, create the command buffer                               */
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
 
     for (int i = 0; i < info.swapChainImageCount; i++) {
         VkAttachmentViewCreateInfo color_attachment_view = {};
@@ -314,6 +314,7 @@ int main(int argc, char **argv)
                 &color_attachment_view, &info.buffers[i].view);
         assert(!res);
     }
+    end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 
     /* Clean Up */

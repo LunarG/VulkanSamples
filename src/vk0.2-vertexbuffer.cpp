@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_wsi(info);
-    init_command_buffer(info);
+    init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
@@ -132,14 +132,6 @@ int main(int argc, char **argv)
     info.vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     info.vi_attribs[1].offsetInBytes = 16;
 
-    VkCmdBufferBeginInfo cmd_begin_info = {};
-    cmd_begin_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cmd_begin_info.pNext = NULL;
-    cmd_begin_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-
-    res = vkBeginCommandBuffer(info.cmd, &cmd_begin_info);
-    assert(!res);
     const VkDeviceSize offsets[1] = {0};
 
     /* We cannot bind the vertex buffer until we begin a renderpass */
@@ -172,18 +164,7 @@ int main(int argc, char **argv)
                            offsets);                /* pOffsets */
 
     vkCmdEndRenderPass(info.cmd);
-    res = vkEndCommandBuffer(info.cmd);
-    assert(!res);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence;
-    nullFence.handle = VK_NULL_HANDLE;
-
-    /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
-    assert(!res);                      /* using command buffers                             */
+    end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);
