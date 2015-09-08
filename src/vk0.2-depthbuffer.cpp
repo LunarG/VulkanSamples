@@ -86,6 +86,9 @@ int main(int argc, char **argv)
     image_info.arraySize = 1;
     image_info.samples = 1;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.queueFamilyCount = 0;
+    image_info.pQueueFamilyIndices = NULL;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.flags = 0;
 
     VkMemoryAllocInfo mem_alloc = {};

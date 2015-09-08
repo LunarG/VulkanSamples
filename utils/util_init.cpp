@@ -278,6 +278,7 @@ VkResult init_device(struct sample_info &info)
     device_info.extensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
+    device_info.pEnabledFeatures = NULL;
     device_info.flags = 0;
 
     res = vkCreateDevice(info.gpu, &device_info, &info.device);
@@ -533,6 +534,9 @@ void init_depth_buffer(struct sample_info &info)
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
     image_info.samples = 1;
+    image_info.queueFamilyCount = 0;
+    image_info.pQueueFamilyIndices = NULL;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
     image_info.flags = 0;
 
@@ -840,6 +844,7 @@ void init_swap_chain(struct sample_info &info)
         color_attachment_view.mipLevel = 0;
         color_attachment_view.baseArraySlice = 0;
         color_attachment_view.arraySize = 1;
+        color_attachment_view.flags = 0;
 
 
         sc_buffer.image = swapChainImages[i].image;
@@ -874,8 +879,13 @@ void init_uniform_buffer(struct sample_info &info)
     /* VULKAN_KEY_START */
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     buf_info.size = sizeof(info.MVP);
+    buf_info.queueFamilyCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
     assert(!res);
 
@@ -914,10 +924,12 @@ void init_uniform_buffer(struct sample_info &info)
 
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.pNext = NULL;
     view_info.buffer = info.uniform_data.buf;
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range = sizeof(info.MVP);
+    view_info.format = VK_FORMAT_UNDEFINED;
 
     res = vkCreateBufferView(info.device, &view_info, &info.uniform_data.view);
     assert(!res);
@@ -948,10 +960,12 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info)
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.pNext              = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount = 1;
-    pPipelineLayoutCreateInfo.pSetLayouts        = &info.desc_layout;
+    pPipelineLayoutCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.pNext                  = NULL;
+    pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+    pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
+    pPipelineLayoutCreateInfo.descriptorSetCount     = 1;
+    pPipelineLayoutCreateInfo.pSetLayouts            = &info.desc_layout;
 
     err = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,
@@ -1120,8 +1134,13 @@ void init_vertex_buffer(struct sample_info &info)
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     buf_info.size = sizeof(g_vb_solid_face_colors_Data);
+    buf_info.queueFamilyCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
     assert(!res);
 
@@ -1160,10 +1179,12 @@ void init_vertex_buffer(struct sample_info &info)
 
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.pNext = NULL;
     view_info.buffer = info.vertex_buffer.buf;
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range = sizeof(info.MVP);
+    view_info.format = VK_FORMAT_UNDEFINED;
 
     res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
     assert(!res);

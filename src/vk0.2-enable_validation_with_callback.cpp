@@ -151,6 +151,7 @@ int main(int argc, char **argv)
     device_info.extensionCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
+    device_info.pEnabledFeatures = NULL;
     device_info.flags = 0;
 
     res = vkCreateDevice(info.gpu, &device_info, &info.device);

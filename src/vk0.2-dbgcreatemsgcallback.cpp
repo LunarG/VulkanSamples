@@ -136,6 +136,8 @@ int main(int argc, char **argv)
     inst_info.pAllocCb = NULL;
     inst_info.extensionCount = 1;
     inst_info.ppEnabledExtensionNames = extension_names;
+    inst_info.layerCount = 0;
+    inst_info.ppEnabledLayerNames = NULL;
 
     VkInstance inst;
 

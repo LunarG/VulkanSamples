@@ -65,10 +65,12 @@ int main(int argc, char **argv)
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
-    pPipelineLayoutCreateInfo.sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.pNext              = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount = 1;
-    pPipelineLayoutCreateInfo.pSetLayouts        = &info.desc_layout;
+    pPipelineLayoutCreateInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pPipelineLayoutCreateInfo.pNext                  = NULL;
+    pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+    pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
+    pPipelineLayoutCreateInfo.descriptorSetCount     = 1;
+    pPipelineLayoutCreateInfo.pSetLayouts            = &info.desc_layout;
 
     res = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,

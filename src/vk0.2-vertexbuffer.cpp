@@ -68,8 +68,13 @@ int main(int argc, char **argv)
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     buf_info.size = sizeof(info.MVP);
+    buf_info.queueFamilyCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
     assert(!res);
 
@@ -108,10 +113,12 @@ int main(int argc, char **argv)
 
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+    view_info.pNext = NULL;
     view_info.buffer = info.vertex_buffer.buf;
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
     view_info.range = sizeof(info.MVP);
+    view_info.format = VK_FORMAT_UNDEFINED;
 
     res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
     assert(!res);
