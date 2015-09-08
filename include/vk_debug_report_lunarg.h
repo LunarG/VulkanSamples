@@ -113,6 +113,8 @@ typedef enum _DEBUG_REPORT_ERROR
 #define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
 
 #define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDbgObjectType, 0)
+#define VK_ERROR_VALIDATION_FAILED VK_DEBUG_REPORT_ENUM_EXTEND(VkResult, 0)
+
 // ------------------------------------------------------------------------------------------------
 // Vulkan function pointers
 
