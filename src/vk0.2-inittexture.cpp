@@ -33,6 +33,7 @@ Inititalize Texture
 
 int main(int argc, char **argv)
 {
+    VkResult res;
     struct sample_info info = {};
     char sample_title[] = "Texture Initialization Sample";
 
@@ -72,8 +73,8 @@ int main(int argc, char **argv)
     }
 
     VkFormatProperties formatProps;
-    VkResult err = vkGetPhysicalDeviceFormatProperties(info.gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-    assert(!err);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+    assert(!res);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
     bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
@@ -94,7 +95,6 @@ int main(int argc, char **argv)
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags = 0;
 
-
     VkMemoryAllocInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_alloc.pNext = NULL;
@@ -108,28 +108,28 @@ int main(int argc, char **argv)
 
     /* Create a mappable image.  It will be the texture if linear images are ok to be textures */
     /* or it will be the staging image if they are not.                                        */
-    err = vkCreateImage(info.device, &image_create_info,
+    res = vkCreateImage(info.device, &image_create_info,
             &mappableImage);
-    assert(!err);
+    assert(!res);
 
-    err = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
-    assert(!err);
+    res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+    assert(!res);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    err = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
-    assert(!err);
+    res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
+    assert(!res);
 
     /* allocate memory */
-    err = vkAllocMemory(info.device, &mem_alloc,
+    res = vkAllocMemory(info.device, &mem_alloc,
                 &(mappableMemory));
-    assert(!err);
+    assert(!res);
 
     /* bind memory */
-    err = vkBindImageMemory(info.device, mappableImage,
+    res = vkBindImageMemory(info.device, mappableImage,
             mappableMemory, 0);
-    assert(!err);
+    assert(!res);
 
     VkImageSubresource subres = {};
     subres.aspect = VK_IMAGE_ASPECT_COLOR;
@@ -140,11 +140,11 @@ int main(int argc, char **argv)
     void *data;
 
     /* Get the subresource layout so we know what the row pitch is */
-    err = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-    assert(!err);
+    res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
+    assert(!res);
 
-    err = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
-    assert(!err);
+    res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
+    assert(!res);
 
     /* Read the ppm file into the mappable image's memory */
     if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
@@ -152,8 +152,8 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    err = vkUnmapMemory(info.device, mappableMemory);
-    assert(!err);
+    res = vkUnmapMemory(info.device, mappableMemory);
+    assert(!res);
 
     if (!needStaging) {
         /* If we can use the linear tiled image as a texture, just do it */
@@ -169,28 +169,28 @@ int main(int argc, char **argv)
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-        err = vkCreateImage(info.device, &image_create_info,
+        res = vkCreateImage(info.device, &image_create_info,
                 &texObj.image);
-        assert(!err);
+        assert(!res);
 
-        err = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-        assert(!err);
+        res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
+        assert(!res);
 
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type with DEVICE_ONLY property */
-        err = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
-        assert(!err);
+        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
+        assert(!res);
 
         /* allocate memory */
-        err = vkAllocMemory(info.device, &mem_alloc,
+        res = vkAllocMemory(info.device, &mem_alloc,
                     &texObj.mem);
-        assert(!err);
+        assert(!res);
 
         /* bind memory */
-        err = vkBindImageMemory(info.device, texObj.image,
+        res = vkBindImageMemory(info.device, texObj.image,
                 texObj.mem, 0);
-        assert(!err);
+        assert(!res);
 
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd                                       */
@@ -256,9 +256,9 @@ int main(int argc, char **argv)
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     /* create sampler */
-    err = vkCreateSampler(info.device, &samplerCreateInfo,
+    res = vkCreateSampler(info.device, &samplerCreateInfo,
             &texObj.sampler);
-    assert(!err);
+    assert(!res);
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -278,9 +278,9 @@ int main(int argc, char **argv)
 
     /* create image view */
     view_info.image = texObj.image;
-    err = vkCreateImageView(info.device, &view_info,
+    res = vkCreateImageView(info.device, &view_info,
             &texObj.view);
-    assert(!err);
+    assert(!res);
 
     info.textures.push_back(texObj);
     /* VULKAN_KEY_END */
