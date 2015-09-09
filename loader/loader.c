@@ -1516,23 +1516,26 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         }
 #define GET_JSON_ITEM(node, var) {                    \
         item = cJSON_GetObjectItem(node, #var);       \
-        if (item != NULL)                             \
+        if (item != NULL) {                           \
             temp = cJSON_Print(item);                 \
-        temp[strlen(temp) - 1] = '\0';                \
-        var = loader_stack_alloc(strlen(temp) + 1);   \
-        strcpy(var, &temp[1]);                        \
-        loader_tls_heap_free(temp);                   \
+            temp[strlen(temp) - 1] = '\0';            \
+            var = loader_stack_alloc(strlen(temp) + 1);\
+            strcpy(var, &temp[1]);                    \
+            loader_tls_heap_free(temp);               \
+        }                                             \
         }
 
         cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
-        char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *version;
+        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *version;
         GET_JSON_OBJECT(layer_node, functions)
         if (functions != NULL) {
             GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
             GET_JSON_ITEM(functions, vkGetDeviceProcAddr)
-            strncpy(props->functions.str_gipa, vkGetInstanceProcAddr, sizeof (props->functions.str_gipa));
+            if (vkGetInstanceProcAddr != NULL)
+                strncpy(props->functions.str_gipa, vkGetInstanceProcAddr, sizeof (props->functions.str_gipa));
             props->functions.str_gipa[sizeof (props->functions.str_gipa) - 1] = '\0';
-            strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof (props->functions.str_gdpa));
+            if (vkGetDeviceProcAddr != NULL)
+                strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof (props->functions.str_gdpa));
             props->functions.str_gdpa[sizeof (props->functions.str_gdpa) - 1] = '\0';
         }
         GET_JSON_OBJECT(layer_node, instance_extensions)
@@ -2273,16 +2276,19 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         nextInstObj->nextObject = nextObj;
         nextObj = (void*) nextInstObj;
 
-        char funcStr[256];
-        snprintf(funcStr, 256, "%sGetInstanceProcAddr", layer_prop->info.layerName);
         lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
-        if ((nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
-            nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
-        if (!nextGPA) {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
+        if ((nextGPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
+            if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
+                nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
+                layer_prop->functions.get_instance_proc_addr = nextGPA;
+            } else
+                nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gipa);
+            if (!nextGPA) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetInstanceProcAddr in layer %s", layer_prop->lib_name);
 
-            /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
-            continue;
+                /* TODO: Should we return nextObj, nextGPA to previous? or decrement layer_list count*/
+                continue;
+            }
         }
 
         loader_log(VK_DBG_REPORT_INFO_BIT, 0,
@@ -2419,14 +2425,17 @@ static uint32_t loader_activate_device_layers(
         nextGpuObj->nextObject = nextObj;
         nextObj = (void*) nextGpuObj;
 
-        char funcStr[256];
-        snprintf(funcStr, 256, "%sGetDeviceProcAddr", layer_prop->info.layerName);
         lib_handle = loader_add_layer_lib(inst, "device", layer_prop);
-        if ((nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, funcStr)) == NULL)
-            nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
-        if (!nextGPA) {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", layer_prop->info.layerName);
-            continue;
+        if ((nextGPA = layer_prop->functions.get_device_proc_addr) == NULL) {
+            if (layer_prop->functions.str_gdpa == NULL || strlen(layer_prop->functions.str_gdpa) == 0) {
+                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetDeviceProcAddr");
+                layer_prop->functions.get_device_proc_addr = nextGPA;
+            } else
+                nextGPA = (PFN_vkGetDeviceProcAddr) loader_platform_get_proc_address(lib_handle, layer_prop->functions.str_gdpa);
+            if (!nextGPA) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to find vkGetDeviceProcAddr in layer %s", layer_prop->lib_name);
+                continue;
+            }
         }
 
         loader_log(VK_DBG_REPORT_INFO_BIT, 0,

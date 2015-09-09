@@ -6,7 +6,10 @@
         "library_path": ".\\VKLayerMulti.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.1.0",
-        "description": "LunarG Sample multiple layer per library"
+        "description": "LunarG Sample multiple layer per library",
+        "functions" : {
+          "vkGetDeviceProcAddr" : "multi1GetDeviceProcAddr"
+        }
     },
     "layer" : {
         "name": "multi2",
@@ -14,6 +17,9 @@
         "library_path": ".\\VKLayerMulti.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.1.0",
-        "description": "LunarG Sample multiple layer per library"
+        "description": "LunarG Sample multiple layer per library",
+        "functions" : {
+          "vkGetInstanceProcAddr" : "multi2GetInstanceProcAddr"
+        }
     }
 }
