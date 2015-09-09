@@ -436,7 +436,10 @@ static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result = validate_draw_state_flags(pCB, indexedDraw);
     PIPELINE_NODE* pPipe = getPipeline(pCB->lastBoundPipeline);
     // Now complete other state checks
-    if (pPipe && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
+    // TODO : Currently only performing next check if *something* was bound (non-zero last bound)
+    //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
+    //  We should have that check separately and then gate this check based on that check
+    if (pPipe && (pCB->lastBoundPipelineLayout) && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
         result = VK_FALSE;
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout.handle, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
                 "Pipeline layout from last vkCmdBindDescriptorSets() (%#" PRIxLEAST64 ") does not match PSO Pipeline layout (%#" PRIxLEAST64 ") ", pCB->lastBoundPipelineLayout.handle, pPipe->graphicsPipelineCI.layout.handle);
