@@ -651,9 +651,9 @@ static VkFlags intel_format_get_raw_features(const struct intel_gpu *gpu,
 
 // These format features flags are supported by buffers.  Remaining flags
 // are supported by optimal/linear tiling images.
-static VkFlags bufferFormatsFlagMask =  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
-                                        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
-                                        VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
+static VkFlags bufferFormatsFlagMask =  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT        |
+                                        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT        |
+                                        VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT |
                                         VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
 
 static void intel_format_get_props(const struct intel_gpu *gpu,
