@@ -2,6 +2,7 @@
  * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,6 +24,7 @@
  */
 #pragma once
 
+#include <cassert>
 #include <unordered_map>
 
 extern std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;

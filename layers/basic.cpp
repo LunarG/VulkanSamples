@@ -2,6 +2,7 @@
  * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,14 +25,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 #include "vk_layer_table.h"
 #include "vk_layer_extension_utils.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
-#include "vk_loader_platform.h"
 
 static const VkLayerProperties globalLayerProps[] = {
     {

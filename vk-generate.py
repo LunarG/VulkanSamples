@@ -3,6 +3,7 @@
 # VK
 #
 # Copyright (C) 2014 LunarG, Inc.
+# Copyright (C) 2015 Google Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -103,7 +104,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             return
 
         self.prefix = self.argv[0]
-        super().run()
+        super(DispatchTableOpsSubcommand, self).run()
 
     def generate_header(self):
         return "\n".join(["#include <vulkan.h>",

@@ -27,7 +27,8 @@
  *   Ian Elliott <ian@lunarg.com>
  */
 
-#define _ISOC11_SOURCE /* for aligned_alloc() */
+//#define _ISOC11_SOURCE /* for aligned_alloc() */
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
 #include "vk_loader_platform.h"

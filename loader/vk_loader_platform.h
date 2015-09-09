@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2015 LunarG, Inc.
  * Copyright 2014 Valve Software
+ * Copyright (C) 2015 Google Inc.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -46,6 +47,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <libgen.h>
 
 // VK Library Filenames, Paths, etc.:
@@ -127,7 +129,7 @@ static inline loader_platform_dl_handle loader_platform_open_library(const char*
 {
     return dlopen(libPath, RTLD_LAZY | RTLD_LOCAL);
 }
-static inline char * loader_platform_open_library_error(const char* libPath)
+static inline const char * loader_platform_open_library_error(const char* libPath)
 {
     return dlerror();
 }
@@ -142,7 +144,7 @@ static inline void * loader_platform_get_proc_address(loader_platform_dl_handle 
     assert(name);
     return dlsym(library, name);
 }
-static inline char * loader_platform_get_proc_address_error(const char *name)
+static inline const char * loader_platform_get_proc_address_error(const char *name)
 {
     return dlerror();
 }
@@ -154,11 +156,11 @@ typedef pthread_t loader_platform_thread;
     pthread_once_t var = PTHREAD_ONCE_INIT;
 #define LOADER_PLATFORM_THREAD_ONCE_DEFINITION(var) \
     pthread_once_t var;
-static inline void loader_platform_thread_once(void *ctl, void (* func) (void))
+static inline void loader_platform_thread_once(pthread_once_t *ctl, void (* func) (void))
 {
     assert(func != NULL);
     assert(ctl != NULL);
-    pthread_once((pthread_once_t *) ctl, func);
+    pthread_once(ctl, func);
 }
 
 // Thread IDs:
@@ -201,7 +203,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 }
 
 #define loader_stack_alloc(size) alloca(size)
-static inline void *loader_aligned_alloc(size_t alignment, size_t size) { return aligned_alloc(alignment, size); }
+static inline void *loader_aligned_alloc(size_t alignment, size_t size) { void *ptr; posix_memalign(&ptr, alignment, size); return ptr; }
 
 #elif defined(_WIN32) // defined(__linux__)
 /* Windows-specific common code: */

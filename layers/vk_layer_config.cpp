@@ -1,6 +1,7 @@
 /**************************************************************************
  *
  * Copyright 2014 Lunarg, Inc.
+ * Copyright 2015 Google Inc.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,10 +29,7 @@
 #include <string.h>
 #include <vk_layer.h>
 #include <iostream>
-#include "vk_loader_platform.h"
 #include "vk_layer_config.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
 #include "vk_loader_platform.h"
 
 #define MAX_CHARS_PER_LINE 4096
