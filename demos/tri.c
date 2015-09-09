@@ -1544,8 +1544,10 @@ LRESULT CALLBACK WndProc(HWND hWnd,
         PostQuitMessage(0);
         return 0;
     case WM_PAINT:
-        demo_run(&demo);
-        return 0;
+        if (demo.prepared) {
+            demo_run(&demo);
+            return 0;
+        }
     default:
         break;
     }
@@ -2148,6 +2150,8 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 static void demo_cleanup(struct demo *demo)
 {
     uint32_t i;
+
+    demo->prepared = false;
 
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
