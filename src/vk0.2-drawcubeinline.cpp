@@ -709,12 +709,11 @@ int main(int argc, char **argv)
     res = vkGetBufferMemoryRequirements(device, uniform_buffer, &mem_reqs);
     assert(!res);
 
-    VkMemoryAllocInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.memoryTypeIndex = 0;
 
-    alloc_info.allocationSize = mem_reqs.size;
+    mem_alloc.allocationSize = mem_reqs.size;
 
     for (uint32_t i = 0; i < 32; i++) {
         if ((mem_reqs.memoryTypeBits & 1) == 1) {
@@ -728,7 +727,7 @@ int main(int argc, char **argv)
     }
 
     VkDeviceMemory uniform_memory;
-    res = vkAllocMemory(device, &alloc_info, &(uniform_memory));
+    res = vkAllocMemory(device, &mem_alloc, &(uniform_memory));
     assert(!res);
 
     uint8_t *pData;
@@ -856,11 +855,11 @@ int main(int argc, char **argv)
     res = vkGetBufferMemoryRequirements(device, vertex_buffer, &mem_reqs);
     assert(!res);
 
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.pNext = NULL;
+    mem_alloc.memoryTypeIndex = 0;
 
-    alloc_info.allocationSize = mem_reqs.size;
+    mem_alloc.allocationSize = mem_reqs.size;
     for (uint32_t i = 0; i < 32; i++) {
         if ((mem_reqs.memoryTypeBits & 1) == 1) {
             // Type is available, does it match user properties?
@@ -873,7 +872,7 @@ int main(int argc, char **argv)
     }
 
     VkDeviceMemory vertex_memory;
-    res = vkAllocMemory(device, &alloc_info, &(vertex_memory));
+    res = vkAllocMemory(device, &mem_alloc, &(vertex_memory));
     assert(!res);
 
     res = vkMapMemory(device, vertex_memory, 0, 0, 0, (void **) &pData);
