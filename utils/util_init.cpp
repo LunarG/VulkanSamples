@@ -1180,13 +1180,11 @@ void init_vertex_buffer(struct sample_info &info)
     view_info.buffer = info.vertex_buffer.buf;
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
-    view_info.range = sizeof(info.MVP);
+    view_info.range = sizeof(g_vb_solid_face_colors_Data);
     view_info.format = VK_FORMAT_UNDEFINED;
 
     res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
     assert(!res);
-
-    info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
 
     info.vi_binding.binding = 0;
     info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;

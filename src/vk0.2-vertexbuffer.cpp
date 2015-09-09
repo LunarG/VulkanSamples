@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     view_info.buffer = info.vertex_buffer.buf;
     view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
     view_info.offset = 0;
-    view_info.range = sizeof(info.MVP);
+    view_info.range = sizeof(g_vb_solid_face_colors_Data);
     view_info.format = VK_FORMAT_UNDEFINED;
 
     res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
