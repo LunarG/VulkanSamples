@@ -448,6 +448,21 @@ static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
         log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                 "Draw cmd issued without an active RenderPass. vkCmdDraw*() must only be called within a RenderPass.");
     }
+    // Verify Vtx binding
+    if (MAX_BINDING != pCB->lastVtxBinding) {
+        if (pCB->lastVtxBinding >= pPipe->vtxBindingCount) {
+            if (0 == pPipe->vtxBindingCount) {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                        "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
+                return false;
+            }
+            else {
+                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                        "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipe->vtxBindingCount - 1));
+                return false;
+            }
+        }
+    }
     return result;
 }
 // For given sampler, return a ptr to its Create Info struct, or NULL if sampler not found
@@ -1181,42 +1196,6 @@ static void printPipeline(const VkCmdBuffer cb)
                     vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
         }
     }
-}
-// Verify bound Pipeline State Object
-static bool validateBoundPipeline(const VkCmdBuffer cb)
-{
-    GLOBAL_CB_NODE* pCB = getCBNode(cb);
-    if (pCB && pCB->lastBoundPipeline) {
-        // First verify that we have a Node for bound pipeline
-        PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
-        if (!pPipeTrav) {
-            log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_PIPELINE_BOUND, "DS",
-                    "Can't find last bound Pipeline %#" PRIxLEAST64 "!", pCB->lastBoundPipeline.handle);
-            return false;
-        } else {
-            // Verify Vtx binding
-            if (MAX_BINDING != pCB->lastVtxBinding) {
-                if (pCB->lastVtxBinding >= pPipeTrav->vtxBindingCount) {
-                    if (0 == pPipeTrav->vtxBindingCount) {
-                        log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
-                        return false;
-                    }
-                    else {
-                        log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                                "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipeTrav->vtxBindingCount - 1));
-                        return false;
-                    }
-                }
-                else {
-                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
-                            vk_print_vkvertexinputbindingdescription(&pPipeTrav->pVertexBindingDescriptions[pCB->lastVtxBinding], "{DS}INFO : ").c_str());
-                }
-            }
-        }
-        return true;
-    }
-    return false;
 }
 // Print details of DS config to stdout
 static void printDSConfig(const VkCmdBuffer cb)
@@ -2318,7 +2297,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
             } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
                 log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrectly binding graphics DescriptorSets without an active RenderPass");
-            } else if (validateBoundPipeline(cmdBuffer)) {
+            } else {
                 for (uint32_t i=0; i<setCount; i++) {
                     SET_NODE* pSet = getSetNode(pDescriptorSets[i]);
                     if (pSet) {
@@ -2385,11 +2364,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
                         "Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.");
             } else {
                 pCB->lastVtxBinding = startBinding + bindingCount -1;
-                if (validateBoundPipeline(cmdBuffer)) {
-                    updateCBTracking(cmdBuffer);
-                    addCmd(pCB, CMD_BINDVERTEXBUFFER);
-                    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
-                }
+                updateCBTracking(cmdBuffer);
+                addCmd(pCB, CMD_BINDVERTEXBUFFER);
+                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
             }
         } else {
             report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
