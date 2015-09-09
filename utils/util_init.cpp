@@ -681,10 +681,6 @@ void init_wsi(struct sample_info &info)
 
     info.graphics_queue_family_index = graphicsQueueNodeIndex;
 
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
-            0, &info.queue);
-    assert(!res);
-
     // Get the list of VkFormats that are supported:
     size_t formatsSize;
     res = info.fpGetSurfaceInfoWSI(info.device,
