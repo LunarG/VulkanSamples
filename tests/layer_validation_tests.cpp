@@ -1039,7 +1039,6 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     m_errorMonitor->ClearState();
     // Cause validation error by re-submitting cmd buffer that should only be submitted once
     err = vkQueueSubmit( m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
-    ASSERT_VK_SUCCESS( err );
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after re-submitting Command Buffer that was created with one-time submit flag";

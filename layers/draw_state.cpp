@@ -353,12 +353,11 @@ static VkBool32 validate_status(GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask
     if ((!enable_mask) || (enable_mask & pNode->status)) {
         if ((pNode->status & status_mask) != status_flag) {
             // TODO : How to pass dispatchable objects as srcObject? Here src obj should be cmd buffer
-            log_msg(mdd(pNode->cmdBuffer), msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, error_code, "DS",
+            return log_msg(mdd(pNode->cmdBuffer), msg_flags, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, error_code, "DS",
                     "CB object %#" PRIxLEAST64 ": %s", reinterpret_cast<uint64_t>(pNode->cmdBuffer), fail_msg);
-            return VK_FALSE;
         }
     }
-    return VK_TRUE;
+    return VK_FALSE;
 }
 // For given dynamic state handle and type, return CreateInfo for that Dynamic State
 static void* getDynamicStateCreateInfo(const uint64_t handle, const DYNAMIC_STATE_BIND_POINT type)
@@ -381,8 +380,9 @@ static void* getDynamicStateCreateInfo(const uint64_t handle, const DYNAMIC_STAT
     }
 }
 // Print the last bound dynamic state
-static void printDynamicState(const VkCmdBuffer cb)
+static VkBool32 printDynamicState(const VkCmdBuffer cb)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -390,21 +390,22 @@ static void printDynamicState(const VkCmdBuffer cb)
             if (pCB->lastBoundDynamicState[i]) {
                 void* pDynStateCI = getDynamicStateCreateInfo(pCB->lastBoundDynamicState[i], (DYNAMIC_STATE_BIND_POINT)i);
                 if (pDynStateCI) {
-                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
+                    skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
                             "Reporting CreateInfo for currently bound %s object %#" PRIxLEAST64, string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str(), pCB->lastBoundDynamicState[i]);
-                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
+                    skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, dynamicStateBindPointToObjType((DYNAMIC_STATE_BIND_POINT)i), pCB->lastBoundDynamicState[i], 0, DRAWSTATE_NONE, "DS",
                             dynamic_display(pDynStateCI, "  ").c_str());
                 } else {
-                    log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+                    skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                             "No dynamic state of type %s bound", string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str());
                 }
             } else {
-                log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+                skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                         "No dynamic state of type %s bound", string_DYNAMIC_STATE_BIND_POINT((DYNAMIC_STATE_BIND_POINT)i).c_str());
             }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
+    return skipCall;
 }
 // Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
@@ -421,13 +422,13 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
 static VkBool32 validate_draw_state_flags(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result;
     result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_BOUND, CBSTATUS_VIEWPORT_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_LINE_WIDTH_BOUND,   CBSTATUS_LINE_WIDTH_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_LINE_WIDTH_NOT_BOUND,   "Line width object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_DEPTH_BIAS_BOUND,   CBSTATUS_DEPTH_BIAS_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_DEPTH_BIAS_NOT_BOUND,   "Depth bias object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_BLEND_BOUND,   CBSTATUS_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_BLEND_NOT_BOUND,   "Blend object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_DEPTH_WRITE_ENABLE, CBSTATUS_DEPTH_BOUNDS_BOUND, CBSTATUS_DEPTH_BOUNDS_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Depth bounds object not bound to this command buffer");
-    result &= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_BOUND, CBSTATUS_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_STENCIL_NOT_BOUND, "Stencil object not bound to this command buffer");
+    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_LINE_WIDTH_BOUND,   CBSTATUS_LINE_WIDTH_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_LINE_WIDTH_NOT_BOUND,   "Line width object not bound to this command buffer");
+    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_DEPTH_BIAS_BOUND,   CBSTATUS_DEPTH_BIAS_BOUND,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_DEPTH_BIAS_NOT_BOUND,   "Depth bias object not bound to this command buffer");
+    result |= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_BLEND_BOUND,   CBSTATUS_BLEND_BOUND,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_BLEND_NOT_BOUND,   "Blend object not bound to this command buffer");
+    result |= validate_status(pCB, CBSTATUS_DEPTH_WRITE_ENABLE, CBSTATUS_DEPTH_BOUNDS_BOUND, CBSTATUS_DEPTH_BOUNDS_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Depth bounds object not bound to this command buffer");
+    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_BOUND, CBSTATUS_STENCIL_BOUND, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_STENCIL_NOT_BOUND, "Stencil object not bound to this command buffer");
     if (indexedDraw)
-        result &= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
+        result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
     return result;
 }
 // Validate overall state at the time of a draw call
@@ -441,25 +442,23 @@ static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     //  We should have that check separately and then gate this check based on that check
     if (pPipe && (pCB->lastBoundPipelineLayout) && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
         result = VK_FALSE;
-        log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout.handle, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
+        result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, pCB->lastBoundPipelineLayout.handle, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
                 "Pipeline layout from last vkCmdBindDescriptorSets() (%#" PRIxLEAST64 ") does not match PSO Pipeline layout (%#" PRIxLEAST64 ") ", pCB->lastBoundPipelineLayout.handle, pPipe->graphicsPipelineCI.layout.handle);
     }
     if (!pCB->activeRenderPass) {
-        log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+        result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                 "Draw cmd issued without an active RenderPass. vkCmdDraw*() must only be called within a RenderPass.");
     }
     // Verify Vtx binding
     if (MAX_BINDING != pCB->lastVtxBinding) {
         if (pCB->lastVtxBinding >= pPipe->vtxBindingCount) {
             if (0 == pPipe->vtxBindingCount) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                         "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
-                return false;
             }
             else {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                         "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipe->vtxBindingCount - 1));
-                return false;
             }
         }
     }
@@ -479,43 +478,39 @@ static VkSamplerCreateInfo* getSamplerCreateInfo(const VkSampler sampler)
 // Verify that create state for a pipeline is valid
 static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_NODE* pPipeline)
 {
+    VkBool32 skipCall = VK_FALSE;
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: Vtx Shader required");
-        return VK_FALSE;
     }
     // Either both or neither TC/TE shaders should be defined
     if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT) == 0) !=
          ((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_EVALUATION_BIT) == 0) ) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair");
-        return VK_FALSE;
     }
     // Compute shaders should be specified independent of Gfx shaders
     if ((pPipeline->active_shaders & VK_SHADER_STAGE_COMPUTE_BIT) &&
         (pPipeline->active_shaders & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESS_CONTROL_BIT |
                                      VK_SHADER_STAGE_TESS_EVALUATION_BIT | VK_SHADER_STAGE_GEOMETRY_BIT |
                                      VK_SHADER_STAGE_FRAGMENT_BIT))) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline");
-        return VK_FALSE;
     }
     // VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
     // Mismatching primitive topology and tessellation fails graphics pipeline creation.
     if (pPipeline->active_shaders & (VK_SHADER_STAGE_TESS_CONTROL_BIT | VK_SHADER_STAGE_TESS_EVALUATION_BIT) &&
         (pPipeline->iaStateCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH must be set as IA topology for tessellation pipelines");
-        return VK_FALSE;
     }
     if ((pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
         (~pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT)) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines");
-        return VK_FALSE;
     }
-    return VK_TRUE;
+    return skipCall;
 }
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
@@ -666,7 +661,7 @@ static uint32_t getNumSamples(const VkPipeline pipeline)
     return 1;
 }
 // Validate state related to the PSO
-static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline)
+static VkBool32 validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline)
 {
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
@@ -700,7 +695,7 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
             }
 
             if (psoNumSamples != subpassNumSamples) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
+                return log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_NUM_SAMPLES_MISMATCH, "DS",
                         "Num samples mismatch! Binding PSO (%#" PRIxLEAST64 ") with %u samples while current RenderPass (%#" PRIxLEAST64 ") w/ %u samples!", pipeline.handle, psoNumSamples, pCB->activeRenderPass.handle, subpassNumSamples);
             }
         } else {
@@ -711,6 +706,7 @@ static void validatePipelineState(const GLOBAL_CB_NODE* pCB, const VkPipelineBin
     } else {
         // TODO : Validate non-gfx pipeline updates
     }
+    return VK_FALSE;
 }
 
 // Block of code at start here specifically for managing/tracking DSs
@@ -747,66 +743,79 @@ static LAYOUT_NODE* getLayoutNode(const VkDescriptorSetLayout layout) {
     loader_platform_thread_unlock_mutex(&globalLock);
     return layoutMap[layout.handle];
 }
-// Return 1 if update struct is of valid type, 0 otherwise
+// Return VK_FALSE if update struct is of valid type, otherwise flag error and return code from callback
 static VkBool32 validUpdateStruct(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-            return 1;
+            return VK_FALSE;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            return log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            return 0;
     }
 }
 // For given update struct, return binding
-static uint32_t getUpdateBinding(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
+static VkBool32 getUpdateBinding(const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* binding)
 {
+    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
+            *binding = ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
+            break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
+            *binding = ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
+            break;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            return 0xFFFFFFFF;
+            *binding = 0xFFFFFFFF;
     }
+    return skipCall;
 }
-// Return count for given update struct
-static uint32_t getUpdateArrayIndex(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
+// Set arrayIndex for given update struct in the last parameter
+// Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
+static uint32_t getUpdateArrayIndex(const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* arrayIndex)
 {
+    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
+            *arrayIndex = ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
+            break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
+            *arrayIndex = ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
+            break;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            return 0;
+            *arrayIndex = 0;
     }
+    return skipCall;
 }
-// Return count for given update struct
-static uint32_t getUpdateCount(const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
+// Set count for given update struct in the last parameter
+// Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
+static uint32_t getUpdateCount(const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* count)
 {
+    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->count;
+            *count = ((VkWriteDescriptorSet*)pUpdateStruct)->count;
+            break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
+            *count = ((VkCopyDescriptorSet*)pUpdateStruct)->count;
+            break;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            return 0;
+            *count = 0;
     }
+    return skipCall;
 }
 // For given Layout Node and binding, return index where that binding begins
 static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
@@ -827,21 +836,33 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
     return offsetIndex-1;
 }
 // For given layout and update, return the first overall index of the layout that is update
-static uint32_t getUpdateStartIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static VkBool32 getUpdateStartIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t* startIndex)
 {
-    return (getBindingStartIndex(pLayout, getUpdateBinding(device, pUpdateStruct))+getUpdateArrayIndex(device, pUpdateStruct));
+    uint32_t binding = 0, arrayIndex = 0;
+    VkBool32 skipCall = getUpdateBinding(device, pUpdateStruct, &binding);
+    skipCall |= getUpdateArrayIndex(device, pUpdateStruct, &arrayIndex);
+    if (VK_FALSE == skipCall)
+        *startIndex = getBindingStartIndex(pLayout, binding)+arrayIndex;
+    return skipCall;
 }
 // For given layout and update, return the last overall index of the layout that is update
-static uint32_t getUpdateEndIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static VkBool32 getUpdateEndIndex(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t* endIndex)
 {
-    return (getBindingStartIndex(pLayout, getUpdateBinding(device, pUpdateStruct))+getUpdateArrayIndex(device, pUpdateStruct)+getUpdateCount(device, pUpdateStruct)-1);
+    uint32_t binding = 0, arrayIndex = 0, count = 0;
+    VkBool32 skipCall = getUpdateBinding(device, pUpdateStruct, &binding);
+    skipCall |= getUpdateArrayIndex(device, pUpdateStruct, &arrayIndex);
+    skipCall |= getUpdateCount(device, pUpdateStruct, &count);
+    if (VK_FALSE == skipCall)
+        *endIndex = getBindingStartIndex(pLayout, binding)+arrayIndex+count-1;
+    return skipCall;
 }
 // Verify that the descriptor type in the update struct matches what's expected by the layout
 static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     // First get actual type of update
+    VkBool32 skipCall = VK_FALSE;
     VkDescriptorType actualType;
-    uint32_t i = 0;
+    uint32_t i = 0, startIndex = 0, endIndex = 0;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
@@ -849,25 +870,28 @@ static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLa
             break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             /* no need to validate */
-            return 1;
+            return VK_FALSE;
             break;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            return 0;
     }
-    for (i = getUpdateStartIndex(device, pLayout, pUpdateStruct); i <= getUpdateEndIndex(device, pLayout, pUpdateStruct); i++) {
-        if (pLayout->pTypes[i] != actualType)
-            return 0;
+    skipCall |= getUpdateStartIndex(device, pLayout, pUpdateStruct, &startIndex);
+    skipCall |= getUpdateEndIndex(device, pLayout, pUpdateStruct, &endIndex);
+    if (VK_FALSE == skipCall) {
+        for (i = startIndex; i <= endIndex; i++) {
+            if (pLayout->pTypes[i] != actualType)
+                return VK_TRUE;
+        }
     }
-    return 1;
+    return skipCall;
 }
 // Determine the update type, allocate a new struct of that type, shadow the given pUpdate
-//   struct into the new struct and return ptr to shadow struct cast as GENERIC_HEADER
+//   struct into the pNewNode param. Return VK_TRUE if error condition encountered and callback signals early exit.
 // NOTE : Calls to this function should be wrapped in mutex
-static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* pUpdate)
+static VkBool32 shadowUpdateNode(const VkDevice device, GENERIC_HEADER* pUpdate, GENERIC_HEADER** pNewNode)
 {
-    GENERIC_HEADER* pNewNode = NULL;
+    VkBool32 skipCall = VK_FALSE;
     VkWriteDescriptorSet* pWDS = NULL;
     VkCopyDescriptorSet* pCDS = NULL;
     size_t array_size = 0;
@@ -878,7 +902,7 @@ static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* p
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
             pWDS = new VkWriteDescriptorSet;
-            pNewNode = (GENERIC_HEADER*)pWDS;
+            *pNewNode = (GENERIC_HEADER*)pWDS;
             memcpy(pWDS, pUpdate, sizeof(VkWriteDescriptorSet));
             pWDS->pDescriptors = new VkDescriptorInfo[pWDS->count];
             array_size = sizeof(VkDescriptorInfo) * pWDS->count;
@@ -886,24 +910,24 @@ static GENERIC_HEADER* shadowUpdateNode(const VkDevice device, GENERIC_HEADER* p
             break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             pCDS = new VkCopyDescriptorSet;
-            pUpdate = (GENERIC_HEADER*)pCDS;
+            *pNewNode = (GENERIC_HEADER*)pCDS;
             memcpy(pCDS, pUpdate, sizeof(VkCopyDescriptorSet));
             break;
         default:
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
-                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType);
-            return NULL;
+            if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
+                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdate->sType), pUpdate->sType))
+                return VK_TRUE;
     }
     // Make sure that pNext for the end of shadow copy is NULL
-    pNewNode->pNext = NULL;
-    return pNewNode;
+    (*pNewNode)->pNext = NULL;
+    return skipCall;
 }
 // update DS mappings based on ppUpdateArray
 static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
 {
     const VkWriteDescriptorSet *pWDS = NULL;
     const VkCopyDescriptorSet *pCDS = NULL;
-    VkBool32 result = 1;
+    VkBool32 skipCall = VK_FALSE;
 
     if (type == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
         pWDS = (const VkWriteDescriptorSet *) pUpdateArray;
@@ -922,45 +946,48 @@ static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
         GENERIC_HEADER* pUpdate = (pWDS) ? (GENERIC_HEADER*) &pWDS[i] : (GENERIC_HEADER*) &pCDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
-        if (!validUpdateStruct(device, pUpdate)) {
-            result = 0;
+        if ((skipCall = validUpdateStruct(device, pUpdate)) == VK_TRUE) {
             break;
         }
         // Make sure that binding is within bounds
-        if (pLayout->createInfo.count < getUpdateBinding(device, pUpdate)) {
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                    "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, getUpdateBinding(device, pUpdate), string_VkStructureType(pUpdate->sType));
-            result = 0;
+        uint32_t binding = 0, endIndex = 0;
+        skipCall |= getUpdateBinding(device, pUpdate, &binding);
+        if (pLayout->createInfo.count < binding) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                    "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
-            if (getBindingEndIndex(pLayout, getUpdateBinding(device, pUpdate)) < getUpdateEndIndex(device, pLayout, pUpdate)) {
+            skipCall |= getUpdateBinding(device, pUpdate, &binding);
+            skipCall |= getUpdateEndIndex(device, pLayout, pUpdate, &endIndex);
+            if (getBindingEndIndex(pLayout, binding) < endIndex) {
                 // TODO : Keep count of layout CI structs and size this string dynamically based on that count
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
-                log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
-                        "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), getUpdateBinding(device, pUpdate), DSstr.c_str());
-                result = 0;
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
+                        "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
-                if (!validateUpdateType(device, pLayout, pUpdate)) {
-                    log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
+                if ((skipCall = validateUpdateType(device, pLayout, pUpdate)) == VK_TRUE) {
+                    skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
                             "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
-                    result = 0;
                 } else {
                     // Save the update info
                     // TODO : Info message that update successful
                     // Create new update struct for this set's shadow copy
-                    GENERIC_HEADER* pNewNode = shadowUpdateNode(device, pUpdate);
+                    GENERIC_HEADER* pNewNode = NULL;
+                    skipCall |= shadowUpdateNode(device, pUpdate, &pNewNode);
                     if (NULL == pNewNode) {
-                        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                                 "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
-                        result = 0;
                     } else {
                         // Insert shadow node into LL of updates for this set
                         pNewNode->pNext = pSet->pUpdateStructs;
                         pSet->pUpdateStructs = pNewNode;
                         // Now update appropriate descriptor(s) to point to new Update node
-                        for (uint32_t j = getUpdateStartIndex(device, pLayout, pUpdate); j <= getUpdateEndIndex(device, pLayout, pUpdate); j++) {
+                        skipCall |= getUpdateEndIndex(device, pLayout, pUpdate, &endIndex);
+                        uint32_t startIndex;
+                        skipCall |= getUpdateStartIndex(device, pLayout, pUpdate, &startIndex);
+                        for (uint32_t j = startIndex; j <= endIndex; j++) {
                             assert(j<pSet->descriptorCount);
                             pSet->ppDescriptors[j] = pNewNode;
                         }
@@ -970,7 +997,7 @@ static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return result;
+    return skipCall;
 }
 // Free the shadowed update node for this Set
 // NOTE : Calls to this function should be wrapped in mutex
@@ -1112,14 +1139,15 @@ static void deleteCmdBuffers()
     }
     cmdBufferMap.clear();
 }
-static void report_error_no_cb_begin(const VkCmdBuffer cb, const char* caller_name)
+static VkBool32 report_error_no_cb_begin(const VkCmdBuffer cb, const char* caller_name)
 {
     // TODO : How to pass cb as srcObj here?
-    log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_BEGIN_CMD_BUFFER, "DS",
+    return log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_BEGIN_CMD_BUFFER, "DS",
             "You must call vkBeginCommandBuffer() before this call to %s", (void*)caller_name);
 }
-static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
+static VkBool32 addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
 {
+    VkBool32 skipCall = VK_FALSE;
     CMD_NODE* pCmd = new CMD_NODE;
     if (pCmd) {
         // init cmd node and append to end of cmd LL
@@ -1129,9 +1157,10 @@ static void addCmd(GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
         pCB->pCmds.push_back(pCmd);
     } else {
         // TODO : How to pass cb as srcObj here?
-        log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+        skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                 "Out of memory while attempting to allocate new CMD_NODE for cmdBuffer %#" PRIxLEAST64, reinterpret_cast<uint64_t>(pCB->cmdBuffer));
     }
+    return skipCall;
 }
 static void resetCB(const VkCmdBuffer cb)
 {
@@ -1184,65 +1213,69 @@ static void set_cb_dyn_status(GLOBAL_CB_NODE* pNode, DYNAMIC_STATE_BIND_POINT st
     }
 }
 // Print the last bound Gfx Pipeline
-static void printPipeline(const VkCmdBuffer cb)
+static VkBool32 printPipeline(const VkCmdBuffer cb)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB) {
         PIPELINE_NODE *pPipeTrav = getPipeline(pCB->lastBoundPipeline);
         if (!pPipeTrav) {
             // nothing to print
         } else {
-            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                     vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
         }
     }
+    return skipCall;
 }
 // Print details of DS config to stdout
-static void printDSConfig(const VkCmdBuffer cb)
+static VkBool32 printDSConfig(const VkCmdBuffer cb)
 {
+    VkBool32 skipCall = VK_FALSE;
     char ds_config_str[1024*256] = {0}; // TODO : Currently making this buffer HUGE w/o overrun protection.  Need to be smarter, start smaller, and grow as needed.
     GLOBAL_CB_NODE* pCB = getCBNode(cb);
     if (pCB && pCB->lastBoundDescriptorSet) {
         SET_NODE* pSet = getSetNode(pCB->lastBoundDescriptorSet);
         POOL_NODE* pPool = getPoolNode(pSet->pool);
         // Print out pool details
-        log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "Details for pool %#" PRIxLEAST64 ".", pPool->pool.handle);
         string poolStr = vk_print_vkdescriptorpoolcreateinfo(&pPool->createInfo, " ");
-        log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "%s", poolStr.c_str());
         // Print out set details
         char prefix[10];
         uint32_t index = 0;
-        log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "Details for descriptor set %#" PRIxLEAST64 ".", pSet->set.handle);
         LAYOUT_NODE* pLayout = pSet->pLayout;
         // Print layout details
-        log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, (void*)pLayout->layout.handle, (void*)pSet->set.handle);
         sprintf(prefix, "  [L%u] ", index);
         string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
-        log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "%s", DSLstr.c_str());
         index++;
         GENERIC_HEADER* pUpdate = pSet->pUpdateStructs;
         if (pUpdate) {
-            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                     "Update Chain [UC] for descriptor set %#" PRIxLEAST64 ":", pSet->set.handle);
             sprintf(prefix, "  [UC] ");
-            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                     dynamic_display(pUpdate, prefix).c_str());
             // TODO : If there is a "view" associated with this update, print CI for that view
         } else {
             if (0 != pSet->descriptorCount) {
-                log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+                skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                         "No Update Chain for descriptor set %#" PRIxLEAST64 " which has %u descriptors (vkUpdateDescriptors has not been called)", pSet->set.handle, pSet->descriptorCount);
             } else {
-                log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
+                skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                         "FYI: No descriptors in descriptor set %#" PRIxLEAST64 ".", pSet->set.handle);
             }
         }
     }
+    return skipCall;
 }
 
 static void printCB(const VkCmdBuffer cb)
@@ -1263,14 +1296,16 @@ static void printCB(const VkCmdBuffer cb)
 }
 
 
-static void synchAndPrintDSConfig(const VkCmdBuffer cb)
+static VkBool32 synchAndPrintDSConfig(const VkCmdBuffer cb)
 {
+    VkBool32 skipCall = VK_FALSE;
     if (!(mdd(cb)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
-        return;
+        return skipCall;
     }
-    printDSConfig(cb);
-    printPipeline(cb);
-    printDynamicState(cb);
+    skipCall |= printDSConfig(cb);
+    skipCall |= printPipeline(cb);
+    skipCall |= printDynamicState(cb);
+    return skipCall;
 }
 
 static void init_draw_state(layer_data *my_data)
@@ -1466,6 +1501,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
     for (uint32_t i=0; i < cmdBufferCount; i++) {
         // Validate that cmd buffers have been updated
@@ -1473,22 +1509,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
         loader_platform_thread_lock_mutex(&globalLock);
         pCB->submitCount++; // increment submit count
         if ((pCB->beginInfo.flags & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
-            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+            skipCall |= log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
                     "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<uint64_t>(pCB->cmdBuffer), pCB->submitCount);
         }
         if (CB_UPDATE_COMPLETE != pCB->state) {
             // Flag error for using CB w/o vkEndCommandBuffer() called
             // TODO : How to pass cb as srcObj?
-            log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS",
+            skipCall |= log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS",
                     "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->cmdBuffer));
             loader_platform_thread_unlock_mutex(&globalLock);
-            return VK_ERROR_UNKNOWN;
+            return VK_ERROR_VALIDATION_FAILED;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
-
-    VkResult result = get_dispatch_table(draw_state_device_table_map, queue)->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
-    return result;
+    if (VK_FALSE == skipCall)
+        return get_dispatch_table(draw_state_device_table_map, queue)->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
@@ -1714,10 +1750,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     loader_platform_thread_lock_mutex(&globalLock);
     PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfos, NULL);
-    VkBool32 valid = verifyPipelineCreateState(device, pPipeNode);
+    VkBool32 skipCall = verifyPipelineCreateState(device, pPipeNode);
     loader_platform_thread_unlock_mutex(&globalLock);
-    /* TODO: preference is to make API call after reporting any validation errors */
-    if (VK_TRUE == valid) {
+    if (VK_FALSE == skipCall) {
         result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
         log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, (*pPipelines).handle, 0, DRAWSTATE_NONE, "DS",
                 "Created Gfx Pipeline %#" PRIxLEAST64, (*pPipelines).handle);
@@ -1733,6 +1768,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
             delete[] pPipeNode->pAttachments;
             delete pPipeNode;
         }
+        return VK_ERROR_VALIDATION_FAILED;
     }
     return result;
 }
@@ -1757,8 +1793,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     if (VK_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (*pSetLayout).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                    "Out of memory while attempting to allocate LAYOUT_NODE in vkCreateDescriptorSetLayout()");
+            if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (*pSetLayout).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                    "Out of memory while attempting to allocate LAYOUT_NODE in vkCreateDescriptorSetLayout()"))
+                return VK_ERROR_VALIDATION_FAILED;
         }
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
@@ -1810,13 +1847,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
     VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
-        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                "Created Descriptor Pool %#" PRIxLEAST64, (*pDescriptorPool).handle);
+        if (log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                "Created Descriptor Pool %#" PRIxLEAST64, (*pDescriptorPool).handle))
+            return VK_ERROR_VALIDATION_FAILED;
         loader_platform_thread_lock_mutex(&globalLock);
         POOL_NODE* pNewNode = new POOL_NODE;
         if (NULL == pNewNode) {
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                    "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()");
+            if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                    "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()"))
+                return VK_ERROR_VALIDATION_FAILED;
         } else {
             memset(pNewNode, 0, sizeof(POOL_NODE));
             VkDescriptorPoolCreateInfo* pCI = (VkDescriptorPoolCreateInfo*)&pNewNode->createInfo;
@@ -1866,8 +1905,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                 // Create new set node and add to head of pool nodes
                 SET_NODE* pNewNode = new SET_NODE;
                 if (NULL == pNewNode) {
-                    log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                            "Out of memory while attempting to allocate SET_NODE in vkAllocDescriptorSets()");
+                    if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                            "Out of memory while attempting to allocate SET_NODE in vkAllocDescriptorSets()"))
+                        return VK_ERROR_VALIDATION_FAILED;
                 } else {
                     memset(pNewNode, 0, sizeof(SET_NODE));
                     // Insert set at head of Set LL for this pool
@@ -1875,8 +1915,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                     pPoolNode->pSets = pNewNode;
                     LAYOUT_NODE* pLayout = getLayoutNode(pSetLayouts[i]);
                     if (NULL == pLayout) {
-                        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pSetLayouts[i].handle, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
-                                "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pSetLayouts[i].handle);
+                        if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pSetLayouts[i].handle, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
+                                "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pSetLayouts[i].handle))
+                            return VK_ERROR_VALIDATION_FAILED;
                     }
                     pNewNode->pLayout = pLayout;
                     pNewNode->pool = descriptorPool;
@@ -1905,8 +1946,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
 
 VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
-    if (dsUpdate(device, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
-        dsUpdate(device, VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies)) {
+    // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when both updates return VK_FALSE
+    if (!dsUpdate(device, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
+        !dsUpdate(device, VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies)) {
         get_dispatch_table(draw_state_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
     }
 }
@@ -2000,31 +2042,31 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
 
 VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
 {
-    VkBool32 bail = false;
+    VkBool32 skipCall = false;
     // Validate command buffer level
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
             if (pBeginInfo->renderPass.handle || pBeginInfo->framebuffer.handle) {
                 // These should be NULL for a Primary CB
-                bail = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                     "vkCreateCommandBuffer():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)cmdBuffer);
             }
         } else {
             if (!pBeginInfo->renderPass.handle || !pBeginInfo->framebuffer.handle) {
                 // These should NOT be null for an Secondary CB
-                bail = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
                     "vkCreateCommandBuffer():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)cmdBuffer);
             }
         }
         pCB->beginInfo = *pBeginInfo;
     } else {
         // TODO : Need to pass cmdBuffer as objType here
-        bail = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_CMD_BUFFER, "DS",
                 "In vkBeginCommandBuffer() and unable to find CmdBuffer Node for CB %p!", (void*)cmdBuffer);
     }
-    if (bail) {
-        return VK_ERROR_UNKNOWN;
+    if (skipCall) {
+        return VK_ERROR_VALIDATION_FAILED;
     }
     VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (VK_SUCCESS == result) {
@@ -2038,22 +2080,26 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
 
 VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 {
+    VkBool32 skipCall = VK_FALSE;
     VkResult result = VK_SUCCESS;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     /* TODO: preference is to always call API function after reporting any validation errors */
     if (pCB) {
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);
-            if (VK_SUCCESS == result) {
-                updateCBTracking(cmdBuffer);
-                pCB->state = CB_UPDATE_COMPLETE;
-                // Reset CB status flags
-                pCB->status = 0;
-                printCB(cmdBuffer);
-            }
-        } else {
-            report_error_no_cb_begin(cmdBuffer, "vkEndCommandBuffer()");
+        if (pCB->state != CB_UPDATE_ACTIVE) {
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkEndCommandBuffer()");
         }
+    }
+    if (VK_FALSE == skipCall) {
+        result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);
+        if (VK_SUCCESS == result) {
+            updateCBTracking(cmdBuffer);
+            pCB->state = CB_UPDATE_COMPLETE;
+            // Reset CB status flags
+            pCB->status = 0;
+            printCB(cmdBuffer);
+        }
+    } else {
+        result = VK_ERROR_VALIDATION_FAILED;
     }
     return result;
 }
@@ -2070,16 +2116,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer, VkCmd
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDPIPELINE);
+            skipCall |= addCmd(pCB, CMD_BINDPIPELINE);
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute pipeline (%#" PRIxLEAST64 ") during active RenderPass (%#" PRIxLEAST64 ")", pipeline.handle, pCB->activeRenderPass.handle);
             } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrectly binding graphics pipeline (%#" PRIxLEAST64 ") without an active RenderPass", pipeline.handle);
             } else {
                 PIPELINE_NODE* pPN = getPipeline(pipeline);
@@ -2089,191 +2136,205 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
                     set_cb_pso_status(pCB, pPN);
                     g_lastBoundPipeline = pPN;
                     loader_platform_thread_unlock_mutex(&globalLock);
-                    validatePipelineState(pCB, pipelineBindPoint, pipeline);
-                    get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+                    skipCall |= validatePipelineState(pCB, pipelineBindPoint, pipeline);
                 } else {
-                    log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_INVALID_PIPELINE, "DS",
+                    skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline.handle, 0, DRAWSTATE_INVALID_PIPELINE, "DS",
                             "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", (void*)pipeline.handle);
                 }
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindPipeline()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindPipeline()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, VkDynamicViewportState dynamicViewportState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICVIEWPORTSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICVIEWPORTSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicViewportState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_VIEWPORT_BOUND;
             if (dynamicVpStateMap.find(dynamicViewportState.handle) == dynamicVpStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE, dynamicViewportState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE, dynamicViewportState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicViewportState object %#" PRIxLEAST64 ", was it ever created?", dynamicViewportState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_VIEWPORT] = dynamicViewportState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_VIEWPORT] = dynamicViewportState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicViewportState(cmdBuffer, dynamicViewportState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicViewportState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicViewportState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicViewportState(cmdBuffer, dynamicViewportState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicLineWidthState(VkCmdBuffer cmdBuffer, VkDynamicLineWidthState dynamicLineWidthState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICLINEWIDTHSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICLINEWIDTHSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicLineWidthState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_LINE_WIDTH_BOUND;
             if (dynamicLineWidthStateMap.find(dynamicLineWidthState.handle) == dynamicLineWidthStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE, dynamicLineWidthState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE, dynamicLineWidthState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicLineWidthState object %#" PRIxLEAST64 ", was it ever created?", dynamicLineWidthState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_LINE_WIDTH] = dynamicLineWidthState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_LINE_WIDTH] = dynamicLineWidthState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicLineWidthState(cmdBuffer, dynamicLineWidthState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicLineWidthState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicLineWidthState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicLineWidthState(cmdBuffer, dynamicLineWidthState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicDepthBiasState(VkCmdBuffer cmdBuffer, VkDynamicDepthBiasState dynamicDepthBiasState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICDEPTHBIASSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICDEPTHBIASSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicDepthBiasState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_DEPTH_BIAS_BOUND;
             if (dynamicDepthBiasStateMap.find(dynamicDepthBiasState.handle) == dynamicDepthBiasStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE, dynamicDepthBiasState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE, dynamicDepthBiasState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicDepthBiasState object %#" PRIxLEAST64 ", was it ever created?", dynamicDepthBiasState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_BIAS] = dynamicDepthBiasState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_BIAS] = dynamicDepthBiasState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicDepthBiasState(cmdBuffer, dynamicDepthBiasState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicDepthBiasState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicDepthBiasState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicDepthBiasState(cmdBuffer, dynamicDepthBiasState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicBlendState(VkCmdBuffer cmdBuffer, VkDynamicBlendState dynamicBlendState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICBLENDSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICBLENDSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicBlendState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_BLEND_BOUND;
             if (dynamicBlendStateMap.find(dynamicBlendState.handle) == dynamicBlendStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE, dynamicBlendState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE, dynamicBlendState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicBlendState object %#" PRIxLEAST64 ", was it ever created?", dynamicBlendState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_BLEND] = dynamicBlendState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_BLEND] = dynamicBlendState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicBlendState(cmdBuffer, dynamicBlendState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicBlendState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicBlendState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicBlendState(cmdBuffer, dynamicBlendState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicDepthBoundsState(VkCmdBuffer cmdBuffer, VkDynamicDepthBoundsState dynamicDepthBoundsState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICDEPTHBOUNDSSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICDEPTHBOUNDSSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicDepthBoundsState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_DEPTH_BOUNDS_BOUND;
             if (dynamicDepthBoundsStateMap.find(dynamicDepthBoundsState.handle) == dynamicDepthBoundsStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE, dynamicDepthBoundsState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE, dynamicDepthBoundsState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicDepthBoundsState object %#" PRIxLEAST64 ", was it ever created?", dynamicDepthBoundsState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_BOUNDS] = dynamicDepthBoundsState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_DEPTH_BOUNDS] = dynamicDepthBoundsState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicDepthBoundsState(cmdBuffer, dynamicDepthBoundsState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicDepthBoundsState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicDepthBoundsState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicDepthBoundsState(cmdBuffer, dynamicDepthBoundsState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStencilState(VkCmdBuffer cmdBuffer, VkDynamicStencilState dynamicStencilState)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BINDDYNAMICSTENCILSTATE);
+            skipCall |= addCmd(pCB, CMD_BINDDYNAMICSTENCILSTATE);
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindDynamicStencilState() without an active RenderPass.");
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_STENCIL_BOUND;
             if (dynamicStencilStateMap.find(dynamicStencilState.handle) == dynamicStencilStateMap.end()) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE, dynamicStencilState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE, dynamicStencilState.handle, 0, DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT, "DS",
                         "Unable to find VkDynamicStencilState object %#" PRIxLEAST64 ", was it ever created?", dynamicStencilState.handle);
             } else {
                 pCB->lastBoundDynamicState[VK_STATE_BIND_POINT_STENCIL] = dynamicStencilState.handle;
                 g_lastBoundDynamicState[VK_STATE_BIND_POINT_STENCIL] = dynamicStencilState.handle;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicStencilState(cmdBuffer, dynamicStencilState);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicStencilState()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDynamicStencilState()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDynamicStencilState(cmdBuffer, dynamicStencilState);
 }
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute DescriptorSets during active RenderPass (%#" PRIxLEAST64 ")", pCB->activeRenderPass.handle);
             } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrectly binding graphics DescriptorSets without an active RenderPass");
             } else {
                 for (uint32_t i=0; i<setCount; i++) {
@@ -2285,45 +2346,48 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                         pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
                         g_lastBoundDescriptorSet = pDescriptorSets[i];
                         loader_platform_thread_unlock_mutex(&globalLock);
-                        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_NONE, "DS",
+                        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", pDescriptorSets[i].handle, string_VkPipelineBindPoint(pipelineBindPoint));
                         if (!pSet->pUpdateStructs)
-                            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                     "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", pDescriptorSets[i].handle);
                     } else {
-                        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_INVALID_SET, "DS",
+                        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_INVALID_SET, "DS",
                                 "Attempt to bind DS %#" PRIxLEAST64 " that doesn't exist!", pDescriptorSets[i].handle);
                     }
                 }
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_BINDDESCRIPTORSETS);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+                skipCall |= addCmd(pCB, CMD_BINDDESCRIPTORSETS);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindDescriptorSets()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindDescriptorSets()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindIndexBuffer() without an active RenderPass.");
             } else {
                 // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
                 pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_BINDINDEXBUFFER);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+                skipCall |= addCmd(pCB, CMD_BINDINDEXBUFFER);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
@@ -2333,157 +2397,169 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             /* TODO: Need to track all the vertex buffers, not just last one */
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.");
             } else {
                 pCB->lastVtxBinding = startBinding + bindingCount -1;
                 updateCBTracking(cmdBuffer);
                 addCmd(pCB, CMD_BINDVERTEXBUFFER);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW]++;
-            valid = validate_draw_state(pCB, VK_FALSE);
+            skipCall |= validate_draw_state(pCB, VK_FALSE);
             // TODO : Need to pass cmdBuffer as srcObj here
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
-            synchAndPrintDSConfig(cmdBuffer);
-            if (valid) {
+            skipCall |= synchAndPrintDSConfig(cmdBuffer);
+            if (VK_FALSE == skipCall) {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_DRAW);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+                skipCall |= addCmd(pCB, CMD_DRAW);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkBool32 valid = VK_FALSE;
+    VkBool32 skipCall = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW_INDEXED]++;
-            valid = validate_draw_state(pCB, VK_TRUE);
+            skipCall |= validate_draw_state(pCB, VK_TRUE);
             // TODO : Need to pass cmdBuffer as srcObj here
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
-            synchAndPrintDSConfig(cmdBuffer);
-            if (valid) {
+            skipCall |= synchAndPrintDSConfig(cmdBuffer);
+            if (VK_FALSE == skipCall) {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_DRAWINDEXED);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+                skipCall |= addCmd(pCB, CMD_DRAWINDEXED);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkBool32 valid = VK_FALSE;
+    VkBool32 skipCall = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW_INDIRECT]++;
-            valid = validate_draw_state(pCB, VK_FALSE);
+            skipCall |= validate_draw_state(pCB, VK_FALSE);
             // TODO : Need to pass cmdBuffer as srcObj here
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
-            synchAndPrintDSConfig(cmdBuffer);
-            if (valid) {
+            skipCall |= synchAndPrintDSConfig(cmdBuffer);
+            if (VK_FALSE == skipCall) {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_DRAWINDIRECT);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+                skipCall |= addCmd(pCB, CMD_DRAWINDIRECT);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkBool32 valid = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW_INDEXED_INDIRECT]++;
-            valid = validate_draw_state(pCB, VK_TRUE);
+            skipCall |= validate_draw_state(pCB, VK_TRUE);
             // TODO : Need to pass cmdBuffer as srcObj here
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
+            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
-            synchAndPrintDSConfig(cmdBuffer);
-            if (valid) {
+            skipCall |= synchAndPrintDSConfig(cmdBuffer);
+            if (VK_FALSE == skipCall) {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+                skipCall |= addCmd(pCB, CMD_DRAWINDEXEDINDIRECT);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DISPATCH);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatch(cmdBuffer, x, y, z);
+            skipCall |= addCmd(pCB, CMD_DISPATCH);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatch(cmdBuffer, x, y, z);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_DISPATCHINDIRECT);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
+            skipCall |= addCmd(pCB, CMD_DISPATCHINDIRECT);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_COPYBUFFER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+            skipCall |= addCmd(pCB, CMD_COPYBUFFER);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
@@ -2493,16 +2569,18 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
                                              VkImageLayout destImageLayout,
                                              uint32_t regionCount, const VkImageCopy* pRegions)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_COPYIMAGE);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+            skipCall |= addCmd(pCB, CMD_COPYIMAGE);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
@@ -2511,21 +2589,23 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
                                              uint32_t regionCount, const VkImageBlit* pRegions,
                                              VkTexFilter filter)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly issuing CmdBlitImage during active RenderPass (%#" PRIxLEAST64 ")", pCB->activeRenderPass.handle);
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_BLITIMAGE);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+                skipCall |= addCmd(pCB, CMD_BLITIMAGE);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
@@ -2533,16 +2613,18 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
                                                      VkImage destImage, VkImageLayout destImageLayout,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_COPYBUFFERTOIMAGE);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+            skipCall |= addCmd(pCB, CMD_COPYBUFFERTOIMAGE);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
@@ -2550,44 +2632,50 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
                                                      VkBuffer destBuffer,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_COPYIMAGETOBUFFER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+            skipCall |= addCmd(pCB, CMD_COPYIMAGETOBUFFER);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_UPDATEBUFFER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+            skipCall |= addCmd(pCB, CMD_UPDATEBUFFER);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_FILLBUFFER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+            skipCall |= addCmd(pCB, CMD_FILLBUFFER);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
@@ -2598,29 +2686,31 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
     uint32_t                                    rectCount,
     const VkRect3D*                             pRects)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             // Warn if this is issued prior to Draw Cmd
             if (!hasDrawCmd(pCB)) {
                 // TODO : cmdBuffer should be srcObj
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearColorAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                         " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Clear*Attachment cmd issued without an active RenderPass. vkCmdClearColorAttachment() must only be called inside of a RenderPass."
                         " vkCmdClearColorImage() should be used outside of a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_CLEARCOLORATTACHMENT);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
+                skipCall |= addCmd(pCB, CMD_CLEARCOLORATTACHMENT);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
@@ -2632,29 +2722,31 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     uint32_t                                    rectCount,
     const VkRect3D*                             pRects)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             // Warn if this is issued prior to Draw Cmd
             if (!hasDrawCmd(pCB)) {
                 // TODO : cmdBuffer should be srcObj
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearDepthStencilAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                         " It is recommended you use RenderPass LOAD_OP_CLEAR on DS Attachment prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             if (!pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Clear*Attachment cmd issued without an active RenderPass. vkCmdClearDepthStencilAttachment() must only be called inside of a RenderPass."
                         " vkCmdClearDepthStencilImage() should be used outside of a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_CLEARDEPTHSTENCILATTACHMENT);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount, pRects);
+                skipCall |= addCmd(pCB, CMD_CLEARDEPTHSTENCILATTACHMENT);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -2663,22 +2755,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         const VkClearColorValue *pColor,
         uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Clear*Image cmd issued with an active RenderPass. vkCmdClearColorImage() must only be called outside of a RenderPass."
                         " vkCmdClearColorAttachment() should be used within a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_CLEARCOLORIMAGE);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+                skipCall |= addCmd(pCB, CMD_CLEARCOLORIMAGE);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer,
@@ -2686,22 +2780,24 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer,
                                                      float depth, uint32_t stencil,
                                                      uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Clear*Image cmd issued with an active RenderPass. vkCmdClearDepthStencilImage() must only be called outside of a RenderPass."
                         " vkCmdClearDepthStencilAttachment() should be used within a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_CLEARDEPTHSTENCILIMAGE);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+                skipCall |= addCmd(pCB, CMD_CLEARDEPTHSTENCILIMAGE);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
@@ -2709,133 +2805,151 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
                                                 VkImage destImage, VkImageLayout destImageLayout,
                                                 uint32_t regionCount, const VkImageResolve* pRegions)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Cannot call vkCmdResolveImage() during an active RenderPass (%#" PRIxLEAST64 ").", pCB->activeRenderPass.handle);
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_RESOLVEIMAGE);
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+                skipCall |= addCmd(pCB, CMD_RESOLVEIMAGE);
             }
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_SETEVENT);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, stageMask);
+            skipCall |= addCmd(pCB, CMD_SETEVENT);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, stageMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_RESETEVENT);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, stageMask);
+            skipCall |= addCmd(pCB, CMD_RESETEVENT);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, stageMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_WAITEVENTS);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
+            skipCall |= addCmd(pCB, CMD_WAITEVENTS);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_PIPELINEBARRIER);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+            skipCall |= addCmd(pCB, CMD_PIPELINEBARRIER);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdPipelineBarrier()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdPipelineBarrier()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_BEGINQUERY);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+            skipCall |= addCmd(pCB, CMD_BEGINQUERY);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdBeginQuery()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBeginQuery()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_ENDQUERY);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
+            skipCall |= addCmd(pCB, CMD_ENDQUERY);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdEndQuery()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdEndQuery()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_RESETQUERYPOOL);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+            skipCall |= addCmd(pCB, CMD_RESETQUERYPOOL);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdResetQueryPool()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdResetQueryPool()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_WRITETIMESTAMP);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+            skipCall |= addCmd(pCB, CMD_WRITETIMESTAMP);
         } else {
-            report_error_no_cb_begin(cmdBuffer, "vkCmdWriteTimestamp()");
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdWriteTimestamp()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
@@ -2907,79 +3021,87 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkRenderPassContents contents)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
             if (pCB->activeRenderPass) {
-                log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Cannot call vkCmdBeginRenderPass() during an active RenderPass (%#" PRIxLEAST64 "). You must first call vkCmdEndRenderPass().", pCB->activeRenderPass.handle);
             } else {
                 updateCBTracking(cmdBuffer);
-                addCmd(pCB, CMD_BEGINRENDERPASS);
+                skipCall |= addCmd(pCB, CMD_BEGINRENDERPASS);
                 pCB->activeRenderPass = pRenderPassBegin->renderPass;
                 pCB->activeSubpass = 0;
                 pCB->framebuffer = pRenderPassBegin->framebuffer;
                 if (pCB->lastBoundPipeline) {
-                    validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+                    skipCall |= validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
                 }
-                get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
             }
         } else {
-            log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+            skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                     "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCmdBuffer cmdBuffer, VkRenderPassContents contents)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (!pCB->activeRenderPass) {
-            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+            skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                     "Incorrect call to vkCmdNextSubpass() without an active RenderPass.");
         } else {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_NEXTSUBPASS);
+            skipCall |= addCmd(pCB, CMD_NEXTSUBPASS);
             pCB->activeSubpass++;
             if (pCB->lastBoundPipeline) {
-                validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
+                skipCall |= validatePipelineState(pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
             }
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (!pCB->activeRenderPass) {
-            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+            skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                     "Incorrect call to vkCmdEndRenderPass() without an active RenderPass.");
         } else {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_ENDRENDERPASS);
+            skipCall |= addCmd(pCB, CMD_ENDRENDERPASS);
             pCB->activeRenderPass = 0;
             pCB->activeSubpass = 0;
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (!pCB->activeRenderPass) {
-            log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+            skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                     "Incorrect call to vkCmdExecuteCommands() without an active RenderPass.");
         } else {
             updateCBTracking(cmdBuffer);
-            addCmd(pCB, CMD_EXECUTECOMMANDS);
-            get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
+            skipCall |= addCmd(pCB, CMD_EXECUTECOMMANDS);
         }
     }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -3011,34 +3133,38 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char* pMarker)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     if (!deviceExtMap[pDisp].debug_marker_enabled) {
         // TODO : cmdBuffer should be srcObj
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerBegin but extension disabled!");
         return;
     } else if (pCB) {
         updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_DBGMARKERBEGIN);
+        skipCall |= addCmd(pCB, CMD_DBGMARKERBEGIN);
     }
-    debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerBegin(cmdBuffer, pMarker);
+    if (VK_FALSE == skipCall)
+        debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerBegin(cmdBuffer, pMarker);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
+    VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
     if (!deviceExtMap[pDisp].debug_marker_enabled) {
         // TODO : cmdBuffer should be srcObj
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerEnd but extension disabled!");
         return;
     } else if (pCB) {
         updateCBTracking(cmdBuffer);
-        addCmd(pCB, CMD_DBGMARKEREND);
+        skipCall |= addCmd(pCB, CMD_DBGMARKEREND);
     }
-    debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerEnd(cmdBuffer);
+    if (VK_FALSE == skipCall)
+        debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerEnd(cmdBuffer);
 }
 
 //VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObjectType  objType, VkObject object, size_t tagSize, const void* pTag)
