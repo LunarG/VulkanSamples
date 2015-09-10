@@ -1150,7 +1150,7 @@ protected:
     {
         VkCmdBlitTest::SetUp();
 
-        init_test_formats(VK_FORMAT_FEATURE_CONVERSION_BIT);
+        init_test_formats(0);
 
         ASSERT_NE(true, test_formats_.empty());
     }

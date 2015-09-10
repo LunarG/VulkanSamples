@@ -603,8 +603,7 @@ static VkFlags intel_format_get_color_features(const struct intel_gpu *gpu,
             features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
 
         if (features & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
-            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
-                        VK_FORMAT_FEATURE_CONVERSION_BIT;
+            features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
         }
     }
 #undef TEST

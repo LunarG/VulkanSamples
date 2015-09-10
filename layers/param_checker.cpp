@@ -295,7 +295,7 @@ std::string EnumeratorString(VkResult const& enumerator)
 static
 bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
 {
-    VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(VK_FORMAT_FEATURE_CONVERSION_BIT |
+    VkFormatFeatureFlagBits allFlags = (VkFormatFeatureFlagBits)(
         VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT |
         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT |
         VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT |
@@ -325,10 +325,6 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_FORMAT_FEATURE_CONVERSION_BIT)
-    {
-        strings.push_back("VK_FORMAT_FEATURE_CONVERSION_BIT");
-    }
     if(enumerator & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)
     {
         strings.push_back("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT");

@@ -716,14 +716,13 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
         if (features[i].flags == 0) {
             printf("\n\t\tNone");
         } else {
-            printf("%s%s%s%s%s%s%s%s%s%s%s%s%s",
+            printf("%s%s%s%s%s%s%s%s%s%s%s%s",
                ((features[i].flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT"               : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)               ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_BIT"               : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT"            : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)      ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT"      : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)    ? "\n\t\tVK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT"    : ""),
-               ((features[i].flags & VK_FORMAT_FEATURE_CONVERSION_BIT)                  ? "\n\t\tVK_FORMAT_FEATURE_CONVERSION_BIT"                  : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SOURCE_BIT)                 ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SOURCE_BIT"                 : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DESTINATION_BIT"            : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT"        : ""),
