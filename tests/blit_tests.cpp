@@ -1296,7 +1296,7 @@ TEST_F(VkCmdClearColorImageTest, Basic)
                          VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT; // Going to check contents
 
         const VkImageSubresourceRange range =
-            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR);
+            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR_BIT);
         std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         test_clear_color_image(img_info, color, ranges);
@@ -1476,14 +1476,14 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
         img_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
         const VkImageSubresourceRange range =
-            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_DEPTH);
+            vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_DEPTH_BIT);
         std::vector<VkImageSubresourceRange> ranges(&range, &range + 1);
 
         if (it->format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
             it->format == VK_FORMAT_D16_UNORM_S8_UINT ||
             it->format == VK_FORMAT_D24_UNORM_S8_UINT) {
                 const VkImageSubresourceRange range2 =
-                    vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_STENCIL);
+                    vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_STENCIL_BIT);
                 ranges.push_back(range2);
             }
 

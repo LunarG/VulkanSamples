@@ -919,7 +919,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
         color_image_view.format = m_format;
-        color_image_view.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.mipLevels = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;

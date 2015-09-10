@@ -180,7 +180,7 @@ static uint32_t cmd_get_flush_flags(const struct intel_cmd *cmd,
 }
 
 static void cmd_memory_barriers(struct intel_cmd *cmd,
-				                uint32_t flush_flags,
+                                uint32_t flush_flags,
                                 uint32_t memory_barrier_count,
                                 const void* const* memory_barriers)
 {

@@ -1519,7 +1519,7 @@ typedef struct {
 } VkChannelMapping;
 
 typedef struct {
-    VkImageAspect                               aspect;
+    VkImageAspectFlags                          aspectMask;
     uint32_t                                    baseMipLevel;
     uint32_t                                    mipLevels;
     uint32_t                                    baseArrayLayer;

@@ -165,7 +165,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.channels.g = VK_CHANNEL_SWIZZLE_G;
     info.channels.b = VK_CHANNEL_SWIZZLE_B;
     info.channels.a = VK_CHANNEL_SWIZZLE_A;
-    info.subresourceRange.aspect = aspect;
+    info.subresourceRange.aspectMask = aspect;
     info.subresourceRange.baseMipLevel = 0;
     info.subresourceRange.mipLevels = VK_REMAINING_MIP_LEVELS;
     info.subresourceRange.baseArrayLayer = 0;
@@ -841,7 +841,7 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
             continue;
 
         for (j = 0; j < array_size; j++) {
-            if (range->aspect == VK_IMAGE_ASPECT_COLOR) {
+            if (range->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT) {
                 cmd_meta_set_dst_for_img(cmd, img, format,
                         meta->dst.lod, meta->dst.layer, meta);
 
@@ -849,10 +849,18 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
             } else {
                 cmd_meta_set_ds_view(cmd, img, meta->dst.lod,
                         meta->dst.layer, meta);
-                cmd_meta_set_ds_state(cmd, range->aspect,
-                        meta->clear_val[1], meta);
+                if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_DEPTH,
+                            meta->clear_val[1], meta);
 
-                cmd_draw_meta(cmd, meta);
+                    cmd_draw_meta(cmd, meta);
+                }
+                if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_STENCIL,
+                            meta->clear_val[1], meta);
+
+                    cmd_draw_meta(cmd, meta);
+                }
             }
 
             meta->dst.layer++;
@@ -869,14 +877,13 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 
     if (img->layout.aux != INTEL_LAYOUT_AUX_HIZ)
         return;
-    if (range->aspect != VK_IMAGE_ASPECT_DEPTH)
+    if (!(range->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)))
         return;
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
     meta.samples = img->samples;
 
-    meta.ds.aspect = VK_IMAGE_ASPECT_DEPTH;
     meta.ds.op = op;
     meta.ds.optimal = true;
 
@@ -995,7 +1002,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
      */
     for (uint32_t i = 0; i < rectCount; i++) {
            VkImageSubresourceRange range = {
-               VK_IMAGE_ASPECT_COLOR,
+               VK_IMAGE_ASPECT_COLOR_BIT,
                view->mipLevel,
                1,
                pRects[i].offset.z,
@@ -1012,7 +1019,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     VkCmdBuffer                             cmdBuffer,
-    VkImageAspectFlags                      imageAspectMask,
+    VkImageAspectFlags                      aspectMask,
     VkImageLayout                           imageLayout,
     float                                   depth,
     uint32_t                                stencil,
@@ -1032,20 +1039,20 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
      */
     for (uint32_t i = 0; i < rectCount; i++) {
            VkImageSubresourceRange range = {
-               VK_IMAGE_ASPECT_DEPTH,
+               VK_IMAGE_ASPECT_DEPTH_BIT,
                0, /* ds->mipLevel, */
                1,
                pRects[i].offset.z,
                pRects[i].extent.depth
            };
 
-           if (imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+           if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
                        view->img, imageLayout,
                        depth, stencil, 1, &range);
            }
-           if (imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-               range.aspect = VK_IMAGE_ASPECT_STENCIL;
+           if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+               range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
                        view->img, imageLayout,
                        depth, stencil, 1, &range);

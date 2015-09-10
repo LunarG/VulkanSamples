@@ -3859,13 +3859,6 @@ bool PreCreateImageView(
         "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.a, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->subresourceRange.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pCreateInfo->subresourceRange.aspect > VK_IMAGE_ASPECT_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkImageAspect pCreateInfo->subresourceRange.aspect, is an unrecognized enumerator");
-        return false;
-    }
     }
 
     return true;
@@ -6632,13 +6625,7 @@ bool PreCmdClearColorImage(
 
     if(pRanges != nullptr)
     {
-    if(pRanges->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRanges->aspect > VK_IMAGE_ASPECT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorImage parameter, VkImageAspect pRanges->aspect, is an unrecognized enumerator");
-        return false;
-    }
+        /* TODO: How should we validate pRanges->aspectMask */
     }
 
     return true;
@@ -6685,13 +6672,11 @@ bool PreCmdClearDepthStencilImage(
 {
     if(pRanges != nullptr)
     {
-    if(pRanges->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRanges->aspect > VK_IMAGE_ASPECT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilImage parameter, VkImageAspect pRanges->aspect, is an unrecognized enumerator");
-        return false;
-    }
+        /*
+         * TODO: How do we validation pRanges->aspectMask?
+         * Allows values are: VK_IMAGE_ASPECT_DEPTH_BIT and
+         * VK_IMAGE_ASPECT_STENCIL_BIT.
+         */
     }
 
     return true;

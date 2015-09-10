@@ -463,7 +463,7 @@ void VkTest::CreateImageTest()
     viewInfo.subresourceRange.arraySize = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.mipLevels = 1;
-    viewInfo.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 //    VkResult VKAPI vkCreateImageView(
 //        VkDevice                                  device,

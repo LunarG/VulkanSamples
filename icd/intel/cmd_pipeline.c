@@ -2227,6 +2227,7 @@ static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
 
     CMD_ASSERT(cmd, 6, 7.5);
 
+    /* TODO: aspect is now a mask, can you do both? */
     if (meta->ds.aspect == VK_IMAGE_ASPECT_DEPTH) {
         dw[0] = 0;
         dw[1] = 0;
@@ -3739,12 +3740,12 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
         range.arraySize = view->array_size;
 
         if (view->is_rt) {
-            range.aspect = VK_IMAGE_ASPECT_COLOR;
+            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
             cmd_meta_clear_color_image(cmdBuffer, view->img,
                     att->initial_layout, &clear_val->color, 1, &range);
         } else {
-            range.aspect = VK_IMAGE_ASPECT_DEPTH;
+            range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
             cmd_meta_clear_depth_stencil_image(cmdBuffer,
                     view->img, att->initial_layout,
@@ -3752,7 +3753,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
                     1, &range);
 
             if (att->stencil_clear_on_load) {
-                range.aspect = VK_IMAGE_ASPECT_STENCIL;
+                range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
 
                 cmd_meta_clear_depth_stencil_image(cmdBuffer,
                         view->img, att->initial_layout,

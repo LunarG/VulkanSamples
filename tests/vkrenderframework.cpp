@@ -862,7 +862,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.channels.g = VK_CHANNEL_SWIZZLE_G;
     view.channels.b = VK_CHANNEL_SWIZZLE_B;
     view.channels.a = VK_CHANNEL_SWIZZLE_A;
-    view.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view.subresourceRange.baseMipLevel = 0;
     view.subresourceRange.mipLevels = 1;
     view.subresourceRange.baseArrayLayer = 0;
@@ -1357,7 +1357,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
     // whatever we want to do, we do it to the whole buffer
     VkImageSubresourceRange srRange = {};
-    srRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     srRange.baseMipLevel = 0;
     srRange.mipLevels = VK_REMAINING_MIP_LEVELS;
     srRange.baseArrayLayer = 0;
@@ -1389,7 +1389,7 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     if (depthStencilObj)
     {
         VkImageSubresourceRange dsRange = {};
-        dsRange.aspect = VK_IMAGE_ASPECT_DEPTH;
+        dsRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         dsRange.baseMipLevel = 0;
         dsRange.mipLevels = VK_REMAINING_MIP_LEVELS;
         dsRange.baseArrayLayer = 0;
@@ -1444,7 +1444,7 @@ void VkCommandBufferObj::PrepareAttachments()
         VK_MEMORY_INPUT_TRANSFER_BIT;
 
     VkImageSubresourceRange srRange = {};
-    srRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     srRange.baseMipLevel = 0;
     srRange.mipLevels = VK_REMAINING_MIP_LEVELS;
     srRange.baseArrayLayer = 0;
@@ -1614,7 +1614,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
     view_info.image = VK_NULL_HANDLE;
-    view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_DEPTH;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.mipLevels = 1;
     view_info.subresourceRange.baseArrayLayer = 0;

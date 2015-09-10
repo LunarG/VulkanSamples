@@ -592,7 +592,7 @@ static void demo_prepare_buffers(struct demo *demo)
                 .a = VK_CHANNEL_SWIZZLE_A,
             },
             .subresourceRange = {
-                .aspect = VK_IMAGE_ASPECT_COLOR,
+                .aspectMask = VK_IMAGE_ASPECT_COLOR,
                 .baseMipLevel = 0,
                 .mipLevels = 1,
                 .baseArrayLayer = 0,
@@ -647,7 +647,7 @@ static void demo_prepare_depth(struct demo *demo)
         .image.handle = VK_NULL_HANDLE,
         .format = depth_format,
         .subresourceRange = {
-            .aspect = VK_IMAGE_ASPECT_DEPTH,
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH,
             .baseMipLevel = 0,
             .mipLevels = 1,
             .baseArrayLayer = 0,
