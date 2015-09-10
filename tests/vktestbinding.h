@@ -390,6 +390,7 @@ public:
 
     // vkGetImageSubresourceLayout()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
+    VkSubresourceLayout subresource_layout(const VkImageSubresourceCopy &subres) const;
 
     bool transparent() const;
     bool copyable() const { return (format_features_ & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT); }
@@ -418,6 +419,8 @@ public:
     static VkImageCreateInfo create_info();
     static VkImageSubresource subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_layer);
     static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer);
+    static VkImageSubresourceCopy subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
+    static VkImageSubresourceCopy subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
     static VkImageSubresourceRange subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,
                                                      uint32_t base_array_layer, uint32_t array_size);
     static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspect aspect);
@@ -720,6 +723,21 @@ inline VkImageSubresource Image::subresource(VkImageAspect aspect, uint32_t mip_
 inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer)
 {
     return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer);
+}
+
+inline VkImageSubresourceCopy Image::subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
+{
+    VkImageSubresourceCopy subres = {};
+    subres.aspect = aspect;
+    subres.mipLevel = mip_level;
+    subres.arrayLayer = array_layer;
+    subres.arraySize = array_size;
+    return subres;
+}
+
+inline VkImageSubresourceCopy Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
+{
+    return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer, array_size);
 }
 
 inline VkImageSubresourceRange Image::subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,

@@ -70,7 +70,7 @@ private:
     bool walk(Action action, Image &img) const;
     bool walk_region(Action action, const VkBufferImageCopy &region, const VkSubresourceLayout &layout, void *data) const;
 
-    std::vector<uint8_t> pattern_hash(const VkImageSubresource &subres, const VkOffset3D &offset) const;
+    std::vector<uint8_t> pattern_hash(const VkImageSubresourceCopy &subres, const VkOffset3D &offset) const;
 
     static uint32_t hash_salt_;
 
@@ -147,7 +147,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info, const std::vector<VkIm
             for (uint32_t layer = 0; layer < it->arraySize; layer++) {
                 VkBufferImageCopy region = {};
                 region.bufferOffset = offset;
-                region.imageSubresource = Image::subresource(*it, lv, layer);
+                region.imageSubresource = Image::subresource(*it, lv, layer, 1);
                 region.imageExtent = Image::extent(info_.extent, lv);
 
                 regions_.push_back(region);
@@ -269,7 +269,7 @@ bool ImageChecker::walk(Action action, Image &img) const
     return (it == regions_.end());
 }
 
-std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresource &subres, const VkOffset3D &offset) const
+std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresourceCopy &subres, const VkOffset3D &offset) const
 {
 #define HASH_BYTE(val, b) static_cast<uint8_t>((static_cast<uint32_t>(val) >> (b * 8)) & 0xff)
 #define HASH_BYTES(val) HASH_BYTE(val, 0), HASH_BYTE(val, 1), HASH_BYTE(val, 2), HASH_BYTE(val, 3)
@@ -1134,7 +1134,7 @@ TEST_F(VkCmdCopyImageTest, Basic)
         img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
 
         VkImageCopy copy = {};
-        copy.srcSubresource = vk_testing::Image::subresource(VK_IMAGE_ASPECT_COLOR, 0, 0);
+        copy.srcSubresource = vk_testing::Image::subresource(VK_IMAGE_ASPECT_COLOR, 0, 0, 1);
         copy.destSubresource = copy.srcSubresource;
         copy.extent = img_info.extent;
 

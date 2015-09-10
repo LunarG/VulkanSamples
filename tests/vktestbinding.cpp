@@ -603,6 +603,17 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) 
     return data;
 }
 
+VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceCopy &subrescopy) const
+{
+    VkSubresourceLayout data;
+    VkImageSubresource subres = subresource(subrescopy.aspect, subrescopy.mipLevel, subrescopy.arrayLayer);
+    size_t size = sizeof(data);
+    if (!EXPECT(vkGetImageSubresourceLayout(device(), handle(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
+        memset(&data, 0, sizeof(data));
+
+    return data;
+}
+
 bool Image::transparent() const
 {
     return (create_info_.tiling == VK_IMAGE_TILING_LINEAR &&
