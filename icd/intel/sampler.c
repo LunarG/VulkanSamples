@@ -55,14 +55,14 @@ static int translate_tex_mipmap_mode(VkTexMipmapMode mode)
    }
 }
 
-static int translate_tex_addr(VkTexAddress addr)
+static int translate_tex_addr(VkTexAddressMode addr)
 {
    switch (addr) {
-   case VK_TEX_ADDRESS_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
-   case VK_TEX_ADDRESS_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
-   case VK_TEX_ADDRESS_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
-   case VK_TEX_ADDRESS_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
-   case VK_TEX_ADDRESS_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
+   case VK_TEX_ADDRESS_MODE_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
+   case VK_TEX_ADDRESS_MODE_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
+   case VK_TEX_ADDRESS_MODE_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
+   case VK_TEX_ADDRESS_MODE_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
+   case VK_TEX_ADDRESS_MODE_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
    default:
       assert(!"unknown tex address");
       return GEN6_TEXCOORDMODE_WRAP;
@@ -262,9 +262,9 @@ sampler_init(struct intel_sampler *sampler,
    }
 
    /* determine wrap s/t/r */
-   wrap_s = translate_tex_addr(info->addressU);
-   wrap_t = translate_tex_addr(info->addressV);
-   wrap_r = translate_tex_addr(info->addressW);
+   wrap_s = translate_tex_addr(info->addressModeU);
+   wrap_t = translate_tex_addr(info->addressModeV);
+   wrap_r = translate_tex_addr(info->addressModeW);
 
    translate_border_color(info->borderColor, border_color);
 

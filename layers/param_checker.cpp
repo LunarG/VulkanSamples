@@ -4612,25 +4612,25 @@ bool PreCreateSampler(
         "vkCreateSampler parameter, VkTexMipmapMode pCreateInfo->mipMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressU < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressU > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeU < VK_TEX_ADDRESS_BEGIN_RANGE ||
+        pCreateInfo->addressModeU > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressU, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeU, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressV < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressV > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeV < VK_TEX_ADDRESS_BEGIN_RANGE ||
+        pCreateInfo->addressModeV > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressV, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeV, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressW < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressW > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeW < VK_TEX_ADDRESS_BEGIN_RANGE ||
+        pCreateInfo->addressModeW > VK_TEX_ADDRESS_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressW, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||

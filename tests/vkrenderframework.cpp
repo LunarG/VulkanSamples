@@ -897,9 +897,9 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressU = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressModeU = VK_TEX_ADDRESS_MODE_WRAP;
+    samplerCreateInfo.addressModeV = VK_TEX_ADDRESS_MODE_WRAP;
+    samplerCreateInfo.addressModeW = VK_TEX_ADDRESS_MODE_WRAP;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;

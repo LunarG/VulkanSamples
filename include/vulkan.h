@@ -695,16 +695,16 @@ typedef enum {
 } VkTexMipmapMode;
 
 typedef enum {
-    VK_TEX_ADDRESS_WRAP = 0,
-    VK_TEX_ADDRESS_MIRROR = 1,
-    VK_TEX_ADDRESS_CLAMP = 2,
-    VK_TEX_ADDRESS_MIRROR_ONCE = 3,
-    VK_TEX_ADDRESS_CLAMP_BORDER = 4,
-    VK_TEX_ADDRESS_BEGIN_RANGE = VK_TEX_ADDRESS_WRAP,
-    VK_TEX_ADDRESS_END_RANGE = VK_TEX_ADDRESS_CLAMP_BORDER,
-    VK_TEX_ADDRESS_NUM = (VK_TEX_ADDRESS_CLAMP_BORDER - VK_TEX_ADDRESS_WRAP + 1),
+    VK_TEX_ADDRESS_MODE_WRAP = 0,
+    VK_TEX_ADDRESS_MODE_MIRROR = 1,
+    VK_TEX_ADDRESS_MODE_CLAMP = 2,
+    VK_TEX_ADDRESS_MODE_MIRROR_ONCE = 3,
+    VK_TEX_ADDRESS_MODE_CLAMP_BORDER = 4,
+    VK_TEX_ADDRESS_BEGIN_RANGE = VK_TEX_ADDRESS_MODE_WRAP,
+    VK_TEX_ADDRESS_END_RANGE = VK_TEX_ADDRESS_MODE_CLAMP_BORDER,
+    VK_TEX_ADDRESS_NUM = (VK_TEX_ADDRESS_MODE_CLAMP_BORDER - VK_TEX_ADDRESS_MODE_WRAP + 1),
     VK_TEX_ADDRESS_MAX_ENUM = 0x7FFFFFFF
-} VkTexAddress;
+} VkTexAddressMode;
 
 typedef enum {
     VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK = 0,
@@ -1739,9 +1739,9 @@ typedef struct {
     VkTexFilter                                 magFilter;
     VkTexFilter                                 minFilter;
     VkTexMipmapMode                             mipMode;
-    VkTexAddress                                addressU;
-    VkTexAddress                                addressV;
-    VkTexAddress                                addressW;
+    VkTexAddressMode                            addressModeU;
+    VkTexAddressMode                            addressModeV;
+    VkTexAddressMode                            addressModeW;
     float                                       mipLodBias;
     float                                       maxAnisotropy;
     VkBool32                                    compareEnable;
