@@ -2067,6 +2067,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     VkImageType type,
     VkImageTiling tiling,
     VkImageUsageFlags usage,
+    VkImageCreateFlags flags,
     VkImageFormatProperties* pImageFormatProperties,
     VkResult result)
 {
@@ -2116,11 +2117,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageType type,
     VkImageTiling tiling,
     VkImageUsageFlags usage,
+    VkImageCreateFlags flags,
     VkImageFormatProperties* pImageFormatProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, pImageFormatProperties);
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 
-    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, pImageFormatProperties, result);
+    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties, result);
 
     return result;
 }

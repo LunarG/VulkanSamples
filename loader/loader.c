@@ -2872,6 +2872,7 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
         VkImageType                             type,
         VkImageTiling                           tiling,
         VkImageUsageFlags                       usage,
+        VkImageCreateFlags                      flags,
         VkImageFormatProperties*                pImageFormatProperties)
 {
     uint32_t gpu_index;
@@ -2880,7 +2881,7 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
 
     if (icd->GetPhysicalDeviceImageFormatProperties)
         res = icd->GetPhysicalDeviceImageFormatProperties(physicalDevice, format,
-                                type, tiling, usage, pImageFormatProperties);
+                                type, tiling, usage, flags, pImageFormatProperties);
 
     return res;
 }

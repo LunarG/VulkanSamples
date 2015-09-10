@@ -287,12 +287,12 @@ VkResult VKAPI loader_GetPhysicalDeviceFormatProperties(
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo);
 
-VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
-        VkPhysicalDevice                        physicalDevice,
+VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
         VkImageTiling                           tiling,
         VkImageUsageFlags                       usage,
+        VkImageCreateFlags                      flags,
         VkImageFormatProperties*                pImageFormatProperties);
 
 VkResult VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(

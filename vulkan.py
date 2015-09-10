@@ -244,6 +244,7 @@ core = Extension(
              Param("VkImageType", "type"),
              Param("VkImageTiling", "tiling"),
              Param("VkImageUsageFlags", "usage"),
+             Param("VkImageCreateFlags", "flags"),
              Param("VkImageFormatProperties*", "pImageFormatProperties")]),
 
         Proto("PFN_vkVoidFunction", "GetInstanceProcAddr",
