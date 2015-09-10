@@ -949,10 +949,10 @@ static VkBool32 freeMemObjInfo(
             // Now verify that no references to this mem obj remain
             // TODO : Is this check still valid? I don't think so
             //   Even if not, we still need to remove binding from obj
-//            if (0 != pInfo->refCount) {
-//                reportMemReferencesAndCleanUp(pInfo);
-//                result = VK_FALSE;
-//            }
+            if (0 != pInfo->refCount) {
+                reportMemReferencesAndCleanUp(pInfo);
+                result = VK_FALSE;
+            }
             // Delete mem obj info
             deleteMemObjInfo(object, mem.handle);
         }
@@ -1626,6 +1626,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = bufferMap.find(buffer.handle);
     if (item != bufferMap.end()) {
+        clear_object_binding(device, buffer.handle, VK_OBJECT_TYPE_BUFFER);
         bufferMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1637,6 +1638,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = imageMap.find(image.handle);
     if (item != imageMap.end()) {
+        clear_object_binding(device, image.handle, VK_OBJECT_TYPE_IMAGE);
         imageMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
