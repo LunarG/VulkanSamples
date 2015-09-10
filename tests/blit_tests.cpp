@@ -1150,7 +1150,7 @@ protected:
     {
         VkCmdBlitTest::SetUp();
 
-        init_test_formats(0);
+        init_test_formats(VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 
         ASSERT_NE(true, test_formats_.empty());
     }
