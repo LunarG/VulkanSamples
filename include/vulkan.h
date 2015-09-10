@@ -865,6 +865,16 @@ typedef enum {
 typedef VkFlags VkImageUsageFlags;
 
 typedef enum {
+    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000001,
+    VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
+    VK_IMAGE_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
+    VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000008,
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
+} VkImageCreateFlagBits;
+typedef VkFlags VkImageCreateFlags;
+
+typedef enum {
     VK_SAMPLE_COUNT_1 = 0x00000001,
     VK_SAMPLE_COUNT_2 = 0x00000002,
     VK_SAMPLE_COUNT_4 = 0x00000004,
@@ -962,16 +972,6 @@ typedef enum {
     VK_BUFFER_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
 } VkBufferCreateFlagBits;
 typedef VkFlags VkBufferCreateFlags;
-
-typedef enum {
-    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000001,
-    VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
-    VK_IMAGE_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
-    VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000008,
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
-} VkImageCreateFlagBits;
-typedef VkFlags VkImageCreateFlags;
 
 typedef enum {
     VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
@@ -1195,8 +1195,17 @@ typedef struct {
 } VkFormatProperties;
 
 typedef struct {
+    int32_t                                     width;
+    int32_t                                     height;
+    int32_t                                     depth;
+} VkExtent3D;
+
+typedef struct {
+    VkExtent3D                                  maxExtent;
+    uint32_t                                    maxMipLevels;
+    uint32_t                                    maxArraySize;
     VkSampleCountFlags                          sampleCounts;
-    uint64_t                                    maxResourceSize;
+    VkDeviceSize                                maxResourceSize;
 } VkImageFormatProperties;
 
 typedef struct {
@@ -1389,12 +1398,6 @@ typedef struct {
     VkDeviceSize                                alignment;
     uint32_t                                    memoryTypeBits;
 } VkMemoryRequirements;
-
-typedef struct {
-    int32_t                                     width;
-    int32_t                                     height;
-    int32_t                                     depth;
-} VkExtent3D;
 
 typedef struct {
     VkImageAspect                               aspect;
