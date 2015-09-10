@@ -699,7 +699,7 @@ validate_interface_between_stages(VkDevice dev,
         auto a_first = a_at_end ? 0 : a_it->first;
         auto b_first = b_at_end ? 0 : b_it->first;
 
-        if (b_at_end || a_first < b_first) {
+        if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
             log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name);
             a_it++;
