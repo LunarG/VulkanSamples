@@ -623,7 +623,7 @@ static VkFlags intel_format_get_ds_features(const struct intel_gpu *gpu,
         features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;;
         break;
     case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM:
+    case VK_FORMAT_D24_UNORM_X8:
     case VK_FORMAT_D32_SFLOAT:
         features = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
         break;

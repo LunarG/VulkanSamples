@@ -259,7 +259,7 @@ static const char *vk_format_string(VkFormat fmt)
     STR(R11G11B10_UFLOAT);
     STR(R9G9B9E5_UFLOAT);
     STR(D16_UNORM);
-    STR(D24_UNORM);
+    STR(D24_UNORM_X8);
     STR(D32_SFLOAT);
     STR(S8_UINT);
     STR(D16_UNORM_S8_UINT);

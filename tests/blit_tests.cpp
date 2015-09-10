@@ -396,7 +396,7 @@ size_t get_format_size(VkFormat format)
         { VK_FORMAT_R11G11B10_UFLOAT,      4,  3 },
         { VK_FORMAT_R9G9B9E5_UFLOAT,       4,  3 },
         { VK_FORMAT_D16_UNORM,             2,  1 },
-        { VK_FORMAT_D24_UNORM,             3,  1 },
+        { VK_FORMAT_D24_UNORM_X8,          3,  1 },
         { VK_FORMAT_D32_SFLOAT,            4,  1 },
         { VK_FORMAT_S8_UINT,               1,  1 },
         { VK_FORMAT_D16_UNORM_S8_UINT,     3,  2 },
@@ -1462,7 +1462,7 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
 
         // known driver issues
         if (it->format == VK_FORMAT_S8_UINT ||
-            it->format == VK_FORMAT_D24_UNORM ||
+            it->format == VK_FORMAT_D24_UNORM_X8 ||
             it->format == VK_FORMAT_D16_UNORM_S8_UINT ||
             it->format == VK_FORMAT_D24_UNORM_S8_UINT)
             continue;

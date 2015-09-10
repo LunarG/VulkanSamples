@@ -39,7 +39,7 @@ static inline bool intel_format_has_depth(const struct intel_gpu *gpu,
 
     switch (format) {
     case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM:
+    case VK_FORMAT_D24_UNORM_X8:
     case VK_FORMAT_D32_SFLOAT:
     /* VK_FORMAT_D16_UNORM_S8_UINT is unsupported */
     case VK_FORMAT_D24_UNORM_S8_UINT:

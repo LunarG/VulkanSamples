@@ -123,7 +123,7 @@ static const struct icd_format_info {
     [VK_FORMAT_R11G11B10_UFLOAT]     = { 4,  3 },
     [VK_FORMAT_R9G9B9E5_UFLOAT]      = { 4,  3 },
     [VK_FORMAT_D16_UNORM]            = { 2,  1 },
-    [VK_FORMAT_D24_UNORM]            = { 3,  1 },
+    [VK_FORMAT_D24_UNORM_X8]         = { 3,  1 },
     [VK_FORMAT_D32_SFLOAT]           = { 4,  1 },
     [VK_FORMAT_S8_UINT]              = { 1,  1 },
     [VK_FORMAT_D16_UNORM_S8_UINT]    = { 3,  2 },
@@ -211,7 +211,7 @@ bool icd_format_is_ds(VkFormat format)
 
     switch (format) {
     case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM:
+    case VK_FORMAT_D24_UNORM_X8:
     case VK_FORMAT_D32_SFLOAT:
     case VK_FORMAT_S8_UINT:
     case VK_FORMAT_D16_UNORM_S8_UINT:
