@@ -993,7 +993,7 @@ bool ValidateEnumerator(VkBufferCreateFlagBits const& enumerator)
 {
     VkBufferCreateFlagBits allFlags = (VkBufferCreateFlagBits)(VK_BUFFER_CREATE_SPARSE_ALIASED_BIT |
         VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT |
-        VK_BUFFER_CREATE_SPARSE_BIT);
+        VK_BUFFER_CREATE_SPARSE_BINDING_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1019,9 +1019,9 @@ std::string EnumeratorString(VkBufferCreateFlagBits const& enumerator)
     {
         strings.push_back("VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT");
     }
-    if(enumerator & VK_BUFFER_CREATE_SPARSE_BIT)
+    if(enumerator & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)
     {
-        strings.push_back("VK_BUFFER_CREATE_SPARSE_BIT");
+        strings.push_back("VK_BUFFER_CREATE_SPARSE_BINDING_BIT");
     }
 
     std::string enumeratorString;
@@ -1046,7 +1046,7 @@ bool ValidateEnumerator(VkImageCreateFlagBits const& enumerator)
         VK_IMAGE_CREATE_SPARSE_ALIASED_BIT |
         VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
         VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT |
-        VK_IMAGE_CREATE_SPARSE_BIT);
+        VK_IMAGE_CREATE_SPARSE_BINDING_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1084,9 +1084,9 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
     {
         strings.push_back("VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT");
     }
-    if(enumerator & VK_IMAGE_CREATE_SPARSE_BIT)
+    if(enumerator & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)
     {
-        strings.push_back("VK_IMAGE_CREATE_SPARSE_BIT");
+        strings.push_back("VK_IMAGE_CREATE_SPARSE_BINDING_BIT");
     }
 
     std::string enumeratorString;
