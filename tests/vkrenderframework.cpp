@@ -1604,7 +1604,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.arraySize = 1;
     image_info.samples = 1;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.queueFamilyCount = 0;

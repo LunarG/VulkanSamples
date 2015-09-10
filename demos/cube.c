@@ -826,7 +826,7 @@ static void demo_prepare_depth(struct demo *demo)
         .arraySize = 1,
         .samples = 1,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         .flags = 0,
     };
     VkMemoryAllocInfo mem_alloc = {

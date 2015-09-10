@@ -400,7 +400,7 @@ layout_init_alignments(struct intel_layout *layout,
       /* this happens to be the case */
       layout->align_i = layout->block_width;
       layout->align_j = layout->block_height;
-   } else if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   } else if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) {
          switch (layout->format) {
          case VK_FORMAT_D16_UNORM:
@@ -492,7 +492,7 @@ layout_get_valid_tilings(const struct intel_layout *layout,
     *
     *     "W-Major Tile Format is used for separate stencil."
     */
-   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       switch (format) {
       case VK_FORMAT_S8_UINT:
          valid_tilings &= LAYOUT_TILING_W;
@@ -602,7 +602,7 @@ layout_init_walk_gen7(struct intel_layout *layout,
     *
     * See "Multisampled Surface Storage Format" field of SURFACE_STATE.
     */
-   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       /*
        * From the Ivy Bridge PRM, volume 1 part 1, page 111:
        *
@@ -689,7 +689,7 @@ layout_init_size_and_format(struct intel_layout *layout,
     *
     * GEN7+ requires separate stencil buffers.
     */
-   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
          require_separate_stencil = true;
       else
@@ -789,7 +789,7 @@ layout_want_hiz(const struct intel_layout *layout,
    if (intel_debug & INTEL_DEBUG_NOHIZ)
        return false;
 
-   if (!(info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT))
+   if (!(info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
       return false;
 
    if (!intel_format_has_depth(params->gpu, info->format))

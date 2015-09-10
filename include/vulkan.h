@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 162, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 164, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -858,7 +858,7 @@ typedef enum {
     VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
     VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT = 0x00000020,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
     VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
     VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
 } VkImageUsageFlagBits;

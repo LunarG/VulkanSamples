@@ -191,7 +191,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     }
 
     // Image usage flags
-    //        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                       = 0x00000008,
+    //        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT                       = 0x00000008,
     //typedef enum VkImageUsageFlags_
     //{
     //    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = 0x00000001,   // Can be used as a source of transfer operations
@@ -199,7 +199,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     //    VK_IMAGE_USAGE_SAMPLED_BIT                              = 0x00000004,   // Can be sampled from (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
     //    VK_IMAGE_USAGE_STORAGE_BIT                              = 0x00000008,   // Can be used as storage image (STORAGE_IMAGE descriptor type)
     //    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000010,   // Can be used as framebuffer color attachment
-    //    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = 0x00000020,   // Can be used as framebuffer depth/stencil attachment
+    //    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT                        = 0x00000020,   // Can be used as framebuffer depth/stencil attachment
     //    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = 0x00000040,   // Image data not needed outside of rendering
     //    } VkImageUsageFlags;
     imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |

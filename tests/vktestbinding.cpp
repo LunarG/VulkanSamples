@@ -608,7 +608,7 @@ bool Image::transparent() const
     return (create_info_.tiling == VK_IMAGE_TILING_LINEAR &&
             create_info_.samples == 1 &&
             !(create_info_.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)));
+                                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)));
 }
 
 NON_DISPATCHABLE_HANDLE_DTOR(ImageView, vkDestroyImageView)

@@ -1233,7 +1233,7 @@ void intel_img_view_init(struct intel_dev *dev,
 
     view->img = img;
 
-    if (!(img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+    if (!(img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
             state_swizzles = info->channels;
             view->shader_swizzles.r = VK_CHANNEL_SWIZZLE_R;
@@ -1332,7 +1332,7 @@ void intel_att_view_init(struct intel_dev *dev,
                             info->subresourceRange.baseArraySlice,
                             info->subresourceRange.arraySize);
 
-    if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+    if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         att_view_init_for_ds(att_view, dev->gpu, img, view_type, img->layout.format,
                              info->subresourceRange.baseMipLevel,
                              info->subresourceRange.baseArraySlice,

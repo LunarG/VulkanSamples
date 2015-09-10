@@ -396,7 +396,7 @@ static
 bool ValidateEnumerator(VkImageUsageFlagBits const& enumerator)
 {
     VkImageUsageFlagBits allFlags = (VkImageUsageFlagBits)(VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-        VK_IMAGE_USAGE_DEPTH_STENCIL_BIT |
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_STORAGE_BIT |
         VK_IMAGE_USAGE_SAMPLED_BIT |
@@ -424,9 +424,9 @@ std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
     {
         strings.push_back("VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT");
     }
-    if(enumerator & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)
+    if(enumerator & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
     {
-        strings.push_back("VK_IMAGE_USAGE_DEPTH_STENCIL_BIT");
+        strings.push_back("VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT");
     }
     if(enumerator & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
     {

@@ -1052,7 +1052,7 @@ static VkBool32 set_mem_binding(
                 if (VK_OBJECT_TYPE_IMAGE == type) {
                     VkImageCreateInfo ici = pObjBindInfo->create_info.image;
                     if (ici.usage & (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                     VK_IMAGE_USAGE_DEPTH_STENCIL_BIT)) {
+                                     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
                         // TODO::  More memory state transition stuff.
                     }
                 }
@@ -2195,7 +2195,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
         // Validate that img has correct usage flags set
         validate_image_usage_flags(
                     device, pCreateInfo->image,
-                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }

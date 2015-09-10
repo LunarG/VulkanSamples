@@ -97,7 +97,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
         region.imageSubresource.arraySlice = 0;
         region.imageExtent = Image::extent(info_.extent, lv);
 
-        if (info_.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+        if (info_.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             if (info_.format != VK_FORMAT_S8_UINT) {
                 region.imageSubresource.aspect = VK_IMAGE_ASPECT_DEPTH;
                 regions_.push_back(region);
@@ -1473,7 +1473,7 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+        img_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_DEPTH);

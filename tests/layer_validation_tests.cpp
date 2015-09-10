@@ -880,7 +880,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
         .arraySize = 1,
         .samples = 1,
         .tiling = VK_IMAGE_TILING_LINEAR,
-        .usage = 0, // Not setting VK_IMAGE_USAGE_DEPTH_STENCIL_BIT
+        .usage = 0, // Not setting VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
         .flags = 0,
     };
 
