@@ -1042,7 +1042,6 @@ static
 bool ValidateEnumerator(VkImageCreateFlagBits const& enumerator)
 {
     VkImageCreateFlagBits allFlags = (VkImageCreateFlagBits)(VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT |
-        VK_IMAGE_CREATE_INVARIANT_DATA_BIT |
         VK_IMAGE_CREATE_SPARSE_ALIASED_BIT |
         VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT |
         VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT |
@@ -1067,10 +1066,6 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
     if(enumerator & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
     {
         strings.push_back("VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT");
-    }
-    if(enumerator & VK_IMAGE_CREATE_INVARIANT_DATA_BIT)
-    {
-        strings.push_back("VK_IMAGE_CREATE_INVARIANT_DATA_BIT");
     }
     if(enumerator & VK_IMAGE_CREATE_SPARSE_ALIASED_BIT)
     {
