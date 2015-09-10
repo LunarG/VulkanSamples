@@ -1226,8 +1226,8 @@ void intel_img_view_init(struct intel_dev *dev,
         mip_levels = img->mip_levels - info->subresourceRange.baseMipLevel;
 
     array_size = info->subresourceRange.arraySize;
-    if (array_size > img->array_size - info->subresourceRange.baseArraySlice)
-        array_size = img->array_size - info->subresourceRange.baseArraySlice;
+    if (array_size > img->array_size - info->subresourceRange.baseArrayLayer)
+        array_size = img->array_size - info->subresourceRange.baseArrayLayer;
 
     view->obj.destroy = img_view_destroy;
 
@@ -1261,13 +1261,13 @@ void intel_img_view_init(struct intel_dev *dev,
         if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7)) {
             surface_state_tex_gen7(dev->gpu, img, info->viewType, info->format,
                     info->subresourceRange.baseMipLevel, mip_levels,
-                    info->subresourceRange.baseArraySlice, array_size,
+                    info->subresourceRange.baseArrayLayer, array_size,
                     state_swizzles, false, view->cmd);
             view->cmd_len = 8;
         } else {
             surface_state_tex_gen6(dev->gpu, img, info->viewType, info->format,
                     info->subresourceRange.baseMipLevel, mip_levels,
-                    info->subresourceRange.baseArraySlice, array_size,
+                    info->subresourceRange.baseArrayLayer, array_size,
                     false, view->cmd);
             view->cmd_len = 6;
         }
@@ -1282,7 +1282,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     struct intel_img_view *view;
 
     if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
-        info->subresourceRange.baseArraySlice >= img->array_size ||
+        info->subresourceRange.baseArrayLayer >= img->array_size ||
         !info->subresourceRange.mipLevels ||
         !info->subresourceRange.arraySize) {
         /* TODOVV: Move test to validation layer */
@@ -1320,27 +1320,27 @@ void intel_att_view_init(struct intel_dev *dev,
     att_view->img = img;
 
     att_view->mipLevel = info->subresourceRange.baseMipLevel;
-    att_view->baseArraySlice = info->subresourceRange.baseArraySlice;
+    att_view->baseArrayLayer = info->subresourceRange.baseArrayLayer;
     att_view->array_size = info->subresourceRange.arraySize;
 
     view_type = img_type_to_view_type(img->type,
-                                      info->subresourceRange.baseArraySlice,
+                                      info->subresourceRange.baseArrayLayer,
                                       info->subresourceRange.arraySize);
 
     att_view_init_for_input(att_view, dev->gpu, img, view_type, info->format,
                             info->subresourceRange.baseMipLevel,
-                            info->subresourceRange.baseArraySlice,
+                            info->subresourceRange.baseArrayLayer,
                             info->subresourceRange.arraySize);
 
     if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         att_view_init_for_ds(att_view, dev->gpu, img, view_type, img->layout.format,
                              info->subresourceRange.baseMipLevel,
-                             info->subresourceRange.baseArraySlice,
+                             info->subresourceRange.baseArrayLayer,
                              info->subresourceRange.arraySize);
     } else {
         att_view_init_for_rt(att_view, dev->gpu, img, view_type, info->format,
                              info->subresourceRange.baseMipLevel,
-                             info->subresourceRange.baseArraySlice,
+                             info->subresourceRange.baseArrayLayer,
                              info->subresourceRange.arraySize);
     }
 }

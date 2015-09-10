@@ -922,7 +922,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
         color_image_view.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.mipLevels = 1;
-        color_image_view.subresourceRange.baseArraySlice = 0;
+        color_image_view.subresourceRange.baseArrayLayer = 0;
         color_image_view.subresourceRange.arraySize = 1;
 
         m_buffers[i].image = swapchainImages[i];

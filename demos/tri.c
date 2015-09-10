@@ -595,7 +595,7 @@ static void demo_prepare_buffers(struct demo *demo)
                 .aspect = VK_IMAGE_ASPECT_COLOR,
                 .baseMipLevel = 0,
                 .mipLevels = 1,
-                .baseArraySlice = 0,
+                .baseArrayLayer = 0,
                 .arraySize = 1
             },
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
@@ -650,7 +650,7 @@ static void demo_prepare_depth(struct demo *demo)
             .aspect = VK_IMAGE_ASPECT_DEPTH,
             .baseMipLevel = 0,
             .mipLevels = 1,
-            .baseArraySlice = 0,
+            .baseArrayLayer = 0,
             .arraySize = 1
         },
         .flags = 0,
@@ -759,7 +759,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         const VkImageSubresource subres = {
             .aspect = VK_IMAGE_ASPECT_COLOR,
             .mipLevel = 0,
-            .arraySlice = 0,
+            .arrayLayer = 0,
         };
         VkSubresourceLayout layout;
         void *data;

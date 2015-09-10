@@ -128,7 +128,7 @@ VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 
 #define VK_LOD_CLAMP_NONE                 1000.0f
 #define VK_REMAINING_MIP_LEVELS           (~0U)
-#define VK_REMAINING_ARRAY_SLICES         (~0U)
+#define VK_REMAINING_ARRAY_LAYERS         (~0U)
 #define VK_WHOLE_SIZE                     (~0ULL)
 #define VK_ATTACHMENT_UNUSED              (~0U)
 #define VK_TRUE                           1
@@ -1423,7 +1423,7 @@ typedef struct {
 typedef struct {
     VkImageAspect                               aspect;
     uint32_t                                    mipLevel;
-    uint32_t                                    arraySlice;
+    uint32_t                                    arrayLayer;
 } VkImageSubresource;
 
 typedef struct {
@@ -1523,7 +1523,7 @@ typedef struct {
     VkImageAspect                               aspect;
     uint32_t                                    baseMipLevel;
     uint32_t                                    mipLevels;
-    uint32_t                                    baseArraySlice;
+    uint32_t                                    baseArrayLayer;
     uint32_t                                    arraySize;
 } VkImageSubresourceRange;
 

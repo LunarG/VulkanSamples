@@ -803,13 +803,13 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
 
     VkImageCopy copy_region = {};
     copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-    copy_region.srcSubresource.arraySlice = 0;
+    copy_region.srcSubresource.arrayLayer = 0;
     copy_region.srcSubresource.mipLevel = 0;
     copy_region.srcOffset.x = 0;
     copy_region.srcOffset.y = 0;
     copy_region.srcOffset.z = 0;
     copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-    copy_region.destSubresource.arraySlice = 0;
+    copy_region.destSubresource.arrayLayer = 0;
     copy_region.destSubresource.mipLevel = 0;
     copy_region.destOffset.x = 0;
     copy_region.destOffset.y = 0;
@@ -865,7 +865,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
     view.subresourceRange.baseMipLevel = 0;
     view.subresourceRange.mipLevels = 1;
-    view.subresourceRange.baseArraySlice = 0;
+    view.subresourceRange.baseArrayLayer = 0;
     view.subresourceRange.arraySize = 1;
 
     /* create image */
@@ -1360,8 +1360,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     srRange.aspect = VK_IMAGE_ASPECT_COLOR;
     srRange.baseMipLevel = 0;
     srRange.mipLevels = VK_REMAINING_MIP_LEVELS;
-    srRange.baseArraySlice = 0;
-    srRange.arraySize = VK_REMAINING_ARRAY_SLICES;
+    srRange.baseArrayLayer = 0;
+    srRange.arraySize = VK_REMAINING_ARRAY_LAYERS;
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1392,8 +1392,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
         dsRange.aspect = VK_IMAGE_ASPECT_DEPTH;
         dsRange.baseMipLevel = 0;
         dsRange.mipLevels = VK_REMAINING_MIP_LEVELS;
-        dsRange.baseArraySlice = 0;
-        dsRange.arraySize = VK_REMAINING_ARRAY_SLICES;
+        dsRange.baseArrayLayer = 0;
+        dsRange.arraySize = VK_REMAINING_ARRAY_LAYERS;
 
         // prepare the depth buffer for clear
 
@@ -1447,8 +1447,8 @@ void VkCommandBufferObj::PrepareAttachments()
     srRange.aspect = VK_IMAGE_ASPECT_COLOR;
     srRange.baseMipLevel = 0;
     srRange.mipLevels = VK_REMAINING_MIP_LEVELS;
-    srRange.baseArraySlice = 0;
-    srRange.arraySize = VK_REMAINING_ARRAY_SLICES;
+    srRange.baseArrayLayer = 0;
+    srRange.arraySize = VK_REMAINING_ARRAY_LAYERS;
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1617,7 +1617,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_DEPTH;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.mipLevels = 1;
-    view_info.subresourceRange.baseArraySlice = 0;
+    view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.arraySize = 1;
     view_info.flags = 0;
     view_info.format = m_depth_stencil_fmt;

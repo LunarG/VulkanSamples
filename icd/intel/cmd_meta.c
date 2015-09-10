@@ -168,8 +168,8 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     info.subresourceRange.aspect = aspect;
     info.subresourceRange.baseMipLevel = 0;
     info.subresourceRange.mipLevels = VK_REMAINING_MIP_LEVELS;
-    info.subresourceRange.baseArraySlice = 0;
-    info.subresourceRange.arraySize = VK_REMAINING_ARRAY_SLICES;
+    info.subresourceRange.baseArrayLayer = 0;
+    info.subresourceRange.arraySize = VK_REMAINING_ARRAY_LAYERS;
 
     intel_img_view_init(cmd->dev, &info, view);
 
@@ -264,7 +264,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
     info.format = format;
     info.subresourceRange.baseMipLevel = lod;
     info.subresourceRange.mipLevels = 1;
-    info.subresourceRange.baseArraySlice = layer;
+    info.subresourceRange.baseArrayLayer = layer;
     info.subresourceRange.arraySize = 1;
 
     intel_att_view_init(cmd->dev, &info, view);
@@ -326,7 +326,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
     info.image.handle = (uint64_t)img;
     info.subresourceRange.baseMipLevel = lod;
     info.subresourceRange.mipLevels = 1;
-    info.subresourceRange.baseArraySlice = layer;
+    info.subresourceRange.baseArrayLayer = layer;
     info.subresourceRange.arraySize = 1;
 
     intel_att_view_init(cmd->dev, &info, &meta->ds.view);
@@ -521,13 +521,13 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
                 (region->extent.depth > 1));
 
         meta.src.lod = region->srcSubresource.mipLevel;
-        meta.src.layer = region->srcSubresource.arraySlice +
+        meta.src.layer = region->srcSubresource.arrayLayer +
             region->srcOffset.z;
         meta.src.x = region->srcOffset.x;
         meta.src.y = region->srcOffset.y;
 
         meta.dst.lod = region->destSubresource.mipLevel;
-        meta.dst.layer = region->destSubresource.arraySlice +
+        meta.dst.layer = region->destSubresource.arrayLayer +
                 region->destOffset.z;
         meta.dst.x = region->destOffset.x;
         meta.dst.y = region->destOffset.y;
@@ -610,7 +610,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
         meta.src.x = region->bufferOffset / icd_format_get_size(format);
 
         meta.dst.lod = region->imageSubresource.mipLevel;
-        meta.dst.layer = region->imageSubresource.arraySlice +
+        meta.dst.layer = region->imageSubresource.arrayLayer +
             region->imageOffset.z;
         meta.dst.x = region->imageOffset.x / block_width;
         meta.dst.y = region->imageOffset.y / block_width;
@@ -701,7 +701,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
         uint32_t j;
 
         meta.src.lod = region->imageSubresource.mipLevel;
-        meta.src.layer = region->imageSubresource.arraySlice +
+        meta.src.layer = region->imageSubresource.arrayLayer +
             region->imageOffset.z;
         meta.src.x = region->imageOffset.x / block_width;
         meta.src.y = region->imageOffset.y / block_width;
@@ -817,20 +817,20 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
     uint32_t i, j;
 
     if (range->baseMipLevel >= img->mip_levels ||
-        range->baseArraySlice >= img->array_size)
+        range->baseArrayLayer >= img->array_size)
         return;
 
     mip_levels = img->mip_levels - range->baseMipLevel;
     if (mip_levels > range->mipLevels)
         mip_levels = range->mipLevels;
 
-    array_size = img->array_size - range->baseArraySlice;
+    array_size = img->array_size - range->baseArrayLayer;
     if (array_size > range->arraySize)
         array_size = range->arraySize;
 
     for (i = 0; i < mip_levels; i++) {
         meta->dst.lod = range->baseMipLevel + i;
-        meta->dst.layer = range->baseArraySlice;
+        meta->dst.layer = range->baseArrayLayer;
 
         /* TODO INTEL_CMD_META_DS_HIZ_CLEAR requires 8x4 aligned rectangle */
         meta->width = u_minify(img->layout.width0, meta->dst.lod);
@@ -1101,16 +1101,16 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
 
     for (i = 0; i < regionCount; i++) {
         const VkImageResolve *region = &pRegions[i];
-        int arraySlice;
+        int arrayLayer;
 
-        for(arraySlice = 0; arraySlice < region->extent.depth; arraySlice++) {
+        for(arrayLayer = 0; arrayLayer < region->extent.depth; arrayLayer++) {
             meta.src.lod = region->srcSubresource.mipLevel;
-            meta.src.layer = region->srcSubresource.arraySlice + arraySlice;
+            meta.src.layer = region->srcSubresource.arrayLayer + arrayLayer;
             meta.src.x = region->srcOffset.x;
             meta.src.y = region->srcOffset.y;
 
             meta.dst.lod = region->destSubresource.mipLevel;
-            meta.dst.layer = region->destSubresource.arraySlice + arraySlice;
+            meta.dst.layer = region->destSubresource.arrayLayer + arrayLayer;
             meta.dst.x = region->destOffset.x;
             meta.dst.y = region->destOffset.y;
 

@@ -892,7 +892,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
         .pNext = NULL,
         .image = dsi,
         .mipLevel = 0,
-        .baseArraySlice = 0,
+        .baseArrayLayer = 0,
         .arraySize = 1,
         .flags = 0,
     };

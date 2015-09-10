@@ -179,7 +179,7 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     unsigned x, y;
 
     intel_layout_get_slice_pos(&img->layout, pSubresource->mipLevel,
-                               pSubresource->arraySlice, &x, &y);
+                               pSubresource->arrayLayer, &x, &y);
     intel_layout_pos_to_mem(&img->layout, x, y, &x, &y);
 
     pLayout->offset = intel_layout_mem_to_linear(&img->layout, x, y);

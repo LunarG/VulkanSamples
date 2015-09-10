@@ -381,14 +381,14 @@ void VkTest::CreateImageTest()
 //    {
 //        VkImageAspect                        aspect;
 //        uint32_t                                mipLevel;
-//        uint32_t                                arraySlice;
+//        uint32_t                                arrayLayer;
 //    } VkImageSubresource;
 
 
     if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         VkImageSubresource subresource = {};
         subresource.aspect = VK_IMAGE_ASPECT_COLOR;
-        subresource.arraySlice = 0;
+        subresource.arrayLayer = 0;
 
         _w = w;
         _h = h;
@@ -459,7 +459,7 @@ void VkTest::CreateImageTest()
     viewInfo.channels.b = VK_CHANNEL_SWIZZLE_B;
     viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
-    viewInfo.subresourceRange.baseArraySlice = 0;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.arraySize = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.mipLevels = 1;

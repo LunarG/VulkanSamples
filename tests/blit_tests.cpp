@@ -94,7 +94,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
 
         region.bufferOffset = offset;
         region.imageSubresource.mipLevel = lv;
-        region.imageSubresource.arraySlice = 0;
+        region.imageSubresource.arrayLayer = 0;
         region.imageExtent = Image::extent(info_.extent, lv);
 
         if (info_.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -130,7 +130,7 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
                 VkBufferImageCopy region = regions_[i];
 
                 region.bufferOffset += slice_pitch * slice;
-                region.imageSubresource.arraySlice = slice;
+                region.imageSubresource.arrayLayer = slice;
                 regions_.push_back(region);
             }
         }
@@ -144,10 +144,10 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info, const std::vector<VkIm
     for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
          it != ranges.end(); it++) {
         for (uint32_t lv = 0; lv < it->mipLevels; lv++) {
-            for (uint32_t slice = 0; slice < it->arraySize; slice++) {
+            for (uint32_t layer = 0; layer < it->arraySize; layer++) {
                 VkBufferImageCopy region = {};
                 region.bufferOffset = offset;
-                region.imageSubresource = Image::subresource(*it, lv, slice);
+                region.imageSubresource = Image::subresource(*it, lv, layer);
                 region.imageExtent = Image::extent(info_.extent, lv);
 
                 regions_.push_back(region);
@@ -276,7 +276,7 @@ std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresource &subres
     const unsigned char input[] = {
         HASH_BYTES(hash_salt_),
         HASH_BYTES(subres.mipLevel),
-        HASH_BYTES(subres.arraySlice),
+        HASH_BYTES(subres.arrayLayer),
         HASH_BYTES(offset.x),
         HASH_BYTES(offset.y),
         HASH_BYTES(offset.z),

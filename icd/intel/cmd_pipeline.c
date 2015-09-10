@@ -3735,7 +3735,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
         view = fb->views[i];
         range.baseMipLevel = view->mipLevel;
         range.mipLevels = 1;
-        range.baseArraySlice = view->baseArraySlice;
+        range.baseArrayLayer = view->baseArrayLayer;
         range.arraySize = view->array_size;
 
         if (view->is_rt) {

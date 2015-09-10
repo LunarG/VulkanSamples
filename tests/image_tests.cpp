@@ -285,7 +285,7 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     viewInfo.channels.b = VK_CHANNEL_SWIZZLE_B;
     viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
-    viewInfo.subresourceRange.baseArraySlice = 0;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.arraySize = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.mipLevels = 1;

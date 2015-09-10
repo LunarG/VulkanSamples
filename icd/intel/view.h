@@ -57,7 +57,7 @@ struct intel_att_view {
     struct intel_img *img;
 
     uint32_t mipLevel;
-    uint32_t baseArraySlice;
+    uint32_t baseArrayLayer;
     uint32_t array_size;
 
     /* SURFACE_STATE for readback */

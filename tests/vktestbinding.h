@@ -416,10 +416,10 @@ public:
     }
 
     static VkImageCreateInfo create_info();
-    static VkImageSubresource subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_slice);
-    static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_slice);
+    static VkImageSubresource subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_layer);
+    static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer);
     static VkImageSubresourceRange subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,
-                                                                                  uint32_t base_array_slice, uint32_t array_size);
+                                                     uint32_t base_array_layer, uint32_t array_size);
     static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspect aspect);
     static VkImageSubresourceRange subresource_range(const VkImageSubresource &subres);
 
@@ -708,28 +708,28 @@ inline VkImageCreateInfo Image::create_info()
     return info;
 }
 
-inline VkImageSubresource Image::subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_slice)
+inline VkImageSubresource Image::subresource(VkImageAspect aspect, uint32_t mip_level, uint32_t array_layer)
 {
     VkImageSubresource subres = {};
     subres.aspect = aspect;
     subres.mipLevel = mip_level;
-    subres.arraySlice = array_slice;
+    subres.arrayLayer = array_layer;
     return subres;
 }
 
-inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_slice)
+inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer)
 {
-    return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArraySlice + array_slice);
+    return subresource(range.aspect, range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer);
 }
 
 inline VkImageSubresourceRange Image::subresource_range(VkImageAspect aspect, uint32_t base_mip_level, uint32_t mip_levels,
-                                                                                     uint32_t base_array_slice, uint32_t array_size)
+                                                        uint32_t base_array_layer, uint32_t array_size)
 {
     VkImageSubresourceRange range = {};
     range.aspect = aspect;
     range.baseMipLevel = base_mip_level;
     range.mipLevels = mip_levels;
-    range.baseArraySlice = base_array_slice;
+    range.baseArrayLayer = base_array_layer;
     range.arraySize = array_size;
     return range;
 }
@@ -741,7 +741,7 @@ inline VkImageSubresourceRange Image::subresource_range(const VkImageCreateInfo 
 
 inline VkImageSubresourceRange Image::subresource_range(const VkImageSubresource &subres)
 {
-    return subresource_range(subres.aspect, subres.mipLevel, 1, subres.arraySlice, 1);
+    return subresource_range(subres.aspect, subres.mipLevel, 1, subres.arrayLayer, 1);
 }
 
 inline VkExtent2D Image::extent(int32_t width, int32_t height)
