@@ -239,10 +239,9 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
 void VkImageTest::DestroyImage()
 {
-    // All done with image memory, clean up
-    vkFreeMemory(device(), m_image_mem);
-
+    // All done with image object and memory, clean up
     vkDestroyImage(device(), m_image);
+    vkFreeMemory(device(), m_image_mem);
 }
 
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
