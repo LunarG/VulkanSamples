@@ -131,9 +131,6 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
 {
     uint32_t i;
 
-    if (!count)
-        return VK_ERROR_INVALID_POINTER;
-
     for (i = 0; i < count; i++) {
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
@@ -141,9 +138,6 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
         if (q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) {
             ret = nulldrv_queue_create(dev, q->queueFamilyIndex,
                     &dev->queues[q->queueFamilyIndex]);
-        }
-        else {
-            ret = VK_ERROR_INVALID_POINTER;
         }
 
         if (ret != VK_SUCCESS) {
@@ -879,7 +873,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroySwapChainKHR(
+ICD_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkDevice                                device,
     VkSwapchainKHR                          swapchain)
 {
@@ -1571,10 +1565,6 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
 {
     uint32_t copy_size;
 
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
-
     if (pProperties == NULL) {
         *pCount = NULLDRV_EXT_COUNT;
         return VK_SUCCESS;
@@ -1602,10 +1592,6 @@ VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
 {
-
-    if (pCount == NULL) {
-        return VK_ERROR_INVALID_POINTER;
-    }
 
     *pCount = 0;
 
@@ -1896,7 +1882,7 @@ ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
     VkPipelineCache                             pipelineCache)
 {
     NULLDRV_LOG_FUNC;
-    return VK_ERROR_UNAVAILABLE;
+    return 0;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
@@ -1905,7 +1891,7 @@ ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;
-    return VK_ERROR_UNAVAILABLE;
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
 
 ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
@@ -1915,7 +1901,7 @@ ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
     const VkPipelineCache*                      pSrcCaches)
 {
     NULLDRV_LOG_FUNC;
-    return VK_ERROR_UNAVAILABLE;
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
 ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                  device,
@@ -2115,7 +2101,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_line_width_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_rs_line **) pState);
+            (struct nulldrv_dynamic_line_width **) pState);
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
@@ -2127,7 +2113,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_depth_bias_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_rs_depth_bias **) pState);
+            (struct nulldrv_dynamic_depth_bias **) pState);
 }
 
 ICD_EXPORT void VKAPI vkDestroyDynamicLineWidthState(
@@ -2155,7 +2141,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_blend_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_cb **) pState);
+            (struct nulldrv_dynamic_blend **) pState);
 }
 
 ICD_EXPORT void VKAPI vkDestroyDynamicBlendState(
@@ -2175,7 +2161,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
     return nulldrv_depth_bounds_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_depth **) pState);
+            (struct nulldrv_dynamic_depth_bounds **) pState);
 }
 
 ICD_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(
@@ -2489,5 +2475,5 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageUsageFlags                           usage,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-    return VK_ERROR_UNAVAILABLE;
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
