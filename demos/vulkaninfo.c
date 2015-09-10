@@ -817,12 +817,12 @@ static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparse
     printf("\tVkPhysicalDeviceSparseProperties:\n");
     printf("\t---------------------------------\n");
 
-    printf("\t\tsparseResidencyStandard2DBlockShape     = %u\n", sparseProps->sparseResidencyStandard2DBlockShape    );
-    printf("\t\tsparseResidencyStandard2DMSBlockShape   = %u\n", sparseProps->sparseResidencyStandard2DMSBlockShape  );
-    printf("\t\tsparseResidencyStandard3DBlockShape     = %u\n", sparseProps->sparseResidencyStandard3DBlockShape    );
-    printf("\t\tsparseResidencyAlignedMipSize           = %u\n", sparseProps->sparseResidencyAlignedMipSize          );
-    printf("\t\tsparseResidencyNonResident              = %u\n", sparseProps->sparseResidencyNonResident             );
-    printf("\t\tsparseResidencyNonResidentStrict        = %u\n", sparseProps->sparseResidencyNonResidentStrict       );
+    printf("\t\tresidencyStandard2DBlockShape     = %u\n", sparseProps->residencyStandard2DBlockShape    );
+    printf("\t\tresidencyStandard2DMSBlockShape   = %u\n", sparseProps->residencyStandard2DMSBlockShape  );
+    printf("\t\tresidencyStandard3DBlockShape     = %u\n", sparseProps->residencyStandard3DBlockShape    );
+    printf("\t\tresidencyAlignedMipSize           = %u\n", sparseProps->residencyAlignedMipSize          );
+    printf("\t\tresidencyNonResident              = %u\n", sparseProps->residencyNonResident             );
+    printf("\t\tresidencyNonResidentStrict        = %u\n", sparseProps->residencyNonResidentStrict       );
 }
 
 static void app_dump_limits(const VkPhysicalDeviceLimits *limits)

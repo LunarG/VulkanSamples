@@ -1297,12 +1297,12 @@ typedef struct {
 } VkPhysicalDeviceLimits;
 
 typedef struct {
-    VkBool32                                    sparseResidencyStandard2DBlockShape;
-    VkBool32                                    sparseResidencyStandard2DMSBlockShape;
-    VkBool32                                    sparseResidencyStandard3DBlockShape;
-    VkBool32                                    sparseResidencyAlignedMipSize;
-    VkBool32                                    sparseResidencyNonResident;
-    VkBool32                                    sparseResidencyNonResidentStrict;
+    VkBool32                                    residencyStandard2DBlockShape;
+    VkBool32                                    residencyStandard2DMSBlockShape;
+    VkBool32                                    residencyStandard3DBlockShape;
+    VkBool32                                    residencyAlignedMipSize;
+    VkBool32                                    residencyNonResident;
+    VkBool32                                    residencyNonResidentStrict;
 } VkPhysicalDeviceSparseProperties;
 
 typedef struct {
