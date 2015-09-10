@@ -700,14 +700,17 @@ validate_interface_between_stages(VkDevice dev,
         auto b_first = b_at_end ? 0 : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                    "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name);
+            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+                    "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name)) {
+                pass = false;
+            }
             a_it++;
         }
         else if (a_at_end || a_first > b_first) {
-            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
-                    "%s consumes input location %d which is not written by %s", consumer_name, b_first, producer_name);
-            pass = false;
+            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+                    "%s consumes input location %d which is not written by %s", consumer_name, b_first, producer_name)) {
+                pass = false;
+            }
             b_it++;
         }
         else {
@@ -720,9 +723,10 @@ validate_interface_between_stages(VkDevice dev,
                 describe_type(producer_type, producer, a_it->second.type_id);
                 describe_type(consumer_type, consumer, b_it->second.type_id);
 
-                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                        "Type mismatch on location %d: '%s' vs '%s'", a_it->first, producer_type, consumer_type);
+                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                        "Type mismatch on location %d: '%s' vs '%s'", a_it->first, producer_type, consumer_type)) {
                 pass = false;
+                }
             }
             a_it++;
             b_it++;
@@ -831,9 +835,10 @@ validate_vi_consistency(VkDevice dev, VkPipelineVertexInputStateCreateInfo const
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto & binding = bindings[desc->binding];
         if (binding) {
-            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC",
-                    "Duplicate vertex input binding descriptions for binding %d", desc->binding);
-            pass = false;
+            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC",
+                    "Duplicate vertex input binding descriptions for binding %d", desc->binding)) {
+                pass = false;
+            }
         }
         else {
             binding = desc;
@@ -872,14 +877,17 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first;
         if (b_at_end || a_first < b_first) {
-            log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                    "Vertex attribute at location %d not consumed by VS", a_first);
+            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+                    "Vertex attribute at location %d not consumed by VS", a_first)) {
+                pass = false;
+            }
             it_a++;
         }
         else if (a_at_end || b_first < a_first) {
-            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
-                    "VS consumes input at location %d but not provided", b_first);
-            pass = false;
+            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+                    "VS consumes input at location %d but not provided", b_first)) {
+                pass = false;
+            }
             it_b++;
         }
         else {
@@ -890,10 +898,11 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
                 char vs_type[1024];
                 describe_type(vs_type, vs, it_b->second.type_id);
-                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Attribute type of `%s` at location %d does not match VS input type of `%s`",
-                        string_VkFormat(it_a->second->format), a_first, vs_type);
-                pass = false;
+                        string_VkFormat(it_a->second->format), a_first, vs_type)) {
+                    pass = false;
+                }
             }
 
             /* OK! */
@@ -923,17 +932,19 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
      */
     if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
         if (outputs.size()) {
-            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
-                    "Should not have user-defined FS outputs when using broadcast");
-            pass = false;
+            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
+                    "Should not have user-defined FS outputs when using broadcast")) {
+                pass = false;
+            }
         }
 
         for (unsigned i = 0; i < color_formats.size(); i++) {
             unsigned attachmentType = get_format_type(color_formats[i]);
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
-                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                        "CB format should not be SINT or UINT when using broadcast");
-                pass = false;
+                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                        "CB format should not be SINT or UINT when using broadcast")) {
+                    pass = false;
+                }
             }
         }
 
@@ -950,15 +961,18 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
     /* TODO: Figure out compile error with cb->attachmentCount */
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
         if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
-            log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
-                    "FS writes to output location %d with no matching attachment", it->first);
+            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+                    "FS writes to output location %d with no matching attachment", it->first)) {
+                pass = false;
+            }
             it++;
         }
         else if (it == outputs.end() || it->first > attachment) {
-            log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
-                    "Attachment %d not written by FS", attachment);
+            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+                    "Attachment %d not written by FS", attachment)) {
+                pass = false;
+            }
             attachment++;
-            pass = false;
         }
         else {
             unsigned output_type = get_fundamental_type(fs, it->second.type_id);
@@ -968,10 +982,11 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
                 char fs_type[1024];
                 describe_type(fs_type, fs, it->second.type_id);
-                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Attachment %d of type `%s` does not match FS output type of `%s`",
-                        attachment, string_VkFormat(color_formats[attachment]), fs_type);
-                pass = false;
+                        attachment, string_VkFormat(color_formats[attachment]), fs_type)) {
+                    pass = false;
+                }
             }
 
             /* OK! */
@@ -1038,8 +1053,10 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
         if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 
             if (pStage->stage < VK_SHADER_STAGE_VERTEX || pStage->stage > VK_SHADER_STAGE_FRAGMENT) {
-                log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
-                        "Unknown shader stage %d", pStage->stage);
+                if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
+                        "Unknown shader stage %d", pStage->stage)) {
+                    pass = false;
+                }
             }
             else {
                 struct shader_object *shader = shader_object_map[pStage->shader.handle];
@@ -1061,11 +1078,12 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
                     if (binding == nullptr) {
                         char type_name[1024];
                         describe_type(type_name, shader->module, it->second.type_id);
-                        log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
+                        if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
                                 SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                 "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
-                                it->first.first, it->first.second, type_name);
-                        pass = false;
+                                it->first.first, it->first.second, type_name)) {
+                            pass = false;
+                        }
                     }
                 }
             }
