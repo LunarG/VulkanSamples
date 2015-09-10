@@ -665,7 +665,7 @@ static void intel_format_get_props(const struct intel_gpu *gpu,
         props->optimalTilingFeatures = 0;
         props->bufferFeatures        = 0;
     } else if(icd_format_is_color(format)) {
-        VkFlags formatFlags = NULL;
+        VkFlags formatFlags = 0;
         formatFlags = intel_format_get_color_features(gpu, format);
         props->linearTilingFeatures  = formatFlags & ~bufferFormatsFlagMask;
         props->optimalTilingFeatures = formatFlags & ~bufferFormatsFlagMask;
@@ -702,5 +702,5 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageUsageFlags                           usage,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-    return VK_ERROR_UNAVAILABLE;
+    return VK_ERROR_UNKNOWN;
 }
