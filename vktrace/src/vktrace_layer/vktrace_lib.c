@@ -109,9 +109,7 @@ VKTRACER_ENTRY _Load(void)
         while (debugStartup);
         }
     #endif
-#ifndef PLATFORM_LINUX
-        AttachHooks();
-#else
+#ifdef PLATFORM_LINUX
         struct sigaction act;
         memset(&act, 0 , sizeof(act));
         act.sa_sigaction = vktrace_sighandler;
@@ -128,7 +126,6 @@ VKTRACER_LEAVE _Unload(void)
     // only do the hooking and networking if the tracer is NOT loaded by vktrace
     if (vktrace_is_loaded_into_vktrace() == FALSE)
     {
-        DetachHooks();
         if (vktrace_trace_get_trace_file() != NULL) {
             vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_GetTracerId(), VKTRACE_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
             vktrace_finalize_trace_packet(pHeader);

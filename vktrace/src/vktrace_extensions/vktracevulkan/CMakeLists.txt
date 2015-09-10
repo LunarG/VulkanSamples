@@ -86,5 +86,5 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_gener
 
 # Directories which actually contain vulkan-specific vktrace plugins.
 add_subdirectory(vkreplay/)
-add_subdirectory(vktrace/)
+#add_subdirectory(vktrace/)
 

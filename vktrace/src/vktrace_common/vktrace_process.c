@@ -71,8 +71,6 @@ BOOL vktrace_process_spawn(vktrace_process_info* pInfo)
         const char delim[] = " \t";
         unsigned int idx;
 
-        vktrace_set_global_var("LD_PRELOAD", strchr(pInfo->processLDPreload, '=')+1);
-
         // Change process name so the the tracer DLLs will behave as expected when loaded.
         // NOTE: Must be 15 characters or less.
         const char * tmpProcName = "vktraceChildProcess";

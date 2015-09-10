@@ -22,7 +22,7 @@ new-item vktracereplay_tmp -itemtype directory > $null 2> $null
 cd vktracereplay_tmp
 cp ..\..\vktrace\$dPath\vkreplay.exe .
 cp ..\..\vktrace\$dPath\vktrace.exe .
-cp ..\..\vktrace\$dPath\vulkan_trace.dll
+cp ..\..\vktrace\$dPath\vktrace_layer.dll .
 cp ..\..\demos\$dPath\cube.exe .
 cp ..\..\demos\*.png .
 cp ..\..\demos\*.spv .
@@ -39,11 +39,11 @@ $Env:VK_LAYER_PATH = $pwd
 
 # Temporarily set ScreenShot layer by hand until these are worked out
 $Env:_VK_SCREENSHOT = 1
-$Env:VK_INSTANCE_LAYERS = "ScreenShot"
-$Env:VK_DEVICE_LAYERS = "ScreenShot"
+$Env:VK_INSTANCE_LAYERS = "Vktrace:ScreenShot"
+$Env:VK_DEVICE_LAYERS = "Vktrace:ScreenShot"
 
 # Do a trace and replay
-& vktrace -o c01.vktrace -s 1 -p cube -a "--c 10" -l0 vulkan_trace.dll > trace.sout 2> trace.serr
+& vktrace -o c01.vktrace -s 1 -p cube -a "--c 10" > trace.sout 2> trace.serr
 rename-item -path 1.ppm -newname 1-trace.ppm
 & vkreplay  -s 1 -t  c01.vktrace > replay.sout 2> replay.serr
 rename-item -path 1.ppm -newname 1-replay.ppm

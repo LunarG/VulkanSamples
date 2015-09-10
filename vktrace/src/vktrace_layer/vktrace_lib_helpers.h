@@ -23,13 +23,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #pragma once
-
+#include "vk_layer.h"
 #include "vktrace_platform.h"
 #include "vktrace_vk_vk.h"
 #include "vk_struct_size_helper.h"
-
-// defined in generated file: vktrace_vk_vk.c
-extern BOOL isHooked;
+#include "vk_debug_marker_layer.h"
 
 // Support for shadowing CPU mapped memory
 //TODO better handling of multiple range rather than fixed array
@@ -50,9 +48,12 @@ typedef struct _VKMemInfo {
     unsigned int capacity;
 } VKMemInfo;
 
-// defined in manually written file: vktrace_vk_trace.c
+// defined in manually written file: vktrace_lib_trace.c
 extern VKMemInfo g_memInfo;
 extern VKTRACE_CRITICAL_SECTION g_memInfoLock;
+extern VkLayerInstanceDispatchTable g_instTable;
+extern VkLayerDispatchTable g_devTable;
+extern VkLayerDebugMarkerDispatchTable g_debugmarkerTable;
 
 static void init_mem_info_entrys(VKAllocInfo *ptr, const unsigned int num)
 {

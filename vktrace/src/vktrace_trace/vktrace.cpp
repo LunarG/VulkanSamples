@@ -236,7 +236,7 @@ int main(int argc, char* argv[])
 #if defined(WIN32)
     g_default_settings.trace_library[0] = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "vulkan_trace.dll");
 #elif defined(PLATFORM_LINUX)
-    g_default_settings.trace_library[0] = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "libvulkan_trace.so");
+    g_default_settings.trace_library[0] = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "libvktrace_layer.so");
 #endif
 
     // free binary directory string

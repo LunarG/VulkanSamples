@@ -39,6 +39,7 @@ set(VKTRACE_VULKAN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(src/vktrace_common)
 add_subdirectory(src/vktrace_trace)
+add_subdirectory(src/vktrace_layer)
 add_subdirectory(src/vktrace_replay)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 add_subdirectory(src/thirdparty/mhook/mhook-lib)

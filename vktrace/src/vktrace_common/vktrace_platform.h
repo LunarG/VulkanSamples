@@ -68,6 +68,9 @@ typedef CRITICAL_SECTION VKTRACE_CRITICAL_SECTION;
 #define VKTRACE_NULL_THREAD NULL
 #define VKTRACE_PATH_SEPARATOR "\\"
 #define VKTRACE_THREAD_LOCAL __declspec(thread)
+#if !defined(__cplusplus)
+#define inline _inline
+#endif
 #endif
 
 #if defined(WIN32)

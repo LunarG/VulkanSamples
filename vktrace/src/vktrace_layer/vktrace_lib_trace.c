@@ -26,23 +26,25 @@
 
 #include "vulkan.h"
 #include "vktrace_platform.h"
+#include "vk_dispatch_table_helper.h"
 #include "vktrace_common.h"
+#include "vktrace_lib_helpers.h"
 #include "vktrace_vk_vk_ext_khr_swapchain.h"
 #include "vktrace_vk_vk_ext_khr_device_swapchain.h"
 #include "vk_ext_khr_device_swapchain_struct_size_helper.h"
-#include "vktrace_lib_helpers.h"
 #include "vktrace_vk_vk.h"
 #include "vktrace_interconnect.h"
 #include "vktrace_filelike.h"
-#ifdef WIN32
-#include "mhook/mhook-lib/mhook.h"
-#endif
 #include "vktrace_trace_packet_utils.h"
 #include <stdio.h>
 
 // declared as extern in vktrace_lib_helpers.h
 VKTRACE_CRITICAL_SECTION g_memInfoLock;
 VKMemInfo g_memInfo = {0, NULL, NULL, 0};
+
+//TODO change this to support multiple devices and instances
+VkLayerInstanceDispatchTable g_instTable;
+VkLayerDispatchTable g_devTable;
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocMemory(
     VkDevice device,
@@ -53,7 +55,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocMemory(
     VkResult result;
     packet_vkAllocMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkAllocMemory, get_struct_chain_size((void*)pAllocInfo) + sizeof(VkDeviceMemory));
-    result = real_vkAllocMemory(device, pAllocInfo, pMem);
+    result = g_devTable.AllocMemory(device, pAllocInfo, pMem);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkAllocMemory(pHeader);
     pPacket->device = device;
@@ -82,7 +84,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     VkResult result;
     packet_vkMapMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkMapMemory, sizeof(void*));
-    result = real_vkMapMemory(device, mem, offset, size, flags, ppData);
+    result = g_devTable.MapMemory(device, mem, offset, size, flags, ppData);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkMapMemory(pHeader);
     pPacket->device = device;
@@ -132,7 +134,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
         entry->pData = NULL;
     }
     vktrace_leave_critical_section(&g_memInfoLock);
-    real_vkUnmapMemory(device, mem);
+    g_devTable.UnmapMemory(device, mem);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket->device = device;
     pPacket->mem = mem;
@@ -146,7 +148,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkFreeMemory(
     vktrace_trace_packet_header* pHeader;
     packet_vkFreeMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkFreeMemory, 0);
-    real_vkFreeMemory(device, mem);
+    g_devTable.FreeMemory(device, mem);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkFreeMemory(pHeader);
     pPacket->device = device;
@@ -216,7 +218,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
     // now finalize the ppData array since it is done being updated
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->ppData));
 
-    result = real_vkFlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    result = g_devTable.FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket->device = device;
     pPacket->memRangeCount = memRangeCount;
@@ -238,7 +240,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     // begin custom code (needs to use get_struct_chain_size)
     CREATE_TRACE_PACKET(vkCreateDescriptorPool,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDescriptorPool));
     // end custom code
-    result = real_vkCreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    result = g_devTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDescriptorPool(pHeader);
     pPacket->device = device;
@@ -284,10 +286,10 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
         if (!found_ss)
         {
             // query to find if ScreenShot layer is available
-            real_vkGetPhysicalDeviceLayerProperties(physicalDevice, &count, NULL);
+            g_instTable.GetPhysicalDeviceLayerProperties(physicalDevice, &count, NULL);
             VkLayerProperties *props = (VkLayerProperties *) vktrace_malloc(count * sizeof (VkLayerProperties));
             if (props && count > 0)
-                real_vkGetPhysicalDeviceLayerProperties(physicalDevice, &count, props);
+                g_instTable.GetPhysicalDeviceLayerProperties(physicalDevice, &count, props);
             for (i = 0; i < count; i++) {
                 if (!strcmp(props[i].layerName, "ScreenShot"))
                 {
@@ -313,7 +315,8 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
         }
     }
     CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
-    result = real_vkCreateDevice(physicalDevice, pCreateInfo, pDevice);
+    result = g_devTable.CreateDevice(physicalDevice, pCreateInfo, pDevice);
+    //TODO Add initial of extension enablement and init of debugmarker dispatch Table
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDevice(pHeader);
     pPacket->physicalDevice = physicalDevice;
@@ -343,7 +346,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicViewportState(
     uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;
     CREATE_TRACE_PACKET(vkCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDynamicViewportState));
     // end custom code
-    result = real_vkCreateDynamicViewportState(device, pCreateInfo, pState);
+    result = g_devTable.CreateDynamicViewportState(device, pCreateInfo, pState);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDynamicViewportState(pHeader);
     pPacket->device = device;
@@ -372,7 +375,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateFramebuffer(
     uint32_t attachmentCount = (pCreateInfo != NULL && pCreateInfo->pAttachments != NULL) ? pCreateInfo->attachmentCount : 0;
     CREATE_TRACE_PACKET(vkCreateFramebuffer, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkFramebuffer));
     // end custom code
-    result = real_vkCreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    result = g_devTable.CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateFramebuffer(pHeader);
     pPacket->device = device;
@@ -399,20 +402,14 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     uint64_t vktraceStartTime = vktrace_get_time();
     vktrace_platform_thread_once(&gInitOnce, InitTracer);
     SEND_ENTRYPOINT_ID(vkCreateInstance);
-    if (real_vkCreateInstance == vkCreateInstance)
-    {
-        vktrace_platform_get_next_lib_sym((void **) &real_vkCreateInstance,"vkCreateInstance");
-    }
     startTime = vktrace_get_time();
-    result = real_vkCreateInstance(pCreateInfo, pInstance);
+    result = g_instTable.CreateInstance(pCreateInfo, pInstance);
     endTime = vktrace_get_time();
+    //TODO add init of extension enablement and init of extension dispatch table
     CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    if (isHooked == FALSE) {
-        AttachHooks();
-    }
     pPacket = interpret_body_as_vkCreateInstance(pHeader);
 
     add_VkInstanceCreateInfo_to_packet(pHeader, (VkInstanceCreateInfo**)&(pPacket->pCreateInfo), (VkInstanceCreateInfo*) pCreateInfo);
@@ -437,7 +434,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
     uint32_t subpassCount = (pCreateInfo != NULL && (pCreateInfo->pSubpasses != NULL)) ? pCreateInfo->subpassCount : 0;
     CREATE_TRACE_PACKET(vkCreateRenderPass, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkRenderPass));
     // end custom code
-    result = real_vkCreateRenderPass(device, pCreateInfo, pRenderPass);
+    result = g_devTable.CreateRenderPass(device, pCreateInfo, pRenderPass);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateRenderPass(pHeader);
     pPacket->device = device;
@@ -469,44 +466,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetGlobalExtensionProperties(
-    const char* pLayerName,
-    uint32_t* pCount,
-    VkExtensionProperties* pProperties)
-{
-    vktrace_trace_packet_header* pHeader;
-    VkResult result;
-    packet_vkGetGlobalExtensionProperties* pPacket = NULL;
-    uint64_t startTime;
-    uint64_t endTime;
-    uint64_t vktraceStartTime = vktrace_get_time();
-    vktrace_platform_thread_once(&gInitOnce, InitTracer);
-    if (real_vkGetGlobalExtensionProperties == vkGetGlobalExtensionProperties) {
-        vktrace_platform_get_next_lib_sym((void **) &real_vkGetGlobalExtensionProperties,"vkGetGlobalExtensionProperties");
-    }
-    startTime = vktrace_get_time();
-    result = real_vkGetGlobalExtensionProperties(pLayerName, pCount, pProperties);
-    endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkGetGlobalExtensionProperties, ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0) + sizeof(uint32_t) + (*pCount * sizeof(VkExtensionProperties)));
-    pHeader->vktrace_begin_time = vktraceStartTime;
-    pHeader->entrypoint_begin_time = startTime;
-    pHeader->entrypoint_end_time = endTime;
-    if (isHooked == FALSE) {
-        AttachHooks();
-    }
-    pPacket = interpret_body_as_vkGetGlobalExtensionProperties(pHeader);
-
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pLayerName), ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0), pLayerName);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pProperties), *pCount * sizeof(VkExtensionProperties), pProperties);
-    pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pLayerName));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pProperties));
-    FINISH_TRACE_PACKET();
-    return result;
-}
-
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
     VkPhysicalDevice physicalDevice,
     const char* pLayerName,
@@ -520,7 +479,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+    result = g_instTable.GetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceExtensionProperties, ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0) + sizeof(uint32_t) + (*pCount * sizeof(VkExtensionProperties)));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -539,41 +498,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetGlobalLayerProperties(
-    uint32_t* pCount,
-    VkLayerProperties* pProperties)
-{
-    vktrace_trace_packet_header* pHeader;
-    VkResult result;
-    packet_vkGetGlobalLayerProperties* pPacket = NULL;
-    uint64_t startTime;
-    uint64_t endTime;
-    uint64_t vktraceStartTime = vktrace_get_time();
-    vktrace_platform_thread_once(&gInitOnce, InitTracer);
-    if (real_vkGetGlobalLayerProperties == vkGetGlobalLayerProperties) {
-        vktrace_platform_get_next_lib_sym((void **) &real_vkGetGlobalLayerProperties,"vkGetGlobalLayerProperties");
-    }
-    startTime = vktrace_get_time();
-    result = real_vkGetGlobalLayerProperties(pCount, pProperties);
-    endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkGetGlobalLayerProperties, sizeof(uint32_t) + (*pCount * sizeof(VkLayerProperties)));
-    pHeader->vktrace_begin_time = vktraceStartTime;
-    pHeader->entrypoint_begin_time = startTime;
-    pHeader->entrypoint_end_time = endTime;
-    if (isHooked == FALSE) {
-        AttachHooks();
-    }
-    pPacket = interpret_body_as_vkGetGlobalLayerProperties(pHeader);
-
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pProperties), *pCount * sizeof(VkLayerProperties), pProperties);
-    pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pProperties));
-    FINISH_TRACE_PACKET();
-    return result;
-}
-
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceLayerProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
@@ -586,7 +510,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceLayerProperties(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
+    result = g_instTable.GetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceLayerProperties, sizeof(uint32_t) + (*pCount * sizeof(VkLayerProperties)));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -616,7 +540,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
+    result = g_instTable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceQueueFamilyProperties, sizeof(uint32_t) + *pCount * sizeof(VkQueueFamilyProperties));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -633,49 +557,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties
     return result;
 }
 
-/*
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetGlobalExtensionInfo(
-    VkExtensionInfoType infoType,
-    uint32_t extensionIndex,
-    size_t* pDataSize,
-    void* pData)
-{
-    vktrace_trace_packet_header* pHeader;
-    VkResult result;
-    size_t _dataSize;
-    packet_vkGetGlobalExtensionInfo* pPacket = NULL;
-    uint64_t startTime;
-    uint64_t endTime;
-    uint64_t vktraceStartTime = vktrace_get_time();
-    vktrace_platform_thread_once(&gInitOnce, InitTracer);
-    if (real_vkGetGlobalExtensionInfo == vkGetGlobalExtensionInfo)
-    {
-        vktrace_platform_get_next_lib_sym((void **) &real_vkGetGlobalExtensionInfo,"vkGetGlobalExtensionInfo");
-    }
-    startTime = vktrace_get_time();
-    result = real_vkGetGlobalExtensionInfo(infoType, extensionIndex, pDataSize, pData);
-    endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkGetGlobalExtensionInfo, (((pDataSize != NULL) ? sizeof(size_t) : 0) + ((pDataSize != NULL && pData != NULL) ? *pDataSize : 0)));
-    pHeader->vktrace_begin_time = vktraceStartTime;
-    pHeader->entrypoint_begin_time = startTime;
-    pHeader->entrypoint_end_time = endTime;
-    if (isHooked == FALSE) {
-        AttachHooks();
-    }
-    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
-    pPacket = interpret_body_as_vkGetGlobalExtensionInfo(pHeader);
-    pPacket->infoType = infoType;
-    pPacket->extensionIndex = extensionIndex;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData);
-    pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
-    FINISH_TRACE_PACKET();
-    return result;
-}
-*/
-
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(
     VkInstance instance,
     uint32_t* pPhysicalDeviceCount,
@@ -690,7 +571,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(
     //TODO make sure can handle being called twice with pPD == 0
     SEND_ENTRYPOINT_ID(vkEnumeratePhysicalDevices);
     startTime = vktrace_get_time();
-    result = real_vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    result = g_instTable.EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkEnumeratePhysicalDevices, sizeof(uint32_t) + ((pPhysicalDevices && pPhysicalDeviceCount) ? *pPhysicalDeviceCount * sizeof(VkPhysicalDevice) : 0));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -724,7 +605,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
+    result = g_devTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
     endTime = vktrace_get_time();
     _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
     CREATE_TRACE_PACKET(vkGetQueryPoolResults, ((pDataSize != NULL) ? sizeof(size_t) : 0) + _dataSize);
@@ -762,7 +643,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     uint64_t vktraceStartTime = vktrace_get_time();
     SEND_ENTRYPOINT_ID(vkAllocDescriptorSets);
     startTime = vktrace_get_time();
-    result = real_vkAllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    result = g_devTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkAllocDescriptorSets, (count * sizeof(VkDescriptorSetLayout)) + (count * sizeof(VkDescriptorSet)));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -815,7 +696,8 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
 
     CREATE_TRACE_PACKET(vkUpdateDescriptorSets, arrayByteCount);
     // end custom code
-    real_vkUpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+
+    g_devTable.UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkUpdateDescriptorSets(pHeader);
     pPacket->device = device;
@@ -850,7 +732,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
     size_t customSize;
     customSize = (eventCount * sizeof(VkEvent)) + memBarrierCount * sizeof(void*) + calculate_memory_barrier_size(memBarrierCount, ppMemBarriers);
     CREATE_TRACE_PACKET(vkCmdWaitEvents, customSize);
-    real_vkCmdWaitEvents(cmdBuffer, eventCount, pEvents, srcStageMask, destStageMask, memBarrierCount, ppMemBarriers);
+    g_devTable.CmdWaitEvents(cmdBuffer, eventCount, pEvents, srcStageMask, destStageMask, memBarrierCount, ppMemBarriers);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCmdWaitEvents(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
@@ -899,7 +781,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
     size_t customSize;
     customSize = (memBarrierCount * sizeof(void*)) + calculate_memory_barrier_size(memBarrierCount, ppMemBarriers);
     CREATE_TRACE_PACKET(vkCmdPipelineBarrier, customSize);
-    real_vkCmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+    g_devTable.CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCmdPipelineBarrier(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
@@ -949,7 +831,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateGraphicsPipelines(
         total_size += get_struct_chain_size((void*)&pCreateInfos[i]);
     }
     CREATE_TRACE_PACKET(vkCreateGraphicsPipelines, total_size + count*sizeof(VkPipeline));
-    result = real_vkCreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    result = g_devTable.CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateGraphicsPipelines(pHeader);
     pPacket->device = device;
@@ -976,7 +858,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateComputePipelines(
     VkResult result;
     packet_vkCreateComputePipelines* pPacket = NULL;
     CREATE_TRACE_PACKET(vkCreateComputePipelines, count*sizeof(VkComputePipelineCreateInfo) + sizeof(VkPipeline));
-    result = real_vkCreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    result = g_devTable.CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateComputePipelines(pHeader);
     pPacket->device = device;
@@ -1001,7 +883,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
     packet_vkCmdBeginRenderPass* pPacket = NULL;
     size_t clearValueSize = sizeof(VkClearValue) * pRenderPassBegin->clearValueCount;
     CREATE_TRACE_PACKET(vkCmdBeginRenderPass, sizeof(VkRenderPassBeginInfo) + clearValueSize);
-    real_vkCmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+    g_devTable.CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCmdBeginRenderPass(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
@@ -1023,7 +905,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeDescriptorSets(
     VkResult result;
     packet_vkFreeDescriptorSets* pPacket = NULL;
     CREATE_TRACE_PACKET(vkFreeDescriptorSets, count*sizeof(VkDescriptorSet));
-    result = real_vkFreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    result = g_devTable.FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkFreeDescriptorSets(pHeader);
     pPacket->device = device;
@@ -1045,7 +927,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesKHR(
     VkResult result;
     packet_vkGetSurfacePropertiesKHR* pPacket = NULL;
     CREATE_TRACE_PACKET(vkGetSurfacePropertiesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(VkSurfacePropertiesKHR));
-    result = real_vkGetSurfacePropertiesKHR(device, pSurfaceDescription, pSurfaceProperties);
+    result = g_devTable.GetSurfacePropertiesKHR(device, pSurfaceDescription, pSurfaceProperties);
     pPacket = interpret_body_as_vkGetSurfacePropertiesKHR(pHeader);
     pPacket->device = device;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
@@ -1071,7 +953,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsKHR(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSurfaceFormatsKHR(device, pSurfaceDescription, pCount, pSurfaceFormats);
+    result = g_devTable.GetSurfaceFormatsKHR(device, pSurfaceDescription, pCount, pSurfaceFormats);
     endTime = vktrace_get_time();
     _dataSize = (pCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pCount *sizeof(VkSurfaceFormatKHR));
     CREATE_TRACE_PACKET(vkGetSurfaceFormatsKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
@@ -1105,7 +987,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesKHR(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSurfacePresentModesKHR(device, pSurfaceDescription, pCount, pPresentModes);
+    result = g_devTable.GetSurfacePresentModesKHR(device, pSurfaceDescription, pCount, pPresentModes);
     endTime = vktrace_get_time();
     _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeKHR));
     CREATE_TRACE_PACKET(vkGetSurfacePresentModesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
@@ -1134,7 +1016,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapchainKHR(
     VkResult result;
     packet_vkCreateSwapchainKHR* pPacket = NULL;
     CREATE_TRACE_PACKET(vkCreateSwapchainKHR, vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo) + sizeof(VkSwapchainKHR));
-    result = real_vkCreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    result = g_devTable.CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
     pPacket = interpret_body_as_vkCreateSwapchainKHR(pHeader);
     pPacket->device = device;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapchainCreateInfoKHR), pCreateInfo);
@@ -1164,7 +1046,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapchainImagesKHR(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = real_vkGetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+    result = g_devTable.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
     endTime = vktrace_get_time();
     _dataSize = (pCount == NULL || pSwapchainImages == NULL) ? 0 : (*pCount *sizeof(VkImage));
     CREATE_TRACE_PACKET(vkGetSwapchainImagesKHR, sizeof(uint32_t) + _dataSize);
@@ -1193,7 +1075,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentKHR(
     size_t swapchainSize = pPresentInfo->swapchainCount*sizeof(VkSwapchainKHR);
     size_t indexSize = pPresentInfo->swapchainCount*sizeof(uint32_t);
     CREATE_TRACE_PACKET(vkQueuePresentKHR, sizeof(VkPresentInfoKHR)+swapchainSize+indexSize);
-    result = real_vkQueuePresentKHR(queue, pPresentInfo);
+    result = g_devTable.QueuePresentKHR(queue, pPresentInfo);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkQueuePresentKHR(pHeader);
     pPacket->queue = queue;
@@ -1223,7 +1105,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicStencilState(
     uint32_t createInfoMultiplier = (pLocalCreateInfoBack != NULL) ? 2 : 1;
 
     CREATE_TRACE_PACKET(vkCreateDynamicStencilState, createInfoMultiplier * sizeof(VkDynamicStencilStateCreateInfo) + sizeof(VkDynamicStencilState));
-    result = real_vkCreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
+    result = g_devTable.CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDynamicStencilState(pHeader);
     pPacket->device = device;
@@ -1251,7 +1133,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
     VkResult result;
     packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket = NULL;
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfaceSupportKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(VkBool32));
-    result = real_vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, pSurfaceDescription, pSupported);
+    result = g_instTable.GetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, pSurfaceDescription, pSupported);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkGetPhysicalDeviceSurfaceSupportKHR(pHeader);
     pPacket->physicalDevice = physicalDevice;
@@ -1265,3 +1147,445 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
     return result;
 }
 */
+
+static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
+{
+    if (!name || name[0] != 'v' || name[1] != 'k')
+        return NULL;
+
+    name += 2;
+
+    if (!strcmp(name, "CreateDevice"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDevice;
+    if (!strcmp(name, "DestroyDevice"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDevice;
+    if (!strcmp(name, "GetDeviceQueue"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetDeviceQueue;
+    if (!strcmp(name, "QueueSubmit"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueSubmit;
+    if (!strcmp(name, "QueueWaitIdle"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueWaitIdle;
+    if (!strcmp(name, "DeviceWaitIdle"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDeviceWaitIdle;
+    if (!strcmp(name, "AllocMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkAllocMemory;
+    if (!strcmp(name, "FreeMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkFreeMemory;
+    if (!strcmp(name, "MapMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkMapMemory;
+    if (!strcmp(name, "UnmapMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkUnmapMemory;
+    if (!strcmp(name, "FlushMappedMemoryRanges"))
+        return (PFN_vkVoidFunction) __HOOKED_vkFlushMappedMemoryRanges;
+    if (!strcmp(name, "InvalidateMappedMemoryRanges"))
+        return (PFN_vkVoidFunction) __HOOKED_vkInvalidateMappedMemoryRanges;
+    if (!strcmp(name, "GetDeviceMemoryCommitment"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetDeviceMemoryCommitment;
+    if (!strcmp(name, "BindBufferMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkBindBufferMemory;
+    if (!strcmp(name, "BindImageMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkBindImageMemory;
+    if (!strcmp(name, "GetBufferMemoryRequirements"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetBufferMemoryRequirements;
+    if (!strcmp(name, "GetImageMemoryRequirements"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetImageMemoryRequirements;
+    if (!strcmp(name, "GetImageSparseMemoryRequirements"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetImageSparseMemoryRequirements;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(name, "QueueBindSparseBufferMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseBufferMemory;
+    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "QueueBindSparseImageMemory"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseImageMemory;
+    if (!strcmp(name, "CreateFence"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateFence;
+    if (!strcmp(name, "DestroyFence"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyFence;
+    if (!strcmp(name, "ResetFences"))
+        return (PFN_vkVoidFunction) __HOOKED_vkResetFences;
+    if (!strcmp(name, "GetFenceStatus"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetFenceStatus;
+    if (!strcmp(name, "WaitForFences"))
+        return (PFN_vkVoidFunction) __HOOKED_vkWaitForFences;
+    if (!strcmp(name, "CreateSemaphore"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateSemaphore;
+    if (!strcmp(name, "DestroySemaphore"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroySemaphore;
+    if (!strcmp(name, "QueueSignalSemaphore"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueSignalSemaphore;
+    if (!strcmp(name, "QueueWaitSemaphore"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueWaitSemaphore;
+    if (!strcmp(name, "CreateEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateEvent;
+    if (!strcmp(name, "DestroyEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyEvent;
+    if (!strcmp(name, "GetEventStatus"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetEventStatus;
+    if (!strcmp(name, "SetEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkSetEvent;
+    if (!strcmp(name, "ResetEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkResetEvent;
+    if (!strcmp(name, "CreateQueryPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateQueryPool;
+    if (!strcmp(name, "DestroyQueryPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyQueryPool;
+    if (!strcmp(name, "GetQueryPoolResults"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetQueryPoolResults;
+    if (!strcmp(name, "CreateBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateBuffer;
+    if (!strcmp(name, "DestroyBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyBuffer;
+    if (!strcmp(name, "CreateBufferView"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateBufferView;
+    if (!strcmp(name, "DestroyBufferView"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyBufferView;
+    if (!strcmp(name, "CreateImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateImage;
+    if (!strcmp(name, "DestroyImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyImage;
+    if (!strcmp(name, "GetImageSubresourceLayout"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetImageSubresourceLayout;
+    if (!strcmp(name, "CreateImageView"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateImageView;
+    if (!strcmp(name, "DestroyImageView"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyImageView;
+    if (!strcmp(name, "CreateShaderModule"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateShaderModule;
+    if (!strcmp(name, "DestroyShaderModule"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyShaderModule;
+    if (!strcmp(name, "CreateShader"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateShader;
+    if (!strcmp(name, "DestroyShader"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyShader;
+    if (!strcmp(name, "CreatePipelineCache"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreatePipelineCache;
+    if (!strcmp(name, "DestroyPipelineCache"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyPipelineCache;
+    if (!strcmp(name, "GetPipelineCacheSize"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPipelineCacheSize;
+    if (!strcmp(name, "GetPipelineCacheData"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPipelineCacheData;
+    if (!strcmp(name, "MergePipelineCaches"))
+        return (PFN_vkVoidFunction) __HOOKED_vkMergePipelineCaches;
+    if (!strcmp(name, "CreateGraphicsPipelines"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateGraphicsPipelines;
+    if (!strcmp(name, "CreateComputePipelines"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateComputePipelines;
+    if (!strcmp(name, "DestroyPipeline"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyPipeline;
+    if (!strcmp(name, "CreatePipelineLayout"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreatePipelineLayout;
+    if (!strcmp(name, "DestroyPipelineLayout"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyPipelineLayout;
+    if (!strcmp(name, "CreateSampler"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateSampler;
+    if (!strcmp(name, "DestroySampler"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroySampler;
+    if (!strcmp(name, "CreateDescriptorSetLayout"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDescriptorSetLayout;
+    if (!strcmp(name, "DestroyDescriptorSetLayout"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDescriptorSetLayout;
+    if (!strcmp(name, "CreateDescriptorPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDescriptorPool;
+    if (!strcmp(name, "DestroyDescriptorPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDescriptorPool;
+    if (!strcmp(name, "ResetDescriptorPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkResetDescriptorPool;
+    if (!strcmp(name, "AllocDescriptorSets"))
+        return (PFN_vkVoidFunction) __HOOKED_vkAllocDescriptorSets;
+    if (!strcmp(name, "FreeDescriptorSets"))
+        return (PFN_vkVoidFunction) __HOOKED_vkFreeDescriptorSets;
+    if (!strcmp(name, "UpdateDescriptorSets"))
+        return (PFN_vkVoidFunction) __HOOKED_vkUpdateDescriptorSets;
+    if (!strcmp(name, "CreateDynamicViewportState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicViewportState;
+    if (!strcmp(name, "DestroyDynamicViewportState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicViewportState;
+    if (!strcmp(name, "CreateDynamicLineWidthState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicLineWidthState;
+    if (!strcmp(name, "DestroyDynamicLineWidthState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicLineWidthState;
+    if (!strcmp(name, "CreateDynamicDepthBiasState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicDepthBiasState;
+    if (!strcmp(name, "DestroyDynamicDepthBiasState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicDepthBiasState;
+    if (!strcmp(name, "CreateDynamicBlendState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicBlendState;
+    if (!strcmp(name, "DestroyDynamicBlendState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicBlendState;
+    if (!strcmp(name, "CreateDynamicDepthBoundsState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicDepthBoundsState;
+    if (!strcmp(name, "DestroyDynamicDepthBoundsState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicDepthBoundsState;
+    if (!strcmp(name, "CreateDynamicStencilState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicStencilState;
+    if (!strcmp(name, "DestroyDynamicStencilState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicStencilState;
+    if (!strcmp(name, "CreateCommandPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateCommandPool;
+    if (!strcmp(name, "DestroyCommandPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyCommandPool;
+    if (!strcmp(name, "ResetCommandPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkResetCommandPool;
+    if (!strcmp(name, "CreateCommandBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateCommandBuffer;
+    if (!strcmp(name, "DestroyCommandBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyCommandBuffer;
+    if (!strcmp(name, "BeginCommandBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkBeginCommandBuffer;
+    if (!strcmp(name, "EndCommandBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkEndCommandBuffer;
+    if (!strcmp(name, "ResetCommandBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkResetCommandBuffer;
+    if (!strcmp(name, "CmdBindPipeline"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindPipeline;
+    if (!strcmp(name, "CmdBindDynamicViewportState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicViewportState;
+    if (!strcmp(name, "CmdBindDynamicLineWidthState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicLineWidthState;
+    if (!strcmp(name, "CmdBindDynamicDepthBiasState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicDepthBiasState;
+    if (!strcmp(name, "CmdBindDynamicBlendState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicBlendState;
+    if (!strcmp(name, "CmdBindDynamicDepthBoundsState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicDepthBoundsState;
+    if (!strcmp(name, "CmdBindDynamicStencilState"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicStencilState;
+    if (!strcmp(name, "CmdBindDescriptorSets"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDescriptorSets;
+    if (!strcmp(name, "CmdBindIndexBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindIndexBuffer;
+    if (!strcmp(name, "CmdBindVertexBuffers"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindVertexBuffers;
+    if (!strcmp(name, "CmdDraw"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDraw;
+    if (!strcmp(name, "CmdDrawIndexed"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDrawIndexed;
+    if (!strcmp(name, "CmdDrawIndirect"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDrawIndirect;
+    if (!strcmp(name, "CmdDrawIndexedIndirect"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDrawIndexedIndirect;
+    if (!strcmp(name, "CmdDispatch"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDispatch;
+    if (!strcmp(name, "CmdDispatchIndirect"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdDispatchIndirect;
+    if (!strcmp(name, "CmdCopyBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdCopyBuffer;
+    if (!strcmp(name, "CmdCopyImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdCopyImage;
+    if (!strcmp(name, "CmdBlitImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBlitImage;
+    if (!strcmp(name, "CmdCopyBufferToImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdCopyBufferToImage;
+    if (!strcmp(name, "CmdCopyImageToBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdCopyImageToBuffer;
+    if (!strcmp(name, "CmdUpdateBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdUpdateBuffer;
+    if (!strcmp(name, "CmdFillBuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdFillBuffer;
+    if (!strcmp(name, "CmdClearColorImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearColorImage;
+    if (!strcmp(name, "CmdClearDepthStencilImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearDepthStencilImage;
+    if (!strcmp(name, "CmdClearColorAttachment"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearColorAttachment;
+    if (!strcmp(name, "CmdClearDepthStencilAttachment"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearDepthStencilAttachment;
+    if (!strcmp(name, "CmdResolveImage"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdResolveImage;
+    if (!strcmp(name, "CmdSetEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetEvent;
+    if (!strcmp(name, "CmdResetEvent"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdResetEvent;
+    if (!strcmp(name, "CmdWaitEvents"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdWaitEvents;
+    if (!strcmp(name, "CmdPipelineBarrier"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdPipelineBarrier;
+    if (!strcmp(name, "CmdBeginQuery"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBeginQuery;
+    if (!strcmp(name, "CmdEndQuery"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdEndQuery;
+    if (!strcmp(name, "CmdResetQueryPool"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdResetQueryPool;
+    if (!strcmp(name, "CmdWriteTimestamp"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdWriteTimestamp;
+    if (!strcmp(name, "CmdCopyQueryPoolResults"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdCopyQueryPoolResults;
+    if (!strcmp(name, "CreateFramebuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateFramebuffer;
+    if (!strcmp(name, "DestroyFramebuffer"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyFramebuffer;
+    if (!strcmp(name, "CreateRenderPass"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateRenderPass;
+    if (!strcmp(name, "DestroyRenderPass"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyRenderPass;
+    if (!strcmp(name, "GetRenderAreaGranularity"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetRenderAreaGranularity;
+    if (!strcmp(name, "CmdBeginRenderPass"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdBeginRenderPass;
+    if (!strcmp(name, "CmdNextSubpass"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdNextSubpass;
+    if (!strcmp(name, "CmdPushConstants"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdPushConstants;
+    if (!strcmp(name, "CmdEndRenderPass"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdEndRenderPass;
+    if (!strcmp(name, "CmdExecuteCommands"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdExecuteCommands;
+
+    return NULL;
+}
+
+static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
+{
+    if (!name || name[0] != 'v' || name[1] != 'k')
+        return NULL;
+
+    name += 2;
+    if (!strcmp(name, "CreateInstance"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCreateInstance;
+    if (!strcmp(name, "DestroyInstance"))
+        return (PFN_vkVoidFunction) __HOOKED_vkDestroyInstance;
+    if (!strcmp(name, "EnumeratePhysicalDevices"))
+        return (PFN_vkVoidFunction) __HOOKED_vkEnumeratePhysicalDevices;
+    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceFeatures;
+    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceImageFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(name, "GetPhysicalDeviceProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceProperties;
+    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties;
+    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceMemoryProperties;
+    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceExtensionProperties;
+
+    return NULL;
+}
+
+/**
+ * Want trace packets created for GetDeviceProcAddr that is app initiated
+ * but not for loader initiated calls to GDPA. Thus need two versions of GDPA.
+ */
+VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetDeviceProcAddr(VkDevice device, const char* funcName)
+{
+    vktrace_trace_packet_header *pHeader;
+    PFN_vkVoidFunction addr;
+    packet_vkGetDeviceProcAddr* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetDeviceProcAddr, ((funcName != NULL) ? strlen(funcName) + 1 : 0));
+    addr = __HOOKED_vkGetDeviceProcAddr(device, funcName);
+    vktrace_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkGetDeviceProcAddr(pHeader);
+    pPacket->device = device;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pName), ((funcName != NULL) ? strlen(funcName) + 1 : 0), funcName);
+    pPacket->result = addr;
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pName));
+    FINISH_TRACE_PACKET();
+    return addr;
+}
+
+/* GDPA with no trace packet creation */
+VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+{
+    PFN_vkVoidFunction addr;
+    if (device == VK_NULL_HANDLE) {
+        return NULL;
+    }
+
+    /* loader uses this to force layer initialization; device object is wrapped */
+    if (!strcmp("vkGetDeviceProcAddr", funcName)) {
+        layer_initialize_dispatch_table(&g_devTable, (const VkBaseLayerObject *) device);
+        return (PFN_vkVoidFunction) vktraceGetDeviceProcAddr;
+    }
+
+    addr = layer_intercept_proc(funcName);
+    if (addr)
+        return addr;
+
+    VkLayerDispatchTable *pDisp =  &g_devTable; //device_dispatch_table(device);
+    //TODO check for exts enabled (device_swapchain, debug_marker)
+    if (1) // if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
+    {
+        if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfacePropertiesKHR);
+        if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfaceFormatsKHR);
+        if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfacePresentModesKHR);
+        if (!strcmp("vkCreateSwapchainKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkCreateSwapchainKHR);
+        if (!strcmp("vkDestroySwapchainKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkDestroySwapchainKHR);
+        if (!strcmp("vkGetSwapchainImagesKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkGetSwapchainImagesKHR);
+        if (!strcmp("vkAcquireNextImageKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkAcquireNextImageKHR);
+        if (!strcmp("vkQueuePresentKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkQueuePresentKHR);
+    }
+
+    {
+        if (pDisp->GetDeviceProcAddr == NULL)
+            return NULL;
+        return pDisp->GetDeviceProcAddr(device, funcName);
+    }
+}
+
+/**
+ * Want trace packets created for GetInstanceProcAddr that is app initiated
+ * but not for loader initiated calls to GIPA. Thus need two versions of GIPA.
+ */
+VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetInstanceProcAddr(VkInstance instance, const char* funcName)
+{
+    vktrace_trace_packet_header* pHeader;
+    PFN_vkVoidFunction addr;
+    packet_vkGetInstanceProcAddr* pPacket = NULL;
+    assert(strcmp("vkGetInstanceProcAddr", funcName));
+    CREATE_TRACE_PACKET(vkGetInstanceProcAddr, ((funcName != NULL) ? strlen(funcName) + 1 : 0));
+    addr = __HOOKED_vkGetInstanceProcAddr(instance, funcName);
+    vktrace_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkGetInstanceProcAddr(pHeader);
+    pPacket->instance = instance;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pName), ((funcName != NULL) ? strlen(funcName) + 1 : 0), funcName);
+    pPacket->result = addr;
+    vktrace_finalize_buffer_address(pHeader, (void**) &(pPacket->pName));
+    FINISH_TRACE_PACKET();
+    return addr;
+}
+
+/* GIPA with no trace packet creation */
+VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+{
+    PFN_vkVoidFunction addr;
+    if (instance == VK_NULL_HANDLE) {
+        return NULL;
+    }
+
+    /* loader uses this to force layer initialization; instance object is wrapped */
+    if (!strcmp("vkGetInstanceProcAddr", funcName)) {
+        layer_init_instance_dispatch_table(&g_instTable, (const VkBaseLayerObject *) instance);
+        return (PFN_vkVoidFunction) vktraceGetInstanceProcAddr;
+    }
+
+    addr = layer_intercept_instance_proc(funcName);
+    if (addr)
+        return addr;
+    //TODO check for exts enabled (swapchain and debug_report)
+    if (1) // if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
+    {
+        if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
+            return (PFN_vkVoidFunction) (__HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR);
+    }
+    VkLayerInstanceDispatchTable* pTable = &g_instTable; //instance_dispatch_table(instance);
+    if (pTable->GetInstanceProcAddr == NULL)
+        return NULL;
+    return pTable->GetInstanceProcAddr(instance, funcName);
+}
