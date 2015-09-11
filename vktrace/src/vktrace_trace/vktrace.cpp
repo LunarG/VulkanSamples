@@ -381,9 +381,31 @@ int main(int argc, char* argv[])
         }
 
         if (g_settings.program != NULL)
+        {
+            // Add vktrace_layer enable env var if needed
+            char *instEnv = vktrace_get_global_var("VK_INSTANCE_LAYERS");
+            if (!instEnv)
+            {
+                vktrace_set_global_var("VK_INSTANCE_LAYERS", "Vktrace");
+            }
+            else if (instEnv != strstr(instEnv, "Vktrace"))
+            {
+                char *newEnv = vktrace_copy_and_append("Vktrace", VKTRACE_LIST_SEPARATOR, instEnv);
+                vktrace_set_global_var("VK_INSTANCE_LAYERS", newEnv);
+            }
+            char *devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
+            if (!devEnv)
+            {
+                vktrace_set_global_var("VK_DEVICE_LAYERS", "Vktrace");
+            }
+            else if (devEnv != strstr(devEnv, "Vktrace"))
+            {
+                char *newEnv = vktrace_copy_and_append("Vktrace", VKTRACE_LIST_SEPARATOR, devEnv);
+                vktrace_set_global_var("VK_DEVICE_LAYERS", newEnv);
+            }
             // call CreateProcess to launch the application
             procStarted = vktrace_process_spawn(&procInfo);
-
+        }
         if (procStarted == FALSE)
         {
             vktrace_LogError("Failed to setup remote process.");

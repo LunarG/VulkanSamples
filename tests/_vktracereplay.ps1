@@ -39,8 +39,8 @@ $Env:VK_LAYER_PATH = $pwd
 
 # Temporarily set ScreenShot layer by hand until these are worked out
 $Env:_VK_SCREENSHOT = 1
-$Env:VK_INSTANCE_LAYERS = "Vktrace:ScreenShot"
-$Env:VK_DEVICE_LAYERS = "Vktrace:ScreenShot"
+$Env:VK_INSTANCE_LAYERS = "ScreenShot"
+$Env:VK_DEVICE_LAYERS = "ScreenShot"
 
 # Do a trace and replay
 & vktrace -o c01.vktrace -s 1 -p cube -a "--c 10" > trace.sout 2> trace.serr

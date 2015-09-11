@@ -49,6 +49,7 @@ typedef pthread_mutex_t VKTRACE_CRITICAL_SECTION;
 #define VKTRACE_NULL_THREAD 0
 #define _MAX_PATH PATH_MAX
 #define VKTRACE_PATH_SEPARATOR "/"
+#define VKTRACE_LIST_SEPARATOR ":"
 #define VKTRACE_THREAD_LOCAL __thread
 
 #elif defined(WIN32)
@@ -67,6 +68,7 @@ typedef DWORD VKTRACE_THREAD_ROUTINE_RETURN_TYPE;
 typedef CRITICAL_SECTION VKTRACE_CRITICAL_SECTION;
 #define VKTRACE_NULL_THREAD NULL
 #define VKTRACE_PATH_SEPARATOR "\\"
+#define VKTRACE_LIST_SEPARATOR ";"
 #define VKTRACE_THREAD_LOCAL __declspec(thread)
 #if !defined(__cplusplus)
 #define inline _inline

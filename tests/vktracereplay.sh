@@ -25,9 +25,9 @@ cp ../../demos/*spv .
 export LD_LIBRARY_PATH=`pwd`/../loader:$LD_LIBRARY_PATH
 export VK_LAYER_PATH=`pwd`/../../layers
 
-# Temporarily set ScreenShot and Vktrace layer by hand until these are worked out
-export VK_INSTANCE_LAYERS=Vktrace:ScreenShot
-export VK_DEVICE_LAYERS=Vktrace:ScreenShot
+# Temporarily set ScreenShot layer by hand until these are worked out
+export VK_INSTANCE_LAYERS=ScreenShot
+export VK_DEVICE_LAYERS=ScreenShot
 
 (
     ./vktrace -s 1 -p cube  -o c01.vktrace &
@@ -36,9 +36,6 @@ export VK_DEVICE_LAYERS=Vktrace:ScreenShot
     kill $P
 ) >/dev/null 2>&1
 mv 1.ppm 1_trace.ppm
-# Temporarily set ScreenShot layer by hand until these are worked out
-export VK_INSTANCE_LAYERS=ScreenShot
-export VK_DEVICE_LAYERS=ScreenShot
 ./vkreplay -s 1 -t c01.vktrace >/dev/null 2>&1
 #cp cube 1.ppm  # For testing this script -- force a failure
 #rm 1.ppm       # For testing this script -- force a failure
