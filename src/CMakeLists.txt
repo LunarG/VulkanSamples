@@ -183,7 +183,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     descriptor_pipeline_layouts initcommandbuffer
     initrenderpass initframebuffers vertexbuffer
     dynamicstate allocdescriptorsets initshaders initpipeline
-    drawcube drawcubeinline
+    drawcube drawcubeinline drawtexturedcube
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback)
