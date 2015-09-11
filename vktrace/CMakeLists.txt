@@ -41,10 +41,6 @@ add_subdirectory(src/vktrace_common)
 add_subdirectory(src/vktrace_trace)
 add_subdirectory(src/vktrace_layer)
 add_subdirectory(src/vktrace_replay)
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-add_subdirectory(src/thirdparty/mhook/mhook-lib)
-add_subdirectory(src/thirdparty/mhook/disasm-lib)
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
 # use macro from stackoverflow (link below) to get all the extensions that are on the current system
 # http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
