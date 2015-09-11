@@ -108,39 +108,6 @@ class Subcommand(object):
     def generate_footer(self):
         pass
 
-    def _generate_trace_func_ptrs(self):
-        func_ptrs = []
-        func_ptrs.append('// Pointers to real functions and declarations of hooked functions')
-        func_ptrs.append('#ifdef WIN32')
-        func_ptrs.append('extern INIT_ONCE gInitOnce;')
-        for proto in vulkan.core.protos:
-            func_ptrs.append('#define __HOOKED_vk%s hooked_vk%s' % (proto.name, proto.name))
-
-        func_ptrs.append('\n#elif defined(PLATFORM_LINUX)')
-        func_ptrs.append('extern pthread_once_t gInitOnce;')
-        for proto in vulkan.core.protos:
-            func_ptrs.append('#define __HOOKED_vk%s vk%s' % (proto.name, proto.name))
-
-        func_ptrs.append('#endif\n')
-        return "\n".join(func_ptrs)
-
-    def _generate_trace_func_ptrs_ext(self, extName):
-        func_ptrs = []
-        func_ptrs.append('#ifdef WIN32')
-        for ext in vulkan.extensions_all:
-            if (extName.lower() == ext.name.lower()):
-                for proto in ext.protos:
-                    func_ptrs.append('#define __HOOKED_vk%s hooked_vk%s' % (proto.name, proto.name))
-
-        func_ptrs.append('#elif defined(__linux__)')
-        for ext in vulkan.extensions_all:
-            if (extName.lower() == ext.name.lower()):
-                for proto in ext.protos:
-                    func_ptrs.append('#define __HOOKED_vk%s vk%s' % (proto.name, proto.name))
-
-        func_ptrs.append('#endif\n')
-        return "\n".join(func_ptrs)
-
     def _generate_trace_func_protos(self):
         func_protos = []
         func_protos.append('// Hooked function prototypes\n')
@@ -160,83 +127,6 @@ class Subcommand(object):
 
         return "\n".join(func_protos)
 
-
-    def _generate_trace_real_func_ptr_protos(self):
-        func_ptr_assign = []
-        func_ptr_assign.append('')
-        for proto in self.protos:
-            func_ptr_assign.append('extern %s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
-            for p in proto.params:
-                func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
-            func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ');\n')
-        return "\n".join(func_ptr_assign)
-
-    def _generate_func_ptr_assignments(self):
-        func_ptr_assign = []
-        for proto in self.protos:
-            if 'Dbg' not in proto.name and 'KHR' not in proto.name:
-                func_ptr_assign.append('%s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
-                for p in proto.params:
-                    func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
-                func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ') = vk%s;\n' % (proto.name))
-        return "\n".join(func_ptr_assign)
-
-
-    def _generate_func_ptr_assignments_ext(self, extName):
-        func_ptr_assign = []
-        for ext in vulkan.extensions_all:
-            if ext.name.lower() == extName.lower():
-                for proto in ext.protos:
-                    func_ptr_assign.append('%s( VKAPI * real_vk%s)(' % (proto.ret, proto.name))
-                    for p in proto.params:
-                        func_ptr_assign.append('    %s %s,' % (p.ty, p.name))
-                    func_ptr_assign[-1] = func_ptr_assign[-1].replace(',', ');\n')
-        return "\n".join(func_ptr_assign)
-
-    def _generate_attach_hooks(self):
-        hooks_txt = []
-        hooks_txt.append('// declared as extern in vktrace_lib_helpers.h')
-        hooks_txt.append('BOOL isHooked = FALSE;\n')
-        hooks_txt.append('void AttachHooks()\n{\n   BOOL hookSuccess = TRUE;\n#if defined(WIN32)')
-        hooks_txt.append('    Mhook_BeginMultiOperation(FALSE);')
-        hooks_txt.append('    if (real_vkCreateInstance != NULL)')
-        hooks_txt.append('    {\n        isHooked = TRUE;')
-        hook_operator = '='
-        for proto in self.protos:
-            if 'Dbg' not in proto.name and 'KHR' not in proto.name:
-                hooks_txt.append('        hookSuccess %s Mhook_SetHook((PVOID*)&real_vk%s, hooked_vk%s);' % (hook_operator, proto.name, proto.name))
-                hook_operator = '&='
-        hooks_txt.append('    }\n')
-        hooks_txt.append('    if (!hookSuccess)\n    {')
-        hooks_txt.append('        vktrace_LogError("Failed to hook Vulkan.");\n    }\n')
-        hooks_txt.append('    Mhook_EndMultiOperation();\n')
-        hooks_txt.append('#elif defined(__linux__)')
-        hooks_txt.append('    if (real_vkCreateInstance == vkCreateInstance)')
-        hooks_txt.append('        hookSuccess = vktrace_platform_get_next_lib_sym((PVOID*)&real_vkCreateInstance,"vkCreateInstance");')
-        hooks_txt.append('    isHooked = TRUE;')
-        for proto in self.protos:
-            if 'Dbg' not in proto.name and 'KHR' not in proto.name and 'CreateInstance' not in proto.name:
-                hooks_txt.append('    hookSuccess %s vktrace_platform_get_next_lib_sym((PVOID*)&real_vk%s, "vk%s");' % (hook_operator, proto.name, proto.name))
-        hooks_txt.append('    if (!hookSuccess)\n    {')
-        hooks_txt.append('        vktrace_LogError("Failed to hook Vulkan.");\n    }\n')
-        hooks_txt.append('#endif\n}\n')
-        return "\n".join(hooks_txt)
-
-    def _generate_detach_hooks(self):
-        hooks_txt = []
-        hooks_txt.append('void DetachHooks()\n{\n#ifdef __linux__\n    return;\n#elif defined(WIN32)')
-        hooks_txt.append('    BOOL unhookSuccess = TRUE;\n    if (real_vkGetPhysicalDeviceProperties != NULL)\n    {')
-        hook_operator = '='
-        for proto in self.protos:
-            if 'Dbg' not in proto.name and 'KHR' not in proto.name:
-                hooks_txt.append('        unhookSuccess %s Mhook_Unhook((PVOID*)&real_vk%s);' % (hook_operator, proto.name))
-                hook_operator = '&='
-        hooks_txt.append('    }\n    isHooked = FALSE;')
-        hooks_txt.append('    if (!unhookSuccess)\n    {')
-        hooks_txt.append('        vktrace_LogError("Failed to unhook Vulkan.");\n    }')
-        hooks_txt.append('#endif\n}')
-        hooks_txt.append('#ifdef WIN32\nINIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;\n#elif defined(PLATFORM_LINUX)\npthread_once_t gInitOnce = PTHREAD_ONCE_INIT;\n#endif\n')
-        return "\n".join(hooks_txt)
 
     def _generate_init_funcs(self):
         init_tracer = []
@@ -472,9 +362,11 @@ class Subcommand(object):
                                          'FreeMemory',
                                          'FreeDescriptorSets',
                                          'FlushMappedMemoryRanges',
+                                         'GetDeviceProcAddr',
                                          'GetGlobalExtensionProperties',
-                                         'GetPhysicalDeviceExtensionProperties',
                                          'GetGlobalLayerProperties',
+                                         'GetInstanceProcAddr',
+                                         'GetPhysicalDeviceExtensionProperties',
                                          'GetPhysicalDeviceLayerProperties',
                                          'GetPhysicalDeviceQueueFamilyProperties',
                                          'GetQueryPoolResults',
@@ -537,35 +429,16 @@ class Subcommand(object):
                         else:
                             func_body.append('    CREATE_TRACE_PACKET(vk%s, %s);' % (proto.name, ' + '.join(packet_size)))
 
-                        # TODO: need a better way to indicate which extensions should be mapped to which Get*ProcAddr
-                        if proto.name == 'GetInstanceProcAddr':
-                            for iProto in self.protos:
-                                if 'Dbg' in iProto.name or 'GetPhysicalDeviceSurfaceSupportKHR' in iProto.name:
-                                    func_body.append('    if (strcmp(pName, "vk%s") == 0) {' % (iProto.name))
-                                    func_body.append('        real_vk%s = (PFN_vk%s)real_vkGetInstanceProcAddr(instance, pName);' % (iProto.name, iProto.name))
-                                    func_body.append('        vktrace_set_packet_entrypoint_end_time(pHeader);')
-                                    func_body.append('        if (real_vk%s != NULL) {' % (iProto.name))
-                                    func_body.append('            result = (PFN_vkVoidFunction)__HOOKED_vk%s;' % (iProto.name))
-                                    func_body.append('        } else {')
-                                    func_body.append('            result = NULL;')
-                                    func_body.append('        }')
-                                    func_body.append('    }')
-                        elif proto.name == 'GetDeviceProcAddr':
-                            for dProto in self.protos:
-                                if 'KHR' in dProto.name:
-                                    func_body.append('    if (strcmp(pName, "vk%s") == 0) {' % (dProto.name))
-                                    func_body.append('        real_vk%s = (PFN_vk%s)real_vkGetDeviceProcAddr(device, pName);' % (dProto.name, dProto.name))
-                                    func_body.append('        vktrace_set_packet_entrypoint_end_time(pHeader);')
-                                    func_body.append('        if (real_vk%s != NULL) {' % (dProto.name))
-                                    func_body.append('            result = (PFN_vkVoidFunction)__HOOKED_vk%s;' % (dProto.name))
-                                    func_body.append('        } else {')
-                                    func_body.append('            result = NULL;')
-                                    func_body.append('        }')
-                                    func_body.append('    }')
+                        # call down the layer chain and get return value (if there is one)
+                        # Note: this logic doesn't work for CreateInstance or CreateDevice but those are handwritten
+                        if extName == 'vk_debug_marker_lunarg':
+                            table_txt = 'g_debugMarkerTable'
+                        elif proto.params[0].ty in ['VkInstance', 'VkPhysicalDevice']:
+                           table_txt = 'g_instTable'
                         else:
-                            # call real entrypoint and get return value (if there is one)
-                            func_body.append('    %sreal_vk%s;' % (return_txt, proto.c_call()))
-                            func_body.append('    vktrace_set_packet_entrypoint_end_time(pHeader);')
+                           table_txt = 'g_devTable'
+                        func_body.append('    %s%s.%s;' % (return_txt, table_txt, proto.c_call()))
+                        func_body.append('    vktrace_set_packet_entrypoint_end_time(pHeader);')
 
                         if in_data_size:
                             func_body.append('    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;')
@@ -1841,16 +1714,17 @@ class VktraceTraceHeader(Subcommand):
     def generate_header(self, extName):
         header_txt = []
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
-        header_txt.append('#include "vktrace_vk_packet_id.h"\n')
-        header_txt.append('void AttachHooks();')
-        header_txt.append('void DetachHooks();')
-        header_txt.append('void InitTracer(void);\n')
+        header_txt.append('#include "vktrace_vk_packet_id.h"\n\n')
+        header_txt.append('void InitTracer(void);\n\n')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('extern INIT_ONCE gInitOnce;')
+        header_txt.append('\n#elif defined(PLATFORM_LINUX)')
+        header_txt.append('extern pthread_once_t gInitOnce;')
+        header_txt.append('#endif\n')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_trace_func_ptrs(),
-                self._generate_trace_func_protos(),
-                self._generate_trace_real_func_ptr_protos()]
+        body = [self._generate_trace_func_protos()]
 
         return "\n".join(body)
 
@@ -1868,20 +1742,20 @@ class VktraceTraceC(Subcommand):
         header_txt.append('#include "vktrace_interconnect.h"')
         header_txt.append('#include "vktrace_filelike.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
-        header_txt.append('#ifdef WIN32')
-        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
-        header_txt.append('#else')
-        header_txt.append('#include <pthread.h>\n')
+        header_txt.append('#ifdef PLATFORM_LINUX')
+        header_txt.append('#include <pthread.h>')
         header_txt.append('#endif')
         header_txt.append('#include "vktrace_trace_packet_utils.h"')
-        header_txt.append('#include <stdio.h>')
+        header_txt.append('#include <stdio.h>\n')
+        header_txt.append('#ifdef WIN32')
+        header_txt.append('INIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;')
+        header_txt.append('#elif defined(PLATFORM_LINUX)')
+        header_txt.append('pthread_once_t gInitOnce = PTHREAD_ONCE_INIT;')
+        header_txt.append('#endif')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_func_ptr_assignments(),
-                self._generate_attach_hooks(),
-                self._generate_detach_hooks(),
-                self._generate_init_funcs(),
+        body = [self._generate_init_funcs(),
                 self._generate_trace_funcs(self.extName)]
 
         return "\n".join(body)
@@ -1956,8 +1830,7 @@ class VktraceExtTraceHeader(Subcommand):
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_trace_func_ptrs_ext(self.extName),
-                self._generate_trace_func_protos_ext(self.extName)]
+        body = [self._generate_trace_func_protos_ext(self.extName)]
 
         return "\n".join(body)
 
@@ -1973,14 +1846,17 @@ class VktraceExtTraceC(Subcommand):
         header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
         header_txt.append('#include "%s_struct_size_helper.h"' % extName.lower())
-        header_txt.append('#ifdef WIN32')
-        header_txt.append('#include "mhook/mhook-lib/mhook.h"')
-        header_txt.append('#endif')
+        if extName == 'vk_debug_marker_lunarg':
+            header_txt.append('#include "vk_debug_marker_layer.h"\n')
+            header_txt.append('//TODO change this to support multiple devices')
+            header_txt.append('VkLayerDebugMarkerDispatchTable g_debugMarkerTable;')
+
+        else:
+            header_txt.append('#include "vktrace_lib_helpers.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_func_ptr_assignments_ext(self.extName),
-                self._generate_trace_funcs(self.extName)]
+        body = [self._generate_trace_funcs(self.extName)]
 
         return "\n".join(body)
 
