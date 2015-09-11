@@ -105,6 +105,15 @@ static void surface_state_buf_gen7(const struct intel_gpu *gpu,
    surface_format = (typed) ?
       intel_format_translate_color(gpu, elem_format) : GEN6_FORMAT_RAW;
 
+   /*
+    * It's possible that the buffer view being used is smaller than
+    * the format element size (required to be 16 for non-fragment shaders)
+    * Make certain that size is at least struct_size to keep HW happy.
+    */
+   if (size < struct_size) {
+       size = struct_size;
+   }
+
    num_entries = size / struct_size;
    /* see if there is enough space to fit another element */
    if (size % struct_size >= elem_size && !structured)
@@ -1135,9 +1144,9 @@ static void buf_view_destroy(struct intel_obj *obj)
     intel_buf_view_destroy(view);
 }
 
-VkResult intel_buf_view_create(struct intel_dev *dev,
-                                 const VkBufferViewCreateInfo *info,
-                                 struct intel_buf_view **view_ret)
+void intel_buf_view_init(struct intel_dev *dev,
+                         const VkBufferViewCreateInfo *info,
+                         struct intel_buf_view *view)
 {
     struct intel_buf *buf = intel_buf(info->buffer);
     /* TODO: Is transfer destination the only shader write operation? */
@@ -1145,15 +1154,9 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
                              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     VkFormat format;
     VkDeviceSize stride;
+    VkDeviceSize range = info->range;
     uint32_t *cmd;
-    struct intel_buf_view *view;
     int i;
-
-    view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_BUFFER_VIEW,
-            info, 0);
-    if (!view)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     view->obj.destroy = buf_view_destroy;
 
@@ -1195,6 +1198,21 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
             break;
         }
     }
+}
+
+VkResult intel_buf_view_create(struct intel_dev *dev,
+                               const VkBufferViewCreateInfo *info,
+                               struct intel_buf_view **view_ret)
+{
+    struct intel_buf_view *view;
+
+    view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
+            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_BUFFER_VIEW,
+            info, 0);
+    if (!view)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    intel_buf_view_init(dev, info, view);
 
     *view_ret = view;
 

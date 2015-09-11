@@ -1779,10 +1779,17 @@ typedef struct {
 } VkDescriptorPoolCreateInfo;
 
 typedef struct {
+    VkBuffer                                    buffer;
+    VkDeviceSize                                offset;
+    VkDeviceSize                                range;
+} VkShaderBufferInfo;
+
+typedef struct {
     VkBufferView                                bufferView;
     VkSampler                                   sampler;
     VkImageView                                 imageView;
     VkImageLayout                               imageLayout;
+    VkShaderBufferInfo                          shaderBuffer;
 } VkDescriptorInfo;
 
 typedef struct {

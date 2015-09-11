@@ -47,7 +47,7 @@ struct intel_desc_surface {
     enum intel_desc_surface_type type;
     union {
         const void *unused;
-        const struct intel_buf_view *buf;
+        const struct intel_buf_view buf;
         const struct intel_img_view *img;
     } u;
 };
@@ -332,8 +332,8 @@ void intel_desc_region_read_surface(const struct intel_desc_region *region,
     switch (desc->type) {
     case INTEL_DESC_SURFACE_BUF:
         *cmd = (stage == VK_SHADER_STAGE_FRAGMENT) ?
-            desc->u.buf->fs_cmd : desc->u.buf->cmd;
-        *cmd_len = desc->u.buf->cmd_len;
+            desc->u.buf.fs_cmd : desc->u.buf.cmd;
+        *cmd_len = desc->u.buf.cmd_len;
         break;
     case INTEL_DESC_SURFACE_IMG:
         *cmd = desc->u.img->cmd;
@@ -546,7 +546,7 @@ static void desc_set_write_buffer(struct intel_desc_set *set,
     desc.mem = buf_view->buf->obj.mem;
     desc.read_only = false;
     desc.type = INTEL_DESC_SURFACE_BUF;
-    desc.u.buf = buf_view;
+    memcpy(&desc.u.buf, buf_view, sizeof(*buf_view));
     intel_desc_region_update(set->region, &iter->begin, &iter->end,
             &desc, NULL);
 }
@@ -963,10 +963,6 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             for (j = 0; j < write->count; j++) {
                 const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_buf_view *buf_view =
@@ -978,6 +974,37 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                     /* TODOVV: Move test to validation */
 //                    return VK_ERROR_INVALID_VALUE;
 //                    return VK_ERROR_UNKNOWN;
+                }
+            }
+            break;
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+            {
+                const struct intel_dev *dev = intel_dev(device);
+                VkBufferViewCreateInfo view_info;
+                memset(&view_info, 0, sizeof(view_info));
+                view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+                view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
+
+                for (j = 0; j < write->count; j++) {
+                    const VkDescriptorInfo *info = &write->pDescriptors[j];
+                    struct intel_buf_view buf_view;
+
+                    view_info.buffer = info->shaderBuffer.buffer;
+                    view_info.offset = info->shaderBuffer.offset;
+                    view_info.range = info->shaderBuffer.range;
+
+                    intel_buf_view_init(dev, &view_info, &buf_view);
+
+                    desc_set_write_buffer(set, &iter, &buf_view);
+
+                    if (!intel_desc_iter_advance(&iter)) {
+                        /* TODOVV: Move test to validation */
+    //                    return VK_ERROR_INVALID_VALUE;
+    //                    return VK_ERROR_UNKNOWN;
+                    }
                 }
             }
             break;

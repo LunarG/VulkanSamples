@@ -495,6 +495,10 @@ int VkDescriptorSetObj::AppendDummy()
 
 int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj &constantBuffer)
 {
+    assert(type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+           type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+           type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
+           type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
     VkDescriptorTypeCount tc = {};
     tc.type = type;
     tc.count = 1;
@@ -948,16 +952,14 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     memcpy(pData, data, allocationSize);
     memory().unmap();
 
-    // set up the buffer view for the constant buffer
-    VkBufferViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.buffer = handle();
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range  = allocationSize;
-    m_bufferView.init(*m_device, view_info);
-
-    this->m_descriptorInfo.bufferView = m_bufferView.handle();
+    /*
+     * Constant buffers are going to be used as vertex input buffers
+     * or as shader uniform buffers. So, we'll create the shaderbuffer
+     * descriptor here so it's ready if needed.
+     */
+    this->m_descriptorInfo.shaderBuffer.buffer = handle();
+    this->m_descriptorInfo.shaderBuffer.offset = 0;
+    this->m_descriptorInfo.shaderBuffer.range = allocationSize;
 }
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)

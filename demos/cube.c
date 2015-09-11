@@ -363,7 +363,6 @@ struct demo {
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkBufferView view;
         VkDescriptorInfo desc;
     } uniform_data;
 
@@ -1259,7 +1258,6 @@ static void demo_prepare_textures(struct demo *demo)
 void demo_prepare_cube_data_buffer(struct demo *demo)
 {
     VkBufferCreateInfo buf_info;
-    VkBufferViewCreateInfo view_info;
     VkMemoryAllocInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         .pNext = NULL,
@@ -1321,17 +1319,9 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
             demo->uniform_data.mem, 0);
     assert(!err);
 
-    memset(&view_info, 0, sizeof(view_info));
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.buffer = demo->uniform_data.buf;
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range = sizeof(data);
-
-    err = vkCreateBufferView(demo->device, &view_info, &demo->uniform_data.view);
-    assert(!err);
-
-    demo->uniform_data.desc.bufferView = demo->uniform_data.view;
+    demo->uniform_data.desc.shaderBuffer.buffer = demo->uniform_data.buf;
+    demo->uniform_data.desc.shaderBuffer.offset = 0;
+    demo->uniform_data.desc.shaderBuffer.range = sizeof(data);
 }
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
@@ -1952,7 +1942,6 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyImage(demo->device, demo->depth.image);
     vkFreeMemory(demo->device, demo->depth.mem);
 
-    vkDestroyBufferView(demo->device, demo->uniform_data.view);
     vkDestroyBuffer(demo->device, demo->uniform_data.buf);
     vkFreeMemory(demo->device, demo->uniform_data.mem);
 
