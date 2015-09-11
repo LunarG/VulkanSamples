@@ -164,7 +164,7 @@ bool InjectTracersIntoProcess(vktrace_process_info* pInfo)
     for (unsigned int i = 0; i < pInfo->tracerCount; i++)
     {
         // inject tracers
-        if (vktrace_platform_remote_load_library(pInfo->hProcess, pInfo->pCaptureThreads[i].tracerPath, &pInfo->pCaptureThreads[i].tracingThread, &pInfo->processLDPreload))
+        if (vktrace_platform_remote_load_library(pInfo->hProcess, pInfo->pCaptureThreads[i].tracerPath, &pInfo->pCaptureThreads[i].tracingThread, NULL))
         {
             // prepare data for capture threads
             pInfo->pCaptureThreads[i].pProcessInfo = pInfo;
@@ -380,27 +380,9 @@ int main(int argc, char* argv[])
             return -1;
         }
 
-#if defined(WIN32)
         if (g_settings.program != NULL)
             // call CreateProcess to launch the application
             procStarted = vktrace_process_spawn(&procInfo);
-#endif
-
-        if (procStarted == TRUE)
-        {
-            if (InjectTracersIntoProcess(&procInfo) == FALSE)
-            {
-                vktrace_LogError("Failed to setup tracer communication threads.");
-                return -1;
-            }
-
-        }
-
-#if defined(PLATFORM_LINUX)
-        // in linux we want to spawn the process AFTER setting up LD_PRELOAD (which happens in the loop above)
-        if (g_settings.program != NULL)
-            procStarted = vktrace_process_spawn(&procInfo);
-#endif
 
         if (procStarted == FALSE)
         {
@@ -408,6 +390,12 @@ int main(int argc, char* argv[])
         }
         else
         {
+            if (InjectTracersIntoProcess(&procInfo) == FALSE)
+            {
+                vktrace_LogError("Failed to setup tracer communication threads.");
+                return -1;
+            }
+
             // create watchdog thread to monitor existence of remote process
             if (g_settings.program != NULL)
                 procInfo.watchdogThread = vktrace_platform_create_thread(Process_RunWatchdogThread, &procInfo);

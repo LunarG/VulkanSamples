@@ -53,7 +53,6 @@ typedef struct vktrace_process_info
     vktrace_process_handle hProcess;
     vktrace_thread hThread;
     vktrace_thread watchdogThread;
-    char* processLDPreload;
 } vktrace_process_info;
 
 

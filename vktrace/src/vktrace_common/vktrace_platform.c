@@ -434,6 +434,8 @@ BOOL vktrace_platform_remote_load_library(vktrace_process_handle pProcessHandle,
 
 #elif defined(PLATFORM_LINUX)
     char *tmp;
+    if (ldPreload == NULL)
+        return TRUE;
     if (*ldPreload == NULL)
     {
         tmp = vktrace_copy_and_append("LD_PRELOAD", "=", dllPath);
