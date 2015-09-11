@@ -787,7 +787,6 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ASSERT_VK_SUCCESS(BeginCommandBuffer());
@@ -863,7 +862,6 @@ TEST_F(VkRenderTest, TriangleMRT)
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     VkDescriptorSetObj descriptorSet(m_device);
 
@@ -1066,7 +1064,6 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1155,7 +1152,6 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ASSERT_VK_SUCCESS(BeginCommandBuffer());
@@ -1254,7 +1250,6 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1344,7 +1339,6 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer,MESH_BIND_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1586,7 +1580,6 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1690,7 +1683,6 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding, 1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1784,7 +1776,6 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
@@ -1902,7 +1893,6 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
 
@@ -2778,7 +2768,6 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
-    pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BIND_ID);
 
     VkPipelineDepthStencilStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;

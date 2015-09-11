@@ -1233,13 +1233,6 @@ void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription* vi_b
     m_vi_state.bindingCount = count;
 }
 
-void VkPipelineObj::AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding)
-{
-    m_vertexBufferObjs.push_back(vertexDataBuffer);
-    m_vertexBufferBindings.push_back(binding);
-    m_vertexBufferCount++;
-}
-
 void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att)
 {
     if (binding+1 > m_colorAttachments.size())

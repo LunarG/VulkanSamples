@@ -410,7 +410,6 @@ public:
     void AddShader(VkShaderObj* shaderObj);
     void AddVertexInputAttribs(VkVertexInputAttributeDescription* vi_attrib, int count);
     void AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count);
-    void AddVertexDataBuffer(VkConstantBufferObj* vertexDataBuffer, int binding);
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
 
     void AddColorAttachment()
@@ -435,7 +434,6 @@ protected:
     VkPipelineMultisampleStateCreateInfo          m_ms_state;
     VkDeviceObj                                  *m_device;
     vector<VkShaderObj*>                          m_shaderObjs;
-    vector<VkConstantBufferObj*>                  m_vertexBufferObjs;
     vector<int>                                   m_vertexBufferBindings;
     vector<VkPipelineColorBlendAttachmentState>   m_colorAttachments;
     int                                           m_vertexBufferCount;
