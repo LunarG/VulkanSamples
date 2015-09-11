@@ -46,6 +46,10 @@ using namespace std;
 #include "vk_layer_logging.h"
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
+// WSI Image Objects bypass usual Image Object creation methods.  A special Memory
+// Object value will be used to identify them internally.
+static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = static_cast<VkDeviceMemory>(-1);
+
 typedef struct _layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
@@ -416,12 +420,13 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
             break;
         }
         // Swap Chain is very unique, use imageMap, but copy in
-        // SwapChainCreatInfo's usage flags. This is used by vkCreateImageView
-        // to distinguish swap chain images
+        // SwapChainCreatInfo's usage flags and set the mem value to a unique key. These is used by
+        // vkCreateImageView and internal MemTracker routines to distinguish swap chain images
         case VK_OBJECT_TYPE_SWAPCHAIN_KHR:
         {
             auto pCI = &imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
+            pCI->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             pCI->create_info.image.usage =
                 const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsageFlags;
             break;
@@ -720,44 +725,24 @@ static VkBool32 update_cmd_buf_and_mem_references(
     const VkDeviceMemory mem)
 {
     VkBool32 result = VK_TRUE;
-    // First update CB binding in MemObj mini CB list
-    MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem.handle);
-    if (!pMemInfo) {
-        // TODO : cb should be srcObj
-        log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
-                     "Was it correctly allocated? Did it already get freed?", mem.handle, cb);
-        result = VK_FALSE;
-    } else {
-        // Search for cmd buffer object in memory object's binding list
-        VkBool32 found  = VK_FALSE;
-        if (pMemInfo->pCmdBufferBindings.size() > 0) {
-            for (list<VkCmdBuffer>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
-                if ((*it) == cb) {
-                    found = VK_TRUE;
-                    break;
-                }
-            }
-        }
-        // If not present, add to list
-        if (found == VK_FALSE) {
-            pMemInfo->pCmdBufferBindings.push_front(cb);
-            pMemInfo->refCount++;
-        }
-        // Now update CBInfo's Mem reference list
-        MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
-        // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
-        if (!pCBInfo) {
+
+    // Skip validation if this image was created through WSI
+    if (mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
+
+        // First update CB binding in MemObj mini CB list
+        MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem.handle);
+        if (!pMemInfo) {
             // TODO : cb should be srcObj
             log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                    "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that CB. Was CB incorrectly destroyed?", mem.handle, cb);
+                    "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
+                    "Was it correctly allocated? Did it already get freed?", mem.handle, cb);
             result = VK_FALSE;
         } else {
-            // Search for memory object in cmd buffer's reference list
+            // Search for cmd buffer object in memory object's binding list
             VkBool32 found  = VK_FALSE;
-            if (pCBInfo->pMemObjList.size() > 0) {
-                for (auto it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-                    if ((*it) == mem) {
+            if (pMemInfo->pCmdBufferBindings.size() > 0) {
+                for (list<VkCmdBuffer>::iterator it = pMemInfo->pCmdBufferBindings.begin(); it != pMemInfo->pCmdBufferBindings.end(); ++it) {
+                    if ((*it) == cb) {
                         found = VK_TRUE;
                         break;
                     }
@@ -765,7 +750,32 @@ static VkBool32 update_cmd_buf_and_mem_references(
             }
             // If not present, add to list
             if (found == VK_FALSE) {
-                pCBInfo->pMemObjList.push_front(mem);
+                pMemInfo->pCmdBufferBindings.push_front(cb);
+                pMemInfo->refCount++;
+            }
+            // Now update CBInfo's Mem reference list
+            MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
+            // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
+            if (!pCBInfo) {
+                // TODO : cb should be srcObj
+                log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+                        "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that CB. Was CB incorrectly destroyed?", mem.handle, cb);
+                result = VK_FALSE;
+            } else {
+                // Search for memory object in cmd buffer's reference list
+                VkBool32 found  = VK_FALSE;
+                if (pCBInfo->pMemObjList.size() > 0) {
+                    for (auto it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
+                        if ((*it) == mem) {
+                            found = VK_TRUE;
+                            break;
+                        }
+                    }
+                }
+                // If not present, add to list
+                if (found == VK_FALSE) {
+                    pCBInfo->pMemObjList.push_front(mem);
+                }
             }
         }
     }
