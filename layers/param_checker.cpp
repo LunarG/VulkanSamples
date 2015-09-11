@@ -591,7 +591,7 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkMemoryHeapFlagBits const& enumerator)
 {
-    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_HOST_LOCAL);
+    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_HOST_LOCAL_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -609,9 +609,9 @@ std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_HEAP_HOST_LOCAL)
+    if(enumerator & VK_MEMORY_HEAP_HOST_LOCAL_BIT)
     {
-        strings.push_back("VK_MEMORY_HEAP_HOST_LOCAL");
+        strings.push_back("VK_MEMORY_HEAP_HOST_LOCAL_BIT");
     }
 
     std::string enumeratorString;
@@ -1671,7 +1671,7 @@ std::string EnumeratorString(VkCmdPoolCreateFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkCmdPoolResetFlagBits const& enumerator)
 {
-    VkCmdPoolResetFlagBits allFlags = (VkCmdPoolResetFlagBits)(VK_CMD_POOL_RESET_RELEASE_RESOURCES);
+    VkCmdPoolResetFlagBits allFlags = (VkCmdPoolResetFlagBits)(VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1689,9 +1689,9 @@ std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_POOL_RESET_RELEASE_RESOURCES)
+    if(enumerator & VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT)
     {
-        strings.push_back("VK_CMD_POOL_RESET_RELEASE_RESOURCES");
+        strings.push_back("VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT");
     }
 
     std::string enumeratorString;
@@ -1771,7 +1771,7 @@ std::string EnumeratorString(VkCmdBufferOptimizeFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkCmdBufferResetFlagBits const& enumerator)
 {
-    VkCmdBufferResetFlagBits allFlags = (VkCmdBufferResetFlagBits)(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES);
+    VkCmdBufferResetFlagBits allFlags = (VkCmdBufferResetFlagBits)(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1789,9 +1789,9 @@ std::string EnumeratorString(VkCmdBufferResetFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_BUFFER_RESET_RELEASE_RESOURCES)
+    if(enumerator & VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_RESET_RELEASE_RESOURCES");
+        strings.push_back("VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT");
     }
 
     std::string enumeratorString;

@@ -633,7 +633,7 @@ public:
     // vkResetCommandBuffer()
     void end();
     void reset(VkCmdBufferResetFlags flags);
-    void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES); }
+    void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT); }
 
     static VkCmdBufferCreateInfo create_info(VkCmdPool const &pool);
 

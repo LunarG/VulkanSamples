@@ -873,13 +873,13 @@ typedef enum {
 typedef VkFlags VkImageCreateFlags;
 
 typedef enum {
-    VK_SAMPLE_COUNT_1 = 0x00000001,
-    VK_SAMPLE_COUNT_2 = 0x00000002,
-    VK_SAMPLE_COUNT_4 = 0x00000004,
-    VK_SAMPLE_COUNT_8 = 0x00000008,
-    VK_SAMPLE_COUNT_16 = 0x00000010,
-    VK_SAMPLE_COUNT_32 = 0x00000020,
-    VK_SAMPLE_COUNT_64 = 0x00000040,
+    VK_SAMPLE_COUNT_1_BIT = 0x00000001,
+    VK_SAMPLE_COUNT_2_BIT = 0x00000002,
+    VK_SAMPLE_COUNT_4_BIT = 0x00000004,
+    VK_SAMPLE_COUNT_8_BIT = 0x00000008,
+    VK_SAMPLE_COUNT_16_BIT = 0x00000010,
+    VK_SAMPLE_COUNT_32_BIT = 0x00000020,
+    VK_SAMPLE_COUNT_64_BIT = 0x00000040,
 } VkSampleCountFlagBits;
 typedef VkFlags VkSampleCountFlags;
 
@@ -903,7 +903,7 @@ typedef enum {
 typedef VkFlags VkMemoryPropertyFlags;
 
 typedef enum {
-    VK_MEMORY_HEAP_HOST_LOCAL = 0x00000001,
+    VK_MEMORY_HEAP_HOST_LOCAL_BIT = 0x00000001,
 } VkMemoryHeapFlagBits;
 typedef VkFlags VkMemoryHeapFlags;
 typedef VkFlags VkMemoryMapFlags;
@@ -1069,7 +1069,7 @@ typedef enum {
 typedef VkFlags VkCmdPoolCreateFlags;
 
 typedef enum {
-    VK_CMD_POOL_RESET_RELEASE_RESOURCES = 0x00000001,
+    VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
 } VkCmdPoolResetFlagBits;
 typedef VkFlags VkCmdPoolResetFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
@@ -1084,7 +1084,7 @@ typedef enum {
 typedef VkFlags VkCmdBufferOptimizeFlags;
 
 typedef enum {
-    VK_CMD_BUFFER_RESET_RELEASE_RESOURCES = 0x00000001,
+    VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
 } VkCmdBufferResetFlagBits;
 typedef VkFlags VkCmdBufferResetFlags;
 
