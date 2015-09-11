@@ -767,7 +767,6 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -867,7 +866,6 @@ TEST_F(VkRenderTest, TriangleMRT)
     pipelineobj.AddVertexDataBuffer(&meshBuffer, MESH_BUF_ID);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(2));
 
@@ -958,8 +956,6 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, indexBuffer);
 
 
 #define MESH_BIND_ID 0
@@ -1054,7 +1050,6 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1144,7 +1139,6 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1244,7 +1238,6 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1335,7 +1328,6 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1574,7 +1566,6 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1679,7 +1670,6 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
@@ -1774,7 +1764,6 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     pipelineobj.AddShader(&ps);
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, meshBuffer);
 
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
