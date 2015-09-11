@@ -918,6 +918,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.format = m_format;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
