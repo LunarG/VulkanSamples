@@ -56,6 +56,10 @@ typedef struct Checkpoint
     size_t mTokenLength;
 } Checkpoint;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Checkpoint* vktrace_Checkpoint_create(const char* _str);
 void vktrace_Checkpoint_write(Checkpoint* pCheckpoint, FileLike* _out);
 BOOL vktrace_Checkpoint_read(Checkpoint* pCheckpoint, FileLike* _in);
@@ -83,3 +87,7 @@ void vktrace_FileLike_Write(FileLike* pFileLike, const void* _bytes, size_t _len
 // Normally, Write outputs the _len to the stream first--with WriteRaw the bytes are simply written, 
 // no size parameter first.
 BOOL vktrace_FileLike_WriteRaw(FileLike* pFile, const void* _bytes, size_t _len);
+
+#ifdef __cplusplus
+}
+#endif

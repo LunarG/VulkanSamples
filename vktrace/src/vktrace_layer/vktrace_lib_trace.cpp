@@ -187,7 +187,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
 
     // insert into packet the data that was written by CPU between the vkMapMemory call and here
     // create a temporary local ppData array and add it to the packet (to reserve the space for the array)
-    void** ppTmpData = malloc(memRangeCount * sizeof(void*));
+    void** ppTmpData = (void **) malloc(memRangeCount * sizeof(void*));
     vktrace_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->ppData), sizeof(void*)*memRangeCount, ppTmpData);
     free(ppTmpData);
 

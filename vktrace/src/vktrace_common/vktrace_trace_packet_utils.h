@@ -29,6 +29,10 @@
 #include "vktrace_memory.h"
 #include "vktrace_process.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // pUuid is expected to be an array of 4 unsigned ints
 void vktrace_gen_uuid(uint32_t* pUuid);
 
@@ -149,3 +153,7 @@ static vktrace_trace_packet_message* vktrace_interpret_body_as_trace_packet_mess
     pPacket->message = (char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->message);
     return pPacket;
 }
+
+#ifdef __cplusplus
+}
+#endif

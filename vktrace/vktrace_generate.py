@@ -110,11 +110,17 @@ class Subcommand(object):
 
     def _generate_trace_func_protos(self):
         func_protos = []
+        func_protos.append('#ifdef __cplusplus')
+        func_protos.append('extern"C" {')
+        func_protos.append('#endif')
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
             if 'Dbg' not in proto.name and 'KHR' not in proto.name:
                 func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
+        func_protos.append('#ifdef __cplusplus')
+        func_protos.append('}')
+        func_protos.append('#endif')
         return "\n".join(func_protos)
 
     def _generate_trace_func_protos_ext(self, extName):

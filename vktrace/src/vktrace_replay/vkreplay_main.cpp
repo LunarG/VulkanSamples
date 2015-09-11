@@ -25,12 +25,10 @@
 
 #include <stdio.h>
 #include <string>
-extern "C" {
 #include "vktrace_common.h"
 #include "vktrace_tracelog.h"
 #include "vktrace_filelike.h"
 #include "vktrace_trace_packet_utils.h"
-}
 #include "vkreplay_main.h"
 #include "vkreplay_factory.h"
 #include "vkreplay_seq.h"

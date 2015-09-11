@@ -31,10 +31,8 @@
 #include <algorithm>
 #include <queue>
 
-extern "C" {
 #include "vktrace_vk_vk_packets.h"
 #include "vk_enum_string_helper.h"
-}
 
 vkreplayer_settings *g_pReplaySettings;
 

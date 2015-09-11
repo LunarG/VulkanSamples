@@ -6,15 +6,15 @@ include("${SRC_DIR}/build_options.cmake")
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.c)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.cpp)
 
 if (WIN32)
     # Put vk_trace_layer.dll in the same directory as vktrace.exe
@@ -28,12 +28,12 @@ set(CODEGEN_VKTRACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../vktrace_extensions/vktra
 set(SRC_LIST
     ${SRC_LIST}
     vktrace_lib.c
-    vktrace_lib_trace.c
-    codegen/vktrace_vk_vk.c
-    codegen/vktrace_vk_vk_debug_report_lunarg.c
-    codegen/vktrace_vk_vk_debug_marker_lunarg.c
-    codegen/vktrace_vk_vk_ext_khr_swapchain.c
-    codegen/vktrace_vk_vk_ext_khr_device_swapchain.c
+    vktrace_lib_trace.cpp
+    codegen/vktrace_vk_vk.cpp
+    codegen/vktrace_vk_vk_debug_report_lunarg.cpp
+    codegen/vktrace_vk_vk_debug_marker_lunarg.cpp
+    codegen/vktrace_vk_vk_ext_khr_swapchain.cpp
+    codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_swapchain_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_device_swapchain_struct_size_helper.c
@@ -41,7 +41,7 @@ set(SRC_LIST
     ${CODEGEN_UTILS_DIR}/vk_debug_marker_lunarg_struct_size_helper.c
 )
 
-set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE C)
+set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE CXX)
 
 set (HDR_LIST
     vktrace_lib_helpers.h

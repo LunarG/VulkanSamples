@@ -25,12 +25,9 @@
 #include <inttypes.h>
 #include "vkreplay.h"
 #include "vkreplay_vkreplay.h"
-
-extern "C"
-{
 #include "vktrace_vk_packet_id.h"
 #include "vktrace_tracelog.h"
-}
+
 
 vkReplay* g_pReplayer = NULL;
 VKTRACE_CRITICAL_SECTION g_handlerLock;

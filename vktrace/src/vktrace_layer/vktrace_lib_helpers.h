@@ -178,7 +178,7 @@ static void add_new_handle_to_mem_info(const VkDeviceMemory handle, VkDeviceSize
         entry->rangeSize = 0;
         entry->rangeOffset = 0;
         entry->didFlush = FALSE;
-        entry->pData = pData;   // NOTE: VKFreeMemory will free this mem, so no malloc()
+        entry->pData = (uint8_t *) pData;   // NOTE: VKFreeMemory will free this mem, so no malloc()
     }
     vktrace_leave_critical_section(&g_memInfoLock);
 }
@@ -191,7 +191,7 @@ static void add_data_to_mem_info(const VkDeviceMemory handle, VkDeviceSize range
     entry = find_mem_info_entry(handle);
     if (entry)
     {
-        entry->pData = pData;
+        entry->pData = (uint8_t *) pData;
         if (rangeSize == 0)
             entry->rangeSize = entry->totalSize - rangeOffset;
         else
@@ -235,7 +235,7 @@ static void rm_handle_from_mem_info(const VkDeviceMemory handle)
 
 static void add_alloc_memory_to_trace_packet(vktrace_trace_packet_header* pHeader, void** ppOut, const void* pIn)
 {
-    const VkMemoryAllocInfo* pInNow = pIn;
+    const VkMemoryAllocInfo* pInNow = (const VkMemoryAllocInfo*) pIn;
     while (pInNow != NULL)
     {
 

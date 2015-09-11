@@ -31,6 +31,9 @@
 #include "vktrace_interconnect.h"
 #include "vktrace_vk_vk.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 // this is needed to be loaded by vktrace
 VKTRACER_EXPORT VKTRACE_TRACER_ID VKTRACER_CDECL VKTRACE_GetTracerId(void)
 {
@@ -167,5 +170,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         break;
     }
     return TRUE;
+}
+#endif
+#ifdef __cplusplus
 }
 #endif

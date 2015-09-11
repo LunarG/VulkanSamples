@@ -43,6 +43,10 @@ typedef enum {
     VKTRACE_LOG_LEVEL_MAXIMUM
 } VktraceLogLevel;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char* vktrace_LogLevelToString(VktraceLogLevel level);
 const char* vktrace_LogLevelToShortString(VktraceLogLevel level);
 
@@ -80,3 +84,7 @@ void vktrace_LogWarning(const char* format, ...);
 
 // Log any misc information that might help a user understand what is going on.
 void vktrace_LogVerbose(const char* format, ...);
+
+#ifdef __cplusplus
+}
+#endif
