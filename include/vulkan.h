@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 166, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 167, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -1229,7 +1229,9 @@ typedef struct {
     uint32_t                                    maxPerStageDescriptorStorageImages;
     uint32_t                                    maxDescriptorSetSamplers;
     uint32_t                                    maxDescriptorSetUniformBuffers;
+    uint32_t                                    maxDescriptorSetUniformBuffersDynamic;
     uint32_t                                    maxDescriptorSetStorageBuffers;
+    uint32_t                                    maxDescriptorSetStorageBuffersDynamic;
     uint32_t                                    maxDescriptorSetSampledImages;
     uint32_t                                    maxDescriptorSetStorageImages;
     uint32_t                                    maxVertexInputAttributes;
