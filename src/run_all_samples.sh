@@ -43,6 +43,8 @@ echo "Initialize Pipeline"
 ./vk0.2-initpipeline
 echo "Draw Cube"
 ./vk0.2-drawcube
+echo "Draw Textured Cube"
+./vk0.2-drawtexturedcube
 echo "Use GLSL Shader"
 ./vk0.2-useglslshader
 echo "Use SPIR-V Shader"
