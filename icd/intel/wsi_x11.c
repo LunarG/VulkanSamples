@@ -28,6 +28,7 @@
 
 #define _GNU_SOURCE 1
 #include <time.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -610,29 +611,27 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
 static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
                                     uint32_t serial, int64_t timeout)
 {
-    struct timespec start_time; // time at start of call
+    struct timespec current_time; // current time for planning wait
     struct timespec stop_time;  // time when timeout will elapse
-    struct timespec sleep_time; // time for next poll of events
     bool wait;
     if (timeout == 0){
         wait = false;
     } else {
         wait = true;
-        clock_gettime(CLOCK_MONOTONIC, &start_time);
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
         if (timeout == -1) {
             // wait approximately forever
-            stop_time.tv_nsec = start_time.tv_nsec;
-            stop_time.tv_sec = start_time.tv_sec + 10*365*24*60*60;
+            stop_time.tv_nsec = current_time.tv_nsec;
+            stop_time.tv_sec = current_time.tv_sec + 10*365*24*60*60;
         } else {
-            stop_time.tv_nsec = start_time.tv_nsec + (timeout % 1000000000);
-            stop_time.tv_sec = start_time.tv_sec + (timeout / 1000000000);
+            stop_time.tv_nsec = current_time.tv_nsec + (timeout % 1000000000);
+            stop_time.tv_sec = current_time.tv_sec + (timeout / 1000000000);
             // Carry overflow from tv_nsec to tv_sec
             while (stop_time.tv_nsec > 1000000000) {
                 stop_time.tv_sec += 1;
                 stop_time.tv_nsec -= 1000000000;
             }
         }
-        sleep_time = start_time;
     }
 
     while (sc->remote.serial < serial) {
@@ -642,24 +641,36 @@ static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
         ev = (xcb_present_generic_event_t *)
             xcb_poll_for_special_event(sc->c, sc->present_special_event);
         if (wait) {
+            int poll_timeout;
+            struct pollfd fds;
+
+            fds.fd = xcb_get_file_descriptor(sc->c);
+            fds.events = POLLIN;
+
             while (!ev) {
-                if (sleep_time.tv_sec > stop_time.tv_sec ||
-                    (sleep_time.tv_sec == stop_time.tv_sec && sleep_time.tv_nsec > stop_time.tv_nsec)) {
+                clock_gettime(CLOCK_MONOTONIC, &current_time);
+                if (current_time.tv_sec > stop_time.tv_sec ||
+                    (current_time.tv_sec == stop_time.tv_sec && current_time.tv_nsec > stop_time.tv_nsec)) {
                     // Time has run out
                     return VK_TIMEOUT;
                 }
-                sleep_time.tv_nsec += 100000000; // add 0.1 seconds
-                // Carry overflow from tv_nsec to tv_sec
-                while (sleep_time.tv_nsec > 1000000000) {
-                    sleep_time.tv_sec += 1;
-                    sleep_time.tv_nsec -= 1000000000;
+                poll_timeout = 1000/60; // milliseconds for 60 HZ
+                if (current_time.tv_sec >= stop_time.tv_sec-1) { // Remaining timeout may be under 1/60 seconds.
+                    int remaining_timeout;
+                    remaining_timeout = 1000 * (stop_time.tv_sec - current_time.tv_sec) + (stop_time.tv_nsec - current_time.tv_nsec) / 1000000;
+                    if (poll_timeout > remaining_timeout) {
+                        poll_timeout = remaining_timeout; // milliseconds for remainder of timeout
+                    }
                 }
-                if (sleep_time.tv_sec > stop_time.tv_sec ||
-                    (sleep_time.tv_sec == stop_time.tv_sec && sleep_time.tv_nsec > stop_time.tv_nsec)) {
-                    // Cap sleep time at original stop time
-                    sleep_time = stop_time;
+
+                // Wait for any input on the xcb connection or a timeout.
+                // Events may come in and be queued up before poll.  Timing out handles that.
+                poll(&fds, 1, poll_timeout);
+
+                // Another thread may have handled events and updated sc->remote.serial
+                if (sc->remote.serial >= serial) {
+                    return VK_SUCCESS;
                 }
-                clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &sleep_time, NULL);
 
                 // Use xcb_intern_atom_reply just to make xcb really read events from socket.
                 // Calling xcb_poll_for_special_event fails to actually look for new packets.
