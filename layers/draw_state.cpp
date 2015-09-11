@@ -60,24 +60,24 @@ static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map draw_state_device_table_map;
 static instance_table_map draw_state_instance_table_map;
 
-unordered_map<uint64_t, SAMPLER_NODE*> sampleMap;
-unordered_map<uint64_t, VkImageViewCreateInfo> imageMap;
-unordered_map<uint64_t, VkImageViewCreateInfo> viewMap;
-unordered_map<uint64_t, BUFFER_NODE*> bufferMap;
-unordered_map<uint64_t, VkDynamicViewportStateCreateInfo> dynamicVpStateMap;
-unordered_map<uint64_t, VkDynamicLineWidthStateCreateInfo> dynamicLineWidthStateMap;
-unordered_map<uint64_t, VkDynamicDepthBiasStateCreateInfo> dynamicDepthBiasStateMap;
-unordered_map<uint64_t, VkDynamicBlendStateCreateInfo> dynamicBlendStateMap;
-unordered_map<uint64_t, VkDynamicDepthBoundsStateCreateInfo> dynamicDepthBoundsStateMap;
-unordered_map<uint64_t, std::pair<VkDynamicStencilStateCreateInfo, VkDynamicStencilStateCreateInfo>> dynamicStencilStateMap;
-unordered_map<uint64_t, PIPELINE_NODE*> pipelineMap;
-unordered_map<uint64_t, POOL_NODE*> poolMap;
-unordered_map<uint64_t, SET_NODE*> setMap;
-unordered_map<uint64_t, LAYOUT_NODE*> layoutMap;
+static unordered_map<uint64_t, SAMPLER_NODE*> sampleMap;
+static unordered_map<uint64_t, VkImageViewCreateInfo> imageMap;
+static unordered_map<uint64_t, VkImageViewCreateInfo> viewMap;
+static unordered_map<uint64_t, BUFFER_NODE*> bufferMap;
+static unordered_map<uint64_t, VkDynamicViewportStateCreateInfo> dynamicVpStateMap;
+static unordered_map<uint64_t, VkDynamicLineWidthStateCreateInfo> dynamicLineWidthStateMap;
+static unordered_map<uint64_t, VkDynamicDepthBiasStateCreateInfo> dynamicDepthBiasStateMap;
+static unordered_map<uint64_t, VkDynamicBlendStateCreateInfo> dynamicBlendStateMap;
+static unordered_map<uint64_t, VkDynamicDepthBoundsStateCreateInfo> dynamicDepthBoundsStateMap;
+static unordered_map<uint64_t, std::pair<VkDynamicStencilStateCreateInfo, VkDynamicStencilStateCreateInfo>> dynamicStencilStateMap;
+static unordered_map<uint64_t, PIPELINE_NODE*> pipelineMap;
+static unordered_map<uint64_t, POOL_NODE*> poolMap;
+static unordered_map<uint64_t, SET_NODE*> setMap;
+static unordered_map<uint64_t, LAYOUT_NODE*> layoutMap;
 // Map for layout chains
-unordered_map<void*, GLOBAL_CB_NODE*> cmdBufferMap;
-unordered_map<uint64_t, VkRenderPassCreateInfo*> renderPassMap;
-unordered_map<uint64_t, VkFramebufferCreateInfo*> frameBufferMap;
+static unordered_map<void*, GLOBAL_CB_NODE*> cmdBufferMap;
+static unordered_map<uint64_t, VkRenderPassCreateInfo*> renderPassMap;
+static unordered_map<uint64_t, VkFramebufferCreateInfo*> frameBufferMap;
 
 struct devExts {
     bool debug_marker_enabled;
