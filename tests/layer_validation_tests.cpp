@@ -1007,6 +1007,72 @@ TEST_F(VkLayerTest, StencilStateNotBound)
         FAIL() << "Error received was not 'Stencil object not bound to this command buffer'";
     }
 }
+
+TEST_F(VkLayerTest, PipelineNotBound)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    if (!strstr(msgString.c_str(),"Invalid VkPipeline Object 0xbaadb1be")) {
+        FAIL() << "Error received was not 'Invalid VkPipeline Object 0xbaadb1be'";
+    }
+}
 #endif
 #if DRAW_STATE_TESTS
 TEST_F(VkLayerTest, CmdBufferTwoSubmits)
@@ -1047,22 +1113,92 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     }
 }
 
-
 TEST_F(VkLayerTest, BindPipelineNoRenderPass)
 {
     // Initiate Draw w/o a PSO bound
     VkFlags         msgFlags;
     std::string     msgString;
+    VkResult        err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    BeginCommandBuffer();
-    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+        VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
+        pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        pipe_ms_state_ci.pNext = NULL;
+        pipe_ms_state_ci.rasterSamples = 1;
+        pipe_ms_state_ci.sampleShadingEnable = 0;
+        pipe_ms_state_ci.minSampleShading = 1.0;
+        pipe_ms_state_ci.pSampleMask = NULL;
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+        VkPipelineLayout pipeline_layout;
+
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+                                                                                       // but add it to be able to run on more devices
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    m_errorMonitor->ClearState();
+    // Calls CreateCommandBuffer
+    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    memset(&cmd_buf_info, 0, sizeof(VkCmdBufferBeginInfo));
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
+    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
-        FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0xbaadb1be) without an active RenderPass'";
+        FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0x<handle>) without an active RenderPass'";
     }
 }
 
@@ -1287,6 +1423,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     VkResult        err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
     
     VkDescriptorTypeCount ds_type_count = {};
@@ -1348,6 +1485,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         gp_ci.pColorBlendState = NULL;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
         gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
 
     VkPipelineCacheCreateInfo pc_ci = {};
         pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -1406,8 +1544,8 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
     VkRenderPassBeginInfo rp_begin = {};
         rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         rp_begin.pNext = NULL;
-        rp_begin.renderPass = (VkRenderPass)0xc001d00d;
-        rp_begin.framebuffer = 0;
+        rp_begin.renderPass = renderPass();
+        rp_begin.framebuffer = framebuffer();
  
     vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
@@ -1931,72 +2069,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     }
 }
 
-TEST_F(VkLayerTest, PipelineNotBound)
-{
-    VkFlags         msgFlags;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_errorMonitor->ClearState();
-  
-    VkDescriptorTypeCount ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ds_type_count.count = 1;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.count = 1;
-        ds_pool_ci.pTypeCount = &ds_type_count;
-  
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.count = 1;
-        ds_layout_ci.pBinding = &dsl_binding;
-
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-    
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.pNext = NULL;
-        pipeline_layout_ci.descriptorSetCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-
-    BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
-
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
-    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
-        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
-    }
-}
-
 TEST_F(VkLayerTest, ClearCmdNoDraw)
 {
     // Create CmdBuffer where we add ClearCmd for FB Color attachment prior to issuing a Draw
@@ -2250,6 +2322,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
@@ -2300,6 +2373,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
@@ -2349,6 +2423,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
@@ -2400,6 +2475,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     VkVertexInputBindingDescription input_binding;
@@ -2458,6 +2534,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
@@ -2507,6 +2584,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     VkVertexInputBindingDescription input_binding;
@@ -2566,6 +2644,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     ScopedUseGlsl useGlsl(false);
 
     /* Two binding descriptions for binding 0 */

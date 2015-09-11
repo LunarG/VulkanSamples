@@ -397,14 +397,14 @@ initObjectTracker(
 static void create_obj(VkInstance dispatchable_object, VkInstance object, VkDbgObjectType objType);
 static void create_obj(VkDevice dispatchable_object, VkDevice object, VkDbgObjectType objType);
 static void create_obj(VkDevice dispatchable_object, VkDescriptorSet object, VkDbgObjectType objType);
-static void validate_object(VkInstance dispatchable_object, VkInstance object);
-static void validate_object(VkDevice dispatchable_object, VkDevice object);
-static void validate_object(VkDevice dispatchable_object, VkDescriptorPool object);
+static VkBool32 validate_object(VkInstance dispatchable_object, VkInstance object);
+static VkBool32 validate_object(VkDevice dispatchable_object, VkDevice object);
+static VkBool32 validate_object(VkDevice dispatchable_object, VkDescriptorPool object);
 static void destroy_obj(VkInstance dispatchable_object, VkInstance object);
 static void destroy_obj(VkDevice dispatchable_object, VkDeviceMemory object);
 static void destroy_obj(VkDevice dispatchable_object, VkDescriptorSet object);
-static void set_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
-static void reset_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
+static VkBool32 set_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
+static VkBool32 reset_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
 #if 0
 static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, VkDbgObjectType objType,
     ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
@@ -416,45 +416,49 @@ extern unordered_map<const void*, OBJTRACK_NODE*> VkSemaphoreMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkCmdBufferMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkSwapchainKHRMap;
 
-static void validate_object(VkQueue dispatchable_object, VkBuffer object)
+static VkBool32 validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
     if (VkBufferMap.find((void*)object.handle) != VkBufferMap.end()) {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkBuffer Object %p", object.handle);
     }
+    return VK_FALSE;
 }
 
-static void set_status(VkQueue dispatchable_object, VkFence object, VkDbgObjectType objType, ObjectStatusFlags status_flag)
+static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObjectType objType, ObjectStatusFlags status_flag)
 {
+    VkBool32 skipCall = VK_FALSE;
     if (object != VK_NULL_HANDLE) {
         if (VkFenceMap.find((void*)object.handle) != VkFenceMap.end()) {
             OBJTRACK_NODE* pNode = VkFenceMap[(void*)object.handle];
             pNode->status |= status_flag;
-            return;
         }
         else {
             // If we do not find it print an error
-            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+            skipCall |= log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
                 "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",
                 object.handle, string_VkDbgObjectType(objType));
         }
     }
+    return skipCall;
 }
 
-static void validate_object(VkQueue dispatchable_object, VkSemaphore object)
+static VkBool32 validate_object(VkQueue dispatchable_object, VkSemaphore object)
 {
     if (VkSemaphoreMap.find((void*)object.handle) == VkSemaphoreMap.end()) {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkSemaphore Object %p", object.handle);
     }
+    return VK_FALSE;
 }
 
-static void validate_object(VkDevice dispatchable_object, VkCmdBuffer object)
+static VkBool32 validate_object(VkDevice dispatchable_object, VkCmdBuffer object)
 {
     if (VkCmdBufferMap.find(object) == VkCmdBufferMap.end()) {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkCmdBuffer Object %p",reinterpret_cast<uint64_t>(object));
     }
+    return VK_FALSE;
 }
 
 static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObjectType objType)
@@ -619,10 +623,13 @@ explicit_MapMemory(
     VkFlags          flags,
     void           **ppData)
 {
+    VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&objLock);
-    set_status(device, mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
-    validate_object(device, device);
+    skipCall |= set_status(device, mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
+    skipCall |= validate_object(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall == VK_TRUE)
+        return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
 
@@ -634,10 +641,13 @@ explicit_UnmapMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
+    VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&objLock);
-    reset_status(device, mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
-    validate_object(device, device);
+    skipCall |= reset_status(device, mem, VK_OBJECT_TYPE_DEVICE_MEMORY, OBJSTATUS_GPU_MEM_MAPPED);
+    skipCall |= validate_object(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall == VK_TRUE)
+        return;
 
     get_dispatch_table(ObjectTracker_device_table_map, device)->UnmapMemory(device, mem);
 }
