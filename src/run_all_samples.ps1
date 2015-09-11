@@ -52,6 +52,8 @@ echo "Initialize Pipeline"
 & $dPath\vk0.2-initpipeline
 echo "Draw Cube"
 & $dPath\vk0.2-drawcube
+echo "Draw Textured Cube"
+& $dPath\vk0.2-drawtexturedcube
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"
