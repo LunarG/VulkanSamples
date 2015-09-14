@@ -438,11 +438,11 @@ class Subcommand(object):
                         # call down the layer chain and get return value (if there is one)
                         # Note: this logic doesn't work for CreateInstance or CreateDevice but those are handwritten
                         if extName == 'vk_debug_marker_lunarg':
-                            table_txt = 'g_debugMarkerTable'
+                            table_txt = 'mdd(%s)->debugMarkerTable' % proto.params[0].name
                         elif proto.params[0].ty in ['VkInstance', 'VkPhysicalDevice']:
-                           table_txt = 'g_instTable'
+                           table_txt = 'mid(%s)->instTable' % proto.params[0].name
                         else:
-                           table_txt = 'g_devTable'
+                           table_txt = 'mdd(%s)->devTable' % proto.params[0].name
                         func_body.append('    %s%s.%s;' % (return_txt, table_txt, proto.c_call()))
                         func_body.append('    vktrace_set_packet_entrypoint_end_time(pHeader);')
 
@@ -1854,11 +1854,8 @@ class VktraceExtTraceC(Subcommand):
         header_txt.append('#include "%s_struct_size_helper.h"' % extName.lower())
         if extName == 'vk_debug_marker_lunarg':
             header_txt.append('#include "vk_debug_marker_layer.h"\n')
-            header_txt.append('//TODO change this to support multiple devices')
-            header_txt.append('VkLayerDebugMarkerDispatchTable g_debugMarkerTable;')
 
-        else:
-            header_txt.append('#include "vktrace_lib_helpers.h"')
+        header_txt.append('#include "vktrace_lib_helpers.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):

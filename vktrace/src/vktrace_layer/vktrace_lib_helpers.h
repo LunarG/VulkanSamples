@@ -23,6 +23,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #pragma once
+#include <unordered_map>
 #include "vk_layer.h"
 #include "vktrace_platform.h"
 #include "vktrace_vk_vk.h"
@@ -48,12 +49,26 @@ typedef struct _VKMemInfo {
     unsigned int capacity;
 } VKMemInfo;
 
+typedef struct _layer_device_data {
+    VkLayerDispatchTable devTable;
+    bool LunargDebugMarkerEnabled;
+    VkLayerDebugMarkerDispatchTable debugMarkerTable;
+    bool KHRDeviceSwapchainEnabled;
+} layer_device_data;
+typedef struct _layer_instance_data {
+    VkLayerInstanceDispatchTable instTable;
+    bool LunargDebugReportEnabled;
+    bool KHRSwapchainEnabled;
+} layer_instance_data;
+
 // defined in manually written file: vktrace_lib_trace.c
 extern VKMemInfo g_memInfo;
 extern VKTRACE_CRITICAL_SECTION g_memInfoLock;
-extern VkLayerInstanceDispatchTable g_instTable;
-extern VkLayerDispatchTable g_devTable;
-extern VkLayerDebugMarkerDispatchTable g_debugmarkerTable;
+extern std::unordered_map<void *, layer_device_data *> g_deviceDataMap;
+extern std::unordered_map<void *, layer_instance_data *> g_instanceDataMap;
+
+layer_instance_data *mid(void *object);
+layer_device_data *mdd(void* object);
 
 static void init_mem_info_entrys(VKAllocInfo *ptr, const unsigned int num)
 {
