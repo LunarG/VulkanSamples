@@ -252,7 +252,7 @@ class Subcommand(object):
 
         for p in params:
             pp_dict = {}
-            if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
+            if '*' in p.ty and p.name not in ['pTag', 'pUserData']:
 # LUGMAL        if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower() and p.name != 'pCreateInfos':
                 if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower():
                     pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-1].name, p.ty.strip('*').replace('const ', ''), p.name)
@@ -267,6 +267,9 @@ class Subcommand(object):
                     # TODO : This is custom hack to account for 2 pData items with dataSize param for sizing
                     if 'pData' == p.name and 'dataSize' == params[params.index(p)-1].name:
                         pp_dict['add_txt'] = pp_dict['add_txt'].replace('_dataSize', 'dataSize')
+                elif 'void' in p.ty and (p.name == 'pData' or p.name == 'values'):
+                    pp_dict['add_txt'] = '//TODO FIXME vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
+                    pp_dict['finalize_txt'] = '//TODO FIXME vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->%s))' % (p.name)
                 else:
                     pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
                 if 'finalize_txt' not in pp_dict or 'default' == pp_dict['finalize_txt']:
