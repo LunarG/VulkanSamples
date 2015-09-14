@@ -428,8 +428,16 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     ASSERT_VK_SUCCESS( err );
 
     m_errorMonitor->ClearState();
-    // Introduce failure by calling begin again before checking fence
-    BeginCommandBuffer();
+
+    VkCmdBufferBeginInfo info = {};
+    info.flags       = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT | VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.sType       = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    info.renderPass  = VK_NULL_HANDLE;
+    info.subpass     = 0;
+    info.framebuffer = VK_NULL_HANDLE;
+
+    // Introduce failure by calling BCB again before checking fence
+    vkBeginCommandBuffer(m_cmdBuffer->handle(), &info);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
@@ -470,7 +478,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
-   
+
     VkMemoryAllocInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_alloc.pNext = NULL;
@@ -720,7 +728,6 @@ TEST_F(VkLayerTest, RebindMemory)
 
     // Introduce validation failure, try to bind a different memory object to the same image object
     err = vkBindImageMemory(m_device->device(), image, mem2, 0);
-    ASSERT_VK_SUCCESS(err);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to rebind an object";
@@ -821,8 +828,11 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
 
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
-    QueueCommandBuffer(testFence.handle());
+
+    vkQueueSubmit(m_device->m_queue, 1, &m_cmdBuffer->handle(), testFence.handle());
+    vkQueueWaitIdle(m_device->m_queue );
     msgFlags = m_errorMonitor->GetState(&msgString);
+
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err from using a fence in SIGNALED state in call to vkQueueSubmit";
     if (!strstr(msgString.c_str(),"submitted in SIGNALED state.  Fences must be reset before being submitted")) {
         FAIL() << "Error received was not 'VkQueueSubmit with fence in SIGNALED_STATE'";
