@@ -35,7 +35,6 @@ typedef enum _OBJECT_TRACK_ERROR
     OBJTRACK_DESTROY_OBJECT_FAILED,             // Couldn't find object to be destroyed
     OBJTRACK_OBJECT_LEAK,                       // OBJECT was not correctly freed/destroyed
     OBJTRACK_OBJCOUNT_MAX_EXCEEDED,             // Request for Object data in excess of max obj count
-    OBJTRACK_INVALID_FENCE,                     // Requested status of unsubmitted fence object
     OBJTRACK_INVALID_OBJECT,                    // Object used that has never been created
 } OBJECT_TRACK_ERROR;
 
@@ -590,25 +589,6 @@ explicit_GetDeviceQueue(
 }
 
 VkResult
-explicit_QueueSubmit(
-    VkQueue            queue,
-    uint32_t           cmdBufferCount,
-    const VkCmdBuffer *pCmdBuffers,
-    VkFence            fence)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    set_status(queue, fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);
-    // TODO: Fix for updated memory reference mechanism
-    // validate_memory_mapping_status(pMemRefs, memRefCount);
-    // validate_mem_ref_count(memRefCount);
-    loader_platform_thread_unlock_mutex(&objLock);
-
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
-
-    return result;
-}
-
-VkResult
 explicit_MapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
@@ -689,49 +669,6 @@ explicit_QueueBindSparseImageOpaqueMemory(
     loader_platform_thread_unlock_mutex(&objLock);
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
-    return result;
-}
-
-VkResult
-explicit_GetFenceStatus(
-    VkDevice device,
-    VkFence  fence)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    // Warn if submitted_flag is not set
-#if 0
-    validate_status(device, fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED,
-        VK_DBG_REPORT_ERROR_BIT, OBJTRACK_INVALID_FENCE, "Status Requested for Unsubmitted Fence");
-#endif
-    validate_object(device, device);
-    loader_platform_thread_unlock_mutex(&objLock);
-
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetFenceStatus(device, fence);
-
-    return result;
-}
-
-VkResult
-explicit_WaitForFences(
-    VkDevice       device,
-    uint32_t       fenceCount,
-    const VkFence *pFences,
-    VkBool32       waitAll,
-    uint64_t       timeout)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-#if 0
-    // Warn if waiting on unsubmitted fence
-    for (uint32_t i = 0; i < fenceCount; i++) {
-        validate_status(device, pFences[i], VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED, OBJSTATUS_FENCE_IS_SUBMITTED,
-            VK_DBG_REPORT_ERROR_BIT, OBJTRACK_INVALID_FENCE, "Waiting for Unsubmitted Fence");
-    }
-#endif
-    validate_object(device, device);
-    loader_platform_thread_unlock_mutex(&objLock);
-
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
-
     return result;
 }
 

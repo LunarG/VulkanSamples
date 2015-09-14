@@ -2049,10 +2049,30 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     return result;
 }
 
+static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const char* apiCall)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto pFenceInfo = fenceMap.find(fence.handle);
+    if (pFenceInfo != fenceMap.end()) {
+        if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, fence.handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, fence.handle);
+        }
+        if (!pFenceInfo->second.queue) { // Checking status of unsubmitted fence
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, fence.handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                "%s called for fence %#" PRIxLEAST64 " which has not been submitted on a Queue.", apiCall, fence.handle);
+        }
+    }
+    return skipCall;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
     VkDevice device,
     VkFence  fence)
 {
+    VkBool32 skipCall = verifyFenceStatus(device, fence, "vkGetFenceStatus");
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -2069,16 +2089,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     VkBool32       waitAll,
     uint64_t       timeout)
 {
+    VkBool32 skipCall = VK_FALSE;
     // Verify fence status of submitted fences
     for(uint32_t i = 0; i < fenceCount; i++) {
-        auto pFenceInfo = fenceMap.find(pFences[i].handle);
-        if (pFenceInfo != fenceMap.end()) {
-            if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, pFences[i].handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                        "VkWaitForFences specified fence %#" PRIxLEAST64 " already in SIGNALED state.", pFences[i].handle);
-            }
-        }
+        skipCall |= verifyFenceStatus(device, pFences[i], "vkWaitForFences");
     }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
 
