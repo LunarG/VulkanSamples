@@ -2108,10 +2108,10 @@ typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instanc
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef void (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
-typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetGlobalLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkEnumerateInstanceExtensionProperties)(const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkEnumerateDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkEnumerateInstanceLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkEnumerateDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
@@ -2310,22 +2310,22 @@ VkResult VKAPI vkCreateDevice(
 void VKAPI vkDestroyDevice(
     VkDevice                                    device);
 
-VkResult VKAPI vkGetGlobalExtensionProperties(
+VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties);
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties);
 
-VkResult VKAPI vkGetGlobalLayerProperties(
+VkResult VKAPI vkEnumerateInstanceLayerProperties(
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties);
 
-VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+VkResult VKAPI vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties);

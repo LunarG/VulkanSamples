@@ -497,8 +497,8 @@ static inline void loader_init_instance_core_dispatch_table(VkLayerInstanceDispa
     table->GetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties) gpa(inst, "vkGetPhysicalDeviceProperties");
     table->GetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties) gpa(inst, "vkGetPhysicalDeviceQueueFamilyProperties");
     table->GetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties) gpa(inst, "vkGetPhysicalDeviceMemoryProperties");
-    table->GetPhysicalDeviceExtensionProperties = (PFN_vkGetPhysicalDeviceExtensionProperties) gpa(inst, "vkGetPhysicalDeviceExtensionProperties");
-    table->GetPhysicalDeviceLayerProperties = (PFN_vkGetPhysicalDeviceLayerProperties) gpa(inst, "vkGetPhysicalDeviceLayerProperties");
+    table->EnumerateDeviceExtensionProperties = (PFN_vkEnumerateDeviceExtensionProperties) gpa(inst, "vkEnumerateDeviceExtensionProperties");
+    table->EnumerateDeviceLayerProperties = (PFN_vkEnumerateDeviceLayerProperties) gpa(inst, "vkEnumerateDeviceLayerProperties");
 }
 
 static inline void loader_init_instance_extension_dispatch_table(
@@ -541,10 +541,10 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceMemoryProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void *) table->GetInstanceProcAddr;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
-        return (void *) table->GetPhysicalDeviceExtensionProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
-        return (void *) table->GetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
+        return (void *) table->EnumerateDeviceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
+        return (void *) table->EnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR"))
         return (void *) table->GetPhysicalDeviceSurfaceSupportKHR;
     if (!strcmp(name, "DbgCreateMsgCallback"))

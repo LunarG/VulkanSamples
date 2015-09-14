@@ -230,7 +230,7 @@ ICD_EXPORT void VKAPI vkDestroyInstance(
     intel_instance_destroy(instance);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
         VkExtensionProperties*                      pProperties)
@@ -252,7 +252,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {

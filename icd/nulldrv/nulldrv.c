@@ -1549,7 +1549,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -1558,7 +1558,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
@@ -1578,7 +1578,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     }
     return VK_SUCCESS;
 }
-ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
 {
@@ -1586,7 +1586,7 @@ ICD_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pCount,

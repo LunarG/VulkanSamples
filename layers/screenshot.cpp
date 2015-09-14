@@ -387,7 +387,7 @@ static const VkLayerProperties ss_device_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -396,7 +396,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -405,7 +405,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -415,7 +415,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)

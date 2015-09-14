@@ -25,7 +25,7 @@ finds ICD driver libraries.
 
 ## Interface to driver (ICD)
 - vkCreateInstance exported
-- vkGetGlobalExtensionProperties exported
+- vkEnumerateInstanceExtensionProperties exported
 - vkGetDeviceProcAddr exported and returns valid function pointers for all the VK API entrypoints
 - vkGetInstanceProcAddr exported and returns valid function pointers for all the VK API entrypoints
 - all objects created by ICD can be cast to (VK\_LAYER\_DISPATCH\_TABLE \*\*)

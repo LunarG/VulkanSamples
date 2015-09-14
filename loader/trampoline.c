@@ -313,7 +313,7 @@ LOADER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
@@ -323,12 +323,12 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
 
     loader_platform_thread_lock_mutex(&loader_lock);
     //TODO convert over to using instance chain dispatch
-    res = loader_GetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+    res = loader_EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
@@ -337,7 +337,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
 
     loader_platform_thread_lock_mutex(&loader_lock);
     //TODO convert over to using instance chain dispatch
-    res = loader_GetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
+    res = loader_EnumerateDeviceLayerProperties(physicalDevice, pCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }

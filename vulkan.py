@@ -276,22 +276,22 @@ core = Extension(
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceMemoryProperties*", "pMemoryProperties")]),
 
-        Proto("VkResult", "GetGlobalExtensionProperties",
+        Proto("VkResult", "EnumerateInstanceExtensionProperties",
             [Param("const char*", "pLayerName"),
              Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceExtensionProperties",
+        Proto("VkResult", "EnumerateDeviceExtensionProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("const char*", "pLayerName"),
              Param("uint32_t*", "pCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetGlobalLayerProperties",
+        Proto("VkResult", "EnumerateInstanceLayerProperties",
             [Param("uint32_t*", "pCount"),
              Param("VkLayerProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceLayerProperties",
+        Proto("VkResult", "EnumerateDeviceLayerProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("uint32_t*", "pCount"),
              Param("VkLayerProperties*", "pProperties")]),

@@ -372,11 +372,11 @@ class Subcommand(object):
                                          'FreeDescriptorSets',
                                          'FlushMappedMemoryRanges',
                                          'GetDeviceProcAddr',
-                                         'GetGlobalExtensionProperties',
-                                         'GetGlobalLayerProperties',
                                          'GetInstanceProcAddr',
-                                         'GetPhysicalDeviceExtensionProperties',
-                                         'GetPhysicalDeviceLayerProperties',
+                                         'EnumerateInstanceExtensionProperties',
+                                         'EnumerateDeviceExtensionProperties',
+                                         'EnumerateInstanceLayerProperties',
+                                         'EnumerateDeviceLayerProperties',
                                          'GetPhysicalDeviceQueueFamilyProperties',
                                          'GetQueryPoolResults',
                                          'MapMemory',
@@ -1659,7 +1659,7 @@ class Subcommand(object):
                 rbody.append(rr_string)
 
                 # handle return values or anything that needs to happen after the real_*(..) call
-                get_ext_layers_proto = ['GetGlobalExtensionProperties', 'GetPhysicalDeviceExtensionProperties','GetGlobalLayerProperties', 'GetPhysicalDeviceLayerProperties']
+                get_ext_layers_proto = ['EnumerateInstanceExtensionProperties', 'EnumerateDeviceExtensionProperties','EnumerateInstanceLayerProperties', 'EnumerateDeviceLayerProperties']
                 if 'DestroyDevice' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')

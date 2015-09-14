@@ -506,7 +506,7 @@ void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
     memset(pProps, 0, sizeof(*pProps));
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -530,7 +530,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)

@@ -131,7 +131,7 @@ public:
     VkResult set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties,
                              const VkMemoryPropertyFlags forbid = 0) const;
 
-    // vkGetPhysicalDeviceExtensionProperties()
+    // vkEnumerateDeviceExtensionProperties()
     std::vector<VkExtensionProperties> extensions() const;
     std::vector<VkExtensionProperties> extensions(const char * pLayerName) const;
 

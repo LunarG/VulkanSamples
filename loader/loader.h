@@ -139,7 +139,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceProperties GetPhysicalDeviceProperties;
     PFN_vkGetPhysicalDeviceQueueFamilyProperties GetPhysicalDeviceQueueFamilyProperties;
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
-    PFN_vkGetPhysicalDeviceExtensionProperties GetPhysicalDeviceExtensionProperties;
+    PFN_vkEnumerateDeviceExtensionProperties EnumerateDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
@@ -148,7 +148,7 @@ struct loader_icd {
     /*
      * Fill in the cache of available device extensions from
      * this physical device. This cache will be used to satisfy
-     * calls to GetPhysicalDeviceExtensionProperties
+     * calls to EnumerateDeviceExtensionProperties
      */
     struct loader_extension_list device_extension_cache[MAX_GPUS_PER_ICD];
     struct loader_icd *next;
@@ -207,7 +207,7 @@ struct loader_scanned_icds {
 
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
-    PFN_vkGetGlobalExtensionProperties GetGlobalExtensionProperties;
+    PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties;
 };
 
 static inline struct loader_instance *loader_instance(VkInstance instance) {
@@ -309,11 +309,11 @@ VkResult VKAPI loader_GetPhysicalDeviceProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceProperties* pProperties);
 
-VkResult VKAPI loader_GetPhysicalDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
+VkResult VKAPI loader_EnumerateDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
         const char *pLayerName, uint32_t *pCount,
         VkExtensionProperties* pProperties);
 
-VkResult VKAPI loader_GetPhysicalDeviceLayerProperties (VkPhysicalDevice physicalDevice,
+VkResult VKAPI loader_EnumerateDeviceLayerProperties (VkPhysicalDevice physicalDevice,
         uint32_t *pCount,
         VkLayerProperties* pProperties);
 

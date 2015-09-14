@@ -6,7 +6,7 @@ Layer libraries can be written to intercept or hook VK entry points for various
 debug and validation purposes.  One or more VK entry points can be defined in your Layer
 library.  Undefined entrypoints in the Layer library will be passed to the next Layer which
 may be the driver.  Multiple layer libraries can be chained (actually a hierarchy) together.
-vkGetGlobalLayerProperties and vkGetPhysicalDeviceLayerProperties can be called to list the
+vkEnumerateInstanceLayerProperties and vkEnumerateDeviceLayerProperties can be called to list the
 available layers and their properties. Layers can intercept Vulkan instance level entry points
 in which case they are called an Instance Layer.  Layers can intercept device entry  points
 in which case they are called a Device Layer. Instance level entry points are those with VkInstance

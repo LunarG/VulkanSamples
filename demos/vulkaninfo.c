@@ -376,14 +376,14 @@ static void app_get_physical_device_layer_extensions(
 
     /* repeat get until VK_INCOMPLETE goes away */
     do {
-        err = vkGetPhysicalDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, NULL);
+        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, NULL);
         assert(!err);
 
         if (ext_ptr) {
             free(ext_ptr);
         }
         ext_ptr = malloc(ext_count * sizeof(VkExtensionProperties));
-        err = vkGetPhysicalDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, ext_ptr);
+        err = vkEnumerateDeviceExtensionProperties(gpu->obj, layer_name, &ext_count, ext_ptr);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -416,7 +416,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     struct layer_extension_list *device_layers = NULL;
 
     do {
-        err = vkGetPhysicalDeviceLayerProperties(gpu->obj, &count, NULL);
+        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count, NULL);
         assert(!err);
 
         if (device_layer_properties) {
@@ -431,7 +431,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         device_layers = malloc(sizeof(struct layer_extension_list) * count);
         assert(device_layers);
 
-        err = vkGetPhysicalDeviceLayerProperties(gpu->obj, &count, device_layer_properties);
+        err = vkEnumerateDeviceLayerProperties(gpu->obj, &count, device_layer_properties);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -510,14 +510,14 @@ static void app_get_global_layer_extensions(
 
     /* repeat get until VK_INCOMPLETE goes away */
     do {
-        err = vkGetGlobalExtensionProperties(layer_name, &ext_count, NULL);
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, NULL);
         assert(!err);
 
         if (ext_ptr) {
             free(ext_ptr);
         }
         ext_ptr = malloc(ext_count * sizeof(VkExtensionProperties));
-        err = vkGetGlobalExtensionProperties(layer_name, &ext_count, ext_ptr);
+        err = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, ext_ptr);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 
@@ -560,7 +560,7 @@ static void app_create_instance(struct app_instance *inst)
     struct layer_extension_list *global_layers = NULL;
 
     do {
-        err = vkGetGlobalLayerProperties(&count, NULL);
+        err = vkEnumerateInstanceLayerProperties(&count, NULL);
         assert(!err);
 
         if (global_layer_properties) {
@@ -575,7 +575,7 @@ static void app_create_instance(struct app_instance *inst)
         global_layers = malloc(sizeof(struct layer_extension_list) * count);
         assert(global_layers);
 
-        err = vkGetGlobalLayerProperties(&count, global_layer_properties);
+        err = vkEnumerateInstanceLayerProperties(&count, global_layer_properties);
     } while (err == VK_INCOMPLETE);
     assert(!err);
 

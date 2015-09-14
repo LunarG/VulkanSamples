@@ -2228,18 +2228,18 @@ static void demo_init_vk(struct demo *demo)
 
     /* Look for validation layers */
     VkBool32 validation_found = 0;
-    err = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
     assert(!err);
 
     instance_layers = malloc(sizeof(VkLayerProperties) * instance_layer_count);
-    err = vkGetGlobalLayerProperties(&instance_layer_count, instance_layers);
+    err = vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers);
     assert(!err);
 
     if (demo->validate) {
         validation_found = demo_check_layers(ARRAY_SIZE(instance_validation_layers), instance_validation_layers,
                                              instance_layer_count, instance_layers);
         if (!validation_found) {
-            ERR_EXIT("vkGetGlobalLayerProperties failed to find"
+            ERR_EXIT("vkEnumerateInstanceLayerProperties failed to find"
                      "required validation layer.\n\n"
                      "Please look at the Getting Started guide for additional "
                      "information.\n",
@@ -2248,13 +2248,13 @@ static void demo_init_vk(struct demo *demo)
         enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
     }
 
-    err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
+    err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!err);
 
     VkBool32 WSIextFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-    err = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);
+    err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         if (!strcmp("VK_EXT_KHR_swapchain", instance_extensions[i].extName)) {
@@ -2269,7 +2269,7 @@ static void demo_init_vk(struct demo *demo)
         assert(enabled_extension_count < 64);
     }
     if (!WSIextFound) {
-        ERR_EXIT("vkGetGlobalExtensionProperties failed to find the "
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
                  "\"VK_EXT_KHR_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
@@ -2336,18 +2336,18 @@ static void demo_init_vk(struct demo *demo)
     validation_found = 0;
     enabled_layer_count = 0;
     uint32_t device_layer_count = 0;
-    err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
+    err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, NULL);
     assert(!err);
 
     device_layers = malloc(sizeof(VkLayerProperties) * device_layer_count);
-    err = vkGetPhysicalDeviceLayerProperties(demo->gpu, &device_layer_count, device_layers);
+    err = vkEnumerateDeviceLayerProperties(demo->gpu, &device_layer_count, device_layers);
     assert(!err);
 
     if (demo->validate) {
         validation_found = demo_check_layers(ARRAY_SIZE(device_validation_layers), device_validation_layers,
                                              device_layer_count, device_layers);
         if (!validation_found) {
-            ERR_EXIT("vkGetPhysicalDeviceLayerProperties failed to find"
+            ERR_EXIT("vkEnumerateDeviceLayerProperties failed to find"
                      "a required validation layer.\n\n"
                      "Please look at the Getting Started guide for additional "
                      "information.\n",
@@ -2358,7 +2358,7 @@ static void demo_init_vk(struct demo *demo)
 
     uint32_t device_extension_count = 0;
     VkExtensionProperties *device_extensions = NULL;
-    err = vkGetPhysicalDeviceExtensionProperties(
+    err = vkEnumerateDeviceExtensionProperties(
               demo->gpu, NULL, &device_extension_count, NULL);
     assert(!err);
 
@@ -2366,7 +2366,7 @@ static void demo_init_vk(struct demo *demo)
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
     device_extensions = malloc(sizeof(VkExtensionProperties) * device_extension_count);
-    err = vkGetPhysicalDeviceExtensionProperties(
+    err = vkEnumerateDeviceExtensionProperties(
               demo->gpu, NULL, &device_extension_count, device_extensions);
     assert(!err);
 
@@ -2378,7 +2378,7 @@ static void demo_init_vk(struct demo *demo)
         assert(enabled_extension_count < 64);
     }
     if (!WSIextFound) {
-        ERR_EXIT("vkGetPhysicalDeviceExtensionProperties failed to find the "
+        ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the "
                  "\"VK_EXT_KHR_device_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "

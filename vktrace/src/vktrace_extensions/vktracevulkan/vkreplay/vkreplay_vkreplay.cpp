@@ -316,10 +316,10 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
                 uint32_t count;
 
                 // query to find if ScreenShot layer is available
-                m_vkFuncs.real_vkGetPhysicalDeviceLayerProperties(remappedPhysicalDevice, &count, NULL);
+                m_vkFuncs.real_vkEnumerateDeviceLayerProperties(remappedPhysicalDevice, &count, NULL);
                 VkLayerProperties *props = (VkLayerProperties *) vktrace_malloc(count * sizeof (VkLayerProperties));
                 if (props && count > 0)
-                    m_vkFuncs.real_vkGetPhysicalDeviceLayerProperties(remappedPhysicalDevice, &count, props);
+                    m_vkFuncs.real_vkEnumerateDeviceLayerProperties(remappedPhysicalDevice, &count, props);
                 for (uint32_t i = 0; i < count; i++) {
                     if (!strcmp(props[i].layerName, strScreenShot)) {
                         found_ss = true;

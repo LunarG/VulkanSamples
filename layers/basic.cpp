@@ -60,7 +60,7 @@ static const VkLayerProperties basic_physicaldevice_layers[] = {
 };
 
 /* Must use Vulkan name so that loader finds it */
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -77,7 +77,7 @@ static const VkExtensionProperties basic_physicaldevice_extensions[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice        physicalDevice,
         const char             *pLayerName,
         uint32_t               *pCount,
@@ -166,10 +166,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 
-    if (!strcmp("vkGetPhysicalDeviceLayerProperties", pName))
-        return (PFN_vkVoidFunction) vkGetPhysicalDeviceLayerProperties;
-    if (!strcmp("vkGetPhysicalDeviceExtensionProperties", pName))
-        return (PFN_vkVoidFunction) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp("vkEnumerateDeviceLayerProperties", pName))
+        return (PFN_vkVoidFunction) vkEnumerateDeviceLayerProperties;
+    if (!strcmp("vkEnumerateDeviceExtensionProperties", pName))
+        return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
     if (!strcmp("vkGetPhysicalDeviceFormatProperties", pName))
         return (PFN_vkVoidFunction) basic_GetPhysicalDeviceFormatProperties;
     if (!strcmp("vkDestroyInstance", pName))
@@ -182,12 +182,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     return instance_dispatch_table(instance)->GetInstanceProcAddr(instance, pName);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
 {
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)
 {
     return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
 }

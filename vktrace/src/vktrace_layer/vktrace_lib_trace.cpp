@@ -351,10 +351,10 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
         {
             // query to find if ScreenShot layer is available
             VkLayerInstanceDispatchTable *pTable = &mid(physicalDevice)->instTable;
-            pTable->GetPhysicalDeviceLayerProperties(physicalDevice, &count, NULL);
+            pTable->EnumerateDeviceLayerProperties(physicalDevice, &count, NULL);
             VkLayerProperties *props = (VkLayerProperties *) vktrace_malloc(count * sizeof (VkLayerProperties));
             if (props && count > 0)
-                pTable->GetPhysicalDeviceLayerProperties(physicalDevice, &count, props);
+                pTable->EnumerateDeviceLayerProperties(physicalDevice, &count, props);
             for (i = 0; i < count; i++) {
                 if (!strcmp(props[i].layerName, "ScreenShot"))
                 {
@@ -535,7 +535,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice physicalDevice,
     const char* pLayerName,
     uint32_t* pCount,
@@ -543,18 +543,18 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetPhysicalDeviceExtensionProperties* pPacket = NULL;
+    packet_vkEnumerateDeviceExtensionProperties* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mid(physicalDevice)->instTable.GetPhysicalDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+    result = mid(physicalDevice)->instTable.EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
     endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkGetPhysicalDeviceExtensionProperties, ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0) + sizeof(uint32_t) + (*pCount * sizeof(VkExtensionProperties)));
+    CREATE_TRACE_PACKET(vkEnumerateDeviceExtensionProperties, ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0) + sizeof(uint32_t) + (*pCount * sizeof(VkExtensionProperties)));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetPhysicalDeviceExtensionProperties(pHeader);
+    pPacket = interpret_body_as_vkEnumerateDeviceExtensionProperties(pHeader);
     pPacket->physicalDevice = physicalDevice;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pLayerName), ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0), pLayerName);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
@@ -567,25 +567,25 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceExtensionProperties(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceLayerProperties(
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
     VkLayerProperties* pProperties)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetPhysicalDeviceLayerProperties* pPacket = NULL;
+    packet_vkEnumerateDeviceLayerProperties* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mid(physicalDevice)->instTable.GetPhysicalDeviceLayerProperties(physicalDevice, pCount, pProperties);
+    result = mid(physicalDevice)->instTable.EnumerateDeviceLayerProperties(physicalDevice, pCount, pProperties);
     endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkGetPhysicalDeviceLayerProperties, sizeof(uint32_t) + (*pCount * sizeof(VkLayerProperties)));
+    CREATE_TRACE_PACKET(vkEnumerateDeviceLayerProperties, sizeof(uint32_t) + (*pCount * sizeof(VkLayerProperties)));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetPhysicalDeviceLayerProperties(pHeader);
+    pPacket = interpret_body_as_vkEnumerateDeviceLayerProperties(pHeader);
     pPacket->physicalDevice = physicalDevice;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pProperties), *pCount * sizeof(VkLayerProperties), pProperties);
@@ -1532,10 +1532,10 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties;
     if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
         return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceMemoryProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
-        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceLayerProperties;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
-        return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkEnumerateDeviceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
+        return (PFN_vkVoidFunction) __HOOKED_vkEnumerateDeviceExtensionProperties;
 
     return NULL;
 }

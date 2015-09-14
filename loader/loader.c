@@ -98,8 +98,8 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceProperties = loader_GetPhysicalDeviceProperties,
     .GetPhysicalDeviceQueueFamilyProperties = loader_GetPhysicalDeviceQueueFamilyProperties,
     .GetPhysicalDeviceMemoryProperties = loader_GetPhysicalDeviceMemoryProperties,
-    .GetPhysicalDeviceExtensionProperties = loader_GetPhysicalDeviceExtensionProperties,
-    .GetPhysicalDeviceLayerProperties = loader_GetPhysicalDeviceLayerProperties,
+    .EnumerateDeviceExtensionProperties = loader_EnumerateDeviceExtensionProperties,
+    .EnumerateDeviceLayerProperties = loader_EnumerateDeviceLayerProperties,
     .GetPhysicalDeviceSparseImageFormatProperties = loader_GetPhysicalDeviceSparseImageFormatProperties,
     .GetPhysicalDeviceSurfaceSupportKHR = loader_GetPhysicalDeviceSurfaceSupportKHR,
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
@@ -447,7 +447,7 @@ void loader_delete_layer_properties(
 
 static void loader_add_global_extensions(
         const struct loader_instance *inst,
-        const PFN_vkGetGlobalExtensionProperties fp_get_props,
+        const PFN_vkEnumerateInstanceExtensionProperties fp_get_props,
         const char *lib_name,
         struct loader_extension_list *ext_list)
 {
@@ -456,7 +456,7 @@ static void loader_add_global_extensions(
     VkResult res;
 
     if (!fp_get_props) {
-        /* No GetGlobalExtensionProperties defined */
+        /* No EnumerateInstanceExtensionProperties defined */
         return;
     }
 
@@ -497,7 +497,7 @@ static void loader_add_global_extensions(
 
 static void loader_add_physical_device_extensions(
         const struct loader_instance *inst,
-        PFN_vkGetPhysicalDeviceExtensionProperties get_phys_dev_ext_props,
+        PFN_vkEnumerateDeviceExtensionProperties get_phys_dev_ext_props,
         VkPhysicalDevice physical_device,
         const char *lib_name,
         struct loader_extension_list *ext_list)
@@ -507,7 +507,7 @@ static void loader_add_physical_device_extensions(
     VkExtensionProperties *ext_props;
 
     if (!get_phys_dev_ext_props) {
-        /* No GetPhysicalDeviceExtensionProperties defined */
+        /* No EnumerateDeviceExtensionProperties defined */
         return;
     }
 
@@ -870,7 +870,7 @@ void loader_get_icd_loader_instance_extensions(
     // traverse scanned icd list adding non-duplicate extensions to the list
     for (uint32_t i = 0; i < icd_libs->count; i++) {
         loader_init_ext_list(inst, &icd_exts);
-        loader_add_global_extensions(inst, icd_libs->list[i].GetGlobalExtensionProperties,
+        loader_add_global_extensions(inst, icd_libs->list[i].EnumerateInstanceExtensionProperties,
                                      icd_libs->list[i].lib_name,
                                      &icd_exts);
         loader_add_to_ext_list(inst, inst_exts,
@@ -1037,7 +1037,7 @@ static void loader_scanned_icd_add(
 {
     loader_platform_dl_handle handle;
     PFN_vkCreateInstance fp_create_inst;
-    PFN_vkGetGlobalExtensionProperties fp_get_global_ext_props;
+    PFN_vkEnumerateInstanceExtensionProperties fp_get_global_ext_props;
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
@@ -1060,7 +1060,7 @@ static void loader_scanned_icd_add(
 
     LOOKUP_LD(fp_get_proc_addr, GetInstanceProcAddr);
     LOOKUP_LD(fp_create_inst, CreateInstance);
-    LOOKUP_LD(fp_get_global_ext_props, GetGlobalExtensionProperties);
+    LOOKUP_LD(fp_get_global_ext_props, EnumerateInstanceExtensionProperties);
 
 #undef LOOKUP_LD
 
@@ -1080,7 +1080,7 @@ static void loader_scanned_icd_add(
     new_node->handle = handle;
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
-    new_node->GetGlobalExtensionProperties = fp_get_global_ext_props;
+    new_node->EnumerateInstanceExtensionProperties = fp_get_global_ext_props;
 
     new_node->lib_name = (char *) loader_heap_alloc(inst,
                                             strlen(filename) + 1,
@@ -1118,7 +1118,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceMemoryProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceQueueFamilyProperties, true);
-    LOOKUP_GIPA(GetPhysicalDeviceExtensionProperties, true);
+    LOOKUP_GIPA(EnumerateDeviceExtensionProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
     LOOKUP_GIPA(DbgCreateMsgCallback, false);
     LOOKUP_GIPA(DbgDestroyMsgCallback, false);
@@ -2742,7 +2742,7 @@ VkResult loader_init_physical_device_info(
 
                     loader_add_physical_device_extensions(
                                 ptr_instance,
-                                icd->GetPhysicalDeviceExtensionProperties,
+                                icd->EnumerateDeviceExtensionProperties,
                                 icd->gpus[0],
                                 icd->this_icd_lib->lib_name,
                                 &icd->device_extension_cache[i]);
@@ -3081,7 +3081,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, cons
     return loader_GetDeviceProcAddr(device, pName);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
@@ -3149,7 +3149,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
 {
@@ -3190,7 +3190,7 @@ LOADER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceExtensionProperties(
+VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
         VkPhysicalDevice                        gpu,
         const char*                             pLayerName,
         uint32_t*                               pCount,
@@ -3237,7 +3237,7 @@ VkResult VKAPI loader_GetPhysicalDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceLayerProperties(
+VkResult VKAPI loader_EnumerateDeviceLayerProperties(
         VkPhysicalDevice                        gpu,
         uint32_t*                               pCount,
         VkLayerProperties*                      pProperties)

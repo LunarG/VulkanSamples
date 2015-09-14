@@ -57,14 +57,14 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateDevice;
     if (!strcmp(name, "DestroyDevice"))
         return (void*) vkDestroyDevice;
-    if (!strcmp(name, "GetGlobalExtensionProperties"))
-        return (void*) vkGetGlobalExtensionProperties;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
-        return (void*) vkGetPhysicalDeviceExtensionProperties;
-    if (!strcmp(name, "GetGlobalLayerProperties"))
-        return (void*) vkGetGlobalLayerProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
-        return (void*) vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "EnumerateInstanceExtensionProperties"))
+        return (void*) vkEnumerateInstanceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
+        return (void*) vkEnumerateDeviceExtensionProperties;
+    if (!strcmp(name, "EnumerateInstanceLayerProperties"))
+        return (void*) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
+        return (void*) vkEnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "QueueSubmit"))
@@ -378,10 +378,10 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkGetDeviceProcAddr;
     if (!strcmp(name, "CreateDevice"))
         return (void*) vkCreateDevice;
-    if (!strcmp(name, "GetPhysicalDeviceExtensionProperties"))
-        return (void*) vkGetPhysicalDeviceExtensionProperties;
-    if (!strcmp(name, "GetPhysicalDeviceLayerProperties"))
-        return (void*) vkGetPhysicalDeviceLayerProperties;
+    if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
+        return (void*) vkEnumerateDeviceExtensionProperties;
+    if (!strcmp(name, "EnumerateDeviceLayerProperties"))
+        return (void*) vkEnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))

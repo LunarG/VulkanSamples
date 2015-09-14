@@ -240,7 +240,7 @@ static const VkLayerProperties shader_checker_global_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -249,7 +249,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -258,7 +258,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -268,7 +268,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -1117,10 +1117,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
 
     ADD_HOOK(vkCreateInstance);
     ADD_HOOK(vkDestroyInstance);
-    ADD_HOOK(vkGetGlobalExtensionProperties);
-    ADD_HOOK(vkGetPhysicalDeviceExtensionProperties);
-    ADD_HOOK(vkGetGlobalLayerProperties);
-    ADD_HOOK(vkGetPhysicalDeviceLayerProperties);
+    ADD_HOOK(vkEnumerateInstanceExtensionProperties);
+    ADD_HOOK(vkEnumerateDeviceExtensionProperties);
+    ADD_HOOK(vkEnumerateInstanceLayerProperties);
+    ADD_HOOK(vkEnumerateDeviceLayerProperties);
 #undef ADD_HOOK
 
 

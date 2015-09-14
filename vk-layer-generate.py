@@ -35,7 +35,7 @@ from source_line_info import sourcelineinfo
 from collections import defaultdict
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "GetGlobalLayerProperties" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetPhysicalDeviceLayerProperties" or proto.name == "GetPhysicalDeviceExtensionProperties":
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "EnumerateInstanceLayerProperties" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateDeviceLayerProperties" or proto.name == "EnumerateDeviceExtensionProperties":
        return True
     else:
        return False
@@ -208,7 +208,7 @@ class Subcommand(object):
         ggep_body.append('%s' % self.lineinfo.get())
 
         ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
+        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
         ggep_body.append('{')
         ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
         ggep_body.append('}')
@@ -232,7 +232,7 @@ class Subcommand(object):
         ggep_body.append('')
         ggep_body.append('%s' % self.lineinfo.get())
         ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
+        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         ggep_body.append('{')
         ggep_body.append('    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);')
         ggep_body.append('}')
@@ -253,7 +253,7 @@ class Subcommand(object):
             gpdlp_body.append('        "layer: %s",' % layer)
             gpdlp_body.append('    }')
             gpdlp_body.append('};')
-        gpdlp_body.append('VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
+        gpdlp_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         gpdlp_body.append('{')
         gpdlp_body.append('    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);')
         gpdlp_body.append('}')
@@ -279,11 +279,11 @@ class Subcommand(object):
                         intercept = self._gen_layer_dbg_destroy_msg_callback()
                     elif 'CreateDevice' == proto.name:
                         funcs.append('/* CreateDevice HERE */')
-                    elif 'GetGlobalExtensionProperties' == proto.name:
+                    elif 'EnumerateInstanceExtensionProperties' == proto.name:
                         intercept = self._gen_layer_get_global_extension_props(self.layer_name)
-                    elif 'GetGlobalLayerProperties' == proto.name:
+                    elif 'EnumerateInstanceLayerProperties' == proto.name:
                         intercept = self._gen_layer_get_global_layer_props(self.layer_name)
-                    elif 'GetPhysicalDeviceLayerProperties' == proto.name:
+                    elif 'EnumerateDeviceLayerProperties' == proto.name:
                         intercept = self._gen_layer_get_physical_device_layer_props(self.layer_name)
 
                 if intercept is not None:
@@ -613,7 +613,7 @@ class GenericLayerSubcommand(Subcommand):
         return "\n".join(gen_header)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties', 'GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
+        if proto.name in [ 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties', 'EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -903,7 +903,7 @@ class APIDumpSubcommand(Subcommand):
         return "\n".join(func_body)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'GetGlobalLayerProperties','GetGlobalExtensionProperties','GetPhysicalDeviceLayerProperties','GetPhysicalDeviceExtensionProperties']:
+        if proto.name in [ 'EnumerateInstanceLayerProperties','EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties','EnumerateDeviceExtensionProperties']:
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         ret_val = ''
@@ -1450,7 +1450,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(cbv_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgCreateMsgCallback', 'GetGlobalLayerProperties', 'GetGlobalExtensionProperties','GetPhysicalDeviceLayerProperties', 'GetPhysicalDeviceExtensionProperties' ]:
+        if proto.name in [ 'DbgCreateMsgCallback', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
             # use default version
             return None
 

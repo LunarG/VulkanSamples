@@ -1463,7 +1463,7 @@ static const VkLayerProperties mtGlobalLayers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -1472,7 +1472,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -1481,7 +1481,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -1491,7 +1491,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -3319,14 +3319,14 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
         return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkGetPhysicalDeviceMemoryProperties"))
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceMemoryProperties;
-    if (!strcmp(funcName, "vkGetGlobalLayerProperties"))
-        return (PFN_vkVoidFunction) vkGetGlobalLayerProperties;
-    if (!strcmp(funcName, "vkGetGlobalExtensionProperties"))
-        return (PFN_vkVoidFunction) vkGetGlobalExtensionProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceLayerProperties"))
-        return (PFN_vkVoidFunction) vkGetPhysicalDeviceLayerProperties;
-    if (!strcmp(funcName, "vkGetPhysicalDeviceExtensionProperties"))
-        return (PFN_vkVoidFunction) vkGetPhysicalDeviceExtensionProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
+    if (!strcmp(funcName, "vkEnumerateDeviceLayerProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateDeviceLayerProperties;
+    if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);

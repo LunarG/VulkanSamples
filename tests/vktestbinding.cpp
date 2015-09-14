@@ -132,11 +132,11 @@ std::vector<VkLayerProperties> GetGlobalLayers()
 
     do {
         layer_count = 0;
-        err = vkGetGlobalLayerProperties(&layer_count, NULL);
+        err = vkEnumerateInstanceLayerProperties(&layer_count, NULL);
 
         if (err == VK_SUCCESS) {
             layers.reserve(layer_count);
-            err = vkGetGlobalLayerProperties(&layer_count, layers.data());
+            err = vkEnumerateInstanceLayerProperties(&layer_count, layers.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -165,11 +165,11 @@ std::vector<VkExtensionProperties> GetGlobalExtensions(const char *pLayerName)
 
     do {
         ext_count = 0;
-        err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, NULL);
+        err = vkEnumerateInstanceExtensionProperties(pLayerName, &ext_count, NULL);
 
         if (err == VK_SUCCESS) {
             exts.resize(ext_count);
-            err = vkGetGlobalExtensionProperties(pLayerName, &ext_count, exts.data());
+            err = vkEnumerateInstanceExtensionProperties(pLayerName, &ext_count, exts.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -197,11 +197,11 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
 
     do {
         uint32_t extCount = 0;
-        err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, NULL);
+        err = vkEnumerateDeviceExtensionProperties(handle(), pLayerName, &extCount, NULL);
 
         if (err == VK_SUCCESS) {
             exts.resize(extCount);
-            err = vkGetPhysicalDeviceExtensionProperties(handle(), pLayerName, &extCount, exts.data());
+            err = vkEnumerateDeviceExtensionProperties(handle(), pLayerName, &extCount, exts.data());
         }
     } while (err == VK_INCOMPLETE);
 
@@ -239,11 +239,11 @@ std::vector<VkLayerProperties> PhysicalDevice::layers() const
 
     do {
         uint32_t layer_count = 0;
-        err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, NULL);
+        err = vkEnumerateDeviceLayerProperties(handle(), &layer_count, NULL);
 
         if (err == VK_SUCCESS) {
             layer_props.reserve(layer_count);
-            err = vkGetPhysicalDeviceLayerProperties(handle(), &layer_count, layer_props.data());
+            err = vkEnumerateDeviceLayerProperties(handle(), &layer_count, layer_props.data());
         }
     } while (err == VK_INCOMPLETE);
 

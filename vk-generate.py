@@ -122,7 +122,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             stmts.append("memset(table, 0, sizeof(*table));")
             stmts.append("table->GetDeviceProcAddr =(PFN_vkGetDeviceProcAddr)  gpa(device,\"vkGetDeviceProcAddr\");")
             for proto in self.protos:
-                if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetGlobalLayerProperties" or proto.params[0].ty == "VkInstance" or (proto.params[0].ty == "VkPhysicalDevice" and proto.name != "CreateDevice"):
+                if proto.name == "CreateInstance" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateInstanceLayerProperties" or proto.params[0].ty == "VkInstance" or (proto.params[0].ty == "VkPhysicalDevice" and proto.name != "CreateDevice"):
                     continue
                 if proto.name != "GetDeviceProcAddr" and 'KHR' not in proto.name:
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
@@ -255,8 +255,8 @@ class WinDefFileSubcommand(Subcommand):
                 "layer": [
                     "vkGetInstanceProcAddr",
                     "vkGetDeviceProcAddr",
-                    "vkGetGlobalLayerProperties",
-                    "vkGetGlobalExtensionProperties"
+                    "vkEnumerateInstanceLayerProperties",
+                    "vkEnumerateInstanceExtensionProperties"
                 ],
                 "layerMulti": [
                     "multi2GetInstanceProcAddr",
