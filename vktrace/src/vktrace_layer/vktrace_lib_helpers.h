@@ -67,6 +67,8 @@ extern VKTRACE_CRITICAL_SECTION g_memInfoLock;
 extern std::unordered_map<void *, layer_device_data *> g_deviceDataMap;
 extern std::unordered_map<void *, layer_instance_data *> g_instanceDataMap;
 
+typedef void *dispatch_key;
+inline dispatch_key get_dispatch_key(const void* object);
 layer_instance_data *mid(void *object);
 layer_device_data *mdd(void* object);
 

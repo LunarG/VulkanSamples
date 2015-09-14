@@ -430,6 +430,9 @@ class Subcommand(object):
                         if in_data_size:
                             func_body.append('    size_t _dataSize;')
                         func_body.append('    packet_vk%s* pPacket = NULL;' % proto.name)
+                        if proto.name == "DestroyInstance" or proto.name == "DestroyDevice":
+                            func_body.append('    dispatch_key key = get_dispatch_key(%s);' % proto.params[0].name)
+
                         if (0 == len(packet_size)):
                             func_body.append('    CREATE_TRACE_PACKET(vk%s, 0);' % (proto.name))
                         else:
@@ -459,6 +462,11 @@ class Subcommand(object):
                                 func_body.append('    %s;' % (pp_dict['finalize_txt']))
                         # All buffers should be finalized by now, and the trace packet can be finished (which sends it over the socket)
                         func_body.append('    FINISH_TRACE_PACKET();')
+                        if proto.name == "DestroyInstance":
+                            func_body.append('    g_instanceDataMap.erase(key);')
+                        elif proto.name == "DestroyDevice":
+                            func_body.append('    g_deviceDataMap.erase(key);')
+
                         # return result if needed
                         if 'void' not in proto.ret or '*' in proto.ret:
                             func_body.append('    return result;')

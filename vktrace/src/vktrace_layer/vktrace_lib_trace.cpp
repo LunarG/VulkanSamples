@@ -46,9 +46,8 @@ VKMemInfo g_memInfo = {0, NULL, NULL, 0};
 std::unordered_map<void *, layer_device_data *> g_deviceDataMap;
 std::unordered_map<void *, layer_instance_data *> g_instanceDataMap;
 
-
 typedef void *dispatch_key;
-static inline dispatch_key get_dispatch_key(const void* object)
+inline dispatch_key get_dispatch_key(const void* object)
 {
     return (dispatch_key) *(VkLayerDispatchTable **) object;
 }
@@ -1640,7 +1639,6 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetInstanceProcAddr(VkInstan
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
         initInstanceData(g_instanceDataMap, (VkBaseLayerObject *) instance);
-        //layer_init_instance_dispatch_table(&mid(instTable, (const VkBaseLayerObject *) instance);
         return (PFN_vkVoidFunction) vktraceGetInstanceProcAddr;
     }
 
