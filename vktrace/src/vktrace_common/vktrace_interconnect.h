@@ -90,11 +90,11 @@ BOOL vktrace_MessageStream_Send(MessageStream* pStream, const void* _bytes, size
 
 BOOL vktrace_MessageStream_Recv(MessageStream* pStream, void* _out, size_t _len);
 BOOL vktrace_MessageStream_BlockingRecv(MessageStream* pStream, void* _outBuffer, size_t _len);
+
+extern MessageStream* gMessageStream;
 #ifdef __cplusplus
 }
 #endif
-extern MessageStream* gMessageStream;
-
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
