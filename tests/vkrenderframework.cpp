@@ -1077,7 +1077,6 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.buffer = handle();
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_FORMATTED;
     view_info.format = viewFormat;
     view_info.offset = 0;
     view_info.range  = allocationSize;

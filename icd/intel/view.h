@@ -116,7 +116,8 @@ void intel_null_view_init(struct intel_null_view *view,
 
 void intel_buf_view_init(struct intel_dev *dev,
                          const VkBufferViewCreateInfo *info,
-                         struct intel_buf_view *view);
+                         struct intel_buf_view *view,
+                         bool raw);
 
 VkResult intel_buf_view_create(struct intel_dev *dev,
                                const VkBufferViewCreateInfo *info,

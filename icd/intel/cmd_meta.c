@@ -44,7 +44,6 @@ static VkResult cmd_meta_create_buf_view(struct intel_cmd *cmd,
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     info.buffer = buf;
-    info.viewType = VK_BUFFER_VIEW_TYPE_FORMATTED;
     info.format = format;
     info.range = range;
 

@@ -1146,7 +1146,8 @@ static void buf_view_destroy(struct intel_obj *obj)
 
 void intel_buf_view_init(struct intel_dev *dev,
                          const VkBufferViewCreateInfo *info,
-                         struct intel_buf_view *view)
+                         struct intel_buf_view *view,
+                         bool raw)
 {
     struct intel_buf *buf = intel_buf(info->buffer);
     /* TODO: Is transfer destination the only shader write operation? */
@@ -1167,7 +1168,7 @@ void intel_buf_view_init(struct intel_dev *dev,
      * 4 for fragment shaders, but 16 for other stages.  The format
      * must be VK_FORMAT_R32G32B32A32_SFLOAT.
      */
-    if (info->viewType == VK_BUFFER_VIEW_TYPE_RAW) {
+    if (raw) {
         format = VK_FORMAT_R32G32B32A32_SFLOAT;
         stride = 16;
     } else {
@@ -1190,7 +1191,7 @@ void intel_buf_view_init(struct intel_dev *dev,
         }
 
         /* switch to view->fs_cmd */
-        if (info->viewType == VK_BUFFER_VIEW_TYPE_RAW) {
+        if (raw) {
             cmd = view->fs_cmd;
             stride = 4;
         } else {
@@ -1212,7 +1213,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    intel_buf_view_init(dev, info, view);
+    intel_buf_view_init(dev, info, view, false);
 
     *view_ret = view;
 

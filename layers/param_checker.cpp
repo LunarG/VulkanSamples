@@ -3615,13 +3615,6 @@ bool PreCreateBufferView(
         "vkCreateBufferView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->viewType < VK_BUFFER_VIEW_TYPE_BEGIN_RANGE ||
-        pCreateInfo->viewType > VK_BUFFER_VIEW_TYPE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateBufferView parameter, VkBufferViewType pCreateInfo->viewType, is an unrecognized enumerator");
-        return false;
-    }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {

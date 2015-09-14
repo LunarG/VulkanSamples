@@ -986,7 +986,6 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                 VkBufferViewCreateInfo view_info;
                 memset(&view_info, 0, sizeof(view_info));
                 view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-                view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
 
                 for (j = 0; j < write->count; j++) {
                     const VkDescriptorInfo *info = &write->pDescriptors[j];
@@ -996,7 +995,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                     view_info.offset = info->bufferInfo.offset;
                     view_info.range = info->bufferInfo.range;
 
-                    intel_buf_view_init(dev, &view_info, &buf_view);
+                    intel_buf_view_init(dev, &view_info, &buf_view, true);
 
                     desc_set_write_buffer(set, &iter, &buf_view);
 

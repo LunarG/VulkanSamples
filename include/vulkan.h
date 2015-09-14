@@ -479,15 +479,6 @@ typedef enum {
 } VkSharingMode;
 
 typedef enum {
-    VK_BUFFER_VIEW_TYPE_RAW = 0,
-    VK_BUFFER_VIEW_TYPE_FORMATTED = 1,
-    VK_BUFFER_VIEW_TYPE_BEGIN_RANGE = VK_BUFFER_VIEW_TYPE_RAW,
-    VK_BUFFER_VIEW_TYPE_END_RANGE = VK_BUFFER_VIEW_TYPE_FORMATTED,
-    VK_BUFFER_VIEW_TYPE_NUM = (VK_BUFFER_VIEW_TYPE_FORMATTED - VK_BUFFER_VIEW_TYPE_RAW + 1),
-    VK_BUFFER_VIEW_TYPE_MAX_ENUM = 0x7FFFFFFF
-} VkBufferViewType;
-
-typedef enum {
     VK_IMAGE_VIEW_TYPE_1D = 0,
     VK_IMAGE_VIEW_TYPE_2D = 1,
     VK_IMAGE_VIEW_TYPE_3D = 2,
@@ -1483,7 +1474,6 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkBuffer                                    buffer;
-    VkBufferViewType                            viewType;
     VkFormat                                    format;
     VkDeviceSize                                offset;
     VkDeviceSize                                range;
