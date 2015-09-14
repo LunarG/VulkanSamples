@@ -305,7 +305,7 @@ public:
             createView.channels.g = VK_CHANNEL_SWIZZLE_G;
             createView.channels.b = VK_CHANNEL_SWIZZLE_B;
             createView.channels.a = VK_CHANNEL_SWIZZLE_A;
-            createView.subresourceRange = {VK_IMAGE_ASPECT_COLOR, 0, 1, 0, 1};
+            createView.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
             createView.flags = 0;
             m_targetView.init(*m_device, createView);
         }

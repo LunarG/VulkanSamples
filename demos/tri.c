@@ -295,7 +295,7 @@ static void demo_flush_init_cmd(struct demo *demo)
 static void demo_set_image_layout(
         struct demo *demo,
         VkImage image,
-        VkImageAspect aspect,
+        VkImageAspectFlags aspectMask,
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout)
 {
@@ -333,7 +333,7 @@ static void demo_set_image_layout(
         .oldLayout = old_image_layout,
         .newLayout = new_image_layout,
         .image = image,
-        .subresourceRange = { aspect, 0, 1, 0, 0 }
+        .subresourceRange = { aspectMask, 0, 1, 0, 0 }
     };
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
@@ -592,7 +592,7 @@ static void demo_prepare_buffers(struct demo *demo)
                 .a = VK_CHANNEL_SWIZZLE_A,
             },
             .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR,
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
                 .mipLevels = 1,
                 .baseArrayLayer = 0,
@@ -605,7 +605,7 @@ static void demo_prepare_buffers(struct demo *demo)
         demo->buffers[i].image = swapchainImages[i];
 
         demo_set_image_layout(demo, demo->buffers[i].image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -647,7 +647,7 @@ static void demo_prepare_depth(struct demo *demo)
         .image.handle = VK_NULL_HANDLE,
         .format = depth_format,
         .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH,
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,
             .mipLevels = 1,
             .baseArrayLayer = 0,
@@ -689,7 +689,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 
     demo_set_image_layout(demo, demo->depth.image,
-                           VK_IMAGE_ASPECT_DEPTH,
+                           VK_IMAGE_ASPECT_DEPTH_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED,
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
@@ -782,7 +782,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     demo_set_image_layout(demo, tex_obj->image,
-                           VK_IMAGE_ASPECT_COLOR,
+                           VK_IMAGE_ASPECT_COLOR_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED,
                            tex_obj->imageLayout);
     /* setting the image layout does not reference the actual memory so no need to add a mem ref */
@@ -827,12 +827,12 @@ static void demo_prepare_textures(struct demo *demo)
                                        VK_MEMORY_PROPERTY_DEVICE_ONLY);
 
             demo_set_image_layout(demo, staging_texture.image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    staging_texture.imageLayout,
                                    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
             demo_set_image_layout(demo, demo->textures[i].image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    demo->textures[i].imageLayout,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
@@ -849,7 +849,7 @@ static void demo_prepare_textures(struct demo *demo)
                             1, &copy_region);
 
             demo_set_image_layout(demo, demo->textures[i].image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                                    demo->textures[i].imageLayout);
 
@@ -888,7 +888,7 @@ static void demo_prepare_textures(struct demo *demo)
                           VK_CHANNEL_SWIZZLE_G,
                           VK_CHANNEL_SWIZZLE_B,
                           VK_CHANNEL_SWIZZLE_A, },
-            .subresourceRange = { VK_IMAGE_ASPECT_COLOR, 0, 1, 0, 1 },
+            .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
             .flags = 0,
         };
 
