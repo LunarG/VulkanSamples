@@ -992,9 +992,9 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                     const VkDescriptorInfo *info = &write->pDescriptors[j];
                     struct intel_buf_view buf_view;
 
-                    view_info.buffer = info->shaderBuffer.buffer;
-                    view_info.offset = info->shaderBuffer.offset;
-                    view_info.range = info->shaderBuffer.range;
+                    view_info.buffer = info->bufferInfo.buffer;
+                    view_info.offset = info->bufferInfo.offset;
+                    view_info.range = info->bufferInfo.range;
 
                     intel_buf_view_init(dev, &view_info, &buf_view);
 

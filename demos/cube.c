@@ -1319,9 +1319,9 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
             demo->uniform_data.mem, 0);
     assert(!err);
 
-    demo->uniform_data.desc.shaderBuffer.buffer = demo->uniform_data.buf;
-    demo->uniform_data.desc.shaderBuffer.offset = 0;
-    demo->uniform_data.desc.shaderBuffer.range = sizeof(data);
+    demo->uniform_data.desc.bufferInfo.buffer = demo->uniform_data.buf;
+    demo->uniform_data.desc.bufferInfo.offset = 0;
+    demo->uniform_data.desc.bufferInfo.range = sizeof(data);
 }
 
 static void demo_prepare_descriptor_layout(struct demo *demo)

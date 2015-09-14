@@ -1782,14 +1782,14 @@ typedef struct {
     VkBuffer                                    buffer;
     VkDeviceSize                                offset;
     VkDeviceSize                                range;
-} VkShaderBufferInfo;
+} VkDescriptorBufferInfo;
 
 typedef struct {
     VkBufferView                                bufferView;
     VkSampler                                   sampler;
     VkImageView                                 imageView;
     VkImageLayout                               imageLayout;
-    VkShaderBufferInfo                          shaderBuffer;
+    VkDescriptorBufferInfo                      bufferInfo;
 } VkDescriptorInfo;
 
 typedef struct {

@@ -957,9 +957,9 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
      * or as shader uniform buffers. So, we'll create the shaderbuffer
      * descriptor here so it's ready if needed.
      */
-    this->m_descriptorInfo.shaderBuffer.buffer = handle();
-    this->m_descriptorInfo.shaderBuffer.offset = 0;
-    this->m_descriptorInfo.shaderBuffer.range = allocationSize;
+    this->m_descriptorInfo.bufferInfo.buffer = handle();
+    this->m_descriptorInfo.bufferInfo.offset = 0;
+    this->m_descriptorInfo.bufferInfo.range = allocationSize;
 }
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)

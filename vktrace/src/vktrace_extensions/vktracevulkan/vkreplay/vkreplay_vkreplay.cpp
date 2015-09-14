@@ -888,10 +888,10 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].shaderBuffer.buffer.handle != 0)
+                if (pPacket->pDescriptorWrites[i].pDescriptors[j].bufferInfo.buffer.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].shaderBuffer.buffer.handle = m_objMapper.remap_buffers(pPacket->pDescriptorWrites[i].pDescriptors[j].shaderBuffer.buffer.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].shaderBuffer.buffer.handle == 0)
+                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].bufferInfo.buffer.handle = m_objMapper.remap_buffers(pPacket->pDescriptorWrites[i].pDescriptors[j].bufferInfo.buffer.handle);
+                    if (pRemappedWrites[i].pDescriptors[j].bufferInfo.buffer.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkBufferView.");
                         VKTRACE_DELETE(pRemappedWrites);
