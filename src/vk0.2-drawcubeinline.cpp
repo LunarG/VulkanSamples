@@ -60,9 +60,9 @@ int main(int argc, char **argv)
     res = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!res);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp("VK_WSI_swapchain", instance_extensions[i].extName)) {
+        if (!strcmp(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME, instance_extensions[i].extName)) {
             WSIextFound = 1;
-            extension_names[enabled_extension_count++] = (char *) "VK_WSI_swapchain";
+            extension_names[enabled_extension_count++] = (char *) VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME;
         }
     }
     assert(WSIextFound);
@@ -113,9 +113,9 @@ int main(int argc, char **argv)
     assert(!res);
 
     for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp("VK_WSI_device_swapchain", device_extensions[i].extName)) {
+        if (!strcmp(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extName)) {
             WSIextFound = 1;
-            extension_names[enabled_extension_count++] = (char *) "VK_WSI_device_swapchain";
+            extension_names[enabled_extension_count++] = (char *) VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME;
         }
         assert(enabled_extension_count < 64);
     }
@@ -143,7 +143,6 @@ int main(int argc, char **argv)
     device_info.layerCount = 0;
     device_info.ppEnabledLayerNames = NULL;
     device_info.pEnabledFeatures = NULL;
-    device_info.flags = 0;
 
     VkDevice device;
     res = vkCreateDevice(physicalDevice, &device_info, &device);
@@ -211,7 +210,7 @@ int main(int argc, char **argv)
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-    VkPlatformHandleXcbWSI platform_handle_xcb;
+    VkPlatformHandleXcbKHR platform_handle_xcb;
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -267,44 +266,47 @@ int main(int argc, char **argv)
 #endif // _WIN32
 
     /* Initialize WSI */
-    PFN_vkGetPhysicalDeviceSurfaceSupportWSI fpGetPhysicalDeviceSurfaceSupportWSI;
-    PFN_vkGetSurfaceInfoWSI fpGetSurfaceInfoWSI;
-    PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
-    PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
-    PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
-    PFN_vkAcquireNextImageWSI fpAcquireNextImageWSI;
-    PFN_vkQueuePresentWSI fpQueuePresentWSI;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
+    PFN_vkGetSurfacePropertiesKHR fpGetSurfacePropertiesKHR;
+    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
+    PFN_vkGetSurfacePresentModesKHR fpGetSurfacePresentModesKHR;
+    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
+    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
+    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
+    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
+    PFN_vkQueuePresentKHR fpQueuePresentKHR;
 
-    CUBE_GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceSupportWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, GetSurfaceInfoWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, CreateSwapChainWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, DestroySwapChainWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, GetSwapChainInfoWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, AcquireNextImageWSI);
-    CUBE_GET_DEVICE_PROC_ADDR(device, QueuePresentWSI);
+    CUBE_GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceSupportKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, GetSurfacePropertiesKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, GetSurfaceFormatsKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, GetSurfacePresentModesKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, CreateSwapchainKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, DestroySwapchainKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, GetSwapchainImagesKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, AcquireNextImageKHR);
+    CUBE_GET_DEVICE_PROC_ADDR(device, QueuePresentKHR);
 
     uint32_t queue_count;
-    res = vkGetPhysicalDeviceQueueCount(physicalDevice, &queue_count);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, NULL);
     assert(!res);
     assert(queue_count >= 1);
 
-    VkPhysicalDeviceQueueProperties *queue_props = (VkPhysicalDeviceQueueProperties *) malloc(queue_count * sizeof(VkPhysicalDeviceQueueProperties));
-    res = vkGetPhysicalDeviceQueueProperties(physicalDevice, queue_count, queue_props);
+    VkQueueFamilyProperties *queue_props = (VkQueueFamilyProperties *) malloc(queue_count * sizeof(VkQueueFamilyProperties));
+    res = vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_props);
     assert(!res);
-    assert(queue_count >= 1);
 
     // Construct the WSI surface description:
-    VkSurfaceDescriptionWindowWSI surface_description;
-    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    VkSurfaceDescriptionWindowKHR surface_description;
+    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     surface_description.pNext = NULL;
 #ifdef _WIN32
-    surface_description.platform = VK_PLATFORM_WIN32_WSI;
+    surface_description.platform = VK_PLATFORM_WIN32_KHR;
     surface_description.pPlatformHandle = connection;
     surface_description.pPlatformWindow = window;
 #else  // _WIN32
     platform_handle_xcb.connection = connection;
     platform_handle_xcb.root = screen->root;
-    surface_description.platform = VK_PLATFORM_XCB_WSI;
+    surface_description.platform = VK_PLATFORM_XCB_KHR;
     surface_description.pPlatformHandle = &platform_handle_xcb;
     surface_description.pPlatformWindow = &window;
 #endif // _WIN32
@@ -312,8 +314,8 @@ int main(int argc, char **argv)
     // Iterate over each queue to learn whether it supports presenting to WSI:
     VkBool32* supportsPresent = (VkBool32 *)malloc(queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < queue_count; i++) {
-        fpGetPhysicalDeviceSurfaceSupportWSI(physicalDevice, i,
-                                                   (VkSurfaceDescriptionWSI *) &surface_description,
+        fpGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i,
+                                                   (VkSurfaceDescriptionKHR *) &surface_description,
                                                    &supportsPresent[i]);
     }
 
@@ -353,23 +355,20 @@ int main(int argc, char **argv)
     }
 
     // Get the list of VkFormats that are supported:
-    size_t formatsSize;
-    res = fpGetSurfaceInfoWSI(device,
-                                    (VkSurfaceDescriptionWSI *) &surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, NULL);
+    uint32_t formatCount;
+    res = fpGetSurfaceFormatsKHR(device,
+                                    (VkSurfaceDescriptionKHR *) &surface_description,
+                                    &formatCount, NULL);
     assert(!res);
-    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
-    res = fpGetSurfaceInfoWSI(device,
-                                    (VkSurfaceDescriptionWSI *) &surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, surfFormats);
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = fpGetSurfaceFormatsKHR(device,
+                                    (VkSurfaceDescriptionKHR *) &surface_description,
+                                    &formatCount, surfFormats);
     assert(!res);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
     VkFormat format;
-    size_t formatCount = formatsSize / sizeof(VkSurfaceFormatPropertiesWSI);
     if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
     {
         format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -418,60 +417,55 @@ int main(int argc, char **argv)
     assert(!res);
 
     /* Create swap chain */
-    size_t capsSize;
-    size_t presentModesSize;
-    res = fpGetSurfaceInfoWSI(device,
-        (const VkSurfaceDescriptionWSI *)&surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, NULL);
-    assert(!res);
-    res = fpGetSurfaceInfoWSI(device,
-        (const VkSurfaceDescriptionWSI *)&surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, NULL);
+    VkSurfacePropertiesKHR surfProperties;
+    res = fpGetSurfacePropertiesKHR(device,
+        (const VkSurfaceDescriptionKHR *)&surface_description,
+        &surfProperties);
     assert(!res);
 
-    VkSurfacePropertiesWSI *surfProperties =
-        (VkSurfacePropertiesWSI *)malloc(capsSize);
-    VkSurfacePresentModePropertiesWSI *presentModes =
-        (VkSurfacePresentModePropertiesWSI *)malloc(presentModesSize);
-
-    res = fpGetSurfaceInfoWSI(device,
-        (const VkSurfaceDescriptionWSI *)&surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, surfProperties);
-    assert(!res);
-    res = fpGetSurfaceInfoWSI(device,
-        (const VkSurfaceDescriptionWSI *)&surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, presentModes);
+    uint32_t presentModeCount;
+    res = fpGetSurfacePresentModesKHR(device,
+        (const VkSurfaceDescriptionKHR *)&surface_description,
+        &presentModeCount, NULL);
     assert(!res);
 
-    VkExtent2D swapChainExtent;
+    VkPresentModeKHR *presentModes =
+        (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
+    assert(presentModes);
+
+    res = fpGetSurfacePresentModesKHR(device,
+        (const VkSurfaceDescriptionKHR *)&surface_description,
+        &presentModeCount, presentModes);
+    assert(!res);
+
+    VkExtent2D swapchainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfProperties->currentExtent.width == -1)
+    if (surfProperties.currentExtent.width == -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapChainExtent.width = width;
-        swapChainExtent.height = height;
+        swapchainExtent.width = width;
+        swapchainExtent.height = height;
     }
     else
     {
         // If the surface size is defined, the swap chain size must match
-        swapChainExtent = surfProperties->currentExtent;
+        swapchainExtent = surfProperties.currentExtent;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
     // tearing mode.  If not, try IMMEDIATE which will usually be available,
     // and is fastest (though it tears).  If not, fall back to FIFO which is
     // always available.
-    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_FIFO_WSI;
-    size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
-            swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
+        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
             break;
         }
-        if ((swapChainPresentMode != VK_PRESENT_MODE_MAILBOX_WSI) &&
-            (presentModes[i].presentMode == VK_PRESENT_MODE_IMMEDIATE_WSI)) {
-            swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
+            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
     }
 
@@ -491,61 +485,66 @@ int main(int argc, char **argv)
     }
 #endif // WORK_AROUND_CODE
 
-    VkSurfaceTransformWSI preTransform;
-    if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    VkSurfaceTransformKHR preTransform;
+    if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
     } else {
-        preTransform = surfProperties->currentTransform;
+        preTransform = surfProperties.currentTransform;
     }
 
-    VkSwapChainCreateInfoWSI swap_chain_info = {};
-    swap_chain_info.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
+    VkSwapchainCreateInfoKHR swap_chain_info = {};
+    swap_chain_info.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR;
     swap_chain_info.pNext = NULL;
-    swap_chain_info.pSurfaceDescription = (const VkSurfaceDescriptionWSI *)&surface_description;
+    swap_chain_info.pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&surface_description;
     swap_chain_info.minImageCount = desiredNumberOfSwapChainImages;
     swap_chain_info.imageFormat = format;
-    swap_chain_info.imageExtent.width = swapChainExtent.width;
-    swap_chain_info.imageExtent.height = swapChainExtent.height;
+    swap_chain_info.imageExtent.width = swapchainExtent.width;
+    swap_chain_info.imageExtent.height = swapchainExtent.height;
     swap_chain_info.preTransform = preTransform;
     swap_chain_info.imageArraySize = 1;
-    swap_chain_info.presentMode = swapChainPresentMode;
-    swap_chain_info.oldSwapChain.handle = 0;
+    swap_chain_info.presentMode = swapchainPresentMode;
+    swap_chain_info.oldSwapchain.handle = 0;
     swap_chain_info.clipped = true;
 
-    VkSwapChainWSI swap_chain;
-    res = fpCreateSwapChainWSI(device, &swap_chain_info, &swap_chain);
+    VkSwapchainKHR swap_chain;
+    res = fpCreateSwapchainKHR(device, &swap_chain_info, &swap_chain);
     assert(!res);
 
-    size_t swapChainImagesSize;
-    res = fpGetSwapChainInfoWSI(device, swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, NULL);
+    uint32_t swapchainImageCount;
+    res = fpGetSwapchainImagesKHR(device, swap_chain,
+                                      &swapchainImageCount, NULL);
     assert(!res);
 
-    VkSwapChainImagePropertiesWSI* swapChainImages = (VkSwapChainImagePropertiesWSI*)malloc(swapChainImagesSize);
-    assert(swapChainImages);
-    res = fpGetSwapChainInfoWSI(device, swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, swapChainImages);
+    VkImage* swapchainImages = (VkImage*)malloc(swapchainImageCount * sizeof(VkImage));
+    assert(swapchainImages);
+    res = fpGetSwapchainImagesKHR(device, swap_chain,
+                                      &swapchainImageCount, swapchainImages);
     assert(!res);
 
     VkImage buffer_images[2];
-    VkAttachmentView buffer_views[2];
+    VkImageView buffer_views[2];
     VkImageMemoryBarrier image_memory_barrier = {};
     VkImageMemoryBarrier *pmemory_barrier;
     VkPipelineStageFlags src_stages, dest_stages;
 
     for (int i = 0; i < 2; i++) {
-        VkAttachmentViewCreateInfo color_attachment_view = {};
-        color_attachment_view.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-        color_attachment_view.pNext = NULL;
-        color_attachment_view.format = format;
-        color_attachment_view.mipLevel = 0;
-        color_attachment_view.baseArraySlice = 0;
-        color_attachment_view.arraySize = 1;
-        color_attachment_view.flags = 0;
+        VkImageViewCreateInfo color_image_view = {};
+        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view.pNext = NULL;
+        color_image_view.format = format;
+        color_image_view.channels.r = VK_CHANNEL_SWIZZLE_R;
+        color_image_view.channels.g = VK_CHANNEL_SWIZZLE_G;
+        color_image_view.channels.b = VK_CHANNEL_SWIZZLE_B;
+        color_image_view.channels.a = VK_CHANNEL_SWIZZLE_A;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.baseMipLevel = 0;
+        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.baseArrayLayer = 0;
+        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view.flags = 0;
 
-        buffer_images[i] = swapChainImages[i].image;
+        buffer_images[i] = swapchainImages[i];
 
         image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         image_memory_barrier.pNext = NULL;
@@ -554,10 +553,10 @@ int main(int argc, char **argv)
         image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         image_memory_barrier.image = buffer_images[i];
-        image_memory_barrier.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+        image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         image_memory_barrier.subresourceRange.baseMipLevel = 0;
         image_memory_barrier.subresourceRange.mipLevels = 1;
-        image_memory_barrier.subresourceRange.baseArraySlice = 0;
+        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
         image_memory_barrier.subresourceRange.arraySize = 0;
 
 
@@ -568,10 +567,10 @@ int main(int argc, char **argv)
 
         vkCmdPipelineBarrier(cmd_buf, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
-        color_attachment_view.image = buffer_images[i];
+        color_image_view.image = buffer_images[i];
 
-        res = vkCreateAttachmentView(device,
-                &color_attachment_view, &buffer_views[i]);
+        res = vkCreateImageView(device,
+                &color_image_view, &buffer_views[i]);
         assert(!res);
     }
 
@@ -604,7 +603,7 @@ int main(int argc, char **argv)
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
 
     VkMemoryAllocInfo mem_alloc = {};
@@ -613,14 +612,21 @@ int main(int argc, char **argv)
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
 
-    VkAttachmentViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
-    view_info.image.handle = VK_NULL_HANDLE;
+    view_info.image = VK_NULL_HANDLE;
     view_info.format = depth_format;
-    view_info.mipLevel = 0;
-    view_info.baseArraySlice = 0;
-    view_info.arraySize = 1;
+    view_info.channels.r = VK_CHANNEL_SWIZZLE_R;
+    view_info.channels.g = VK_CHANNEL_SWIZZLE_G;
+    view_info.channels.b = VK_CHANNEL_SWIZZLE_B;
+    view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.arraySize = 1;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
     VkMemoryRequirements mem_reqs;
@@ -664,10 +670,10 @@ int main(int argc, char **argv)
     image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     image_memory_barrier.image = depth_image;
-    image_memory_barrier.subresourceRange.aspect = VK_IMAGE_ASPECT_DEPTH;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.arraySize = 0;
 
     pmemory_barrier = &image_memory_barrier;
@@ -677,9 +683,9 @@ int main(int argc, char **argv)
 
     vkCmdPipelineBarrier(cmd_buf, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
-    VkAttachmentView depth_view;
+    VkImageView depth_view;
     view_info.image = depth_image;
-    res = vkCreateAttachmentView(device, &view_info, &depth_view);
+    res = vkCreateImageView(device, &view_info, &depth_view);
     assert(!res);
 
     /* Create a uniform buffer with our trasform matrix in it */
@@ -736,23 +742,9 @@ int main(int argc, char **argv)
 
     memcpy(pData, &MVP, sizeof(MVP));
 
-    res = vkUnmapMemory(device, uniform_memory);
-    assert(!res);
+    vkUnmapMemory(device, uniform_memory);
 
     res = vkBindBufferMemory(device, uniform_buffer, uniform_memory, 0);
-    assert(!res);
-
-    VkBufferViewCreateInfo buf_view_info;
-    buf_view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    buf_view_info.pNext = NULL;
-    buf_view_info.buffer = uniform_buffer;
-    buf_view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    buf_view_info.offset = 0;
-    buf_view_info.range = sizeof(MVP);
-    buf_view_info.format = VK_FORMAT_UNDEFINED;
-
-    VkBufferView uniform_view;
-    res = vkCreateBufferView(device, &buf_view_info, &uniform_view);
     assert(!res);
 
     /* Create a renderpass */
@@ -790,14 +782,14 @@ int main(int argc, char **argv)
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputCount = 0;
-    subpass.inputAttachments = NULL;
+    subpass.pInputAttachments = NULL;
     subpass.colorCount = 1;
-    subpass.colorAttachments = &color_reference;
-    subpass.resolveAttachments = NULL;
+    subpass.pColorAttachments = &color_reference;
+    subpass.pResolveAttachments = NULL;
     subpass.depthStencilAttachment.attachment = 1;
     subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     subpass.preserveCount = 0;
-    subpass.preserveAttachments = NULL;
+    subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
     VkRenderPass render_pass;
@@ -814,11 +806,8 @@ int main(int argc, char **argv)
     assert(!res);
 
     /* Create Framebuffers */
-    VkAttachmentBindInfo fbattachments[2];
-    fbattachments[0].view.handle = VK_NULL_HANDLE;
-    fbattachments[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    fbattachments[1].view = depth_view;
-    fbattachments[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VkImageView fbattachments[2];
+    fbattachments[1] = depth_view;
 
     VkFramebufferCreateInfo fb_info = {};
     VkFramebuffer framebuffers[2];
@@ -834,7 +823,7 @@ int main(int argc, char **argv)
     uint32_t i;
 
     for (i = 0; i < 2; i++) {
-        fbattachments[0].view = buffer_views[i];
+        fbattachments[0] = buffer_views[i];
         res = vkCreateFramebuffer(device, &fb_info, &framebuffers[i]);
         assert(!res);
     }
@@ -880,22 +869,9 @@ int main(int argc, char **argv)
 
     memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
 
-    res = vkUnmapMemory(device, vertex_memory);
-    assert(!res);
+    vkUnmapMemory(device, vertex_memory);
 
     res = vkBindBufferMemory(device, vertex_buffer, vertex_memory, 0);
-    assert(!res);
-
-    buf_view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    buf_view_info.pNext = NULL;
-    buf_view_info.buffer = vertex_buffer;
-    buf_view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    buf_view_info.offset = 0;
-    buf_view_info.range = sizeof(g_vb_solid_face_colors_Data);
-    buf_view_info.format = VK_FORMAT_UNDEFINED;
-
-    VkBufferView vertex_buffer_view;
-    res = vkCreateBufferView(device, &buf_view_info, &vertex_buffer_view);
     assert(!res);
 
     VkVertexInputBindingDescription vi_binding;
@@ -963,18 +939,19 @@ int main(int argc, char **argv)
         &descriptor_pool_info, &desc_pool);
     assert(!res);
 
-    uint32_t count;
     VkDescriptorSet desc_set;
     res = vkAllocDescriptorSets(device, desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &desc_set_layout,
-            &desc_set, &count);
-    assert(!res && count == 1);
+            &desc_set);
+    assert(!res);
 
     VkWriteDescriptorSet writes[1];
     VkDescriptorInfo desc_info;
-    desc_info.bufferView = uniform_view;
-    desc_info.attachmentView = 0;
+    desc_info.bufferInfo.buffer = uniform_buffer;
+    desc_info.bufferInfo.offset = 0;
+    desc_info.bufferInfo.range = sizeof(MVP);
+    desc_info.imageView = 0;
     desc_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     desc_info.imageView = 0;
     desc_info.sampler = 0;
@@ -988,8 +965,7 @@ int main(int argc, char **argv)
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 
-    res = vkUpdateDescriptorSets(device, 1, writes, 0, NULL);
-    assert(!res);
+    vkUpdateDescriptorSets(device, 1, writes, 0, NULL);
 
     /* Create Vertex and Fragment Shaders */
     static const char *vertShaderText =
@@ -1047,6 +1023,7 @@ int main(int argc, char **argv)
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = vert_shader_module;
     shaderCreateInfo.pName = "main";
+    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
     res = vkCreateShader(device, &shaderCreateInfo, &shaderStages[0].shader);
     assert(!res);
 
@@ -1072,6 +1049,7 @@ int main(int argc, char **argv)
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = frag_shader_module;
     shaderCreateInfo.pName = "main";
+    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
     res = vkCreateShader(device, &shaderCreateInfo, &shaderStages[1].shader);
     assert(!res);
 
@@ -1134,7 +1112,7 @@ int main(int argc, char **argv)
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds.depthBoundsEnable = VK_FALSE;
+    ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
@@ -1145,7 +1123,7 @@ int main(int argc, char **argv)
     VkPipelineMultisampleStateCreateInfo   ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
-    ms.sampleMask = 1;
+    ms.pSampleMask = NULL;
     ms.rasterSamples = 1;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
@@ -1198,54 +1176,70 @@ int main(int argc, char **argv)
     res = vkCreateDynamicViewportState(device, &viewport_create, &dyn_viewport);
     assert(!res);
 
-    VkDynamicRasterState dyn_raster;
-    VkDynamicRasterStateCreateInfo raster_create = {};
-    raster_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
-    raster_create.pNext = NULL;
-    raster_create.depthBias = 0;
-    raster_create.depthBiasClamp = 0;
-    raster_create.slopeScaledDepthBias = 0;
-    raster_create.lineWidth = 1.0;
+    VkDynamicLineWidthStateCreateInfo line_width;
+    line_width.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
+    line_width.lineWidth = 1.0;
+    line_width.pNext = NULL;
 
-    res = vkCreateDynamicRasterState(device, &raster_create, &dyn_raster);
+    VkDynamicLineWidthState dyn_line_width;
+    res = vkCreateDynamicLineWidthState(device, &line_width, &dyn_line_width);
     assert(!res);
 
-    VkDynamicColorBlendState dyn_blend;
-    VkDynamicColorBlendStateCreateInfo blend_create = {};
-    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
+    VkDynamicDepthBiasStateCreateInfo depth_bias;
+    depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
+    depth_bias.depthBias = 0.0f;
+    depth_bias.depthBiasClamp = 0.0f;
+    depth_bias.slopeScaledDepthBias = 0.0f;
+    depth_bias.pNext = NULL;
+
+    VkDynamicDepthBiasState dyn_depth_bias;
+    res = vkCreateDynamicDepthBiasState(device, &depth_bias, &dyn_depth_bias);
+    assert(!res);
+
+    VkDynamicBlendState dyn_blend;
+    VkDynamicBlendStateCreateInfo blend_create = {};
+    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
     blend_create.pNext = NULL;
     blend_create.blendConst[0] = 1.0f;
     blend_create.blendConst[1] = 1.0f;
     blend_create.blendConst[2] = 1.0f;
     blend_create.blendConst[3] = 1.0f;
 
-    res = vkCreateDynamicColorBlendState(device,
+    res = vkCreateDynamicBlendState(device,
             &blend_create, &dyn_blend);
     assert(!res);
 
-    VkDynamicDepthStencilState dyn_depth;
-    VkDynamicDepthStencilStateCreateInfo depth_create = {};
-    depth_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_create.pNext = NULL;
-    depth_create.minDepthBounds = 0.0f;
-    depth_create.maxDepthBounds = 1.0f;
-    depth_create.stencilBackRef = 0;
-    depth_create.stencilFrontRef = 0;
-    depth_create.stencilReadMask = 0xff;
-    depth_create.stencilWriteMask = 0xff;
+    VkDynamicDepthBoundsStateCreateInfo depth_bounds;
+    depth_bounds.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
+    depth_bounds.minDepthBounds = 0.0f;
+    depth_bounds.maxDepthBounds = 1.0f;
+    depth_bounds.pNext = NULL;
 
-    res = vkCreateDynamicDepthStencilState(device,
-            &depth_create, &dyn_depth);
+    VkDynamicDepthBoundsState dyn_depth_bounds;
+    res = vkCreateDynamicDepthBoundsState(device,
+            &depth_bounds, &dyn_depth_bounds);
+    assert(!res);
+
+    VkDynamicStencilStateCreateInfo stencil;
+    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
+    stencil.stencilReference = 0;
+    stencil.stencilCompareMask = 0xff;
+    stencil.stencilWriteMask = 0xff;
+    stencil.pNext = NULL;
+
+    VkDynamicStencilState dyn_stencil;
+    res = vkCreateDynamicStencilState(device,
+            &stencil, &stencil, &dyn_stencil);
     assert(!res);
 
     /* Begind renderpass and draw cube */
     VkClearValue clear_values[2];
-    clear_values[0].color.f32[0] = 0.2f;
-    clear_values[0].color.f32[1] = 0.2f;
-    clear_values[0].color.f32[2] = 0.2f;
-    clear_values[0].color.f32[3] = 0.2f;
-    clear_values[1].ds.depth     = 1.0f;
-    clear_values[1].ds.stencil   = 0;
+    clear_values[0].color.float32[0]       = 0.2f;
+    clear_values[0].color.float32[1]       = 0.2f;
+    clear_values[0].color.float32[2]       = 0.2f;
+    clear_values[0].color.float32[3]       = 0.2f;
+    clear_values[1].depthStencil.depth     = 1.0f;
+    clear_values[1].depthStencil.stencil   = 0;
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1256,8 +1250,8 @@ int main(int argc, char **argv)
     rp_begin.renderArea.offset.y = 0;
     rp_begin.renderArea.extent.width = width;
     rp_begin.renderArea.extent.height = height;
-    rp_begin.attachmentCount = 2;
-    rp_begin.pAttachmentClearValues = clear_values;
+    rp_begin.clearValueCount = 2;
+    rp_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(cmd_buf, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
@@ -1269,9 +1263,11 @@ int main(int argc, char **argv)
     vkCmdBindVertexBuffers(cmd_buf, 0, 1, &vertex_buffer, offsets);
 
     vkCmdBindDynamicViewportState(cmd_buf, dyn_viewport);
-    vkCmdBindDynamicRasterState(cmd_buf,  dyn_raster);
-    vkCmdBindDynamicColorBlendState(cmd_buf, dyn_blend);
-    vkCmdBindDynamicDepthStencilState(cmd_buf, dyn_depth);
+    vkCmdBindDynamicLineWidthState(cmd_buf,  dyn_line_width);
+    vkCmdBindDynamicDepthBiasState(cmd_buf,  dyn_depth_bias);
+    vkCmdBindDynamicBlendState(cmd_buf, dyn_blend);
+    vkCmdBindDynamicDepthBoundsState(cmd_buf, dyn_depth_bounds);
+    vkCmdBindDynamicStencilState(cmd_buf, dyn_stencil);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
@@ -1288,15 +1284,15 @@ int main(int argc, char **argv)
     assert(!res);
     /* Now present the image in the window */
 
-    VkPresentInfoWSI present;
+    VkPresentInfoKHR present;
     const uint32_t image_indices[1] = {0};
-    present.sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present.pNext = NULL;
-    present.swapChainCount = 1;
-    present.swapChains = &swap_chain;
+    present.swapchainCount = 1;
+    present.swapchains = &swap_chain;
     present.imageIndices = image_indices;
 
-    res = fpQueuePresentWSI(queue, &present);
+    res = fpQueuePresentKHR(queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
     assert(!res);
@@ -1307,13 +1303,14 @@ int main(int argc, char **argv)
     wait_seconds(1);
 
     vkDestroyDynamicViewportState(device, dyn_viewport);
-    vkDestroyDynamicRasterState(device, dyn_raster);
-    vkDestroyDynamicColorBlendState(device, dyn_blend);
-    vkDestroyDynamicDepthStencilState(device, dyn_depth);
+    vkDestroyDynamicLineWidthState(device, dyn_line_width);
+    vkDestroyDynamicDepthBiasState(device, dyn_depth_bias);
+    vkDestroyDynamicBlendState(device, dyn_blend);
+    vkDestroyDynamicDepthBoundsState(device, dyn_depth_bounds);
+    vkDestroyDynamicStencilState(device, dyn_stencil);
     vkDestroyPipeline(device, pipeline);
     vkDestroyPipelineCache(device, pipelineCache);
     vkFreeMemory(device, uniform_memory);
-    vkDestroyBufferView(device, uniform_view);
     vkDestroyBuffer(device, uniform_buffer);
     vkDestroyDescriptorSetLayout(device, desc_set_layout);
     vkDestroyPipelineLayout(device, pipeline_layout);
@@ -1326,15 +1323,14 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(device, cmd_buf);
     vkDestroyCommandPool(device, cmd_pool);
     vkFreeMemory(device, depth_memory);
-    vkDestroyAttachmentView(device, depth_view);
+    vkDestroyImageView(device, depth_view);
     vkDestroyImage(device, depth_image);
     vkFreeMemory(device, vertex_memory);
-    vkDestroyBufferView(device, vertex_buffer_view);
     vkDestroyBuffer(device, vertex_buffer);
     for (int i = 0; i < 2; i++) {
-        vkDestroyAttachmentView(device, buffer_views[i]);
+        vkDestroyImageView(device, buffer_views[i]);
     }
-    fpDestroySwapChainWSI(device, swap_chain);
+    fpDestroySwapchainKHR(device, swap_chain);
     for (int i = 0; i < 2; i++) {
         vkDestroyFramebuffer(device, framebuffers[i]);
     }

@@ -62,12 +62,11 @@ int main(int argc, char **argv)
         &descriptor_pool, &info.desc_pool);
     assert(!res);
 
-    uint32_t count;
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &info.desc_layout,
-            &info.desc_set, &count);
-    assert(!res && count == 1);
+            &info.desc_set);
+    assert(!res);
 
     VkWriteDescriptorSet writes[1];
 
@@ -80,12 +79,10 @@ int main(int argc, char **argv)
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 
-    res = vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
-    assert(!res);
+    vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyBufferView(info.device, info.uniform_data.view);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);

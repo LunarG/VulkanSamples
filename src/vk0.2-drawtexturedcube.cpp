@@ -68,8 +68,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Draw Textured Cube";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -83,25 +83,25 @@ int main(int argc, char **argv)
     init_depth_buffer(info);
     init_texture(info);
     init_uniform_buffer(info);
+    init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info);
+    init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
-    init_descriptor_and_pipeline_layouts(info, true);
     init_descriptor_set(info, true);
-    init_shaders(info, vertShaderText, fragShaderText);
     init_pipeline(info);
     init_dynamic_state(info);
 
     /* VULKAN_KEY_START */
 
     VkClearValue clear_values[2];
-    clear_values[0].color.f32[0] = 0.2f;
-    clear_values[0].color.f32[1] = 0.2f;
-    clear_values[0].color.f32[2] = 0.2f;
-    clear_values[0].color.f32[3] = 0.2f;
-    clear_values[1].ds.depth     = 1.0f;
-    clear_values[1].ds.stencil   = 0;
+    clear_values[0].color.float32[0] = 0.2f;
+    clear_values[0].color.float32[1] = 0.2f;
+    clear_values[0].color.float32[2] = 0.2f;
+    clear_values[0].color.float32[3] = 0.2f;
+    clear_values[1].depthStencil.depth     = 1.0f;
+    clear_values[1].depthStencil.stencil   = 0;
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -112,8 +112,8 @@ int main(int argc, char **argv)
     rp_begin.renderArea.offset.y = 0;
     rp_begin.renderArea.extent.width = info.width;
     rp_begin.renderArea.extent.height = info.height;
-    rp_begin.attachmentCount = 2;
-    rp_begin.pAttachmentClearValues = clear_values;
+    rp_begin.clearValueCount = 2;
+    rp_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
@@ -126,9 +126,11 @@ int main(int argc, char **argv)
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
 
     vkCmdBindDynamicViewportState(info.cmd, info.dyn_viewport);
-    vkCmdBindDynamicRasterState(info.cmd,  info.dyn_raster);
-    vkCmdBindDynamicColorBlendState(info.cmd, info.dyn_blend);
-    vkCmdBindDynamicDepthStencilState(info.cmd, info.dyn_depth);
+    vkCmdBindDynamicLineWidthState(info.cmd,  info.dyn_line_width);
+    vkCmdBindDynamicDepthBiasState(info.cmd,  info.dyn_depth_bias);
+    vkCmdBindDynamicBlendState(info.cmd, info.dyn_blend);
+    vkCmdBindDynamicDepthBoundsState(info.cmd, info.dyn_depth_bounds);
+    vkCmdBindDynamicStencilState(info.cmd, info.dyn_stencil);
 
     vkCmdDraw(info.cmd, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(info.cmd);
@@ -137,14 +139,14 @@ int main(int argc, char **argv)
 
     /* Now present the image in the window */
 
-    VkPresentInfoWSI present;
-    present.sType = VK_STRUCTURE_TYPE_QUEUE_PRESENT_INFO_WSI;
+    VkPresentInfoKHR present;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present.pNext = NULL;
-    present.swapChainCount = 1;
-    present.swapChains = &info.swap_chain;
+    present.swapchainCount = 1;
+    present.swapchains = &info.swap_chain;
     present.imageIndices = &info.current_buffer;
 
-    res = info.fpQueuePresentWSI(info.queue, &present);
+    res = info.fpQueuePresentKHR(info.queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
     assert(!res);
@@ -156,9 +158,11 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroyDynamicViewportState(info.device, info.dyn_viewport);
-    vkDestroyDynamicRasterState(info.device, info.dyn_raster);
-    vkDestroyDynamicColorBlendState(info.device, info.dyn_blend);
-    vkDestroyDynamicDepthStencilState(info.device, info.dyn_depth);
+    vkDestroyDynamicLineWidthState(info.device, info.dyn_line_width);
+    vkDestroyDynamicDepthBiasState(info.device, info.dyn_depth_bias);
+    vkDestroyDynamicBlendState(info.device, info.dyn_blend);
+    vkDestroyDynamicDepthBoundsState(info.device, info.dyn_depth_bounds);
+    vkDestroyDynamicStencilState(info.device, info.dyn_stencil);
     vkDestroyPipeline(info.device, info.pipeline);
     vkDestroyPipelineCache(info.device, info.pipelineCache);
     vkDestroySampler(info.device, info.textures[0].sampler);
@@ -166,7 +170,6 @@ int main(int argc, char **argv)
     vkDestroyImageView(info.device, info.textures[0].view);
     vkDestroyImage(info.device, info.textures[0].image);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyBufferView(info.device, info.uniform_data.view);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
@@ -179,15 +182,14 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
     vkFreeMemory(info.device, info.vertex_buffer.mem);
-    vkDestroyBufferView(info.device, info.vertex_buffer.view);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
-    info.fpDestroySwapChainWSI(info.device, info.swap_chain);
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
     for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }

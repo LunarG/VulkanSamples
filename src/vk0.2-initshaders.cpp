@@ -94,6 +94,7 @@ int main(int argc, char **argv)
     VkShaderCreateInfo shaderCreateInfo;
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
@@ -119,6 +120,7 @@ int main(int argc, char **argv)
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";

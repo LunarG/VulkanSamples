@@ -100,7 +100,7 @@ VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits
 void set_image_layout(
         struct sample_info &info,
         VkImage image,
-        VkImageAspect aspect,
+        VkImageAspectFlags aspectMask,
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout)
 {
@@ -117,10 +117,9 @@ void set_image_layout(
     image_memory_barrier.oldLayout = old_image_layout;
     image_memory_barrier.newLayout = new_image_layout;
     image_memory_barrier.image = image;
-    image_memory_barrier.subresourceRange.aspect = aspect;
+    image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.baseArraySlice = 0;
     image_memory_barrier.subresourceRange.arraySize = 0;
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {

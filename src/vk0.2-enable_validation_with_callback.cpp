@@ -32,7 +32,7 @@ create and destroy a Vulkan physical device
 #include <cstdlib>
 #include <util_init.hpp>
 
-void dbgFunc(
+VkBool32 dbgFunc(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -62,6 +62,15 @@ void dbgFunc(
 #else
     std::cout << message.str() << std::endl;
 #endif
+
+    /*
+     * false indicates that layer should not bail-out of an
+     * API call that had validation failures. This may mean that the
+     * app dies inside the driver due to invalid parameter(s).
+     * That's what would happen without validation layers, so we'll
+     * keep that behavior here.
+     */
+    return false;
 }
 
 int main(int argc, char **argv)
@@ -152,7 +161,6 @@ int main(int argc, char **argv)
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
-    device_info.flags = 0;
 
     res = vkCreateDevice(info.gpu, &device_info, &info.device);
     assert(!res);
@@ -178,10 +186,6 @@ int main(int argc, char **argv)
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
-        break;
-    case VK_ERROR_INVALID_POINTER:
-        std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
-        exit(1);
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
         std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;

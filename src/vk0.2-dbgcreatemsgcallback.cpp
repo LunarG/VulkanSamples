@@ -36,7 +36,7 @@ create and destroy Vulkan instance
 
 #define APP_SHORT_NAME "vulkansamples_instance"
 
-void dbgFunc(
+VkBool32 dbgFunc(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -66,6 +66,15 @@ void dbgFunc(
 #else
     std::cout << message << std::endl;
 #endif
+
+    /*
+     * false indicates that layer should not bail-out of an
+     * API call that had validation failures. This may mean that the
+     * app dies inside the driver due to invalid parameter(s).
+     * That's what would happen without validation layers, so we'll
+     * keep that behavior here.
+     */
+    return false;
 }
 
 int main(int argc, char **argv)
@@ -173,10 +182,6 @@ int main(int argc, char **argv)
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
-        break;
-    case VK_ERROR_INVALID_POINTER:
-        std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
-        exit(1);
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
         std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;

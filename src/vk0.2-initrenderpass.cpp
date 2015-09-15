@@ -38,8 +38,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Renderpass Sample";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -87,14 +87,14 @@ int main(int argc, char **argv)
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputCount = 0;
-    subpass.inputAttachments = NULL;
+    subpass.pInputAttachments = NULL;
     subpass.colorCount = 1;
-    subpass.colorAttachments = &color_reference;
-    subpass.resolveAttachments = NULL;
+    subpass.pColorAttachments = &color_reference;
+    subpass.pResolveAttachments = NULL;
     subpass.depthStencilAttachment.attachment = 1;
     subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     subpass.preserveCount = 0;
-    subpass.preserveAttachments = NULL;
+    subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -112,11 +112,11 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
-    info.fpDestroySwapChainWSI(info.device, info.swap_chain);
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);

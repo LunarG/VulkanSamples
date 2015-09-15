@@ -45,8 +45,8 @@
 #include <xcb/xcb.h>
 #include <unistd.h>
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_wsi_swapchain.h>
-#include <vulkan/vk_wsi_device_swapchain.h>
+#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/vk_ext_khr_device_swapchain.h>
 #include <vulkan/vk_debug_report_lunarg.h>
 #endif // _WIN32
 
@@ -98,7 +98,7 @@ struct texture_object {
  */
 typedef struct _swap_chain_buffers {
     VkImage image;
-    VkAttachmentView view;
+    VkImageView view;
 } swap_chain_buffer;
 
 /*
@@ -125,7 +125,7 @@ struct sample_info {
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-    VkPlatformHandleXcbWSI platform_handle_xcb;
+    VkPlatformHandleXcbKHR platform_handle_xcb;
 #endif // _WIN32
     bool prepared;
     bool use_staging_buffer;
@@ -145,23 +145,25 @@ struct sample_info {
     VkQueue queue;
     uint32_t graphics_queue_family_index;
     VkPhysicalDeviceProperties gpu_props;
-    std::vector<VkPhysicalDeviceQueueProperties> queue_props;
+    std::vector<VkQueueFamilyProperties> queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
     VkFramebuffer framebuffers[SAMPLE_BUFFER_COUNT];
     int width, height;
     VkFormat format;
 
-    PFN_vkGetPhysicalDeviceSurfaceSupportWSI fpGetPhysicalDeviceSurfaceSupportWSI;
-    PFN_vkGetSurfaceInfoWSI fpGetSurfaceInfoWSI;
-    PFN_vkCreateSwapChainWSI fpCreateSwapChainWSI;
-    PFN_vkDestroySwapChainWSI fpDestroySwapChainWSI;
-    PFN_vkGetSwapChainInfoWSI fpGetSwapChainInfoWSI;
-    PFN_vkAcquireNextImageWSI fpAcquireNextImageWSI;
-    PFN_vkQueuePresentWSI fpQueuePresentWSI;
-    VkSurfaceDescriptionWindowWSI surface_description;
-    size_t swapChainImageCount;
-    VkSwapChainWSI swap_chain;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
+    PFN_vkGetSurfacePropertiesKHR fpGetSurfacePropertiesKHR;
+    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
+    PFN_vkGetSurfacePresentModesKHR fpGetSurfacePresentModesKHR;
+    PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
+    PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
+    PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
+    PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
+    PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    VkSurfaceDescriptionWindowKHR surface_description;
+    uint32_t swapchainImageCount;
+    VkSwapchainKHR swap_chain;
     std::vector<swap_chain_buffer> buffers;
 
     VkCmdPool cmd_pool;
@@ -171,7 +173,7 @@ struct sample_info {
 
         VkImage image;
         VkDeviceMemory mem;
-        VkAttachmentView view;
+        VkImageView view;
     } depth;
 
     std::vector<struct texture_object> textures;
@@ -179,14 +181,12 @@ struct sample_info {
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkBufferView view;
         VkDescriptorInfo desc;
     } uniform_data;
 
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkBufferView view;
         VkDescriptorInfo desc;
     } vertex_buffer;
     VkVertexInputBindingDescription vi_binding;
@@ -205,9 +205,11 @@ struct sample_info {
     VkPipeline pipeline;
 
     VkDynamicViewportState dyn_viewport;
-    VkDynamicRasterState dyn_raster;
-    VkDynamicColorBlendState dyn_blend;
-    VkDynamicDepthStencilState dyn_depth;
+    VkDynamicLineWidthState dyn_line_width;
+    VkDynamicBlendState dyn_blend;
+    VkDynamicDepthBiasState dyn_depth_bias;
+    VkDynamicDepthBoundsState dyn_depth_bounds;
+    VkDynamicStencilState dyn_stencil;
 
     VkShaderModule vert_shader_module;
     VkShaderModule frag_shader_module;
@@ -230,7 +232,7 @@ VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits
 void set_image_layout(
         struct sample_info &demo,
         VkImage image,
-        VkImageAspect aspect,
+        VkImageAspectFlags aspectMask,
         VkImageLayout old_image_layout,
         VkImageLayout new_image_layout);
 

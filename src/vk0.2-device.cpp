@@ -55,7 +55,6 @@ int main(int argc, char **argv)
     device_info.layerCount = 0;
     device_info.ppEnabledLayerNames = NULL;
     device_info.pEnabledFeatures = NULL;
-    device_info.flags = 0;
 
     VkDevice device;
     VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpu, &device_info, &device);
