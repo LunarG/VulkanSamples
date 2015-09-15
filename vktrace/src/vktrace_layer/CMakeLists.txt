@@ -17,9 +17,9 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_gener
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.cpp)
 
 if (WIN32)
-    # Put vk_trace_layer.dll in the same directory as vktrace.exe
+    # Put vktrace_layer.dll in the same directory as vktrace.exe
     # so that vktrace.exe can find vktrace_layer.dll.
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../../..)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/../../../vktrace)
 endif()
 
 set (CODEGEN_UTILS_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../vktrace_extensions/vktracevulkan/vulkan/codegen_utils)
@@ -92,7 +92,7 @@ if (NOT WIN32)
 else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/vktrace_layer.json src_json)
-        FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/vktrace_layer.json dst_json)
+        FILE(TO_NATIVE_PATH ${PROJECT_BINARY_DIR}/../../../layers/${CONFIGURATION}/vktrace_layer.json dst_json)
         add_custom_target(vktrace_layer-json ALL
             COMMAND copy ${src_json} ${dst_json}
             VERBATIM
