@@ -32,10 +32,13 @@
 #include "vktrace_vk_vk_ext_khr_swapchain.h"
 #include "vktrace_vk_vk_ext_khr_device_swapchain.h"
 #include "vk_ext_khr_device_swapchain_struct_size_helper.h"
+#include "vktrace_vk_vk_debug_report_lunarg.h"
+#include "vktrace_vk_vk_debug_marker_lunarg.h"
 #include "vktrace_vk_vk.h"
 #include "vktrace_interconnect.h"
 #include "vktrace_filelike.h"
 #include "vktrace_trace_packet_utils.h"
+#include "vktrace_vk_exts.h"
 #include <stdio.h>
 
 // declared as extern in vktrace_lib_helpers.h
@@ -46,11 +49,6 @@ VKMemInfo g_memInfo = {0, NULL, NULL, 0};
 std::unordered_map<void *, layer_device_data *> g_deviceDataMap;
 std::unordered_map<void *, layer_instance_data *> g_instanceDataMap;
 
-typedef void *dispatch_key;
-inline dispatch_key get_dispatch_key(const void* object)
-{
-    return (dispatch_key) *(VkLayerDispatchTable **) object;
-}
 
 layer_instance_data *mid(void *object)
 {
@@ -79,7 +77,7 @@ static layer_instance_data *initInstanceData(std::unordered_map<void *, layer_in
     std::unordered_map<void *, layer_instance_data *>::const_iterator it = map.find(key);
     if (it == map.end())
     {
-        pTable =  new layer_instance_data;
+        pTable =  new layer_instance_data();
         map[key] = pTable;
     } else
     {
@@ -100,7 +98,7 @@ static layer_device_data *initDeviceData(std::unordered_map<void *, layer_device
     std::unordered_map<void *, layer_device_data *>::const_iterator it = map.find(key);
     if (it == map.end())
     {
-        pTable =  new layer_device_data;
+        pTable =  new layer_device_data();
         map[key] = pTable;
     } else
     {
@@ -383,7 +381,9 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
     }
     CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
     result = mdd(*pDevice)->devTable.CreateDevice(physicalDevice, pCreateInfo, pDevice);
-    //TODO Add initial of extension enablement and init of debugmarker dispatch Table
+    if (result == VK_SUCCESS)
+        ext_init_create_device(mdd(*pDevice), *pDevice, pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);
+
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDevice(pHeader);
     pPacket->physicalDevice = physicalDevice;
@@ -472,7 +472,9 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     startTime = vktrace_get_time();
     result = mid(*pInstance)->instTable.CreateInstance(pCreateInfo, pInstance);
     endTime = vktrace_get_time();
-    //TODO add init of extension enablement and init of extension dispatch table
+    if (result == VK_SUCCESS)
+        ext_init_create_instance(mid(*pInstance), *pInstance, pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);
+
     CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
@@ -1577,33 +1579,41 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetDeviceProcAddr(VkDevice d
     if (addr)
         return addr;
 
-    VkLayerDispatchTable *pDisp =  &mdd(device)->devTable;
-    //TODO check for exts enabled (device_swapchain, debug_marker)
-    if (1) // if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
+    layer_device_data  *devData = mdd(device);
+    if (devData->KHRDeviceSwapchainEnabled)
     {
         if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfacePropertiesKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePropertiesKHR;
         if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfaceFormatsKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfaceFormatsKHR;
         if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkGetSurfacePresentModesKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePresentModesKHR;
         if (!strcmp("vkCreateSwapchainKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkCreateSwapchainKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkCreateSwapchainKHR;
         if (!strcmp("vkDestroySwapchainKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkDestroySwapchainKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkDestroySwapchainKHR;
         if (!strcmp("vkGetSwapchainImagesKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkGetSwapchainImagesKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkGetSwapchainImagesKHR;
         if (!strcmp("vkAcquireNextImageKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkAcquireNextImageKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkAcquireNextImageKHR;
         if (!strcmp("vkQueuePresentKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkQueuePresentKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkQueuePresentKHR;
     }
-
+    if (devData->LunargDebugMarkerEnabled)
     {
-        if (pDisp->GetDeviceProcAddr == NULL)
-            return NULL;
-        return pDisp->GetDeviceProcAddr(device, funcName);
+        if (!strcmp("vkCmdDbgMarkerBegin", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerBegin;
+        if (!strcmp("vkCmdDbgMarkerEnd", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerEnd;
+        if (!strcmp("vkDbgSetObjectTag", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectTag;
+        if (!strcmp("vkDbgSetObjectName", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectName;
     }
+    VkLayerDispatchTable *pDisp =  &devData->devTable;
+    if (pDisp->GetDeviceProcAddr == NULL)
+        return NULL;
+    return pDisp->GetDeviceProcAddr(device, funcName);
 }
 
 /**
@@ -1645,13 +1655,22 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetInstanceProcAddr(VkInstan
     addr = layer_intercept_instance_proc(funcName);
     if (addr)
         return addr;
-    //TODO check for exts enabled (swapchain and debug_report)
-    if (1) // if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
+
+    layer_instance_data  *instData = mid(instance);
+    if (instData->LunargDebugReportEnabled)
+    {
+        if (!strcmp("vkDbgCreateMsgCallback", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkDbgCreateMsgCallback;
+        if (!strcmp("vkDbgDestroyMsgCallback", funcName))
+            return (PFN_vkVoidFunction) __HOOKED_vkDbgDestroyMsgCallback;
+
+    }
+    if (instData->KHRSwapchainEnabled)
     {
         if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
-            return (PFN_vkVoidFunction) (__HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR);
+            return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR;
     }
-    VkLayerInstanceDispatchTable* pTable = &mid(instance)->instTable;
+    VkLayerInstanceDispatchTable* pTable = &instData->instTable;
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
     return pTable->GetInstanceProcAddr(instance, funcName);

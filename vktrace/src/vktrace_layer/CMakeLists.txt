@@ -29,6 +29,7 @@ set(SRC_LIST
     ${SRC_LIST}
     vktrace_lib.c
     vktrace_lib_trace.cpp
+    vktrace_vk_exts.cpp
     codegen/vktrace_vk_vk.cpp
     codegen/vktrace_vk_vk_debug_report_lunarg.cpp
     codegen/vktrace_vk_vk_debug_marker_lunarg.cpp
@@ -45,8 +46,9 @@ set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE CXX)
 
 set (HDR_LIST
     vktrace_lib_helpers.h
-    codegen/vktrace_vk_vk.h
+    vktrace_vk_exts.h
     vk_dispatch_table_helper.h
+    codegen/vktrace_vk_vk.h
     codegen/vktrace_vk_vk_debug_report_lunarg.h
     codegen/vktrace_vk_vk_debug_marker_lunarg.h
     codegen/vktrace_vk_vk_ext_khr_swapchain.h
