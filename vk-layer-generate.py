@@ -1161,6 +1161,12 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
+            # TODO : This is not complete and currently requires some hand-coded function in the header
+            #  Really we want to capture the set of all objects and their associated dispatchable objects
+            #  that are bound by the API calls:
+            #    foreach API Call
+            #        foreach object type seen by call
+            #            create validate_object(disp_obj, object)
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static VkBool32 validate_object(%s dispatchable_object, %s object)' % (o, o))
             else:
@@ -1437,14 +1443,12 @@ class ObjectTrackerSubcommand(Subcommand):
 
         explicit_object_tracker_functions = [
             "CreateInstance",
+            "EnumeratePhysicalDevices",
             "GetPhysicalDeviceQueueFamilyProperties",
             "CreateDevice",
             "GetDeviceQueue",
-            #"QueueSubmit",
             "QueueBindSparseImageMemory",
             "QueueBindSparseBufferMemory",
-            #"GetFenceStatus",
-            #"WaitForFences",
             "AllocDescriptorSets",
             "FreeDescriptorSets",
             "MapMemory",
@@ -1466,18 +1470,24 @@ class ObjectTrackerSubcommand(Subcommand):
         valid_null_object_names = {'CreateGraphicsPipelines' : ['basePipelineHandle'],
                                    'CreateComputePipelines' : ['basePipelineHandle'],
                                    'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
+                                   'QueueSubmit' : ['fence'],
                                   }
         # TODO : A few of the skipped types are just "hard" cases that need some more work to support
         #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
         param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:
+            base_type = p.ty.replace('const ', '').strip('*')
             if 'count' in p.name.lower():
                 param_count = p.name
-            if p.ty in vulkan.core.objects and p.ty not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
-                if proto.name not in valid_null_object_names or p.name not in valid_null_object_names[proto.name]:
+            if base_type in vulkan.core.objects:
+                # This is an object to potentially check for validity. First see if it's an array
+                if '*' in p.ty and 'const' in p.ty and param_count != 'NONE':
+                    loop_params[param_count].append(p.name)
+                # Not an array, check for just a base Object that's not in exceptions
+                elif '*' not in p.ty and (proto.name not in valid_null_object_names or p.name not in valid_null_object_names[proto.name]):
                     loop_params[0].append(p.name)
-            elif vk_helper.is_type(p.ty.replace('const ', '').strip('*'), 'struct'):
-                struct_type = p.ty.replace('const ', '').strip('*')
+            elif vk_helper.is_type(base_type, 'struct'):
+                struct_type = base_type
                 if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
                     struct_type = vk_helper.typedef_rev_dict[struct_type]
                 for m in sorted(vk_helper.struct_dict[struct_type]):
@@ -1540,7 +1550,10 @@ class ObjectTrackerSubcommand(Subcommand):
                     else:
                         base_param = loop_params[lc][0].split('-')[0].split('[')[0]
                         using_line += '    if (%s) {\n' % base_param
-                        using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
+                        if 'setCount' == lc: # TODO : Hacky. This is one case where loop doesn't start from 0
+                            using_line += '        for (uint32_t i=firstSet; i<%s; i++) {\n' % lc
+                        else:
+                            using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
                         for opn in loop_params[lc]:
                             if '[' in opn: # API func param is array
                                 using_line += '            skipCall |= validate_object(%s, %s);\n' % (param0_name, opn)

@@ -387,12 +387,19 @@ initObjectTracker(
 // Forward declares of generated routines
 //
 
+static void create_obj(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDbgObjectType objType);
 static void create_obj(VkInstance dispatchable_object, VkInstance object, VkDbgObjectType objType);
 static void create_obj(VkDevice dispatchable_object, VkDevice object, VkDbgObjectType objType);
 static void create_obj(VkDevice dispatchable_object, VkDescriptorSet object, VkDbgObjectType objType);
+static void create_obj(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectType objType);
+static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object);
+static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkImage object);
+static VkBool32 validate_object(VkQueue dispatchable_object, VkCmdBuffer object);
+static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkDescriptorSet object);
 static VkBool32 validate_object(VkInstance dispatchable_object, VkInstance object);
 static VkBool32 validate_object(VkDevice dispatchable_object, VkDevice object);
 static VkBool32 validate_object(VkDevice dispatchable_object, VkDescriptorPool object);
+static VkBool32 validate_object(VkDevice dispatchable_object, VkDescriptorSetLayout object);
 static void destroy_obj(VkInstance dispatchable_object, VkInstance object);
 static void destroy_obj(VkDevice dispatchable_object, VkDeviceMemory object);
 static void destroy_obj(VkDevice dispatchable_object, VkDescriptorSet object);
@@ -403,11 +410,51 @@ static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, Vk
     ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
     const char         *fail_msg);
 #endif
+extern unordered_map<const void*, OBJTRACK_NODE*> VkPhysicalDeviceMap;
+extern unordered_map<const void*, OBJTRACK_NODE*> VkImageMap;
+extern unordered_map<const void*, OBJTRACK_NODE*> VkQueueMap;
+extern unordered_map<const void*, OBJTRACK_NODE*> VkDescriptorSetMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkBufferMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkFenceMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkSemaphoreMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkCmdBufferMap;
 extern unordered_map<const void*, OBJTRACK_NODE*> VkSwapchainKHRMap;
+
+static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object)
+{
+    if (VkImageMap.find((void*)object.handle) == VkImageMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkImage Object %p", object.handle);
+    }
+    return VK_FALSE;
+}
+
+static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkImage object)
+{
+    if (VkImageMap.find((void*)object.handle) == VkImageMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkImage Object %p", object.handle);
+    }
+    return VK_FALSE;
+}
+
+static VkBool32 validate_object(VkQueue dispatchable_object, VkCmdBuffer object)
+{
+    if (VkCmdBufferMap.find(object) == VkCmdBufferMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkCmdBuffer Object %p",reinterpret_cast<uint64_t>(object));
+    }
+    return VK_FALSE;
+}
+
+static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkDescriptorSet object)
+{
+    if (VkDescriptorSetMap.find((void*)object.handle) == VkDescriptorSetMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkDescriptorSet Object %p", object.handle);
+    }
+    return VK_FALSE;
+}
 
 static VkBool32 validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
@@ -454,6 +501,22 @@ static VkBool32 validate_object(VkDevice dispatchable_object, VkCmdBuffer object
     return VK_FALSE;
 }
 
+static void create_obj(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDbgObjectType objType)
+{
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        reinterpret_cast<uint64_t>(vkObj));
+
+    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
+    pNewObjNode->objType = objType;
+    pNewObjNode->status  = OBJSTATUS_NONE;
+    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);
+    VkPhysicalDeviceMap[vkObj] = pNewObjNode;
+    uint32_t objIndex = objTypeToIndex(objType);
+    numObjs[objIndex]++;
+    numTotalObjs++;
+}
+
 static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObjectType objType)
 {
     log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
@@ -480,6 +543,21 @@ static void create_obj(VkDevice dispatchable_object, VkSwapchainKHR vkObj, VkDbg
     pNewObjNode->status  = OBJSTATUS_NONE;
     pNewObjNode->vkObj  = vkObj.handle;
     VkSwapchainKHRMap[(void*) vkObj.handle] = pNewObjNode;
+    uint32_t objIndex = objTypeToIndex(objType);
+    numObjs[objIndex]++;
+    numTotalObjs++;
+}
+static void create_obj(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectType objType)
+{
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        reinterpret_cast<uint64_t>(vkObj));
+
+    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
+    pNewObjNode->objType = objType;
+    pNewObjNode->status  = OBJSTATUS_NONE;
+    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);
+    VkQueueMap[vkObj] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
     numTotalObjs++;
@@ -568,6 +646,27 @@ explicit_CreateDevice(
     return result;
 }
 
+VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
+{
+    VkBool32 skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&objLock);
+    skipCall |= validate_object(instance, instance);
+    loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
+    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, instance)->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    loader_platform_thread_lock_mutex(&objLock);
+    if (result == VK_SUCCESS) {
+        if (pPhysicalDevices) {
+            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
+                create_obj(instance, pPhysicalDevices[i], VK_OBJECT_TYPE_PHYSICAL_DEVICE);
+            }
+        }
+    }
+    loader_platform_thread_unlock_mutex(&objLock);
+    return result;
+}
+
 VkResult
 explicit_GetDeviceQueue(
     VkDevice  device,
@@ -582,7 +681,10 @@ explicit_GetDeviceQueue(
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 
     loader_platform_thread_lock_mutex(&objLock);
-    addQueueInfo(queueNodeIndex, *pQueue);
+    if (VK_SUCCESS == result) {
+        addQueueInfo(queueNodeIndex, *pQueue);
+        create_obj(device, *pQueue, VK_OBJECT_TYPE_QUEUE);
+    }
     loader_platform_thread_unlock_mutex(&objLock);
 
     return result;
@@ -681,10 +783,16 @@ explicit_AllocDescriptorSets(
     const VkDescriptorSetLayout *pSetLayouts,
     VkDescriptorSet             *pDescriptorSets)
 {
+    VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&objLock);
-    validate_object(device, device);
-    validate_object(device, descriptorPool);
+    skipCall |= validate_object(device, device);
+    skipCall |= validate_object(device, descriptorPool);
+    for (uint32_t i = 0; i < count; i++) {
+        skipCall |= validate_object(device, pSetLayouts[i]);
+    }
     loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocDescriptorSets(
         device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);

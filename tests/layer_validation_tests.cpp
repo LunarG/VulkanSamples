@@ -519,78 +519,6 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     }
 }
 
-TEST_F(VkLayerTest, BindInvalidMemory)
-{
-    VkFlags         msgFlags;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-
-    // Create an image, allocate memory, free it, and then try to bind it
-    VkImage               image;
-    VkDeviceMemory        mem;
-    VkMemoryRequirements  mem_reqs;
-
-    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t  tex_width       = 32;
-    const int32_t  tex_height      = 32;
-
-    VkImageCreateInfo image_create_info = {};
-        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        image_create_info.pNext = NULL;
-        image_create_info.imageType = VK_IMAGE_TYPE_2D;
-        image_create_info.format = tex_format;
-        image_create_info.extent.width = tex_width;
-        image_create_info.extent.height = tex_height;
-        image_create_info.extent.depth = 1;
-        image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
-        image_create_info.samples = 1;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_create_info.flags = 0;
-
-    VkMemoryAllocInfo mem_alloc = {};
-        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        mem_alloc.pNext = NULL;
-        mem_alloc.allocationSize = 0;
-        mem_alloc.memoryTypeIndex = 0;
-
-    err = vkCreateImage(m_device->device(), &image_create_info, &image);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkGetImageMemoryRequirements(m_device->device(),
-                          image,
-                          &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_alloc.allocationSize = mem_reqs.size;
-
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
-    ASSERT_VK_SUCCESS(err);
-
-    // Introduce validation failure, free memory before binding
-    vkFreeMemory(m_device->device(), mem);
-    ASSERT_VK_SUCCESS(err);
-
-    // Try to bind free memory that has been freed
-    err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    // This may very well return an error.
-    (void)err;
-
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to bind a freed memory object";
-    if (!strstr(msgString.c_str(),"couldn't find info for mem obj")) {
-        FAIL() << "Error received did not match expected error message from BindObjectMemory in MemTracker";
-    }
-}
-
 // TODO : Is this test still valid. Not sure it is with updates to memory binding model
 //  Verify and delete the test of fix the check
 //TEST_F(VkLayerTest, FreeBoundMemory)
@@ -733,77 +661,6 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to rebind an object";
     if (!strstr(msgString.c_str(),"which has already been bound to mem object")) {
         FAIL() << "Error received did not match expected message when rebinding memory to an object";
-    }
-}
-
-TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
-{
-    VkFlags         msgFlags;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-
-    // Create an image object, allocate memory, destroy the object and then try to bind it
-    VkImage               image;
-    VkDeviceMemory        mem;
-    VkMemoryRequirements  mem_reqs;
-
-    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
-    const int32_t  tex_width       = 32;
-    const int32_t  tex_height      = 32;
-
-    VkImageCreateInfo image_create_info = {};
-        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        image_create_info.pNext = NULL;
-        image_create_info.imageType = VK_IMAGE_TYPE_2D;
-        image_create_info.format = tex_format;
-        image_create_info.extent.width = tex_width;
-        image_create_info.extent.height = tex_height;
-        image_create_info.extent.depth = 1;
-        image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
-        image_create_info.samples = 1;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-        image_create_info.flags = 0;
-
-    VkMemoryAllocInfo mem_alloc = {};
-        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
-        mem_alloc.pNext = NULL;
-        mem_alloc.allocationSize = 0;
-        mem_alloc.memoryTypeIndex = 0;
-
-    err = vkCreateImage(m_device->device(), &image_create_info, &image);
-    ASSERT_VK_SUCCESS(err);
-
-    err = vkGetImageMemoryRequirements(m_device->device(),
-                          image,
-                          &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
-
-    mem_alloc.allocationSize = mem_reqs.size;
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_VK_SUCCESS(err);
-
-    // Allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
-    ASSERT_VK_SUCCESS(err);
-
-    // Introduce validation failure, destroy Image object before binding
-    vkDestroyImage(m_device->device(), image);
-    ASSERT_VK_SUCCESS(err);
-
-    // Now Try to bind memory to this destroyed object
-    err = vkBindImageMemory(m_device->device(), image, mem, 0);
-    // This may very well return an error.
-    (void) err;
-
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while binding memory to a destroyed object";
-    if (!strstr(msgString.c_str(),"that's not in global list")) {
-        FAIL() << "Error received did not match expected error message from updateObjectBinding in MemTracker";
     }
 }
 
@@ -1079,8 +936,151 @@ TEST_F(VkLayerTest, PipelineNotBound)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
-    if (!strstr(msgString.c_str(),"Invalid VkPipeline Object")) {
-        FAIL() << "Error received was not 'Invalid VkPipeline Object'";
+    if (!strstr(msgString.c_str(),"Invalid VkPipeline Object ")) {
+        FAIL() << "Error received was not 'Invalid VkPipeline Object 0xbaadb1be' but instead it was '" << msgString.c_str() << "'";
+    }
+}
+
+TEST_F(VkLayerTest, BindInvalidMemory)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create an image, allocate memory, free it, and then try to bind it
+    VkImage               image;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
+
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+
+    VkMemoryAllocInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
+        mem_alloc.memoryTypeIndex = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(),
+                          image,
+                          &mem_reqs);
+    ASSERT_VK_SUCCESS(err);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    // allocate memory
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    // Introduce validation failure, free memory before binding
+    vkFreeMemory(m_device->device(), mem);
+    ASSERT_VK_SUCCESS(err);
+
+    // Try to bind free memory that has been freed
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
+    // This may very well return an error.
+    (void)err;
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while tring to bind a freed memory object";
+    if (!strstr(msgString.c_str(),"Invalid VkDeviceMemory Object ")) {
+        FAIL() << "Error received from BindInvalidMemory was not 'Invalid VkDeviceMemory Object 0x<handle>' but instead '" << msgString.c_str() << "'";
+    }
+}
+
+TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create an image object, allocate memory, destroy the object and then try to bind it
+    VkImage               image;
+    VkDeviceMemory        mem;
+    VkMemoryRequirements  mem_reqs;
+
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+
+    VkMemoryAllocInfo mem_alloc = {};
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.pNext = NULL;
+        mem_alloc.allocationSize = 0;
+        mem_alloc.memoryTypeIndex = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(),
+                          image,
+                          &mem_reqs);
+    ASSERT_VK_SUCCESS(err);
+
+    mem_alloc.allocationSize = mem_reqs.size;
+    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
+    ASSERT_VK_SUCCESS(err);
+
+    // Introduce validation failure, destroy Image object before binding
+    vkDestroyImage(m_device->device(), image);
+    ASSERT_VK_SUCCESS(err);
+
+    // Now Try to bind memory to this destroyed object
+    err = vkBindImageMemory(m_device->device(), image, mem, 0);
+    // This may very well return an error.
+    (void) err;
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while binding memory to a destroyed object";
+    if (!strstr(msgString.c_str(),"Invalid VkImage Object ")) {
+        FAIL() << "Error received from BindMemoryToDestroyedObject was not 'Invalid VkImage Object 0x<handle>' but rather '" << msgString.c_str() << "'";
     }
 }
 #endif
