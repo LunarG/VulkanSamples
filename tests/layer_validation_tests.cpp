@@ -1069,8 +1069,8 @@ TEST_F(VkLayerTest, PipelineNotBound)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
-    if (!strstr(msgString.c_str(),"Invalid VkPipeline Object 0xbaadb1be")) {
-        FAIL() << "Error received was not 'Invalid VkPipeline Object 0xbaadb1be'";
+    if (!strstr(msgString.c_str(),"Invalid VkPipeline Object")) {
+        FAIL() << "Error received was not 'Invalid VkPipeline Object'";
     }
 }
 #endif
