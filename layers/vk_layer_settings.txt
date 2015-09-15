@@ -1,0 +1,87 @@
+# This is an example vk_layer_settings.txt file.
+#  This file allows for per-layer settings which can dynamically affect layer
+#  behavior. Comments in this file are denoted with the "#" char.
+#  Settings lines are of the form "<LayerName><SettingName> = <SettingValue>"
+#  There are some common settings that are used by each layer.
+#  Below is a general description of three common settings, followed by
+#  actual template settings for each layer in the SDK.
+#
+# Common settings description:
+# <LayerName>DebugAction : This is an enum value indicating what action is to
+#  be taken when a layer wants to report information. Possible settings values
+#  are defined in the vk_layer.h header file. These settings are:
+#  VK_DBG_LAYER_ACTION_IGNORE - Take no action
+#  VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
+#     have been registered via the vkDbgCreateMsgCallback() extension.
+#  VK_DBG_LAYER_ACTION_LOG_MSG - Log a txt message to stdout or to a log file
+#     specified via the <LayerName>LogFilename setting (see below)
+#  VK_DBG_LAYER_ACTION_BREAK - Trigger a breakpoint.
+#
+# <LayerName>ReportFlags : This is a comma-delineated list of options telling
+#  the layer what types of messages it should report back. Options are:
+#  info - Report informational messages
+#  warn - Report warnings of using the API in an unrecommended manner which may
+#     also lead to undefined behavior
+#  perf - Report using the API in a way that may cause suboptimal performance
+#  error - Report errors in API usage
+#  debug - For layer development. Report messages for debugging layer behavior
+#
+# <LayerName>LogFilename : output filename. Can be relative to location of
+#    vk_layer_settings.txt file, or an absolute path. If no filename is
+#    specified or if filename has invalid path, then stdout is used by default.
+#
+# Example of actual settings for each layer
+#
+# DeviceLimits Settings
+DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+DeviceLimitsReportFlags = error,warn,perf
+DeviceLimitsLogFilename = stdout
+
+# DrawState Settings
+DrawStateDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+DrawStateReportFlags = error,warn,perf
+DrawStateLogFilename = stdout
+
+# Image Settings
+ImageDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ImageReportFlags = error,warn,perf
+ImageLogFilename = stdout
+
+# MemTracker Settings
+MemTrackerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+MemTrackerReportFlags = error,warn,perf
+MemTrackerLogFilename = stdout
+
+# ObjectTracker Settings
+ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ObjectTrackerReportFlags = error,warn,perf
+ObjectTrackerLogFilename = stdout
+
+# ParamChecker Settings
+ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ParamCheckerReportFlags = error,warn,perf
+ParamCheckerLogFilename = stdout
+
+# ShaderChecker Settings
+ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ShaderCheckerReportFlags = error,warn,perf
+ShaderCheckerLogFilename = stdout
+
+# Threading Settings
+ThreadingDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ThreadingReportFlags = error,warn,perf
+ThreadingLogFilename = stdout
+
+# APIDump Settings - NOTE that APIDump is not a validation layer and the
+#  common settings for ReportFlags and DebugAction do not apply
+# Detailed TRUE causes parameter details to be dumped in addition to API calls
+APIDumpDetailed = TRUE
+# NoAddr TRUE causes "address" to be dumped in place of hex addresses
+APIDumpNoAddr = FALSE
+# File = TRUE indicates that output should be written to file
+APIDumpFile = TRUE
+# LogFilename is file to dump to when "File = TRUE" default is "vk_apidump.txt"
+APIDumpLogFilename = stdout
+# Flush = TRUE causes IO to be flushed after each line that's written
+APIDumpFlush = FALSE
+
