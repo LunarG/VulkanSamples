@@ -4350,7 +4350,7 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkLogicOp pCreateInfos->pColorBlendState->logicOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments != nullptr)
+    if(pCreateInfos->pColorBlendState->pAttachments != nullptr && pCreateInfos->pColorBlendState->pAttachments->blendEnable == VK_TRUE)
     {
     if(pCreateInfos->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
