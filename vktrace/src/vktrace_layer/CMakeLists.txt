@@ -92,7 +92,7 @@ if (NOT WIN32)
 else()
     if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
         FILE(TO_NATIVE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/windows/vktrace_layer.json src_json)
-        FILE(TO_NATIVE_PATH ${PROJECT_BINARY_DIR}/../../../layers/${CONFIGURATION}/vktrace_layer.json dst_json)
+        FILE(TO_NATIVE_PATH ${PROJECT_BINARY_DIR}/../../../layers/$<CONFIGURATION>/vktrace_layer.json dst_json)
         add_custom_target(vktrace_layer-json ALL
             COMMAND copy ${src_json} ${dst_json}
             VERBATIM
