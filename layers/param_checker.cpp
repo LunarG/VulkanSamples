@@ -2,6 +2,7 @@
  * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -3867,6 +3868,55 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
+bool PreCreateShaderModule(
+    VkDevice device,
+    const VkShaderModuleCreateInfo* pCreateInfo)
+{
+    if(pCreateInfo) {
+        if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) {
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+                "vkCreateShaderModule parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+            return false;
+        }
+        if(!pCreateInfo->pCode) {
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+                "vkCreateShaderModule paramter, void* pCreateInfo->pCode, is null");
+            return false;
+        }
+    } else {
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+            "vkCreateShaderModule parameter, VkShaderModuleCreateInfo pCreateInfo, is null");
+        return false;
+    }
+
+    return true;
+}
+
+bool PostCreateShaderModule(
+    VkDevice device,
+    VkShaderModule* pShaderModule,
+    VkResult result)
+{
+    if(result < VK_SUCCESS) {
+        std::string reason = "vkCreateShaderModule parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
+    VkDevice device,
+    const VkShaderModuleCreateInfo* pCreateInfo,
+    VkShaderModule* pShaderModule)
+{
+    PreCreateShaderModule(device, pCreateInfo);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
+    PostCreateShaderModule(device, pShaderModule, result);
+    return result;
+}
+
 bool PreCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo)
@@ -6974,6 +7024,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "vkCreateShader"))
         return (PFN_vkVoidFunction) vkCreateShader;
+    if (!strcmp(funcName, "vkCreateShaderModule"))
+        return (PFN_vkVoidFunction) vkCreateShaderModule;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
         return (PFN_vkVoidFunction) vkCreateGraphicsPipelines;
     if (!strcmp(funcName, "vkCreateComputePipelines"))
