@@ -382,7 +382,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     /* Fix the compiler and fix these!  No point in understanding them. */
     rmap->rt_count = bt->texture_start;
     rmap->texture_resource_count = bt->ubo_start - bt->texture_start;
-    rmap->uav_count = bt->count - bt->ubo_start;
+    rmap->uav_count = bt->ubo_count;
     rmap->sampler_count = rmap->texture_resource_count;
     surface_count = rmap->rt_count + rmap->texture_resource_count +
         rmap->uav_count;
@@ -543,10 +543,10 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
     if (usesGather) {
         bt->ubo_count            = data.binding_table.gather_texture_start - data.binding_table.ubo_start;
         bt->texture_gather_start = data.binding_table.gather_texture_start;
-        bt->texture_gather_count = bt->count - bt->texture_gather_start;
+        bt->texture_gather_count = data.binding_table.pull_constants_start - bt->texture_gather_start;
     } else {
-        bt->ubo_count            = bt->count - data.binding_table.ubo_start;
-        bt->texture_gather_start = bt->count;
+        bt->ubo_count            = data.binding_table.pull_constants_start - data.binding_table.ubo_start;
+        bt->texture_gather_start = data.binding_table.pull_constants_start;
         bt->texture_gather_count = 0;
     }
 
