@@ -38,8 +38,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Init Framebuffer Sample";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -54,11 +54,8 @@ int main(int argc, char **argv)
     init_renderpass(info);
 
     /* VULKAN_KEY_START */
-    VkAttachmentBindInfo attachments[2];
-    attachments[0].view.handle = VK_NULL_HANDLE;
-    attachments[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[1].view = info.depth.view;
-    attachments[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VkImageView attachments[2];
+    attachments[1] = info.depth.view;
 
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -72,7 +69,7 @@ int main(int argc, char **argv)
 
     uint32_t i;
     for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
-        attachments[0].view = info.buffers[i].view;
+        attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
         assert(!res);
     }
@@ -80,15 +77,15 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
-    info.fpDestroySwapChainWSI(info.device, info.swap_chain);
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
     for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
 
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);

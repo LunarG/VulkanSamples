@@ -38,8 +38,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Texture Initialization Sample";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
     VkImageSubresource subres = {};
     subres.aspect = VK_IMAGE_ASPECT_COLOR;
     subres.mipLevel = 0;
-    subres.arraySlice = 0;
+    subres.arrayLayer = 0;
 
     VkSubresourceLayout layout;
     void *data;
@@ -155,8 +155,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    res = vkUnmapMemory(info.device, mappableMemory);
-    assert(!res);
+    vkUnmapMemory(info.device, mappableMemory);
 
     if (!needStaging) {
         /* If we can use the linear tiled image as a texture, just do it */
@@ -164,7 +163,7 @@ int main(int argc, char **argv)
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                texObj.imageLayout);
     } else {
@@ -198,24 +197,24 @@ int main(int argc, char **argv)
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd                                       */
         set_image_layout(info, mappableImage,
-                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image,
-                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
         VkImageCopy copy_region;
-        copy_region.srcSubresource.arraySlice = 0;
+        copy_region.srcSubresource.arrayLayer = 0;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
         copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-        copy_region.destSubresource.arraySlice = 0;
+        copy_region.destSubresource.arrayLayer = 0;
         copy_region.destSubresource.mipLevel = 0;
         copy_region.destOffset.x = 0;
         copy_region.destOffset.y = 0;
@@ -233,7 +232,7 @@ int main(int argc, char **argv)
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                                texObj.imageLayout);
 
@@ -248,9 +247,9 @@ int main(int argc, char **argv)
     samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressU = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressModeU = VK_TEX_ADDRESS_MODE_CLAMP;
+    samplerCreateInfo.addressModeV = VK_TEX_ADDRESS_MODE_CLAMP;
+    samplerCreateInfo.addressModeW = VK_TEX_ADDRESS_MODE_CLAMP;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareEnable = VK_FALSE;
@@ -274,10 +273,10 @@ int main(int argc, char **argv)
     view_info.channels.g = VK_CHANNEL_SWIZZLE_G;
     view_info.channels.b = VK_CHANNEL_SWIZZLE_B;
     view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
-    view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.mipLevels = 1;
-    view_info.subresourceRange.baseArraySlice = 0;
+    view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.arraySize = 1;
 
     /* create image view */

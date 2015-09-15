@@ -91,31 +91,19 @@ int main(int argc, char **argv)
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
-    res = vkUnmapMemory(info.device, info.uniform_data.mem);
-    assert(!res);
+    vkUnmapMemory(info.device, info.uniform_data.mem);
 
     res = vkBindBufferMemory(info.device,
             info.uniform_data.buf,
             info.uniform_data.mem, 0);
     assert(!res);
 
-    VkBufferViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.pNext = NULL;
-    view_info.buffer = info.uniform_data.buf;
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range = sizeof(info.MVP);
-    view_info.format = VK_FORMAT_UNDEFINED;
-
-    res = vkCreateBufferView(info.device, &view_info, &info.uniform_data.view);
-    assert(!res);
-
-    info.uniform_data.desc.bufferView = info.uniform_data.view;
+    info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
+    info.uniform_data.desc.bufferInfo.offset = 0;
+    info.uniform_data.desc.bufferInfo.range = sizeof(info.MVP);
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyBufferView(info.device, info.uniform_data.view);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);

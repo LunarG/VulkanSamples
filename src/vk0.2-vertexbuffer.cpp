@@ -40,8 +40,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Vertex Buffer Sample";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -103,27 +103,12 @@ int main(int argc, char **argv)
 
     memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
 
-    res = vkUnmapMemory(info.device, info.vertex_buffer.mem);
-    assert(!res);
+    vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device,
             info.vertex_buffer.buf,
             info.vertex_buffer.mem, 0);
     assert(!res);
-
-    VkBufferViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.pNext = NULL;
-    view_info.buffer = info.vertex_buffer.buf;
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range = sizeof(g_vb_solid_face_colors_Data);
-    view_info.format = VK_FORMAT_UNDEFINED;
-
-    res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
-    assert(!res);
-
-    info.vertex_buffer.desc.bufferView = info.vertex_buffer.view;
 
     /* We won't use these here, but we will need this info when creating the pipeline */
     info.vi_binding.binding = 0;
@@ -143,12 +128,12 @@ int main(int argc, char **argv)
 
     /* We cannot bind the vertex buffer until we begin a renderpass */
     VkClearValue clear_values[2];
-    clear_values[0].color.f32[0] = 0.2f;
-    clear_values[0].color.f32[1] = 0.2f;
-    clear_values[0].color.f32[2] = 0.2f;
-    clear_values[0].color.f32[3] = 0.2f;
-    clear_values[1].ds.depth     = 1.0f;
-    clear_values[1].ds.stencil   = 0;
+    clear_values[0].color.float32[0] = 0.2f;
+    clear_values[0].color.float32[1] = 0.2f;
+    clear_values[0].color.float32[2] = 0.2f;
+    clear_values[0].color.float32[3] = 0.2f;
+    clear_values[1].depthStencil.depth     = 1.0f;
+    clear_values[1].depthStencil.stencil   = 0;
 
     VkRenderPassBeginInfo rp_begin = {};
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -159,8 +144,8 @@ int main(int argc, char **argv)
     rp_begin.renderArea.offset.y = 0;
     rp_begin.renderArea.extent.width = info.width;
     rp_begin.renderArea.extent.height = info.height;
-    rp_begin.attachmentCount = 2;
-    rp_begin.pAttachmentClearValues = clear_values;
+    rp_begin.clearValueCount = 2;
+    rp_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
@@ -175,21 +160,20 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
-    info.fpDestroySwapChainWSI(info.device, info.swap_chain);
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
     for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
 
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyRenderPass(info.device, info.render_pass);
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.vertex_buffer.mem);
-    vkDestroyBufferView(info.device, info.vertex_buffer.view);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);

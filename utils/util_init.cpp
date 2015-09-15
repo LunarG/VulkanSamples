@@ -279,7 +279,6 @@ VkResult init_device(struct sample_info &info)
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
-    device_info.flags = 0;
 
     res = vkCreateDevice(info.gpu, &device_info, &info.device);
     assert(!res);
@@ -323,10 +322,6 @@ VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback 
     case VK_SUCCESS:
         std::cout << "Successfully created message calback object\n";
         info.msg_callbacks.push_back(msg_callback);
-        break;
-    case VK_ERROR_INVALID_POINTER:
-        std::cout << "dbgCreateMsgCallback: Invalid pointer\n" << std::endl;
-        return VK_ERROR_INITIALIZATION_FAILED;
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
         std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;
@@ -538,7 +533,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
 
     VkMemoryAllocInfo mem_alloc = {};
@@ -547,14 +542,17 @@ void init_depth_buffer(struct sample_info &info)
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
 
-    VkAttachmentViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
-    view_info.image.handle = VK_NULL_HANDLE;
+    view_info.image = VK_NULL_HANDLE;
     view_info.format = depth_format;
-    view_info.mipLevel = 0;
-    view_info.baseArraySlice = 0;
-    view_info.arraySize = 1;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.arraySize = 1;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
     VkMemoryRequirements mem_reqs;
@@ -588,14 +586,14 @@ void init_depth_buffer(struct sample_info &info)
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
-                          VK_IMAGE_ASPECT_DEPTH,
+                          VK_IMAGE_ASPECT_DEPTH_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     /* Create image view */
-    view_info.image = info.depth.image;
-    res = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
-    assert(!res);
+   view_info.image = info.depth.image;
+   res = vkCreateImageView(info.device, &view_info, &info.depth.view);
+   assert(!res);
 }
 
 void init_wsi(struct sample_info &info)
@@ -604,25 +602,28 @@ void init_wsi(struct sample_info &info)
 
     VkResult U_ASSERT_ONLY res;
 
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportWSI);
-    GET_DEVICE_PROC_ADDR(info.device, GetSurfaceInfoWSI);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapChainInfoWSI);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageWSI);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentWSI);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfacePropertiesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfaceFormatsKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfacePresentModesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
+    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueCount(info.gpu, &info.queue_count);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, NULL);
     assert(!res);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueProperties(info.gpu, info.queue_count, info.queue_props.data());
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
 
     // Construct the WSI surface description:
-    info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
     info.surface_description.platform = VK_PLATFORM_WIN32_WSI;
@@ -631,7 +632,7 @@ void init_wsi(struct sample_info &info)
 #else  // _WIN32
     info.platform_handle_xcb.connection = info.connection;
     info.platform_handle_xcb.root = info.screen->root;
-    info.surface_description.platform = VK_PLATFORM_XCB_WSI;
+    info.surface_description.platform = VK_PLATFORM_XCB_KHR;
     info.surface_description.pPlatformHandle = &info.platform_handle_xcb;
     info.surface_description.pPlatformWindow = &info.window;
 #endif // _WIN32
@@ -639,8 +640,8 @@ void init_wsi(struct sample_info &info)
     // Iterate over each queue to learn whether it supports presenting to WSI:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportWSI(info.gpu, i,
-                                                   (VkSurfaceDescriptionWSI *) &info.surface_description,
+        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
+                                                   (VkSurfaceDescriptionKHR *) &info.surface_description,
                                                    &supportsPresent[i]);
     }
 
@@ -682,22 +683,19 @@ void init_wsi(struct sample_info &info)
     info.graphics_queue_family_index = graphicsQueueNodeIndex;
 
     // Get the list of VkFormats that are supported:
-    size_t formatsSize;
-    res = info.fpGetSurfaceInfoWSI(info.device,
-                                    (VkSurfaceDescriptionWSI *) &info.surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, NULL);
+    uint32_t formatCount;
+    res = info.fpGetSurfaceFormatsKHR(info.device,
+                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
+                                     &formatCount, NULL);
     assert(!res);
-    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-                                    (VkSurfaceDescriptionWSI *) &info.surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, surfFormats);
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = info.fpGetSurfaceFormatsKHR(info.device,
+                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
+                                     &formatCount, surfFormats);
     assert(!res);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    size_t formatCount = formatsSize / sizeof(VkSurfaceFormatPropertiesWSI);
     if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
     {
         info.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -714,34 +712,29 @@ void init_swap_chain(struct sample_info &info)
     /* DEPENDS on info.cmd and info.queue initialized */
 
     VkResult U_ASSERT_ONLY res;
-    size_t capsSize;
-    size_t presentModesSize;
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, NULL);
-    assert(!res);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, NULL);
+    VkSurfacePropertiesKHR surfProperties;
+
+    res = info.fpGetSurfacePropertiesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &surfProperties);
     assert(!res);
 
-    VkSurfacePropertiesWSI *surfProperties =
-        (VkSurfacePropertiesWSI *)malloc(capsSize);
-    VkSurfacePresentModePropertiesWSI *presentModes =
-        (VkSurfacePresentModePropertiesWSI *)malloc(presentModesSize);
-
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, surfProperties);
+    uint32_t presentModeCount;
+    res = info.fpGetSurfacePresentModesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &presentModeCount, NULL);
     assert(!res);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, presentModes);
+    VkPresentModeKHR *presentModes =
+        (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
+
+    res = info.fpGetSurfacePresentModesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &presentModeCount, presentModes);
     assert(!res);
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfProperties->currentExtent.width == -1)
+    if (surfProperties.currentExtent.width == -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -751,23 +744,22 @@ void init_swap_chain(struct sample_info &info)
     else
     {
         // If the surface size is defined, the swap chain size must match
-        swapChainExtent = surfProperties->currentExtent;
+        swapChainExtent = surfProperties.currentExtent;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
     // tearing mode.  If not, try IMMEDIATE which will usually be available,
     // and is fastest (though it tears).  If not, fall back to FIFO which is
     // always available.
-    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_FIFO_WSI;
-    size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
-            swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
+        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
             break;
         }
-        if ((swapChainPresentMode != VK_PRESENT_MODE_MAILBOX_WSI) &&
-            (presentModes[i].presentMode == VK_PRESENT_MODE_IMMEDIATE_WSI)) {
-            swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
+            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
     }
 
@@ -787,74 +779,80 @@ void init_swap_chain(struct sample_info &info)
     }
 #endif // WORK_AROUND_CODE
 
-    VkSurfaceTransformWSI preTransform;
-    if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    VkSurfaceTransformKHR preTransform;
+    if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
     } else {
-        preTransform = surfProperties->currentTransform;
+        preTransform = surfProperties.currentTransform;
     }
 
-    VkSwapChainCreateInfoWSI swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
+    VkSwapchainCreateInfoKHR swap_chain = {};
+    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
-    swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionWSI *)&info.surface_description;
+    swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&info.surface_description;
     swap_chain.minImageCount = desiredNumberOfSwapChainImages;
     swap_chain.imageFormat = info.format;
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
-    swap_chain.presentMode = swapChainPresentMode;
-    swap_chain.oldSwapChain.handle = 0;
+    swap_chain.presentMode = swapchainPresentMode;
+    swap_chain.oldSwapchain.handle = 0;
     swap_chain.clipped = true;
 
-    res = info.fpCreateSwapChainWSI(info.device, &swap_chain, &info.swap_chain);
+    res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
     assert(!res);
 
-    size_t swapChainImagesSize;
-    res = info.fpGetSwapChainInfoWSI(info.device, info.swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, NULL);
+    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+                                      &info.swapchainImageCount, NULL);
     assert(!res);
 
-    VkSwapChainImagePropertiesWSI* swapChainImages = (VkSwapChainImagePropertiesWSI*)malloc(swapChainImagesSize);
-    assert(swapChainImages);
-    res = info.fpGetSwapChainInfoWSI(info.device, info.swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, swapChainImages);
+    VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
+    assert(swapchainImages);
+    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+                                      &info.swapchainImageCount, swapchainImages);
     assert(!res);
 
 #ifdef WORK_AROUND_CODE
-    info.swapChainImageCount = 2;
-#else  // WORK_AROUND_CODE
-    // The number of images within the swap chain is determined based on the size of the info returned
-    info.swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
+    // After the proper code was created, other parts of this demo were
+    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
+    // images, etc.  Live with that for now.
+    // TODO: Rework this demo code to live with the number of buffers returned
+    // by vkCreateSwapchainKHR().
+    info.swapchainImageCount = 2;
 #endif // WORK_AROUND_CODE
 
-    for (int i = 0; i < info.swapChainImageCount; i++) {
+    for (int i = 0; i < info.swapchainImageCount; i++) {
         swap_chain_buffer sc_buffer;
 
-        VkAttachmentViewCreateInfo color_attachment_view = {};
-        color_attachment_view.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-        color_attachment_view.pNext = NULL;
-        color_attachment_view.format = info.format;
-        color_attachment_view.mipLevel = 0;
-        color_attachment_view.baseArraySlice = 0;
-        color_attachment_view.arraySize = 1;
-        color_attachment_view.flags = 0;
+        VkImageViewCreateInfo color_image_view = {};
+        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view.pNext = NULL;
+        color_image_view.format = info.format;
+        color_image_view.channels.r = VK_CHANNEL_SWIZZLE_R;
+        color_image_view.channels.g = VK_CHANNEL_SWIZZLE_G;
+        color_image_view.channels.b = VK_CHANNEL_SWIZZLE_B;
+        color_image_view.channels.a = VK_CHANNEL_SWIZZLE_A;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.baseMipLevel = 0;
+        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.baseArrayLayer = 0;
+        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view.flags = 0;
 
 
-        sc_buffer.image = swapChainImages[i].image;
+        sc_buffer.image = swapchainImages[i];
 
         set_image_layout(info, sc_buffer.image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-        color_attachment_view.image = sc_buffer.image;
+        color_image_view.image = sc_buffer.image;
 
-        res = vkCreateAttachmentView(info.device,
-                &color_attachment_view, &sc_buffer.view);
+        res = vkCreateImageView(info.device,
+                &color_image_view, &sc_buffer.view);
         info.buffers.push_back(sc_buffer);
         assert(!res);
     }
@@ -911,27 +909,16 @@ void init_uniform_buffer(struct sample_info &info)
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
-    res = vkUnmapMemory(info.device, info.uniform_data.mem);
-    assert(!res);
+    vkUnmapMemory(info.device, info.uniform_data.mem);
 
     res = vkBindBufferMemory(info.device,
             info.uniform_data.buf,
             info.uniform_data.mem, 0);
     assert(!res);
 
-    VkBufferViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.pNext = NULL;
-    view_info.buffer = info.uniform_data.buf;
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range = sizeof(info.MVP);
-    view_info.format = VK_FORMAT_UNDEFINED;
-
-    res = vkCreateBufferView(info.device, &view_info, &info.uniform_data.view);
-    assert(!res);
-
-    info.uniform_data.desc.bufferView = info.uniform_data.view;
+    info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
+    info.uniform_data.desc.bufferInfo.offset = 0;
+    info.uniform_data.desc.bufferInfo.range = sizeof(info.MVP);
 }
 
 void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture)
@@ -1017,14 +1004,14 @@ void init_renderpass(struct sample_info &info)
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputCount = 0;
-    subpass.inputAttachments = NULL;
+    subpass.pInputAttachments = NULL;
     subpass.colorCount = 1;
-    subpass.colorAttachments = &color_reference;
-    subpass.resolveAttachments = NULL;
+    subpass.pColorAttachments = &color_reference;
+    subpass.pResolveAttachments = NULL;
     subpass.depthStencilAttachment.attachment = 1;
     subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     subpass.preserveCount = 0;
-    subpass.preserveAttachments = NULL;
+    subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1045,11 +1032,8 @@ void init_framebuffers(struct sample_info &info)
     /* DEPENDS on init_depth_buffer(), init_renderpass() and init_wsi() */
 
     VkResult U_ASSERT_ONLY res;
-    VkAttachmentBindInfo attachments[2];
-    attachments[0].view.handle = VK_NULL_HANDLE;
-    attachments[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachments[1].view = info.depth.view;
-    attachments[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VkImageView attachments[2];
+    attachments[1] = info.depth.view;
 
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -1064,7 +1048,7 @@ void init_framebuffers(struct sample_info &info)
     uint32_t i;
 
     for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
-        attachments[0].view = info.buffers[i].view;
+        attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
         assert(!res);
     }
@@ -1174,24 +1158,11 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
 
     memcpy(pData, vertexData, dataSize);
 
-    res = vkUnmapMemory(info.device, info.vertex_buffer.mem);
-    assert(!res);
+    vkUnmapMemory(info.device, info.vertex_buffer.mem);
 
     res = vkBindBufferMemory(info.device,
             info.vertex_buffer.buf,
             info.vertex_buffer.mem, 0);
-    assert(!res);
-
-    VkBufferViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    view_info.pNext = NULL;
-    view_info.buffer = info.vertex_buffer.buf;
-    view_info.viewType = VK_BUFFER_VIEW_TYPE_RAW;
-    view_info.offset = 0;
-    view_info.range = sizeof(g_vb_solid_face_colors_Data);
-    view_info.format = VK_FORMAT_UNDEFINED;
-
-    res = vkCreateBufferView(info.device, &view_info, &info.vertex_buffer.view);
     assert(!res);
 
     info.vi_binding.binding = 0;
@@ -1234,45 +1205,58 @@ void init_dynamic_state(struct sample_info &info)
     res = vkCreateDynamicViewportState(info.device, &viewport_create, &info.dyn_viewport);
     assert(!res);
 
+    VkDynamicLineWidthStateCreateInfo line_width;
+    line_width.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
+    line_width.lineWidth = 1.0;
+    line_width.pNext = NULL;
 
-    VkDynamicRasterStateCreateInfo raster_create = {};
-    raster_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
-    raster_create.pNext = NULL;
-    raster_create.depthBias = 0;
-    raster_create.depthBiasClamp = 0;
-    raster_create.slopeScaledDepthBias = 0;
-    raster_create.lineWidth = 1.0;
-
-    res = vkCreateDynamicRasterState(info.device, &raster_create, &info.dyn_raster);
+    res = vkCreateDynamicLineWidthState(info.device, &line_width, &info.dyn_line_width);
     assert(!res);
 
-    VkDynamicColorBlendStateCreateInfo blend_create = {};
-    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
+
+    VkDynamicDepthBiasStateCreateInfo depth_bias;
+    depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
+    depth_bias.depthBias = 0.0f;
+    depth_bias.depthBiasClamp = 0.0f;
+    depth_bias.slopeScaledDepthBias = 0.0f;
+    depth_bias.pNext = NULL;
+
+    res = vkCreateDynamicDepthBiasState(info.device, &depth_bias, &info.dyn_depth_bias);
+    assert(!res);
+
+    VkDynamicBlendStateCreateInfo blend_create = {};
+    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
     blend_create.pNext = NULL;
     blend_create.blendConst[0] = 1.0f;
     blend_create.blendConst[1] = 1.0f;
     blend_create.blendConst[2] = 1.0f;
     blend_create.blendConst[3] = 1.0f;
 
-    res = vkCreateDynamicColorBlendState(info.device,
+    res = vkCreateDynamicBlendState(info.device,
             &blend_create, &info.dyn_blend);
     assert(!res);
 
 
-    VkDynamicDepthStencilStateCreateInfo depth_create = {};
-    depth_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_create.pNext = NULL;
-    depth_create.minDepthBounds = 0.0f;
-    depth_create.maxDepthBounds = 1.0f;
-    depth_create.stencilBackRef = 0;
-    depth_create.stencilFrontRef = 0;
-    depth_create.stencilReadMask = 0xff;
-    depth_create.stencilWriteMask = 0xff;
+    VkDynamicDepthBoundsStateCreateInfo depth_bounds;
+    depth_bounds.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
+    depth_bounds.minDepthBounds = 0.0f;
+    depth_bounds.maxDepthBounds = 1.0f;
+    depth_bounds.pNext = NULL;
 
-    res = vkCreateDynamicDepthStencilState(info.device,
-            &depth_create, &info.dyn_depth);
+    res = vkCreateDynamicDepthBoundsState(info.device,
+            &depth_bounds, &info.dyn_depth_bounds);
     assert(!res);
 
+    VkDynamicStencilStateCreateInfo stencil;
+    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
+    stencil.stencilReference = 0;
+    stencil.stencilCompareMask = 0xff;
+    stencil.stencilWriteMask = 0xff;
+    stencil.pNext = NULL;
+
+    res = vkCreateDynamicStencilState(info.device,
+            &stencil, &stencil, &info.dyn_stencil);
+    assert(!res);
 }
 
 void init_descriptor_set(struct sample_info &info, bool use_texture)
@@ -1302,12 +1286,11 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         &descriptor_pool, &info.desc_pool);
     assert(!res);
 
-    uint32_t count;
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &info.desc_layout,
-            &info.desc_set, &count);
-    assert(!res && count == 1);
+            &info.desc_set);
+    assert(!res);
 
     VkWriteDescriptorSet writes[2];
 
@@ -1322,7 +1305,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     if (use_texture)
     {
-        tex_desc.attachmentView = 0;
+        tex_desc.imageView = 0;
         tex_desc.bufferView = 0;
         tex_desc.imageView = info.textures[0].view;
         tex_desc.sampler = info.textures[0].sampler;
@@ -1337,8 +1320,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         writes[1].destArrayElement = 0;
     }
 
-    res = vkUpdateDescriptorSets(info.device, use_texture?2:1, writes, 0, NULL);
-    assert(!res);
+    vkUpdateDescriptorSets(info.device, use_texture?2:1, writes, 0, NULL);
 }
 
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText)
@@ -1371,6 +1353,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
+    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
     assert(!res);
 
@@ -1396,6 +1379,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";
+    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
     assert(!res);
 
@@ -1461,7 +1445,7 @@ void init_pipeline(struct sample_info &info)
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds.depthBoundsEnable = VK_FALSE;
+    ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
@@ -1472,7 +1456,7 @@ void init_pipeline(struct sample_info &info)
     VkPipelineMultisampleStateCreateInfo   ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
-    ms.sampleMask = 1;
+    ms.pSampleMask = NULL;
     ms.rasterSamples = 1;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
@@ -1579,7 +1563,7 @@ void init_texture(struct sample_info &info)
     VkImageSubresource subres = {};
     subres.aspect = VK_IMAGE_ASPECT_COLOR;
     subres.mipLevel = 0;
-    subres.arraySlice = 0;
+    subres.arrayLayer = 0;
 
     VkSubresourceLayout layout;
     void *data;
@@ -1597,8 +1581,7 @@ void init_texture(struct sample_info &info)
         exit(-1);
     }
 
-    res = vkUnmapMemory(info.device, mappableMemory);
-    assert(!res);
+    vkUnmapMemory(info.device, mappableMemory);
 
     if (!needStaging) {
         /* If we can use the linear tiled image as a texture, just do it */
@@ -1606,7 +1589,7 @@ void init_texture(struct sample_info &info)
         texObj.mem = mappableMemory;
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                texObj.imageLayout);
     } else {
@@ -1640,24 +1623,24 @@ void init_texture(struct sample_info &info)
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd                                       */
         set_image_layout(info, mappableImage,
-                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image,
-                          VK_IMAGE_ASPECT_COLOR,
+                          VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
         VkImageCopy copy_region;
-        copy_region.srcSubresource.arraySlice = 0;
+        copy_region.srcSubresource.arrayLayer = 0;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
         copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-        copy_region.destSubresource.arraySlice = 0;
+        copy_region.destSubresource.arrayLayer = 0;
         copy_region.destSubresource.mipLevel = 0;
         copy_region.destOffset.x = 0;
         copy_region.destOffset.y = 0;
@@ -1684,8 +1667,7 @@ void init_texture(struct sample_info &info)
         res = vkEndCommandBuffer(info.cmd);
         assert(!res);
         const VkCmdBuffer cmd_bufs[] = { info.cmd };
-        VkFence nullFence;
-        nullFence.handle = VK_NULL_HANDLE;
+        VkFence nullFence = { VK_NULL_HANDLE };
 
         /* Queue the command buffer for execution */
         res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
@@ -1697,7 +1679,7 @@ void init_texture(struct sample_info &info)
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                                texObj.imageLayout);
 
@@ -1711,9 +1693,9 @@ void init_texture(struct sample_info &info)
     samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
     samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressU = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressV = VK_TEX_ADDRESS_WRAP;
-    samplerCreateInfo.addressW = VK_TEX_ADDRESS_WRAP;
+    samplerCreateInfo.addressModeU = VK_TEX_ADDRESS_MODE_CLAMP;
+    samplerCreateInfo.addressModeV = VK_TEX_ADDRESS_MODE_CLAMP;
+    samplerCreateInfo.addressModeW = VK_TEX_ADDRESS_MODE_CLAMP;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
@@ -1737,10 +1719,10 @@ void init_texture(struct sample_info &info)
     view_info.channels.g = VK_CHANNEL_SWIZZLE_G;
     view_info.channels.b = VK_CHANNEL_SWIZZLE_B;
     view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
-    view_info.subresourceRange.aspect = VK_IMAGE_ASPECT_COLOR;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.mipLevels = 1;
-    view_info.subresourceRange.baseArraySlice = 0;
+    view_info.subresourceRange.baseArrayLayer = 0;
     view_info.subresourceRange.arraySize = 1;
 
     /* create image view */

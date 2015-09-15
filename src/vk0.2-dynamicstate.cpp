@@ -68,51 +68,67 @@ int main(int argc, char **argv)
     res = vkCreateDynamicViewportState(info.device, &viewport_create, &info.dyn_viewport);
     assert(!res);
 
+    VkDynamicLineWidthStateCreateInfo line_width;
+    line_width.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
+    line_width.lineWidth = 1.0;
+    line_width.pNext = NULL;
 
-    VkDynamicRasterStateCreateInfo raster_create = {};
-    raster_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO;
-    raster_create.pNext = NULL;
-    raster_create.depthBias = 0;
-    raster_create.depthBiasClamp = 0;
-    raster_create.slopeScaledDepthBias = 0;
-    raster_create.lineWidth = 1.0;
-
-    res = vkCreateDynamicRasterState(info.device, &raster_create, &info.dyn_raster);
+    res = vkCreateDynamicLineWidthState(info.device, &line_width, &info.dyn_line_width);
     assert(!res);
 
-    VkDynamicColorBlendStateCreateInfo blend_create = {};
-    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO;
+
+    VkDynamicDepthBiasStateCreateInfo depth_bias;
+    depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
+    depth_bias.depthBias = 0.0f;
+    depth_bias.depthBiasClamp = 0.0f;
+    depth_bias.slopeScaledDepthBias = 0.0f;
+    depth_bias.pNext = NULL;
+
+    res = vkCreateDynamicDepthBiasState(info.device, &depth_bias, &info.dyn_depth_bias);
+    assert(!res);
+
+    VkDynamicBlendStateCreateInfo blend_create = {};
+    blend_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
     blend_create.pNext = NULL;
     blend_create.blendConst[0] = 1.0f;
     blend_create.blendConst[1] = 1.0f;
     blend_create.blendConst[2] = 1.0f;
     blend_create.blendConst[3] = 1.0f;
 
-    res = vkCreateDynamicColorBlendState(info.device,
+    res = vkCreateDynamicBlendState(info.device,
             &blend_create, &info.dyn_blend);
     assert(!res);
 
+    VkDynamicDepthBoundsStateCreateInfo depth_bounds;
+    depth_bounds.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
+    depth_bounds.minDepthBounds = 0.0f;
+    depth_bounds.maxDepthBounds = 1.0f;
+    depth_bounds.pNext = NULL;
 
-    VkDynamicDepthStencilStateCreateInfo depth_create = {};
-    depth_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_create.pNext = NULL;
-    depth_create.minDepthBounds = 0.0f;
-    depth_create.maxDepthBounds = 1.0f;
-    depth_create.stencilBackRef = 0;
-    depth_create.stencilFrontRef = 0;
-    depth_create.stencilReadMask = 0xff;
-    depth_create.stencilWriteMask = 0xff;
-
-    res = vkCreateDynamicDepthStencilState(info.device,
-            &depth_create, &info.dyn_depth);
+    res = vkCreateDynamicDepthBoundsState(info.device,
+            &depth_bounds, &info.dyn_depth_bounds);
     assert(!res);
+
+    VkDynamicStencilStateCreateInfo stencil;
+    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
+    stencil.stencilReference = 0;
+    stencil.stencilCompareMask = 0xff;
+    stencil.stencilWriteMask = 0xff;
+    stencil.pNext = NULL;
+
+    res = vkCreateDynamicStencilState(info.device,
+            &stencil, &stencil, &info.dyn_stencil);
+    assert(!res);
+
 
     /* VULKAN_KEY_END */
 
     vkDestroyDynamicViewportState(info.device, info.dyn_viewport);
-    vkDestroyDynamicRasterState(info.device, info.dyn_raster);
-    vkDestroyDynamicColorBlendState(info.device, info.dyn_blend);
-    vkDestroyDynamicDepthStencilState(info.device, info.dyn_depth);
+    vkDestroyDynamicLineWidthState(info.device, info.dyn_line_width);
+    vkDestroyDynamicDepthBiasState(info.device, info.dyn_depth_bias);
+    vkDestroyDynamicBlendState(info.device, info.dyn_blend);
+    vkDestroyDynamicDepthBoundsState(info.device, info.dyn_depth_bounds);
+    vkDestroyDynamicStencilState(info.device, info.dyn_stencil);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
 }

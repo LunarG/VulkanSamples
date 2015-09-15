@@ -67,8 +67,8 @@ int main(int argc, char **argv)
     char sample_title[] = "Graphics Pipeline Sample";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
-    ds.depthBoundsEnable = VK_FALSE;
+    ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
     VkPipelineMultisampleStateCreateInfo   ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
-    ms.sampleMask = 1;
+    ms.pSampleMask = NULL;
     ms.rasterSamples = 1;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
@@ -188,7 +188,6 @@ int main(int argc, char **argv)
     vkDestroyPipeline(info.device, info.pipeline);
     vkDestroyPipelineCache(info.device, info.pipelineCache);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyBufferView(info.device, info.uniform_data.view);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
@@ -201,15 +200,14 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
     vkFreeMemory(info.device, info.vertex_buffer.mem);
-    vkDestroyBufferView(info.device, info.vertex_buffer.view);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
-    info.fpDestroySwapChainWSI(info.device, info.swap_chain);
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
     for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }

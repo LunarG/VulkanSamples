@@ -47,8 +47,8 @@ int main(int argc, char **argv)
      */
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_WSI_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_WSI_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
     image_info.samples = 1;
-    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_BIT;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -97,14 +97,17 @@ int main(int argc, char **argv)
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
 
-    VkAttachmentViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
-    view_info.image.handle = VK_NULL_HANDLE;
+    view_info.image = VK_NULL_HANDLE;
     view_info.format = depth_format;
-    view_info.mipLevel = 0;
-    view_info.baseArraySlice = 0;
-    view_info.arraySize = 1;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.arraySize = 1;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
     VkMemoryRequirements mem_reqs;
@@ -138,13 +141,13 @@ int main(int argc, char **argv)
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
-                          VK_IMAGE_ASPECT_DEPTH,
+                          VK_IMAGE_ASPECT_DEPTH_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     /* Create image view */
     view_info.image = info.depth.image;
-    res = vkCreateAttachmentView(info.device, &view_info, &info.depth.view);
+    res = vkCreateImageView(info.device, &view_info, &info.depth.view);
     assert(!res);
     end_and_submit_command_buffer(info);
 
@@ -154,7 +157,7 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyAttachmentView(info.device, info.depth.view);
+    vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);

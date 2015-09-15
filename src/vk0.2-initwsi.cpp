@@ -58,26 +58,28 @@ int main(int argc, char **argv)
 
 
     /* VULKAN_KEY_START */
-    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportWSI);
-    GET_DEVICE_PROC_ADDR(info.device, GetSurfaceInfoWSI);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, DestroySwapChainWSI);
-    GET_DEVICE_PROC_ADDR(info.device, GetSwapChainInfoWSI);
-    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageWSI);
-    GET_DEVICE_PROC_ADDR(info.device, QueuePresentWSI);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfacePropertiesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfaceFormatsKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSurfacePresentModesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
+    GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
+    GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
+    GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueCount(info.gpu, &info.queue_count);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, NULL);
     assert(!res);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueProperties(info.gpu, info.queue_count, info.queue_props.data());
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
 
     // Construct the WSI surface description:
-    info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI;
+    info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
     info.surface_description.platform = VK_PLATFORM_WIN32_WSI;
@@ -86,7 +88,7 @@ int main(int argc, char **argv)
 #else  // _WIN32
     info.platform_handle_xcb.connection = info.connection;
     info.platform_handle_xcb.root = info.screen->root;
-    info.surface_description.platform = VK_PLATFORM_XCB_WSI;
+    info.surface_description.platform = VK_PLATFORM_XCB_KHR;
     info.surface_description.pPlatformHandle = &info.platform_handle_xcb;
     info.surface_description.pPlatformWindow = &info.window;
 #endif // _WIN32
@@ -94,8 +96,8 @@ int main(int argc, char **argv)
     // Iterate over each queue to learn whether it supports presenting to WSI:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportWSI(info.gpu, i,
-                                                   (VkSurfaceDescriptionWSI *) &info.surface_description,
+        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
+                                                   (VkSurfaceDescriptionKHR *) &info.surface_description,
                                                    &supportsPresent[i]);
     }
 
@@ -136,27 +138,20 @@ int main(int argc, char **argv)
 
     info.graphics_queue_family_index = graphicsQueueNodeIndex;
 
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
-            0, &info.queue);
-    assert(!res);
-
     // Get the list of VkFormats that are supported:
-    size_t formatsSize;
-    res = info.fpGetSurfaceInfoWSI(info.device,
-                                    (VkSurfaceDescriptionWSI *) &info.surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, NULL);
+    uint32_t formatCount;
+    res = info.fpGetSurfaceFormatsKHR(info.device,
+                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
+                                     &formatCount, NULL);
     assert(!res);
-    VkSurfaceFormatPropertiesWSI *surfFormats = (VkSurfaceFormatPropertiesWSI *)malloc(formatsSize);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-                                    (VkSurfaceDescriptionWSI *) &info.surface_description,
-                                    VK_SURFACE_INFO_TYPE_FORMATS_WSI,
-                                    &formatsSize, surfFormats);
+    VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    res = info.fpGetSurfaceFormatsKHR(info.device,
+                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
+                                     &formatCount, surfFormats);
     assert(!res);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    size_t formatCount = formatsSize / sizeof(VkSurfaceFormatPropertiesWSI);
     if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
     {
         info.format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -167,34 +162,29 @@ int main(int argc, char **argv)
         info.format = surfFormats[0].format;
     }
 
-    size_t capsSize;
-    size_t presentModesSize;
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, NULL);
-    assert(!res);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, NULL);
+    VkSurfacePropertiesKHR surfProperties;
+
+    res = info.fpGetSurfacePropertiesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &surfProperties);
     assert(!res);
 
-    VkSurfacePropertiesWSI *surfProperties =
-        (VkSurfacePropertiesWSI *)malloc(capsSize);
-    VkSurfacePresentModePropertiesWSI *presentModes =
-        (VkSurfacePresentModePropertiesWSI *)malloc(presentModesSize);
-
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PROPERTIES_WSI, &capsSize, surfProperties);
+    uint32_t presentModeCount;
+    res = info.fpGetSurfacePresentModesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &presentModeCount, NULL);
     assert(!res);
-    res = info.fpGetSurfaceInfoWSI(info.device,
-        (const VkSurfaceDescriptionWSI *)&info.surface_description,
-        VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI, &presentModesSize, presentModes);
+    VkPresentModeKHR *presentModes =
+        (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
+
+    res = info.fpGetSurfacePresentModesKHR(info.device,
+        (const VkSurfaceDescriptionKHR *)&info.surface_description,
+        &presentModeCount, presentModes);
     assert(!res);
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfProperties->currentExtent.width == -1)
+    if (surfProperties.currentExtent.width == -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -204,29 +194,28 @@ int main(int argc, char **argv)
     else
     {
         // If the surface size is defined, the swap chain size must match
-        swapChainExtent = surfProperties->currentExtent;
+        swapChainExtent = surfProperties.currentExtent;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
     // tearing mode.  If not, try IMMEDIATE which will usually be available,
     // and is fastest (though it tears).  If not, fall back to FIFO which is
     // always available.
-    VkPresentModeWSI swapChainPresentMode = VK_PRESENT_MODE_FIFO_WSI;
-    size_t presentModeCount = presentModesSize / sizeof(VkSurfacePresentModePropertiesWSI);
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i].presentMode == VK_PRESENT_MODE_MAILBOX_WSI) {
-            swapChainPresentMode = VK_PRESENT_MODE_MAILBOX_WSI;
+        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
             break;
         }
-        if ((swapChainPresentMode != VK_PRESENT_MODE_MAILBOX_WSI) &&
-            (presentModes[i].presentMode == VK_PRESENT_MODE_IMMEDIATE_WSI)) {
-            swapChainPresentMode = VK_PRESENT_MODE_IMMEDIATE_WSI;
+        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
+            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
+            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
     }
 
 #define WORK_AROUND_CODE
 #ifdef WORK_AROUND_CODE
-    uint32_t desiredNumberOfSwapChainImages = SAMPLE_BUFFER_COUNT;
+    uint32_t desiredNumberOfSwapChainImages = 2;
 #else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
@@ -240,79 +229,88 @@ int main(int argc, char **argv)
     }
 #endif // WORK_AROUND_CODE
 
-    VkSurfaceTransformWSI preTransform;
-    if (surfProperties->supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_WSI) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+    VkSurfaceTransformKHR preTransform;
+    if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
     } else {
-        preTransform = surfProperties->currentTransform;
+        preTransform = surfProperties.currentTransform;
     }
 
-    VkSwapChainCreateInfoWSI swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI;
+    VkSwapchainCreateInfoKHR swap_chain = {};
+    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
-    swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionWSI *)&info.surface_description;
+    swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&info.surface_description;
     swap_chain.minImageCount = desiredNumberOfSwapChainImages;
     swap_chain.imageFormat = info.format;
     swap_chain.imageExtent.width = swapChainExtent.width;
     swap_chain.imageExtent.height = swapChainExtent.height;
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
-    swap_chain.presentMode = swapChainPresentMode;
-    swap_chain.oldSwapChain.handle = 0;
+    swap_chain.presentMode = swapchainPresentMode;
+    swap_chain.oldSwapchain.handle = 0;
     swap_chain.clipped = true;
 
-    res = info.fpCreateSwapChainWSI(info.device, &swap_chain, &info.swap_chain);
+    res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
     assert(!res);
 
-    size_t swapChainImagesSize;
-    res = info.fpGetSwapChainInfoWSI(info.device, info.swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, NULL);
+    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+                                      &info.swapchainImageCount, NULL);
     assert(!res);
 
-    VkSwapChainImagePropertiesWSI* swapChainImages = (VkSwapChainImagePropertiesWSI*)malloc(swapChainImagesSize);
-    assert(swapChainImages);
-    res = info.fpGetSwapChainInfoWSI(info.device, info.swap_chain,
-                                      VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI,
-                                      &swapChainImagesSize, swapChainImages);
+    VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
+    assert(swapchainImages);
+    res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
+                                      &info.swapchainImageCount, swapchainImages);
     assert(!res);
 
 #ifdef WORK_AROUND_CODE
-    info.swapChainImageCount = SAMPLE_BUFFER_COUNT;
-#else  // WORK_AROUND_CODE
-    // The number of images within the swap chain is determined based on the size of the info returned
-    info.swapChainImageCount = swapChainImagesSize / sizeof(VkSwapChainImagePropertiesWSI);
+    // After the proper code was created, other parts of this demo were
+    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
+    // images, etc.  Live with that for now.
+    // TODO: Rework this demo code to live with the number of buffers returned
+    // by vkCreateSwapchainKHR().
+    info.swapchainImageCount = 2;
 #endif // WORK_AROUND_CODE
 
-    info.buffers.resize(info.swapChainImageCount);
+    info.buffers.resize(info.swapchainImageCount);
 
     /* Going to need a command buffer to send the memory barriers in set_image_layout       */
     /* but we couldn't have created one before we knew what our graphics_queue_family_index */
     /* is, but now that we have it, create the command buffer                               */
     init_and_begin_command_buffer(info);
+    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
+            0, &info.queue);
+    assert(!res);
 
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        VkAttachmentViewCreateInfo color_attachment_view = {};
-        color_attachment_view.sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO;
-        color_attachment_view.pNext = NULL;
-        color_attachment_view.format = info.format;
-        color_attachment_view.mipLevel = 0;
-        color_attachment_view.baseArraySlice = 0;
-        color_attachment_view.arraySize = 1;
-        color_attachment_view.flags = 0;
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        VkImageViewCreateInfo color_image_view = {};
+        color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view.pNext = NULL;
+        color_image_view.format = info.format;
+        color_image_view.channels.r = VK_CHANNEL_SWIZZLE_R;
+        color_image_view.channels.g = VK_CHANNEL_SWIZZLE_G;
+        color_image_view.channels.b = VK_CHANNEL_SWIZZLE_B;
+        color_image_view.channels.a = VK_CHANNEL_SWIZZLE_A;
+        color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        color_image_view.subresourceRange.baseMipLevel = 0;
+        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.baseArrayLayer = 0;
+        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view.flags = 0;
 
 
-        info.buffers[i].image = swapChainImages[i].image;
+        info.buffers[i].image = swapchainImages[i];
 
         set_image_layout(info, info.buffers[i].image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-        color_attachment_view.image = info.buffers[i].image;
+        color_image_view.image = info.buffers[i].image;
 
-        res = vkCreateAttachmentView(info.device,
-                &color_attachment_view, &info.buffers[i].view);
+        res = vkCreateImageView(info.device,
+                &color_image_view, &info.buffers[i].view);
         assert(!res);
     }
     end_and_submit_command_buffer(info);
@@ -321,8 +319,8 @@ int main(int argc, char **argv)
     /* Clean Up */
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
-    for (int i = 0; i < info.swapChainImageCount; i++) {
-        vkDestroyAttachmentView(info.device, info.buffers[i].view);
+    for (int i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
