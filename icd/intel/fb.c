@@ -103,8 +103,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     uint32_t i;
 
     /* TODOVV: Move to validation layer */
-    if (info->dependencyCount)
-	    return VK_ERROR_UNKNOWN;
+    assert(!(info->dependencyCount) && "Invalid dependencyCount");
 
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
             sizeof(*rp), dev->base.dbg, VK_OBJECT_TYPE_RENDER_PASS, info, 0);
@@ -152,11 +151,9 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
         struct intel_render_pass_subpass *subpass = &rp->subpasses[i];
         uint32_t j;
 
-	/* missing SPIR support? */
-	if (subpass_info->inputCount) {
-		intel_render_pass_destroy(rp);
-		return VK_ERROR_UNKNOWN;
-	}
+        /* missing SPIR support? */
+        /* TODOVV: What do we test here? */
+        assert(!(subpass_info->inputCount) && "Unknown render pass failure");
 
         for (j = 0; j < subpass_info->colorCount; j++) {
             const VkAttachmentReference *color_ref =

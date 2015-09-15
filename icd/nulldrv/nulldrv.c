@@ -202,7 +202,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
                     info->ppEnabledExtensionNames[i]);
 
         if (ext == NULLDRV_EXT_INVALID)
-            return VK_ERROR_INVALID_EXTENSION;
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
 
         dev->exts[ext] = true;
     }
@@ -1667,7 +1667,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 
     *ppData = ptr;
 
-    return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
+    return (ptr) ? VK_SUCCESS : VK_ERROR_MEMORY_MAP_FAILED;
 }
 
 ICD_EXPORT void VKAPI vkUnmapMemory(

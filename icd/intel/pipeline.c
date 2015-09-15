@@ -342,7 +342,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
             info->tess.patchControlPoints > 32) {
             /* TODOVV: Move test to validation layer */
 //            return VK_ERROR_BAD_PIPELINE_DATA;
-            return VK_ERROR_UNKNOWN;
+            return VK_ERROR_VALIDATION_FAILED;
         }
         pipeline->prim_type = GEN7_3DPRIM_PATCHLIST_1 +
             info->tess.patchControlPoints - 1;
@@ -350,7 +350,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
     default:
         /* TODOVV: Move test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if (info->ia.primitiveRestartEnable) {
@@ -464,7 +464,7 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
         // TODO: Log debug message: Vertex Shader required.
         /* TODOVV: Add test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     /*
@@ -476,7 +476,7 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
         // TODO: Log debug message: Both Tess control and Tess eval are required to use tessalation
         /* TODOVV: Add test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if ((pipeline->active_shaders & SHADER_COMPUTE_FLAG) &&
@@ -486,7 +486,7 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
         // TODO: Log debug message: Can only specify compute shader when doing compute
         /* TODOVV: Add test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     /*
@@ -498,7 +498,7 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
         // TODO: Log debug message: Invalid topology used with tessellation shader.
         /* TODOVV: Add test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if ((pipeline->topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
@@ -506,7 +506,7 @@ static VkResult pipeline_validate(struct intel_pipeline *pipeline)
         // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessellation shader.
         /* TODOVV: Add test to validation layer */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     return VK_SUCCESS;
@@ -1150,7 +1150,7 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
     if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb)) {
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     pipeline->vb_count = info->vi.bindingCount;
@@ -1234,7 +1234,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
             default:
                 /* TODOVV: Move test to validation layer */
 //                return VK_ERROR_BAD_PIPELINE_DATA;
-            return VK_ERROR_UNKNOWN;
+            return VK_ERROR_VALIDATION_FAILED;
                 break;
         }
         memcpy(dst, thisStage, sizeof(VkPipelineShaderStageCreateInfo));
@@ -1335,7 +1335,7 @@ ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)
 {
-    return VK_ERROR_UNKNOWN;
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
@@ -1343,7 +1343,7 @@ ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkPipelineCache                             pipelineCache,
     void*                                       pData)
 {
-    return VK_ERROR_UNKNOWN;
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
@@ -1352,7 +1352,7 @@ ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
     uint32_t                                    srcCacheCount,
     const VkPipelineCache*                      pSrcCaches)
 {
-    return VK_ERROR_UNKNOWN;
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
@@ -1390,7 +1390,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     const VkComputePipelineCreateInfo*        pCreateInfos,
     VkPipeline*                               pPipelines)
 {
-    return VK_ERROR_UNKNOWN;
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 ICD_EXPORT void VKAPI vkDestroyPipeline(

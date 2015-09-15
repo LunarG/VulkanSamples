@@ -57,7 +57,7 @@ static VkResult queue_submit_bo(struct intel_queue *queue,
     else
         err = intel_winsys_submit_bo(winsys, queue->ring, bo, used, 0);
 
-    return (err) ? VK_ERROR_UNKNOWN : VK_SUCCESS;
+    return (err) ? VK_ERROR_DEVICE_LOST : VK_SUCCESS;
 }
 
 static struct intel_bo *queue_create_bo(struct intel_queue *queue,
@@ -112,7 +112,7 @@ static VkResult queue_select_pipeline(struct intel_queue *queue,
     default:
         /* TODOVV: Make sure coved in validation test */
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        assert(0 && "Invalid pipeline select");
         break;
     }
 
@@ -190,11 +190,11 @@ static VkResult queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
+    /* TODOVV */
     if (unlikely(cmd->result != VK_SUCCESS || !cmd->primary)) {
         intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
                       &cmd->obj.base, 0, 0,
                       "invalid command buffer submitted");
-        return (cmd->primary) ? cmd->result : VK_ERROR_UNKNOWN;
     }
 
     return queue_select_pipeline(queue, cmd->pipeline_select);
@@ -256,8 +256,8 @@ static VkResult queue_submit_cmd(struct intel_queue *queue,
 }
 
 VkResult intel_queue_create(struct intel_dev *dev,
-                              enum intel_gpu_engine_type engine,
-                              struct intel_queue **queue_ret)
+                            enum intel_gpu_engine_type engine,
+                            struct intel_queue **queue_ret)
 {
     struct intel_queue *queue;
     enum intel_ring_type ring;
@@ -270,7 +270,10 @@ VkResult intel_queue_create(struct intel_dev *dev,
         break;
     default:
         /* TODOVV: Verify test in validation layer */
-        return VK_ERROR_UNKNOWN;
+        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
+                      &dev->base, 0, 0,
+                      "invalid engine type");
+        return VK_ERROR_VALIDATION_FAILED;
         break;
     }
 

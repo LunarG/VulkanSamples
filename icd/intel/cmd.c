@@ -115,8 +115,9 @@ static VkResult cmd_writer_alloc_and_map(struct intel_cmd *cmd,
     writer->item_used = 0;
 
     writer->ptr = intel_bo_map(writer->bo, true);
-    if (!writer->ptr)
-        return VK_ERROR_UNKNOWN;
+    if (!writer->ptr) {
+        return VK_ERROR_MEMORY_MAP_FAILED;
+    }
 
     return VK_SUCCESS;
 }
@@ -162,7 +163,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     if (!new_ptr) {
         intel_bo_unref(new_bo);
         cmd_writer_discard(cmd, which);
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
         return;
     }
 
@@ -271,7 +272,8 @@ VkResult intel_cmd_create(struct intel_dev *dev,
         break;
     default:
         /* TODOVV: Add validation check for this */
-        return VK_ERROR_UNKNOWN;
+        assert(0 && "icd: Invalid queue_family_index");
+        return VK_ERROR_VALIDATION_FAILED;
         break;
     }
 
@@ -365,11 +367,8 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
     struct intel_winsys *winsys = cmd->dev->winsys;
     uint32_t i;
 
-    /* no matching intel_cmd_begin() */
-    if (!cmd->writers[INTEL_CMD_WRITER_BATCH].ptr) {
-        /* TODOVV: Move this to validation layer */
-        return VK_ERROR_UNKNOWN;
-    }
+    /* draw_state: no matching intel_cmd_begin() */
+    assert(cmd->writers[INTEL_CMD_WRITER_BATCH].ptr && "icd: no matching intel_cmd_begin");
 
     cmd_batch_end(cmd);
 
@@ -393,7 +392,7 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
                 (struct intel_bo *) reloc->target, reloc->target_offset,
                 reloc->flags, &presumed_offset);
         if (err) {
-            cmd_fail(cmd, VK_ERROR_UNKNOWN);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_DEVICE_MEMORY);
             break;
         }
 
@@ -415,7 +414,7 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
                 reloc->flags & ~INTEL_CMD_RELOC_TARGET_IS_WRITER,
                 &presumed_offset);
         if (err) {
-            cmd_fail(cmd, VK_ERROR_UNKNOWN);
+            cmd_fail(cmd, VK_ERROR_OUT_OF_DEVICE_MEMORY);
             break;
         }
 
@@ -433,8 +432,9 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
     if (intel_winsys_can_submit_bo(winsys,
                 &cmd->writers[INTEL_CMD_WRITER_BATCH].bo, 1))
         return VK_SUCCESS;
-    else
-        return VK_ERROR_UNKNOWN;
+    else {
+        assert(0 && "intel_winsys_can_submit_bo failed");
+    }
 }
 
 static void pool_destroy(struct intel_obj *obj)

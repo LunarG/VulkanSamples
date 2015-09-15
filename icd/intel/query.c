@@ -112,7 +112,7 @@ VkResult intel_query_create(struct intel_dev *dev,
         intel_query_destroy(query);
         /* TODOVV: Move test to validation layer */
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     VkMemoryAllocInfo mem_reqs;
@@ -243,7 +243,7 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     default:
         /* TODOVV: Move test to validation layer */
 //        return VK_ERROR_INVALID_HANDLE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
         break;
     }
 

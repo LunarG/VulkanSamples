@@ -182,7 +182,7 @@ static VkResult intel_instance_create(
              */
             icd_instance_destroy(icd);
             intel_instance_destroy(instance);
-            return VK_ERROR_INVALID_EXTENSION;
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
 
@@ -192,7 +192,7 @@ static VkResult intel_instance_create(
     if (info->layerCount > 0) {
         icd_instance_destroy(icd);
         intel_instance_destroy(instance);
-        return VK_ERROR_INVALID_LAYER;
+        return VK_ERROR_LAYER_NOT_PRESENT;
     }
 
     *pInstance = instance;
@@ -310,7 +310,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
     *pPhysicalDeviceCount = count;
 
-    return (count > 0) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(

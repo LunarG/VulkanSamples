@@ -45,7 +45,7 @@ VkResult intel_mem_alloc(struct intel_dev *dev,
             "vk-gpu-memory", info->allocationSize, 0);
     if (!mem->bo) {
         intel_mem_free(mem);
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
     }
 
     mem->size = info->allocationSize;
@@ -94,7 +94,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
 
     *ppData = (void *)((size_t)ptr + offset);
 
-    return (ptr) ? VK_SUCCESS : VK_ERROR_UNKNOWN;
+    return (ptr) ? VK_SUCCESS : VK_ERROR_MEMORY_MAP_FAILED;
 }
 
 ICD_EXPORT void VKAPI vkUnmapMemory(

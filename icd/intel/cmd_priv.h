@@ -158,7 +158,7 @@ static inline void cmd_reserve_reloc(struct intel_cmd *cmd,
     /* fail silently */
     if (cmd->reloc_used + reloc_len > cmd->reloc_count) {
         cmd->reloc_used = 0;
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
     }
     assert(cmd->reloc_used + reloc_len <= cmd->reloc_count);
 }

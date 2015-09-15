@@ -561,9 +561,10 @@ static VkResult x11_swap_chain_present_pixmap(struct intel_x11_swap_chain *sc,
             0, NULL);
 
     err = xcb_request_check(sc->c, cookie);
+    /* TODOVV: Can this be validated */
     if (err) {
         free(err);
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     return VK_SUCCESS;
@@ -728,13 +729,13 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
                       VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     /* TODOVV: Can we add test to validation layer? */
     if (!x11_is_dri3_and_present_supported(c)) {
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     /* TODOVV: Can we add test to validation layer? */
@@ -743,7 +744,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         if (fd >= 0)
             close(fd);
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     close(fd);
@@ -766,7 +767,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         !x11_swap_chain_present_select_input(sc) ||
         !x11_swap_chain_create_persistent_images(sc, dev, info)) {
         x11_swap_chain_destroy(sc);
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     *sc_ret = sc;
@@ -884,7 +885,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
     // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR) {
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     // TODOVV: NEED TO ALSO CHECK:
@@ -922,7 +923,7 @@ VkResult VKAPI vkGetSurfaceFormatsKHR(
     // assume the correct data type, and not check):
     if (!pCount) {
 //        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if (pSurfaceFormats) {
@@ -950,7 +951,7 @@ VkResult VKAPI vkGetSurfacePresentModesKHR(
     // assume the correct data type, and not check):
     if (!pCount) {
 //        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if (pPresentModes) {
@@ -1008,7 +1009,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     // assume the correct data type, and not check):
     if (!pCount) {
 //        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     if (pSwapchainImages) {
@@ -1058,7 +1059,7 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     }
     // NOTE: Should never get here, but in case we do, do something:
     assert(0);
-    return VK_ERROR_UNKNOWN;
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 

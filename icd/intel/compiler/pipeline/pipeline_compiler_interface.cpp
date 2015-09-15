@@ -562,7 +562,7 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
         assert(0);
         /* TODO: Move this test to validation layer, is this already covered in shader_checker? */
 //        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     // Sampler mapping data
@@ -888,11 +888,11 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         case GL_COMPUTE_SHADER:
         default:
             assert(0);
-            status = VK_ERROR_UNKNOWN;
+            status = VK_ERROR_VALIDATION_FAILED;
         }
     } else {
         assert(0);
-        status = VK_ERROR_UNKNOWN;
+        status = VK_ERROR_VALIDATION_FAILED;
     }
 
     if (status == VK_SUCCESS) {

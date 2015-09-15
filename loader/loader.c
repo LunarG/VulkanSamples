@@ -622,7 +622,7 @@ static VkResult loader_add_layer_names_to_list(
         layer_prop = loader_get_layer_property(search_target, search_list);
         if (!layer_prop) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Unable to find layer %s", search_target);
-            err = VK_ERROR_INVALID_LAYER;
+            err = VK_ERROR_LAYER_NOT_PRESENT;
             continue;
         }
 
@@ -2190,8 +2190,7 @@ VkResult loader_enable_instance_layers(
 {
     VkResult err;
 
-    if (inst == NULL)
-        return VK_ERROR_UNKNOWN;
+    assert(inst && "Cannot have null instance");
 
     if (!loader_init_layer_list(inst, &inst->activated_layer_list)) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to alloc Instance activated layer list");
@@ -2323,8 +2322,7 @@ static VkResult loader_enable_device_layers(
 {
     VkResult err;
 
-    if (dev == NULL)
-        return VK_ERROR_UNKNOWN;
+    assert(dev && "Cannot have null device");
 
     if (dev->activated_layer_list.list == NULL || dev->activated_layer_list.capacity == 0) {
         loader_init_layer_list(inst, &dev->activated_layer_list);
@@ -2467,7 +2465,7 @@ VkResult loader_validate_layers(
         prop = loader_get_layer_property(ppEnabledLayerNames[i],
                                   list);
         if (!prop) {
-            return VK_ERROR_INVALID_LAYER;
+            return VK_ERROR_LAYER_NOT_PRESENT;
         }
     }
 
@@ -2513,7 +2511,7 @@ VkResult loader_validate_instance_extensions(
 
         if (!extension_prop) {
             /* Didn't find extension name in any of the global layers, error out */
-            return VK_ERROR_INVALID_EXTENSION;
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
     return VK_SUCCESS;
@@ -2560,7 +2558,7 @@ VkResult loader_validate_device_extensions(
 
         if (!extension_prop) {
             /* Didn't find extension name in any of the device layers, error out */
-            return VK_ERROR_INVALID_EXTENSION;
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
     return VK_SUCCESS;
@@ -2698,7 +2696,7 @@ VkResult loader_init_physical_device_info(
 {
     struct loader_icd *icd;
     uint32_t n, count = 0;
-    VkResult res = VK_ERROR_UNKNOWN;
+    VkResult res;
 
     icd = ptr_instance->icds;
     while (icd) {
@@ -3122,7 +3120,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
 
     if (global_ext_list == NULL) {
         loader_platform_thread_unlock_mutex(&loader_lock);
-        return VK_ERROR_INVALID_LAYER;
+        return VK_ERROR_LAYER_NOT_PRESENT;
     }
 
     if (pProperties == NULL) {

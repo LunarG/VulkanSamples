@@ -1526,7 +1526,7 @@ class Subcommand(object):
         rbody.append('vktrace_replay::VKTRACE_REPLAY_RESULT vkReplay::replay(vktrace_trace_packet_header *packet)')
         rbody.append('{')
         rbody.append('    vktrace_replay::VKTRACE_REPLAY_RESULT returnValue = vktrace_replay::VKTRACE_REPLAY_SUCCESS;')
-        rbody.append('    VkResult replayResult = VK_ERROR_UNKNOWN;')
+        rbody.append('    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
         rbody.append('        case VKTRACE_TPI_VK_vkApiVersion:')
@@ -1671,7 +1671,7 @@ class Subcommand(object):
                     rbody.append('                m_display->m_initedVK = false;')
                     rbody.append('            }')
                 elif proto.name in get_ext_layers_proto:
-                    rbody.append('            if (replayResult == VK_ERROR_INVALID_LAYER || replayResult == VK_INCOMPLETE)')
+                    rbody.append('            if (replayResult == VK_ERROR_LAYER_NOT_PRESENT || replayResult == VK_INCOMPLETE)')
                     rbody.append('            { // ignore errors caused by trace config != replay config')
                     rbody.append('                replayResult = VK_SUCCESS;')
                     rbody.append('            }')

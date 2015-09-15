@@ -107,13 +107,11 @@ bool intel_desc_iter_advance(struct intel_desc_iter *iter)
     return true;
 }
 
-static bool desc_region_init_desc_sizes(struct intel_desc_region *region,
+static void desc_region_init_desc_sizes(struct intel_desc_region *region,
                                         const struct intel_gpu *gpu)
 {
     region->surface_desc_size = sizeof(struct intel_desc_surface);
     region->sampler_desc_size = sizeof(struct intel_desc_sampler);
-
-    return true;
 }
 
 VkResult intel_desc_region_create(struct intel_dev *dev,
@@ -129,10 +127,7 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
 
     memset(region, 0, sizeof(*region));
 
-    if (!desc_region_init_desc_sizes(region, dev->gpu)) {
-        intel_free(dev, region);
-        return VK_ERROR_UNKNOWN;
-    }
+    desc_region_init_desc_sizes(region, dev->gpu);
 
     intel_desc_offset_set(&region->size,
             region->surface_desc_size * surface_count,

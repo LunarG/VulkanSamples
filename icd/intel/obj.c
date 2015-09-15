@@ -377,7 +377,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     uint32_t                                    numBindings,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
-    return VK_ERROR_UNKNOWN;
+    assert(0 && "vkQueueBindSparseBufferMemory not supported");
+    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
@@ -386,7 +387,8 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     uint32_t                                    numBindings,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
-    return VK_ERROR_UNKNOWN;
+    assert(0 && "vkQueueBindSparseImageOpaqueMemory not supported");
+    return VK_SUCCESS;
 }
 
 
@@ -396,6 +398,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     uint32_t                                    numBindings,
     const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
-    return VK_ERROR_UNKNOWN;
+    assert(0 && "vkQueueBindSparseImageMemory not supported");
+    return VK_SUCCESS;
 }
 

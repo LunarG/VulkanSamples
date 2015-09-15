@@ -702,5 +702,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-    return VK_ERROR_UNKNOWN;
+    /* TODO: Fill in real values */
+    memset(pImageFormatProperties, 0, sizeof(*pImageFormatProperties));
+    return VK_SUCCESS;
 }

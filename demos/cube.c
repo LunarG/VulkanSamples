@@ -2308,7 +2308,7 @@ static void demo_init_vk(struct demo *demo)
                  "(ICD).\n\nPlease look at the Getting Started guide for "
                  "additional information.\n",
                  "vkCreateInstance Failure");
-    } else if (err == VK_ERROR_INVALID_EXTENSION) {
+    } else if (err == VK_ERROR_EXTENSION_NOT_PRESENT) {
         ERR_EXIT("Cannot find a specified extension library"
                  ".\nMake sure your layers path is set appropriately\n",
                  "vkCreateInstance Failure");

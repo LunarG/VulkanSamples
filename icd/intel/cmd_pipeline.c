@@ -3204,10 +3204,8 @@ static void cmd_bind_vertex_data(struct intel_cmd *cmd,
                                  const struct intel_buf *buf,
                                  VkDeviceSize offset, uint32_t binding)
 {
-    if (binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    /* TODOVV: verify */
+    assert(!(binding >= ARRAY_SIZE(cmd->bind.vertex.buf)) && "binding exceeds buf size");
 
     cmd->bind.vertex.buf[binding] = buf;
     cmd->bind.vertex.offset[binding] = offset;
@@ -3341,8 +3339,7 @@ static void cmd_draw(struct intel_cmd *cmd,
             surface_writer_used <= cmd_get_max_surface_write(cmd));
 
     if (indexed) {
-        if (p->primitive_restart && !gen6_can_primitive_restart(cmd))
-            cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        assert(!(p->primitive_restart && !gen6_can_primitive_restart(cmd)) && "Primitive restart unsupported on this device");
 
         if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
             gen75_3DSTATE_VF(cmd, p->primitive_restart,
@@ -3444,10 +3441,7 @@ static void cmd_exec(struct intel_cmd *cmd, struct intel_bo *bo)
    uint32_t *dw;
    uint32_t pos;
 
-   if (cmd_gen(cmd) < INTEL_GEN(7.5)) {
-       cmd->result = VK_ERROR_UNKNOWN;
-       return;
-   }
+   assert(!(cmd_gen(cmd) < INTEL_GEN(7.5)) && "Invalid GPU version");
 
    pos = cmd_batch_pointer(cmd, cmd_len, &dw);
    dw[0] = GEN6_MI_CMD(MI_BATCH_BUFFER_START) | (cmd_len - 2) |
@@ -3645,9 +3639,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    assert(0 && "vkCmdDrawIndirect not implemented");
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
@@ -3657,9 +3649,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    assert(0 && "vkCmdDrawIndexedIndirect not implemented");
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatch(
@@ -3668,9 +3658,7 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
     uint32_t                                    y,
     uint32_t                                    z)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    assert(0 && "vkCmdDispatch not implemented");
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
@@ -3678,9 +3666,7 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     VkBuffer                                  buffer,
     VkDeviceSize                                offset)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    assert(0 && "vkCmdDisatchIndirect not implemented");
 }
 
 void VKAPI vkCmdPushConstants(
@@ -3717,10 +3703,8 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     const struct intel_att_view *view;
     uint32_t i;
 
-    if (!cmd->primary || rp->attachment_count != fb->view_count) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    /* TODOVV: */
+    assert(!(!cmd->primary || rp->attachment_count != fb->view_count) && "Invalid RenderPass");
 
     cmd_begin_render_pass(cmd, rp, fb, 0, contents);
 
@@ -3771,11 +3755,9 @@ ICD_EXPORT void VKAPI vkCmdNextSubpass(
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_render_pass *rp = cmd->bind.render_pass;
 
-   if (cmd->bind.render_pass_subpass >= rp->subpasses +
-           rp->subpass_count - 1) {
-       cmd->result = VK_ERROR_UNKNOWN;
-       return;
-   }
+    /* TODOVV */
+   assert(!(cmd->bind.render_pass_subpass >= rp->subpasses +
+           rp->subpass_count - 1) && "Invalid RenderPassContents");
 
    cmd->bind.render_pass_changed = true;
    cmd->bind.render_pass_subpass++;
@@ -3798,21 +3780,15 @@ ICD_EXPORT void VKAPI vkCmdExecuteCommands(
    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
    uint32_t i;
 
-   if (!cmd->bind.render_pass || cmd->bind.render_pass_contents !=
-           VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS) {
-       cmd_fail(cmd, VK_ERROR_UNKNOWN);
-       return;
-   }
+   /* TODOVV */
+   assert(!(!cmd->bind.render_pass || cmd->bind.render_pass_contents !=
+           VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS) && "Invalid RenderPass");
 
    for (i = 0; i < cmdBuffersCount; i++) {
        const struct intel_cmd *secondary = intel_cmd(pCmdBuffers[i]);
 
-       if (secondary->primary) {
-           /* TODOVV: Move test to validation layer */
-//           cmd->result = VK_ERROR_INVALID_VALUE;
-           cmd->result = VK_ERROR_UNKNOWN;
-           break;
-       }
+       /* TODOVV: Move test to validation layer */
+       assert(!(secondary->primary) && "Cannot be primary command buffer");
 
        cmd_exec(cmd, intel_cmd_get_batch(secondary, NULL));
    }

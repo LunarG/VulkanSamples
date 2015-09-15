@@ -127,7 +127,8 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
         cmd_query_pipeline_statistics(cmd, query, bo, offset);
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        /* TODOVV: validate */
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
         break;
     }
 }
@@ -150,7 +151,8 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
         cmd_query_pipeline_statistics(cmd, query, bo, offset + query->slot_stride);
         break;
     default:
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        /* TODOVV: validate */
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
         break;
     }
 }
@@ -237,7 +239,7 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
         break;
     default:
         /* TODOVV: This should be covered by validation error */
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
         break;
     }
 }

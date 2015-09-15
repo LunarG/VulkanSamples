@@ -43,25 +43,12 @@ static VkResult shader_module_create(struct intel_dev *dev,
                                      const VkShaderModuleCreateInfo *info,
                                      struct intel_shader_module **sm_ret)
 {
-    const struct icd_spv_header *spv =
-        (const struct icd_spv_header *) info->pCode;
     struct intel_shader_module *sm;
 
     sm = (struct intel_shader_module *) intel_base_create(&dev->base.handle,
             sizeof(*sm), dev->base.dbg, VK_OBJECT_TYPE_SHADER_MODULE, info, 0);
     if (!sm)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    /* TODOVV: Move test to validation layer */
-    if (info->codeSize < sizeof(*spv)) {
-//        return VK_ERROR_INVALID_MEMORY_SIZE;
-        return VK_ERROR_UNKNOWN;
-    }
-    /* TODOVV: Move test to validation layer */
-    if (spv->magic != ICD_SPV_MAGIC) {
-//        return VK_ERROR_BAD_SHADER_CODE;
-        return VK_ERROR_UNKNOWN;
-    }
 
     sm->code_size = info->codeSize;
     sm->code = malloc(info->codeSize);
@@ -126,7 +113,7 @@ static VkResult shader_create(struct intel_dev *dev,
         shader_destroy(&sh->obj);
         /* TODOVV: Can this move to validation layer? */
 //        return VK_ERROR_BAD_SHADER_CODE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     sh->obj.destroy = shader_destroy;

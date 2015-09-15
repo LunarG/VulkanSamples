@@ -448,7 +448,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
                 intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
                         &cmd->obj.base, 0, 0,
                         "unaligned vkCmdCopyBuffer unsupported");
-                cmd_fail(cmd, VK_ERROR_UNKNOWN);
+                cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
                 continue;
             }
 
@@ -489,18 +489,15 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
     bool raw_copy = false;
     uint32_t i;
 
-    if (src->type != dst->type) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    /* TODOVV: verify validation */
+    assert((src->type == dst->type) && "Mismatched source and destination types");
 
     if (src->layout.format == dst->layout.format) {
         raw_copy = true;
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
-    } else if (icd_format_is_compressed(src->layout.format) ||
-               icd_format_is_compressed(dst->layout.format)) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
+    } else {
+        assert((icd_format_is_compressed(src->layout.format) ||
+               icd_format_is_compressed(dst->layout.format)) && "Compressed formats not supported");
     }
 
     memset(&meta, 0, sizeof(meta));
@@ -569,12 +566,10 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
     const VkImageBlit*                       pRegions,
     VkTexFilter                              filter)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-
     /*
      * TODO: Implement actual blit function.
      */
-    cmd_fail(cmd, VK_ERROR_UNKNOWN);
+    assert(0 && "vkCmdBlitImage not implemented");
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
@@ -685,7 +680,6 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
                       &cmd->obj.base, 0, 0,
                       "vkCmdCopyImageToBuffer with bpp %d unsupported",
                       icd_format_get_size(img->layout.format));
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
         return;
     }
 
@@ -732,11 +726,9 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     uint32_t *ptr;
     uint32_t offset;
 
+    /* TODOVV: Is this an API requirement or driver requirement? */
     /* must be 4-byte aligned */
-    if ((destOffset | dataSize) & 3) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    assert(!((destOffset | dataSize) & 3) && "Offset and Size must be 4-byte aligned");
 
     /* write to dynamic state writer first */
     offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, 32,
@@ -778,11 +770,9 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     struct intel_cmd_meta meta;
     VkFormat format;
 
+    /* TODOVV: Is this an API requirement or driver requirement? */
     /* must be 4-byte aligned */
-    if ((destOffset | fillSize) & 3) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    assert(!((destOffset | fillSize) & 3) && "Offset and Size must be 4-byte aligned");
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_VS_POINTS;
@@ -1075,11 +1065,9 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     VkFormat format;
     uint32_t i;
 
-    if (src->samples <= 1 || dst->samples > 1 ||
-        src->layout.format != dst->layout.format) {
-        cmd_fail(cmd, VK_ERROR_UNKNOWN);
-        return;
-    }
+    /* TODOVV: Add validation */
+    assert(!(src->samples <= 1 || dst->samples > 1 ||
+        src->layout.format != dst->layout.format) && "Invalid vkCmdResolveImage");
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_FS_RECT;

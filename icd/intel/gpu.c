@@ -402,14 +402,14 @@ VkResult intel_gpu_init_winsys(struct intel_gpu *gpu)
 
     fd = gpu_open_render_node(gpu);
     if (fd < 0)
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_INITIALIZATION_FAILED;
 
     gpu->winsys = intel_winsys_create_for_fd(gpu->handle.instance->icd, fd);
     if (!gpu->winsys) {
         intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "failed to create GPU winsys");
         gpu_close_render_node(gpu);
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_INITIALIZATION_FAILED;
     }
 
     return VK_SUCCESS;
@@ -469,7 +469,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
    /* TODOVV: Move test to validation layer */
    if (*pCount > INTEL_GPU_ENGINE_COUNT) {
 //       return VK_ERROR_INVALID_VALUE;
-       return VK_ERROR_UNKNOWN;
+       return VK_ERROR_VALIDATION_FAILED;
    }
 
    for (engine = 0; engine < *pCount; engine++) {

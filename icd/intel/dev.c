@@ -79,16 +79,11 @@ static VkResult dev_create_queues(struct intel_dev *dev,
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
 
-        if (q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
-            q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) {
-            ret = intel_queue_create(dev, q->queueFamilyIndex,
+        /* TODOVV: make sure test is covered by validation layer */
+        assert((q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
+            q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
+        ret = intel_queue_create(dev, q->queueFamilyIndex,
                     &dev->queues[q->queueFamilyIndex]);
-        }
-        else {
-            /* TODOVV: make sure test is covered by validation layer */
-//            ret = VK_ERROR_INVALID_POINTER;
-            return VK_ERROR_UNKNOWN;
-        }
 
         if (ret != VK_SUCCESS) {
             uint32_t j;

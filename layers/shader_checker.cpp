@@ -976,7 +976,7 @@ vkCreateGraphicsPipelines(VkDevice device,
         return get_dispatch_table(shader_checker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     }
     else {
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 }
 

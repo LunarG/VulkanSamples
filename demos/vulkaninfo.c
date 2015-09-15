@@ -137,15 +137,13 @@ static const char *vk_result_string(VkResult err)
     STR(VK_TIMEOUT);
     STR(VK_EVENT_SET);
     STR(VK_EVENT_RESET);
-    STR(VK_ERROR_UNKNOWN);
     STR(VK_ERROR_INITIALIZATION_FAILED);
     STR(VK_ERROR_OUT_OF_HOST_MEMORY);
     STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
     STR(VK_ERROR_DEVICE_LOST);
-    STR(VK_ERROR_INVALID_EXTENSION);
+    STR(VK_ERROR_LAYER_NOT_PRESENT);
+    STR(VK_ERROR_EXTENSION_NOT_PRESENT);
     STR(VK_ERROR_MEMORY_MAP_FAILED);
-    STR(VK_ERROR_MEMORY_UNMAP_FAILED);
-    STR(VK_ERROR_INCOMPATIBLE_DEVICE);
     STR(VK_ERROR_INCOMPATIBLE_DRIVER);
 #undef STR
     default: return "UNKNOWN_RESULT";
@@ -475,7 +473,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         }
         if (!extension_found) {
             printf("Cannot find extension: %s\n", known_extensions[i]);
-            ERR_EXIT(VK_ERROR_INVALID_EXTENSION);
+            ERR_EXIT(VK_ERROR_EXTENSION_NOT_PRESENT);
         }
     }
 
@@ -614,7 +612,7 @@ static void app_create_instance(struct app_instance *inst)
         }
         if (!extension_found) {
             printf("Cannot find extension: %s\n", known_extensions[i]);
-            ERR_EXIT(VK_ERROR_INVALID_EXTENSION);
+            ERR_EXIT(VK_ERROR_EXTENSION_NOT_PRESENT);
         }
     }
 
@@ -1095,7 +1093,7 @@ int main(int argc, char **argv)
         ERR_EXIT(err);
     if (gpu_count > MAX_GPUS) {
         printf("Too many GPUS found \n");
-        ERR_EXIT(VK_ERROR_UNKNOWN);
+        ERR_EXIT(-1);
     }
     err = vkEnumeratePhysicalDevices(inst.instance, &gpu_count, objs);
     if (err)

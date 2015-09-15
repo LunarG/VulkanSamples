@@ -185,19 +185,14 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_RESULT_MAX_ENUM";
             break;
         }
-        case VK_ERROR_INVALID_LAYER:
+        case VK_ERROR_LAYER_NOT_PRESENT:
         {
-            return "VK_ERROR_INVALID_LAYER";
+            return "VK_ERROR_LAYER_NOT_PRESENT";
             break;
         }
         case VK_ERROR_INCOMPATIBLE_DRIVER:
         {
             return "VK_ERROR_INCOMPATIBLE_DRIVER";
-            break;
-        }
-        case VK_ERROR_MEMORY_UNMAP_FAILED:
-        {
-            return "VK_ERROR_MEMORY_UNMAP_FAILED";
             break;
         }
         case VK_ERROR_MEMORY_MAP_FAILED:
@@ -213,11 +208,6 @@ std::string EnumeratorString(VkResult const& enumerator)
         case VK_ERROR_OUT_OF_HOST_MEMORY:
         {
             return "VK_ERROR_OUT_OF_HOST_MEMORY";
-            break;
-        }
-        case VK_ERROR_UNKNOWN:
-        {
-            return "VK_ERROR_UNKNOWN";
             break;
         }
         case VK_ERROR_INITIALIZATION_FAILED:
@@ -255,19 +245,14 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_UNSUPPORTED";
             break;
         }
-        case VK_ERROR_INCOMPATIBLE_DEVICE:
-        {
-            return "VK_ERROR_INCOMPATIBLE_DEVICE";
-            break;
-        }
         case VK_SUCCESS:
         {
             return "VK_SUCCESS";
             break;
         }
-        case VK_ERROR_INVALID_EXTENSION:
+        case VK_ERROR_EXTENSION_NOT_PRESENT:
         {
-            return "VK_ERROR_INVALID_EXTENSION";
+            return "VK_ERROR_EXTENSION_NOT_PRESENT";
             break;
         }
         case VK_ERROR_DEVICE_LOST:

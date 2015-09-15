@@ -1306,7 +1306,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
         !info->subresourceRange.arraySize) {
         /* TODOVV: Move test to validation layer */
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
