@@ -215,16 +215,7 @@ init_shader_checker(layer_data *my_data)
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         option_str = getLayerOption("ShaderCheckerLogFilename");
-        if (option_str)
-        {
-            log_output = fopen(option_str, "w");
-        }
-        if (log_output == NULL) {
-            if (option_str)
-                std::cout << std::endl << "ShaderChecker ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << std::endl << std::endl;
-            log_output = stdout;
-        }
-
+        log_output = getLayerLogOutput(option_str, "ShaderChecker");
         layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }
 

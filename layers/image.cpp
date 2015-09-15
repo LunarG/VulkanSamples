@@ -86,15 +86,7 @@ static void InitImage(layer_data *data)
     {
         FILE *log_output = NULL;
         const char* option_str = getLayerOption("ImageLogFilename");
-        if(option_str)
-        {
-            log_output = fopen(option_str, "w");
-        }
-        if(log_output == NULL)
-        {
-            log_output = stdout;
-        }
-
+        log_output = getLayerLogOutput(option_str, "Image");
         layer_create_msg_callback(data->report_data, report_flags, log_callback, (void*)log_output, &data->logging_callback);
     }
 }

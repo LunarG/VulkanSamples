@@ -1321,16 +1321,7 @@ static void init_draw_state(layer_data *my_data)
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         option_str = getLayerOption("DrawStateLogFilename");
-        if (option_str)
-        {
-            log_output = fopen(option_str, "w");
-        }
-        if (log_output == NULL) {
-            if (option_str)
-                cout << endl << "DrawState ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << endl << endl;
-            log_output = stdout;
-        }
-
+        log_output = getLayerLogOutput(option_str, "DrawState");
         layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }
 

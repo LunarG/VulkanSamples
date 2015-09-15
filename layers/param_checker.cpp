@@ -89,16 +89,7 @@ static void InitParamChecker(layer_data *data)
     {
         FILE *log_output = NULL;
         const char* option_str = getLayerOption("ParamCheckerLogFilename");
-        if(option_str)
-        {
-            log_output = fopen(option_str, "w");
-        }
-        if (log_output == NULL) {
-            if (option_str)
-                std::cout << std::endl << "ParamChecker ERROR: Bad output filename specified: " << option_str << ". Writing to STDOUT instead" << std::endl << std::endl;
-            log_output = stdout;
-        }
-
+        log_output = getLayerLogOutput(option_str, "ParamChecker");
         layer_create_msg_callback(data->report_data, report_flags, log_callback, (void*)log_output, &data->logging_callback);
     }
 }

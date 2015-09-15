@@ -368,13 +368,7 @@ initObjectTracker(
     if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
     {
         option_str = getLayerOption("ObjectTrackerLogFilename");
-        if (option_str) {
-            log_output = fopen(option_str, "w");
-        }
-        if (log_output == NULL) {
-            log_output = stdout;
-        }
-
+        log_output = getLayerLogOutput(option_str, "ObjectTracker");
         layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
     }
 

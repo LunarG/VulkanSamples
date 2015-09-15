@@ -27,6 +27,7 @@
 #include <map>
 #include <string.h>
 #include <vk_layer.h>
+#include <iostream>
 #include "vk_loader_platform.h"
 #include "vk_layer_config.h"
 // The following is #included again to catch certain OS-specific functions
@@ -95,6 +96,23 @@ static unsigned int convertStringEnumVal(const char *_enum)
 const char *getLayerOption(const char *_option)
 {
     return g_configFileObj.getOption(_option);
+}
+
+// If option is NULL or stdout, return stdout, otherwise try to open option
+//  as a filename. If successful, return file handle, otherwise stdout
+FILE* getLayerLogOutput(const char *_option, const char *layerName)
+{
+    FILE* log_output = NULL;
+    if (!_option || !strcmp("stdout", _option))
+        log_output = stdout;
+    else {
+        log_output = fopen(_option, "w");
+        if (log_output == NULL) {
+            if (_option)
+                std::cout << std::endl << layerName << " ERROR: Bad output filename specified: " << _option << ". Writing to STDOUT instead" << std::endl << std::endl;
+            log_output = stdout;
+        }
+    }
 }
 
 uint32_t getLayerOptionFlags(const char *_option, uint32_t optionDefault)
