@@ -30,11 +30,6 @@
 #include "debug_report.h"
 #include "wsi_swapchain.h"
 
-#if defined(WIN32)
-// On Windows need to disable global optimization for function entrypoints or
-//  else mhook will not be able to hook all of them
-#pragma optimize( "g", off )
-#endif
 
 /* Trampoline entrypoints */
 LOADER_EXPORT VkResult VKAPI vkCreateInstance(
