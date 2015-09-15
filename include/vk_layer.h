@@ -175,8 +175,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkGetSwapchainImagesKHR GetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR AcquireNextImageKHR;
     PFN_vkQueuePresentKHR QueuePresentKHR;
-    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 } VkLayerDispatchTable;
 
 typedef struct VkLayerInstanceDispatchTable_
