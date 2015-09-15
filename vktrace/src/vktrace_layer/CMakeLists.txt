@@ -45,8 +45,8 @@ set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE CXX)
 
 set (HDR_LIST
     vktrace_lib_helpers.h
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../layers/vk_dispatch_table_helper.h
     codegen/vktrace_vk_vk.h
+    vk_dispatch_table_helper.h
     codegen/vktrace_vk_vk_debug_report_lunarg.h
     codegen/vktrace_vk_vk_debug_marker_lunarg.h
     codegen/vktrace_vk_vk_ext_khr_swapchain.h
@@ -63,6 +63,12 @@ set (HDR_LIST
     ${CODEGEN_UTILS_DIR}/vk_debug_report_lunarg_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_debug_marker_lunarg_struct_size_helper.h
 )
+
+add_custom_command(OUTPUT vk_dispatch_table_helper.h
+	COMMAND ${PYTHON_CMD} ${CMAKE_SOURCE_DIR}/vk-generate.py dispatch-table-ops layer > vk_dispatch_table_helper.h
+	DEPENDS ${CMAKE_SOURCE_DIR}/vk-generate.py ${CMAKE_SOURCE_DIR}/vulkan.py)
+add_custom_target(generate_vktrace_layer_helpers DEPENDS
+	vk_dispatch_table_helper.h)
 
 include_directories(
     codegen
@@ -95,6 +101,8 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SRC_LIST} ${HDR_LIST})
+
+add_dependencies(${PROJECT_NAME} generate_vktrace_layer_helpers)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
