@@ -745,8 +745,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
         // First update CB binding in MemObj mini CB list
         MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem.handle);
         if (!pMemInfo) {
-            // TODO : cb should be srcObj
-            skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                            "In %s, trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
                            "Was it correctly allocated? Did it already get freed?", apiName, mem.handle, cb);
         } else {
@@ -769,8 +768,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
             MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
             if (!pCBInfo) {
-                // TODO : cb should be srcObj
-                skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+                skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                                "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that CB. Was CB incorrectly destroyed?", mem.handle, cb);
             } else {
                 // Search for memory object in cmd buffer's reference list
@@ -793,22 +791,6 @@ static VkBool32 update_cmd_buf_and_mem_references(
     return skipCall;
 }
 
-// Clear the CB Binding for mem
-// Calls to this function should be wrapped in mutex
-static void remove_cmd_buf_and_mem_reference(
-    const VkCmdBuffer    cb,
-    const VkDeviceMemory mem)
-{
-    MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem.handle);
-    // TODO : Having this check is not ideal, really if memInfo was deleted,
-    //   its CB bindings should be cleared and then clear_cmd_buf_and_mem_references wouldn't call
-    //   us here with stale mem objs
-    if (pInfo) {
-        pInfo->pCmdBufferBindings.remove(cb);
-        pInfo->refCount--;
-     }
-}
-
 // Free bindings related to CB
 static VkBool32 clear_cmd_buf_and_mem_references(
     const VkCmdBuffer cb)
@@ -816,14 +798,15 @@ static VkBool32 clear_cmd_buf_and_mem_references(
     VkBool32 skipCall = VK_FALSE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
     if (!pCBInfo) {
-        // TODO : cb should be srcObj
-        skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
+        skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_CB, "MEM",
                      "Unable to find global CB info %p for deletion", cb);
     } else {
         if (pCBInfo->pMemObjList.size() > 0) {
             list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
             for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
-                remove_cmd_buf_and_mem_reference(cb, (*it));
+                MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info((*it).handle);
+                pInfo->pCmdBufferBindings.remove(cb);
+                pInfo->refCount--;
             }
         }
         pCBInfo->pMemObjList.clear();
@@ -852,7 +835,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
     size_t objRefCount    = pMemObjInfo->pObjBindings.size();
 
     if ((pMemObjInfo->pCmdBufferBindings.size() + pMemObjInfo->pObjBindings.size()) != 0) {
-        skipCall = log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, pMemObjInfo->mem.handle, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
+        skipCall = log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, pMemObjInfo->mem.handle, 0, MEMTRACK_FREED_MEM_REF, "MEM",
                        "Attempting to free memory object %#" PRIxLEAST64 " which still contains %lu references",
                        pMemObjInfo->mem.handle, (cmdBufRefCount + objRefCount));
     }
@@ -860,7 +843,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
     if (cmdBufRefCount > 0 && pMemObjInfo->pCmdBufferBindings.size() > 0) {
         for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
             // TODO : cmdBuffer should be source Obj here
-            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_NONE, "MEM",
+            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)(*it), 0, MEMTRACK_FREED_MEM_REF, "MEM",
                     "Command Buffer %p still has a reference to mem obj %#" PRIxLEAST64, (*it), pMemObjInfo->mem.handle);
         }
         // Clear the list of hanging references
@@ -869,7 +852,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
 
     if (objRefCount > 0 && pMemObjInfo->pObjBindings.size() > 0) {
         for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, it->type, it->handle, 0, MEMTRACK_NONE, "MEM",
+            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, it->type, it->handle, 0, MEMTRACK_FREED_MEM_REF, "MEM",
                     "VK Object %#" PRIxLEAST64 " still has a reference to mem obj %#" PRIxLEAST64, it->handle, pMemObjInfo->mem.handle);
         }
         // Clear the list of hanging references
@@ -902,17 +885,15 @@ static VkBool32 checkCBCompleted(
     *complete = VK_TRUE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
     if (!pCBInfo) {
-        // TODO : cb should be srcObj
-        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                        "Unable to find global CB info %p to check for completion", cb);
+        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
+                        MEMTRACK_INVALID_CB, "MEM", "Unable to find global CB info %p to check for completion", cb);
         *complete = VK_FALSE;
     } else if (pCBInfo->lastSubmittedQueue != NULL) {
         VkQueue queue = pCBInfo->lastSubmittedQueue;
         MT_QUEUE_INFO *pQueueInfo = &queueMap[queue];
         if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
-            // TODO : cb should be srcObj and print cb handle
-            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_NONE, "MEM",
-                "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
+            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
+                MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
                 pCBInfo->lastSubmittedFence.handle, cb);
             *complete = VK_FALSE;
         }
@@ -931,7 +912,7 @@ static VkBool32 freeMemObjInfo(
     if (!pInfo) {
         skipCall = log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem.handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "Couldn't find mem info object for %#" PRIxLEAST64 "\n    Was %#" PRIxLEAST64 " never allocated or previously freed?",
-            mem.handle, mem.handle);
+                       mem.handle, mem.handle);
     } else {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             skipCall = log_msg(mdd(pInfo->object), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem.handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
@@ -957,9 +938,7 @@ static VkBool32 freeMemObjInfo(
                 }
             }
 
-            // Now verify that no references to this mem obj remain
-            // TODO : Is this check still valid? I don't think so
-            //   Even if not, we still need to remove binding from obj
+            // Now verify that no references to this mem obj remain and remove bindings
             if (0 != pInfo->refCount) {
                 skipCall |= reportMemReferencesAndCleanUp(pInfo);
             }
@@ -970,14 +949,31 @@ static VkBool32 freeMemObjInfo(
     return skipCall;
 }
 
+static const char *object_type_to_string(VkDbgObjectType type) {
+    switch (type)
+    {
+        case VK_OBJECT_TYPE_IMAGE:
+           return "image";
+           break;
+        case VK_OBJECT_TYPE_BUFFER:
+           return "image";
+           break;
+        case VK_OBJECT_TYPE_SWAPCHAIN_KHR:
+           return "swapchain";
+           break;
+        default:
+           return "unknown";
+    }
+}
+
 // Remove object binding performs 3 tasks:
 // 1. Remove ObjectInfo from MemObjInfo list container of obj bindings & free it
 // 2. Decrement refCount for MemObjInfo
 // 3. Clear mem binding for image/buffer by setting its handle to 0
-// TODO : This only applied to Buffer and Image objects now, how should it be updated/customized?
+// TODO : This only applied to Buffer, Image, and Swapchain objects now, how should it be updated/customized?
 static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObjectType type)
 {
-    // TODO : Need to customize images/buffers to track mem binding and clear it here appropriately
+    // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
     if (pObjBindInfo) {
@@ -985,7 +981,7 @@ static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObject
         if (!pMemObjInfo) {
             skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM",
                            "Attempting to clear mem binding on %s obj %#" PRIxLEAST64 " but it has no binding.",
-                           (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer", handle);
+                           object_type_to_string(type), handle);
         } else {
             // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the memObj's refcount
             // and set the objects memory binding pointer to NULL.
@@ -1001,9 +997,9 @@ static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObject
                 }
             }
             if (VK_FALSE == clearSucceeded ) {
-                skipCall |= log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
+                skipCall |= log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                                 "While trying to clear mem binding for %s obj %#" PRIxLEAST64 ", unable to find that object referenced by mem obj %#" PRIxLEAST64,
-                                (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer", handle, pMemObjInfo->mem.handle);
+                                 object_type_to_string(type), handle, pMemObjInfo->mem.handle);
             }
         }
     }
@@ -1017,7 +1013,6 @@ static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObject
 //  Add reference off of objInfo
 //  device is required for error logging, need a dispatchable
 //  object for that.
-// Return VK_TRUE if addition is successful, VK_FALSE otherwise
 static VkBool32 set_mem_binding(
     void*            dispatch_object,
     VkDeviceMemory   mem,
@@ -1028,21 +1023,21 @@ static VkBool32 set_mem_binding(
     VkBool32 skipCall = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
-        skipCall = log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
+        skipCall = log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "In %s, attempting to Bind Obj(%#" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
         if (!pObjBindInfo) {
-            skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
+            skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of %s Obj(%#" PRIxLEAST64 ") that's not in global list()",
-                            (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer", apiName, handle);
+                            object_type_to_string(type), apiName, handle);
         } else {
             // non-null case so should have real mem obj
             MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem.handle);
             if (!pMemInfo) {
                 skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, mem.handle,
                                 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", "In %s, while trying to bind mem for %s obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64,
-                                (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer", apiName, handle, mem.handle);
+                                object_type_to_string(type), apiName, handle, mem.handle);
             } else {
                 // TODO : Need to track mem binding for obj and report conflict here
                 MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(pObjBindInfo->mem.handle);
@@ -1094,7 +1089,7 @@ static VkBool32 set_sparse_mem_binding(
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
         if (!pObjBindInfo) {
-            skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INTERNAL_ERROR, "MEM",
+            skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of Obj(%#" PRIxLEAST64 ") that's not in global list()", apiName, handle);
         }
         // non-null case so should have real mem obj
@@ -1193,7 +1188,8 @@ static VkBool32 get_mem_binding_from_object(
         }
     } else {
         skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
-                       "Trying to get mem binding for object %#" PRIxLEAST64 " but no such object in %s list", handle, (VK_OBJECT_TYPE_IMAGE == type) ? "image" : "buffer");
+                       "Trying to get mem binding for object %#" PRIxLEAST64 " but no such object in %s list",
+                       handle, object_type_to_string(type));
         print_object_list(dispObj);
     }
     return skipCall;
@@ -1398,10 +1394,9 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
 {
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    // TODO : Need to set device as srcObj
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
         "Printing List details prior to vkDestroyDevice()");
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
         "================================================");
     print_mem_list(device);
     printCBList(device);
@@ -2248,8 +2243,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        /* TODO: pPipelines is now an array of pipelines */
-        add_object_create_info(pPipelines->handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[0]);
+        for (int i = 0; i < count; i++) {
+            add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2265,8 +2261,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        /* TODO: pPipelines is now an array of pipelines */
-        add_object_create_info(pPipelines->handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[0]);
+        for (int i = 0; i < count; i++) {
+            add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2403,9 +2400,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     skipCall = checkCBCompleted(cmdBuffer, &cmdBufferComplete);
 
     if (VK_FALSE == cmdBufferComplete) {
-        // TODO : want cmdBuffer to be srcObj here
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                        "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                        MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
                         "You must check CB flag before this call.", cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -2437,10 +2433,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     // Verify that CB is complete (not in-flight)
     skipCall = checkCBCompleted(cmdBuffer, &cmdBufferComplete);
     if (VK_FALSE == cmdBufferComplete) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM",
-                        "Resetting CB %p before it has completed. You must check CB flag before "
-                        "calling vkResetCommandBuffer().", cmdBuffer);
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                        MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Resetting CB %p before it has completed. You must check CB "
+                        "flag before calling vkResetCommandBuffer().", cmdBuffer);
     }
     // Clear memory references as this point.
     skipCall |= clear_cmd_buf_and_mem_references(cmdBuffer);
@@ -2485,9 +2480,8 @@ void VKAPI vkCmdBindDynamicViewportState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicViewportStateCreateInfo*)get_object_create_info(dynamicViewportState.handle, VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE);
     if (!pCI) {
@@ -2511,9 +2505,8 @@ void VKAPI vkCmdBindDynamicLineWidthState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicLineWidthStateCreateInfo*)get_object_create_info(dynamicLineWidthState.handle, VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE);
     if (!pCI) {
@@ -2537,9 +2530,8 @@ void VKAPI vkCmdBindDynamicDepthBiasState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicDepthBiasStateCreateInfo*)get_object_create_info(dynamicDepthBiasState.handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE);
     if (!pCI) {
@@ -2555,7 +2547,7 @@ void VKAPI vkCmdBindDynamicDepthBiasState(
 }
 
 void VKAPI vkCmdBindDynamicBlendState(
-     VkCmdBuffer                                 cmdBuffer,
+     VkCmdBuffer                            cmdBuffer,
      VkDynamicBlendState                    dynamicBlendState)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -2563,9 +2555,8 @@ void VKAPI vkCmdBindDynamicBlendState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicBlendStateCreateInfo*)get_object_create_info(dynamicBlendState.handle, VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE);
     if (!pCI) {
@@ -2589,9 +2580,8 @@ void VKAPI vkCmdBindDynamicDepthBoundsState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicDepthBoundsStateCreateInfo*)get_object_create_info(dynamicDepthBoundsState.handle, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE);
     if (!pCI) {
@@ -2615,9 +2605,8 @@ void VKAPI vkCmdBindDynamicStencilState(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
     if (!pCmdBuf) {
-        // TODO : Want cmdBuffer to be srcObj here
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, MEMTRACK_INVALID_CB, "MEM",
-                       "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     pCI = (VkDynamicStencilStateCreateInfo*)get_object_create_info(dynamicStencilState.handle, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
     if (!pCI) {
@@ -3078,8 +3067,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
                     memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
-                // TODO : Want swapchain to be srcObj here
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, 0, 0, MEMTRACK_NONE, "SWAP_CHAIN",
+                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain.handle, 0, MEMTRACK_NONE, "SWAP_CHAIN",
                         "vkGetSwapchainInfoKHR(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", swapchain);
             }
         }
