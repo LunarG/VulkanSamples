@@ -3,6 +3,7 @@
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
+#include "../icd/common/icd-spv.h"
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -2334,6 +2335,103 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 #endif // THREADING_TESTS
 
 #if SHADER_CHECKER_TESTS
+TEST_F(VkLayerTest, InvalidSPIRVCodeSize)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    m_errorMonitor->ClearState();
+
+    VkShaderModule module;
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    struct icd_spv_header spv;
+
+    spv.magic = ICD_SPV_MAGIC;
+    spv.version = ICD_SPV_VERSION;
+    spv.gen_magic = 0;
+
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.codeSize = 4;
+    moduleCreateInfo.flags = 0;
+    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
+        FAIL() << "Incorrect warning: " << msgString;
+    }
+}
+
+TEST_F(VkLayerTest, InvalidSPIRVMagic)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    m_errorMonitor->ClearState();
+
+    VkShaderModule module;
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    struct icd_spv_header spv;
+
+    spv.magic = ~ICD_SPV_MAGIC;
+    spv.version = ICD_SPV_VERSION;
+    spv.gen_magic = 0;
+
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.codeSize = sizeof(spv) + 10;
+    moduleCreateInfo.flags = 0;
+    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
+        FAIL() << "Incorrect warning: " << msgString;
+    }
+}
+
+TEST_F(VkLayerTest, InvalidSPIRVVersion)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    m_errorMonitor->ClearState();
+
+    VkShaderModule module;
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    struct icd_spv_header spv;
+
+    spv.magic = ICD_SPV_MAGIC;
+    spv.version = ~ICD_SPV_VERSION;
+    spv.gen_magic = 0;
+
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+
+    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.codeSize = sizeof(spv) + 10;
+    moduleCreateInfo.flags = 0;
+    vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
+        FAIL() << "Incorrect warning: " << msgString;
+    }
+}
+
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
     VkFlags msgFlags;
