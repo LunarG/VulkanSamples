@@ -113,6 +113,7 @@ FILE* getLayerLogOutput(const char *_option, const char *layerName)
             log_output = stdout;
         }
     }
+    return log_output;
 }
 
 uint32_t getLayerOptionFlags(const char *_option, uint32_t optionDefault)
