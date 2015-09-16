@@ -134,6 +134,7 @@ VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 #define VK_TRUE                           1
 #define VK_FALSE                          0
 #define VK_QUEUE_FAMILY_IGNORED           (~0U)
+#define VK_SUBPASS_EXTERNAL               (~0U)
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
 #define VK_UUID_LENGTH                    16
 #define VK_MAX_MEMORY_TYPES               32
@@ -1002,6 +1003,11 @@ typedef enum {
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
 typedef VkFlags VkShaderStageFlags;
+
+typedef enum {
+    VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT = 0x00000001,
+} VkAttachmentDescriptionFlagBits;
+typedef VkFlags VkAttachmentDescriptionFlags;
 
 typedef enum {
     VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT = 0x00000001,
@@ -1898,6 +1904,7 @@ typedef struct {
     VkAttachmentStoreOp                         stencilStoreOp;
     VkImageLayout                               initialLayout;
     VkImageLayout                               finalLayout;
+    VkAttachmentDescriptionFlags                flags;
 } VkAttachmentDescription;
 
 typedef struct {
