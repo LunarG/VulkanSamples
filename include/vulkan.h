@@ -1224,6 +1224,7 @@ typedef struct {
     uint32_t                                    maxDescriptorSetSampledImages;
     uint32_t                                    maxDescriptorSetStorageImages;
     uint32_t                                    maxVertexInputAttributes;
+    uint32_t                                    maxVertexInputBindings;
     uint32_t                                    maxVertexInputAttributeOffset;
     uint32_t                                    maxVertexInputBindingStride;
     uint32_t                                    maxVertexOutputComponents;
