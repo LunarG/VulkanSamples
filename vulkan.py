@@ -618,8 +618,6 @@ core = Extension(
 
         Proto("VkResult", "CreateDescriptorPool",
             [Param("VkDevice", "device"),
-             Param("VkDescriptorPoolUsage", "poolUsage"),
-             Param("uint32_t", "maxSets"),
              Param("const VkDescriptorPoolCreateInfo*", "pCreateInfo"),
              Param("VkDescriptorPool*", "pDescriptorPool")]),
 

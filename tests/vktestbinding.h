@@ -524,8 +524,7 @@ public:
     ~DescriptorPool();
 
     // vkCreateDescriptorPool()
-    void init(const Device &dev, VkDescriptorPoolUsage usage,
-              uint32_t max_sets, const VkDescriptorPoolCreateInfo &info);
+    void init(const Device &dev, const VkDescriptorPoolCreateInfo &info);
 
     // vkResetDescriptorPool()
     void reset();

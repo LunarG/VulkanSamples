@@ -1840,9 +1840,9 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         if (log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
@@ -1863,8 +1863,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescrip
                 pNewNode->createInfo.pTypeCount = new VkDescriptorTypeCount[typeCountSize];
                 memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
-            pNewNode->poolUsage  = poolUsage;
-            pNewNode->maxSets      = maxSets;
+            pNewNode->poolUsage  = pCreateInfo->poolUsage;
+            pNewNode->maxSets      = pCreateInfo->maxSets;
             pNewNode->pool       = *pDescriptorPool;
             poolMap[pDescriptorPool->handle] = pNewNode;
         }

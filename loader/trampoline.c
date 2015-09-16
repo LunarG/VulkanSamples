@@ -925,13 +925,13 @@ LOADER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescrip
     disp->DestroyDescriptorSetLayout(device, descriptorSetLayout);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
+LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    return disp->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
 }
 
 LOADER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)

@@ -897,11 +897,13 @@ TEST_F(VkLayerTest, PipelineNotBound)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1147,11 +1149,13 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
-        VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1289,11 +1293,13 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1449,11 +1455,13 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1597,11 +1605,13 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1672,11 +1682,13 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1759,11 +1771,13 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1848,10 +1862,13 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -1936,10 +1953,13 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2020,12 +2040,15 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ds_type_count.count = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
-    ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    ds_pool_ci.pNext = NULL;
-    ds_pool_ci.count = 1;
-    ds_pool_ci.pTypeCount = &ds_type_count;
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -2103,11 +2126,13 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
     VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};
@@ -2194,11 +2219,13 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
 
-        VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSetLayoutBinding dsl_binding = {};

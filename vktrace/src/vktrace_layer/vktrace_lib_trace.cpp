@@ -293,8 +293,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     VkDevice device,
-    VkDescriptorPoolUsage poolUsage,
-    uint32_t maxSets,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
     VkDescriptorPool* pDescriptorPool)
 {
@@ -304,12 +302,10 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     // begin custom code (needs to use get_struct_chain_size)
     CREATE_TRACE_PACKET(vkCreateDescriptorPool,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDescriptorPool));
     // end custom code
-    result = mdd(device)->devTable.CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    result = mdd(device)->devTable.CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCreateDescriptorPool(pHeader);
     pPacket->device = device;
-    pPacket->poolUsage = poolUsage;
-    pPacket->maxSets = maxSets;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDescriptorPoolCreateInfo), pCreateInfo);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCount), pCreateInfo->count * sizeof(VkDescriptorTypeCount), pCreateInfo->pTypeCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorPool), sizeof(VkDescriptorPool), pDescriptorPool);

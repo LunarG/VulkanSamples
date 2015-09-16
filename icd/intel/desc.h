@@ -261,8 +261,6 @@ void intel_desc_region_read_sampler(const struct intel_desc_region *region,
                                     const struct intel_sampler **sampler);
 
 VkResult intel_desc_pool_create(struct intel_dev *dev,
-                                  VkDescriptorPoolUsage usage,
-                                  uint32_t max_sets,
                                   const VkDescriptorPoolCreateInfo *info,
                                   struct intel_desc_pool **pool_ret);
 void intel_desc_pool_destroy(struct intel_desc_pool *pool);

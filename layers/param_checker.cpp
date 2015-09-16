@@ -4741,6 +4741,7 @@ bool PostCreateDescriptorPool(
         return false;
     }
 
+    /* TODOVV: How do we validate maxSets? Probably belongs in the limits layer? */
 
     if(pDescriptorPool != nullptr)
     {
@@ -4758,16 +4759,14 @@ bool PostCreateDescriptorPool(
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice device,
-    VkDescriptorPoolUsage poolUsage,
-    uint32_t maxSets,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
     VkDescriptorPool* pDescriptorPool)
 {
     PreCreateDescriptorPool(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, poolUsage, maxSets, pCreateInfo, pDescriptorPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
 
-    PostCreateDescriptorPool(device, poolUsage, maxSets, pDescriptorPool, result);
+    PostCreateDescriptorPool(device, pCreateInfo->poolUsage, pCreateInfo->maxSets, pDescriptorPool, result);
 
     return result;
 }

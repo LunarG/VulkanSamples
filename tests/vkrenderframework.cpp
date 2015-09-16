@@ -543,8 +543,10 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     VkDescriptorPoolCreateInfo pool = {};
     pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool.count = m_type_counts.size();
+    pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+    pool.maxSets = 1;
     pool.pTypeCount = m_type_counts.data();
-    init(*m_device, VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, pool);
+    init(*m_device, pool);
 
     // create VkDescriptorSetLayout
     vector<VkDescriptorSetLayoutBinding> bindings;

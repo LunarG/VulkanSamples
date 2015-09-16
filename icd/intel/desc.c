@@ -367,10 +367,8 @@ static void desc_pool_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_desc_pool_create(struct intel_dev *dev,
-                                  VkDescriptorPoolUsage usage,
-                                  uint32_t max_sets,
-                                  const VkDescriptorPoolCreateInfo *info,
-                                  struct intel_desc_pool **pool_ret)
+                                const VkDescriptorPoolCreateInfo *info,
+                                struct intel_desc_pool **pool_ret)
 {
     struct intel_desc_pool *pool;
     VkResult ret;
@@ -383,7 +381,7 @@ VkResult intel_desc_pool_create(struct intel_dev *dev,
 
     pool->dev = dev;
 
-    ret = intel_desc_region_alloc(dev->desc_region, max_sets, info,
+    ret = intel_desc_region_alloc(dev->desc_region, info->maxSets, info,
             &pool->region_begin, &pool->region_end);
     if (ret != VK_SUCCESS) {
         intel_base_destroy(&pool->obj.base);
@@ -791,15 +789,13 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
-    VkDevice                                   device,
-    VkDescriptorPoolUsage                    poolUsage,
-    uint32_t                                     maxSets,
-    const VkDescriptorPoolCreateInfo*       pCreateInfo,
-    VkDescriptorPool*                         pDescriptorPool)
+    VkDevice                                    device,
+    const VkDescriptorPoolCreateInfo*           pCreateInfo,
+    VkDescriptorPool*                           pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_desc_pool_create(dev, poolUsage, maxSets, pCreateInfo,
+    return intel_desc_pool_create(dev, pCreateInfo,
             (struct intel_desc_pool **) pDescriptorPool);
 }
 

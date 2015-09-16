@@ -739,10 +739,9 @@ void DescriptorSetLayout::init(const Device &dev, const VkDescriptorSetLayoutCre
 
 NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyDescriptorPool)
 
-void DescriptorPool::init(const Device &dev, VkDescriptorPoolUsage usage,
-                          uint32_t max_sets, const VkDescriptorPoolCreateInfo &info)
+void DescriptorPool::init(const Device &dev, const VkDescriptorPoolCreateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorPool, dev, usage, max_sets, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorPool, dev, &info);
 }
 
 void DescriptorPool::reset()

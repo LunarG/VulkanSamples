@@ -610,8 +610,6 @@ static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
 }
 
 static VkResult nulldrv_desc_pool_create(struct nulldrv_dev *dev,
-                                    VkDescriptorPoolUsage usage,
-                                    uint32_t max_sets,
                                     const VkDescriptorPoolCreateInfo *info,
                                     struct nulldrv_desc_pool **pool_ret)
 {
@@ -2273,16 +2271,14 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
-    VkDevice                                   device,
-    VkDescriptorPoolUsage                  poolUsage,
-    uint32_t                                     maxSets,
-    const VkDescriptorPoolCreateInfo*     pCreateInfo,
-    VkDescriptorPool*                       pDescriptorPool)
+    VkDevice                                    device,
+    const VkDescriptorPoolCreateInfo*           pCreateInfo,
+    VkDescriptorPool*                           pDescriptorPool)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_desc_pool_create(dev, poolUsage, maxSets, pCreateInfo,
+    return nulldrv_desc_pool_create(dev, pCreateInfo,
             (struct nulldrv_desc_pool **) pDescriptorPool);
 }
 

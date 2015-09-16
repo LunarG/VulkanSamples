@@ -1775,13 +1775,14 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
     const VkDescriptorPoolCreateInfo descriptor_pool = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
+        .poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT,
+        .maxSets = 1,
         .count = 2,
         .pTypeCount = type_counts,
     };
     VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorPool(demo->device,
-            VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
             &descriptor_pool, &demo->desc_pool);
     assert(!err);
 }
