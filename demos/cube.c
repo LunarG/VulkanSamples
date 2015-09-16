@@ -719,7 +719,7 @@ static void demo_prepare_buffers(struct demo *demo)
     }
 #endif // WORK_AROUND_CODE
 
-    VkSurfaceTransformFlagBitsKHR preTransform;
+    VkSurfaceTransformFlagsKHR preTransform;
     if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
     } else {
@@ -2449,7 +2449,6 @@ static void demo_init_vk(struct demo *demo)
     GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePropertiesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, GetSurfaceFormatsKHR);
     GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
