@@ -145,7 +145,6 @@ VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const 
 #if DISPATCH_MAP_DEBUG
         fprintf(stderr, "New, Instance: map: %p, base object: %p, key: %p, table: %p\n", &map, instancew, *ppDisp, pTable);
 #endif
-        assert(map.size() <= 1 && "Instance dispatch table map has more than one entry");
     } else
     {
 #if DISPATCH_MAP_DEBUG
