@@ -1734,30 +1734,37 @@ VkResult VKAPI vkMergePipelineCaches(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
     VkResult result = VK_SUCCESS;
-    //TODO handle count > 1  and handle pipelineCache
+    //TODO What to do with pipelineCache?
     // The order of operations here is a little convoluted but gets the job done
     //  1. Pipeline create state is first shadowed into PIPELINE_NODE struct
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
+    VkBool32 skipCall = VK_FALSE;
+    PIPELINE_NODE* pPipeNode[count] = {};
+    uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
-    PIPELINE_NODE* pPipeNode = initPipeline(pCreateInfos, NULL);
-    VkBool32 skipCall = verifyPipelineCreateState(device, pPipeNode);
+    for (i=0; i<count; i++) {
+        pPipeNode[i] = initPipeline(&pCreateInfos[i], NULL);
+        skipCall |= verifyPipelineCreateState(device, pPipeNode[i]);
+    }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
-        log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PIPELINE, (*pPipelines).handle, 0, DRAWSTATE_NONE, "DS",
-                "Created Gfx Pipeline %#" PRIxLEAST64, (*pPipelines).handle);
         loader_platform_thread_lock_mutex(&globalLock);
-        pPipeNode->pipeline = *pPipelines;
-        pipelineMap[pPipeNode->pipeline.handle] = pPipeNode;
+        for (i=0; i<count; i++) {
+            pPipeNode[i]->pipeline = pPipelines[i];
+            pipelineMap[pPipeNode[i]->pipeline.handle] = pPipeNode[i];
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     } else {
-        if (pPipeNode) {
-            // If we allocated a pipeNode, need to clean it up here
-            delete[] pPipeNode->pVertexBindingDescriptions;
-            delete[] pPipeNode->pVertexAttributeDescriptions;
-            delete[] pPipeNode->pAttachments;
-            delete pPipeNode;
+        for (i=0; i<count; i++) {
+            if (pPipeNode[i]) {
+                // If we allocated a pipeNode, need to clean it up here
+                delete[] pPipeNode[i]->pVertexBindingDescriptions;
+                delete[] pPipeNode[i]->pVertexAttributeDescriptions;
+                delete[] pPipeNode[i]->pAttachments;
+                delete pPipeNode[i];
+            }
         }
         return VK_ERROR_VALIDATION_FAILED;
     }
