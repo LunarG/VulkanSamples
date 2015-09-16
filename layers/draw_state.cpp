@@ -2715,8 +2715,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     VkCmdBuffer                                 cmdBuffer,
     VkImageAspectFlags                          imageAspectMask,
     VkImageLayout                               imageLayout,
-    float                                       depth,
-    uint32_t                                    stencil,
+    const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rectCount,
     const VkRect3D*                             pRects)
 {
@@ -2744,7 +2743,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount, pRects);
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -2773,10 +2772,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer,
-                                                     VkImage image, VkImageLayout imageLayout,
-                                                     float depth, uint32_t stencil,
-                                                     uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+        VkCmdBuffer cmdBuffer,
+        VkImage image, VkImageLayout imageLayout,
+        const VkClearDepthStencilValue *pDepthStencil,
+        uint32_t rangeCount,
+        const VkImageSubresourceRange* pRanges)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -2795,7 +2796,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer,
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,

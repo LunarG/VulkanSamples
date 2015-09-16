@@ -1056,13 +1056,12 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
-    VkCmdBuffer                              cmdBuffer,
-    VkImage                                   image,
-    VkImageLayout                            imageLayout,
-    float                                       depth,
-    uint32_t                                    stencil,
+    VkCmdBuffer                                 cmdBuffer,
+    VkImage                                     image,
+    VkImageLayout                               imageLayout,
+    const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*          pRanges)
+    const VkImageSubresourceRange*              pRanges)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1082,8 +1081,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     VkCmdBuffer                             cmdBuffer,
     VkImageAspectFlags                      imageAspectMask,
     VkImageLayout                           imageLayout,
-    float                                   depth,
-    uint32_t                                stencil,
+    const VkClearDepthStencilValue*         pDepthStencil,
     uint32_t                                rectCount,
     const VkRect3D                         *pRects)
 {

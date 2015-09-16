@@ -2903,13 +2903,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
-    VkCmdBuffer                    cmdBuffer,
-    VkImage                        image,
-    VkImageLayout                  imageLayout,
-    float                          depth,
-    uint32_t                       stencil,
-    uint32_t                       rangeCount,
-    const VkImageSubresourceRange *pRanges)
+    VkCmdBuffer                         cmdBuffer,
+    VkImage                             image,
+    VkImageLayout                       imageLayout,
+    const VkClearDepthStencilValue*     pDepthStencil,
+    uint32_t                            rangeCount,
+    const VkImageSubresourceRange*      pRanges)
 {
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
@@ -2920,7 +2919,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(
-            cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+            cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
     }
 }
 

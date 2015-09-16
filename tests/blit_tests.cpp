@@ -1422,9 +1422,13 @@ protected:
         VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_clear.size(), (const void * const*) p_to_clear.data());
 
+        VkClearDepthStencilValue clear_value = {
+            depth,
+            stencil
+        };
         vkCmdClearDepthStencilImage(cmd_.handle(),
                                     img.handle(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                    depth, stencil,
+                                    &clear_value,
                                     ranges.size(), &ranges[0]);
 
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, false, to_xfer.size(), (const void * const*)p_to_xfer.data());

@@ -957,16 +957,15 @@ void cmd_meta_clear_depth_stencil_image(
 }
 
 ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
-    VkCmdBuffer                              cmdBuffer,
-    VkImage                                   image,
-    VkImageLayout                            imageLayout,
-    float                                       depth,
-    uint32_t                                    stencil,
+    VkCmdBuffer                                 cmdBuffer,
+    VkImage                                     image,
+    VkImageLayout                               imageLayout,
+    const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*          pRanges)
+    const VkImageSubresourceRange*              pRanges)
 {
     struct intel_img *img = intel_img(image);
-    cmd_meta_clear_depth_stencil_image(cmdBuffer, img, imageLayout, depth, stencil, rangeCount, pRanges);
+    cmd_meta_clear_depth_stencil_image(cmdBuffer, img, imageLayout, pDepthStencil->depth, pDepthStencil->stencil, rangeCount, pRanges);
 }
 
 ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
@@ -1010,8 +1009,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     VkCmdBuffer                             cmdBuffer,
     VkImageAspectFlags                      aspectMask,
     VkImageLayout                           imageLayout,
-    float                                   depth,
-    uint32_t                                stencil,
+    const VkClearDepthStencilValue*         pDepthStencil,
     uint32_t                                rectCount,
     const VkRect3D                         *pRects)
 {
@@ -1038,13 +1036,13 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
            if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
                        view->img, imageLayout,
-                       depth, stencil, 1, &range);
+                       pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
            }
            if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
                range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
                cmd_meta_clear_depth_stencil_image(cmdBuffer,
                        view->img, imageLayout,
-                       depth, stencil, 1, &range);
+                       pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
            }
     }
 }

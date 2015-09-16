@@ -6655,8 +6655,7 @@ bool PostCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     VkImage image,
     VkImageLayout imageLayout,
-    float depth,
-    uint32_t stencil,
+    const VkClearDepthStencilValue* pDepthStencil,
     uint32_t rangeCount)
 {
 
@@ -6679,16 +6678,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     VkCmdBuffer cmdBuffer,
     VkImage image,
     VkImageLayout imageLayout,
-    float depth,
-    uint32_t stencil,
+    const VkClearDepthStencilValue* pDepthStencil,
     uint32_t rangeCount,
     const VkImageSubresourceRange* pRanges)
 {
     PreCmdClearDepthStencilImage(cmdBuffer, pRanges);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount, pRanges);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 
-    PostCmdClearDepthStencilImage(cmdBuffer, image, imageLayout, depth, stencil, rangeCount);
+    PostCmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount);
 }
 
 bool PreCmdClearColorAttachment(
@@ -6757,8 +6755,7 @@ bool PostCmdClearDepthStencilAttachment(
     VkCmdBuffer cmdBuffer,
     VkImageAspectFlags imageAspectMask,
     VkImageLayout imageLayout,
-    float depth,
-    uint32_t stencil,
+    const VkClearDepthStencilValue* pDepthStencil,
     uint32_t rectCount)
 {
 
@@ -6781,16 +6778,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     VkCmdBuffer cmdBuffer,
     VkImageAspectFlags imageAspectMask,
     VkImageLayout imageLayout,
-    float depth,
-    uint32_t stencil,
+    const VkClearDepthStencilValue* pDepthStencil,
     uint32_t rectCount,
     const VkRect3D* pRects)
 {
     PreCmdClearDepthStencilAttachment(cmdBuffer, pRects);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount, pRects);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
 
-    PostCmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, depth, stencil, rectCount);
+    PostCmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount);
 }
 
 bool PreCmdResolveImage(

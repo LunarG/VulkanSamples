@@ -901,8 +901,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImage", "image"),
              Param("VkImageLayout", "imageLayout"),
-             Param("float", "depth"),
-             Param("uint32_t", "stencil"),
+             Param("const VkClearDepthStencilValue*", "pDepthStencil"),
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 
@@ -918,8 +917,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkImageAspectFlags", "imageAspectMask"),
              Param("VkImageLayout", "imageLayout"),
-             Param("float", "depth"),
-             Param("uint32_t", "stencil"),
+             Param("const VkClearDepthStencilValue*", "pDepthStencil"),
              Param("uint32_t", "rectCount"),
              Param("const VkRect3D*", "pRects")]),
 

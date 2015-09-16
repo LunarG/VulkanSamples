@@ -1398,9 +1398,13 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
         vkCmdPipelineBarrier( handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 
+        VkClearDepthStencilValue clear_value = {
+            depth_clear_color,
+            stencil_clear_color
+        };
         vkCmdClearDepthStencilImage(handle(),
                                     depthStencilObj->handle(), VK_IMAGE_LAYOUT_GENERAL,
-                                    depth_clear_color,  stencil_clear_color,
+                                    &clear_value,
                                     1, &dsRange);
 
         // prepare depth buffer for rendering
