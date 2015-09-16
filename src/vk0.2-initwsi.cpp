@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
-    info.surface_description.platform = VK_PLATFORM_WIN32_WSI;
+    info.surface_description.platform = VK_PLATFORM_WIN32_KHR;
     info.surface_description.pPlatformHandle = info.connection;
     info.surface_description.pPlatformWindow = info.window;
 #else  // _WIN32
@@ -249,6 +249,11 @@ int main(int argc, char **argv)
     swap_chain.presentMode = swapchainPresentMode;
     swap_chain.oldSwapchain.handle = 0;
     swap_chain.clipped = true;
+    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swap_chain.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swap_chain.queueFamilyCount = 0;
+    swap_chain.pQueueFamilyIndices = NULL;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
     assert(!res);
@@ -282,7 +287,7 @@ int main(int argc, char **argv)
             0, &info.queue);
     assert(!res);
 
-    for (int i = 0; i < info.swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
@@ -319,7 +324,7 @@ int main(int argc, char **argv)
     /* Clean Up */
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
-    for (int i = 0; i < info.swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyDevice(info.device);

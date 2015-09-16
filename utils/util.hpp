@@ -37,8 +37,8 @@
 #define NOMINMAX              /* Don't let Windows define min() or max() */
 #include <windows.h>
 #include <vulkan.h>
-#include <vk_wsi_swapchain.h>
-#include <vk_wsi_device_swapchain.h>
+#include <vk_ext_khr_swapchain.h>
+#include <vk_ext_khr_device_swapchain.h>
 #include <vk_debug_report_lunarg.h>
 #define APP_NAME_STR_LEN 80
 #else  // _WIN32
