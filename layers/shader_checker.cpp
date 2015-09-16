@@ -521,11 +521,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         const VkShaderModuleCreateInfo *pCreateInfo,
         VkShaderModule *pShaderModule)
 {
-    loader_platform_thread_lock_mutex(&globalLock);
     VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
 
-    shader_module_map[pShaderModule->handle] = new shader_module(device, pCreateInfo);
-    loader_platform_thread_unlock_mutex(&globalLock);
+    if (res == VK_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        shader_module_map[pShaderModule->handle] = new shader_module(device, pCreateInfo);
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
     return res;
 }
 
@@ -534,9 +536,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
         const VkShaderCreateInfo *pCreateInfo,
         VkShader *pShader)
 {
-    loader_platform_thread_lock_mutex(&globalLock);
     VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateShader(device, pCreateInfo, pShader);
 
+    loader_platform_thread_lock_mutex(&globalLock);
     shader_object_map[pShader->handle] = new shader_object(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
@@ -547,9 +549,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
         const VkRenderPassCreateInfo *pCreateInfo,
         VkRenderPass *pRenderPass)
 {
-    loader_platform_thread_lock_mutex(&globalLock);
     VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
 
+    loader_platform_thread_lock_mutex(&globalLock);
     render_pass_map[pRenderPass->handle] = new render_pass(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
