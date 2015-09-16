@@ -1823,6 +1823,8 @@ static void demo_init_vk(struct demo *demo)
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
     const VkDeviceQueueCreateInfo queue = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = NULL,
         .queueFamilyIndex = 0,
         .queueCount = 1,
     };

@@ -66,8 +66,8 @@ static bool dev_create_meta_shaders(struct intel_dev *dev)
 }
 
 static VkResult dev_create_queues(struct intel_dev *dev,
-                                    const VkDeviceQueueCreateInfo *queues,
-                                    uint32_t count)
+                                  const VkDeviceQueueCreateInfo *queues,
+                                  uint32_t count)
 {
     uint32_t i;
 

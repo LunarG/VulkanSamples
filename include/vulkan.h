@@ -216,9 +216,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY = 48,
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 49,
     VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO = 50,
+    VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 51,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -1339,6 +1340,8 @@ typedef struct {
 } VkPhysicalDeviceMemoryProperties;
 
 typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
 } VkDeviceQueueCreateInfo;
