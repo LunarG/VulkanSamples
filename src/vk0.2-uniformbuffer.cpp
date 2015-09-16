@@ -103,8 +103,8 @@ int main(int argc, char **argv)
     info.uniform_data.desc.bufferInfo.range = sizeof(info.MVP);
     /* VULKAN_KEY_END */
 
-    vkFreeMemory(info.device, info.uniform_data.mem);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
+    vkFreeMemory(info.device, info.uniform_data.mem);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
 }

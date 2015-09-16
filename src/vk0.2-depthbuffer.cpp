@@ -156,9 +156,9 @@ int main(int argc, char **argv)
     /* Clean Up */
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
-    vkFreeMemory(info.device, info.depth.mem);
     vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
+    vkFreeMemory(info.device, info.depth.mem);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
     destroy_window(info);

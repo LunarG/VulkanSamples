@@ -626,7 +626,7 @@ void init_wsi(struct sample_info &info)
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
-    info.surface_description.platform = VK_PLATFORM_WIN32_WSI;
+    info.surface_description.platform = VK_PLATFORM_WIN32_KHR;
     info.surface_description.pPlatformHandle = info.connection;
     info.surface_description.pPlatformWindow = info.window;
 #else  // _WIN32
@@ -799,6 +799,11 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.presentMode = swapchainPresentMode;
     swap_chain.oldSwapchain.handle = 0;
     swap_chain.clipped = true;
+    swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swap_chain.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swap_chain.queueFamilyCount = 0;
+    swap_chain.pQueueFamilyIndices = NULL;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
     assert(!res);
@@ -822,7 +827,7 @@ void init_swap_chain(struct sample_info &info)
     info.swapchainImageCount = 2;
 #endif // WORK_AROUND_CODE
 
-    for (int i = 0; i < info.swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         swap_chain_buffer sc_buffer;
 
         VkImageViewCreateInfo color_image_view = {};

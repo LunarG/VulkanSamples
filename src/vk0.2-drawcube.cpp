@@ -163,8 +163,8 @@ int main(int argc, char **argv)
     vkDestroyDynamicStencilState(info.device, info.dyn_stencil);
     vkDestroyPipeline(info.device, info.pipeline);
     vkDestroyPipelineCache(info.device, info.pipelineCache);
-    vkFreeMemory(info.device, info.uniform_data.mem);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
+    vkFreeMemory(info.device, info.uniform_data.mem);
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkFreeDescriptorSets(info.device, info.desc_pool, 1, &info.desc_set);
@@ -175,12 +175,12 @@ int main(int argc, char **argv)
     vkDestroyShaderModule(info.device, info.frag_shader_module);
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
-    vkFreeMemory(info.device, info.depth.mem);
     vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
-    vkFreeMemory(info.device, info.vertex_buffer.mem);
+    vkFreeMemory(info.device, info.depth.mem);
     vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    for (int i = 0; i < info.swapchainImageCount; i++) {
+    vkFreeMemory(info.device, info.vertex_buffer.mem);
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);
     }
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);

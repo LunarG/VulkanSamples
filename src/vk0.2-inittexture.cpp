@@ -292,9 +292,9 @@ int main(int argc, char **argv)
     vkDestroyCommandBuffer(info.device, info.cmd);
     vkDestroyCommandPool(info.device, info.cmd_pool);
     vkDestroySampler(info.device, texObj.sampler);
-    vkFreeMemory(info.device, texObj.mem);
     vkDestroyImageView(info.device, texObj.view);
     vkDestroyImage(info.device, texObj.image);
+    vkFreeMemory(info.device, texObj.mem);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
     destroy_window(info);

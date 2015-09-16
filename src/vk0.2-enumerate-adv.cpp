@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, gpu);
     assert(!res);
 
-    for(int i = 0; i < gpu_count; ++i)
+    for(uint32_t i = 0; i < gpu_count; ++i)
     {
         VkPhysicalDeviceProperties properties;
         res = vkGetPhysicalDeviceProperties(gpu[i], &properties);

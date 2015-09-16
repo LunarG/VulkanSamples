@@ -111,11 +111,11 @@ int main(int argc, char **argv)
     end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    vkFreeMemory(info.device, info.depth.mem);
     vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
+    vkFreeMemory(info.device, info.depth.mem);
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);
-    for (int i = 0; i < info.swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);
     }
     vkDestroyCommandBuffer(info.device, info.cmd);
