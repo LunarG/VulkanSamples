@@ -396,18 +396,35 @@ class Subcommand(object):
                              "        return addr;"
                              "    }\n" % self.layer_name)
 
+            table_declared = False
             if 0 != len(instance_extensions):
-                for ext_name in instance_extensions:
-                    func_body.append("    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);\n"
+                for (ext_enable, ext_list) in instance_extensions:
+                    extra_space = ""
+                    if 0 != len(ext_enable):
+                        if ext_enable == 'msg_callback_get_proc_addr':
+                            func_body.append("    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);\n"
                                      "    addr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);\n"
                                      "    if (addr) {\n"
                                      "        return addr;\n"
-                                     "    }\n"
-                                     "    if (get_dispatch_table(%s_instance_table_map, instance)->GetInstanceProcAddr == NULL) {\n"
-                                     "        return NULL;\n"
-                                     "    }\n"
-                                     "    return get_dispatch_table(%s_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);\n"
-                                     "}\n" % (self.layer_name, self.layer_name))
+                                     "    }\n")
+                        else:
+                            if table_declared == False:
+                                func_body.append("    VkLayerInstanceDispatchTable* pTable = get_dispatch_table(%s_instance_table_map, instance);" % self.layer_name)
+                                table_declared = True
+                            func_body.append('    if (instanceExtMap.size() != 0 && instanceExtMap[pTable].%s)' % ext_enable)
+                            func_body.append('    {')
+                            extra_space = "    "
+                            for ext_name in ext_list:
+                                func_body.append('    %sif (!strcmp("%s", funcName))\n'
+                                                 '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
+                            if 0 != len(ext_enable):
+                               func_body.append('    }\n')
+
+            func_body.append("    if (get_dispatch_table(%s_instance_table_map, instance)->GetInstanceProcAddr == NULL) {\n"
+                             "        return NULL;\n"
+                             "    }\n"
+                             "    return get_dispatch_table(%s_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);\n"
+                             "}\n" % (self.layer_name, self.layer_name))
             return "\n".join(func_body)
         else:
 #
@@ -450,6 +467,7 @@ class Subcommand(object):
                              "        return pDisp->GetDeviceProcAddr(device, funcName);\n"
                              "    }\n"
                              "}\n")
+            func_body.append('%s' % self.lineinfo.get())
             func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
@@ -465,15 +483,22 @@ class Subcommand(object):
                              "    addr = layer_intercept_instance_proc(funcName);\n"
                              "    if (addr)\n"
                              "        return addr;" % self.layer_name)
+            func_body.append("")
+            func_body.append("    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);")
             if 0 != len(instance_extensions):
-                for ext_name in instance_extensions:
-                    func_body.append("    {\n"
-                                     "        PFN_vkVoidFunction fptr;\n"
-                                     "        fptr = %s(funcName);\n"
-                                     "        if (fptr) return fptr;\n"
-                                     "    }\n" % ext_name)
-            func_body.append("    VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);\n"
-                             "    if (pTable->GetInstanceProcAddr == NULL)\n"
+                extra_space = ""
+                for (ext_enable, ext_list) in instance_extensions:
+                    if 0 != len(ext_enable):
+                        func_body.append('    if (instanceExtMap.size() != 0 && instanceExtMap[pTable].%s)' % ext_enable)
+                        func_body.append('    {')
+                        extra_space = "    "
+                    for ext_name in ext_list:
+                        func_body.append('    %sif (!strcmp("%s", funcName))\n'
+                                         '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
+                    if 0 != len(ext_enable):
+                        func_body.append('    }\n')
+
+            func_body.append("    if (pTable->GetInstanceProcAddr == NULL)\n"
                              "        return NULL;\n"
                              "    return pTable->GetInstanceProcAddr(instance, funcName);\n"
                              "}\n")
@@ -587,7 +612,11 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('struct devExts {')
         gen_header.append('    bool wsi_enabled;')
         gen_header.append('};')
+        gen_header.append('struct instExts {')
+        gen_header.append('    bool wsi_enabled;')
+        gen_header.append('};')
         gen_header.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
+        gen_header.append('static std::unordered_map<void *, struct instExts>    instanceExtMap;')
         gen_header.append('')
         gen_header.append('static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)')
         gen_header.append('{')
@@ -606,6 +635,19 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
         gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)')
         gen_header.append('            deviceExtMap[pDisp].wsi_enabled = true;')
+        gen_header.append('')
+        gen_header.append('    }')
+        gen_header.append('}\n')
+        gen_header.append('static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreateInfo, VkInstance instance)')
+        gen_header.append('{')
+        gen_header.append('    uint32_t i;')
+        gen_header.append('    VkLayerInstanceDispatchTable *pDisp  = instance_dispatch_table(instance);')
+        gen_header.append('    PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;')
+        gen_header.append('    pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");')
+        gen_header.append('    instanceExtMap[pDisp].wsi_enabled = false;')
+        gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
+        gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        gen_header.append('            instanceExtMap[pDisp].wsi_enabled = true;')
         gen_header.append('')
         gen_header.append('    }')
         gen_header.append('}')
@@ -659,12 +701,23 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(instance);\n'
-                         '    instance_dispatch_table(instance)->DestroyInstance(instance);\n'
+                         '    VkLayerInstanceDispatchTable *pDisp  =  instance_dispatch_table(instance);\n'
+                         '    pDisp->DestroyInstance(instance);\n'
+                         '    instanceExtMap.erase(pDisp);\n'
                          '    destroy_instance_dispatch_table(key);\n'
                          '}\n' % (qual, decl))
-        else:
+        elif proto.name == "CreateInstance":
             funcs.append('%s' % self.lineinfo.get())
             # CreateInstance needs to use the second parm instead of the first to set the correct dispatch table
+            funcs.append('%s%s\n'
+                         '{\n'
+                         '    %sinstance_dispatch_table(*pInstance)->%s;\n'
+                         '    if (result == VK_SUCCESS) {\n'
+                         '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
+                         '    }\n'
+                         '}\n' % (qual, decl, ret_val, proto.c_call()))
+        else:
+            funcs.append('%s' % self.lineinfo.get())
             dispatch_param = proto.params[0].name
             # Must use 'instance' table for these APIs, 'device' table otherwise
             table_type = ""
@@ -672,8 +725,6 @@ class GenericLayerSubcommand(Subcommand):
                 table_type = "instance"
             else:
                 table_type = "device"
-            if 'CreateInstance' in proto.name:
-               dispatch_param = '*' + proto.params[1].name
             funcs.append('%s%s\n'
                      '{\n'
                      '    %s%s_dispatch_table(%s)->%s;\n'
@@ -683,6 +734,8 @@ class GenericLayerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "Generic"
+        instance_extensions=[('wsi_enabled',
+                     ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
         extensions=[('wsi_enabled', 
                      ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
                       'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
@@ -692,7 +745,7 @@ class GenericLayerSubcommand(Subcommand):
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
                 self._gen_destroy_msg_callback(),
-                self._generate_layer_gpa_function(extensions)]
+                self._generate_layer_gpa_function(extensions, instance_extensions)]
 
         return "\n\n".join(body)
 
@@ -778,7 +831,12 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    bool wsi_enabled;')
         header_txt.append('};')
         header_txt.append('')
+        header_txt.append('struct instExts {')
+        header_txt.append('    bool wsi_enabled;')
+        header_txt.append('};')
+        header_txt.append('')
         header_txt.append('static std::unordered_map<void *, struct devExts>     deviceExtMap;')
+        header_txt.append('static std::unordered_map<void *, struct instExts>     instanceExtMap;')
         header_txt.append('')
         header_txt.append('static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)')
         header_txt.append('{')
@@ -799,7 +857,20 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('            deviceExtMap[pDisp].wsi_enabled = true;')
         header_txt.append('')
         header_txt.append('    }')
-        header_txt.append('}')
+        header_txt.append('}\n')
+        header_txt.append('static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreateInfo, VkInstance instance)')
+        header_txt.append('{')
+        header_txt.append('    uint32_t i;')
+        header_txt.append('    VkLayerInstanceDispatchTable *pDisp  = instance_dispatch_table(instance);')
+        header_txt.append('    PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;')
+        header_txt.append('    pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");')
+        header_txt.append('    instanceExtMap[pDisp].wsi_enabled = false;')
+        header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
+        header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)')
+        header_txt.append('            instanceExtMap[pDisp].wsi_enabled = true;')
+        header_txt.append('')
+        header_txt.append('    }')
+        header_txt.append('}\n')
         header_txt.append('')
         header_txt.append('void interpret_memBarriers(const void* const* ppMemBarriers, uint32_t memBarrierCount)')
         header_txt.append('{')
@@ -1053,13 +1124,22 @@ class APIDumpSubcommand(Subcommand):
            table_type = 'instance'
         else:
            table_type = 'device'
+        dispatch_param = proto.params[0].name
 
         if proto.name == "CreateInstance":
             dispatch_param = '*' + proto.params[1].name
-        else:
-            dispatch_param = proto.params[0].name
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    using namespace StreamControl;\n'
+                     '    %sinstance_dispatch_table(*pInstance)->%s;\n'
+                     '    if (result == VK_SUCCESS) {\n'
+                     '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
+                     '    }\n'
+                     '    %s%s%s\n'
+                     '%s'
+                     '}\n' % (qual, decl, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
 
-        if proto.name == "CreateDevice":
+        elif proto.name == "CreateDevice":
             funcs.append('%s\n' % self.lineinfo.get())
             funcs.append('%s%s\n'
                      '{\n'
@@ -1075,7 +1155,7 @@ class APIDumpSubcommand(Subcommand):
                  '{\n'
                  '    using namespace StreamControl;\n'
                  '    dispatch_key key = get_dispatch_key(device);\n'
-                         '    VkLayerDispatchTable *pDisp  = %s_dispatch_table(%s);\n'
+                 '    VkLayerDispatchTable *pDisp  = %s_dispatch_table(%s);\n'
                  '    %spDisp->%s;\n'
                  '    deviceExtMap.erase(pDisp);\n'
                  '    destroy_device_dispatch_table(key);\n'
@@ -1087,11 +1167,13 @@ class APIDumpSubcommand(Subcommand):
                  '{\n'
                  '    using namespace StreamControl;\n'
                  '    dispatch_key key = get_dispatch_key(instance);\n'
-                 '    %s%s_dispatch_table(%s)->%s;\n'
+                 '    VkLayerInstanceDispatchTable *pDisp  = %s_dispatch_table(%s);\n'
+                 '    %spDisp->%s;\n'
+                 '    instanceExtMap.erase(pDisp);\n'
                  '    destroy_instance_dispatch_table(key);\n'
                  '    %s%s%s\n'
                  '%s'
-                 '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
+                 '}' % (qual, decl, table_type, dispatch_param, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
             funcs.append('%s%s\n'
                      '{\n'
@@ -1104,6 +1186,8 @@ class APIDumpSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "APIDump"
+        instance_extensions=[('wsi_enabled',
+                     ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
         extensions=[('wsi_enabled',
                      ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
                       'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
@@ -1111,7 +1195,7 @@ class APIDumpSubcommand(Subcommand):
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
-                self._generate_layer_gpa_function(extensions)]
+                self._generate_layer_gpa_function(extensions, instance_extensions)]
         return "\n\n".join(body)
 
 class ObjectTrackerSubcommand(Subcommand):
@@ -1390,6 +1474,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    layer_data_map.erase(pInstanceTable);')
         gedi_txt.append('')
         gedi_txt.append('    ObjectTracker_instance_table_map.erase(key);')
+        gedi_txt.append('    instanceExtMap.erase(pInstanceTable);')
         gedi_txt.append('    assert(ObjectTracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedi_txt.append('')
         gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
@@ -1623,6 +1708,9 @@ class ObjectTrackerSubcommand(Subcommand):
                       'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
+        instance_extensions=[('msg_callback_get_proc_addr', []),
+                              ('wsi_enabled',
+                              ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),
@@ -1631,7 +1719,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
-                                                  instance_extensions=['msg_callback_get_proc_addr'])]
+                                                  instance_extensions)]
         return "\n\n".join(body)
 
 class ThreadingSubcommand(Subcommand):
@@ -1915,7 +2003,7 @@ class ThreadingSubcommand(Subcommand):
         body = [self._generate_new_layer_initialization(True, lockname='threading', condname='threading'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions=[],
-                                                  instance_extensions=['msg_callback_get_proc_addr']),
+                                                  instance_extensions=[('msg_callback_get_proc_addr', [])]),
                 self._gen_create_msg_callback(),
                 self._gen_destroy_msg_callback()]
         return "\n\n".join(body)

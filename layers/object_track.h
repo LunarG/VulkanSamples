@@ -73,6 +73,11 @@ typedef struct _layer_data {
     bool objtrack_extensions_enabled;
 } layer_data;
 
+struct instExts {
+    bool wsi_enabled;
+};
+
+static std::unordered_map<void *, struct instExts> instanceExtMap;
 static std::unordered_map<void*, layer_data *> layer_data_map;
 static device_table_map                        ObjectTracker_device_table_map;
 static instance_table_map                      ObjectTracker_instance_table_map;
@@ -195,6 +200,20 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], "OBJTRACK_EXTENSIONS") == 0)
             my_device_data->objtrack_extensions_enabled = true;
+    }
+}
+
+static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreateInfo, VkInstance instance)
+{
+    uint32_t i;
+    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(ObjectTracker_instance_table_map, instance);
+    PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
+    pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    instanceExtMap[pDisp].wsi_enabled = false;
+    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].wsi_enabled = true;
+
     }
 }
 
@@ -612,6 +631,7 @@ explicit_CreateInstance(
                                    *pInstance,
                                    pCreateInfo->extensionCount,
                                    pCreateInfo->ppEnabledExtensionNames);
+        createInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
         initObjectTracker(my_data);
         create_obj(*pInstance, *pInstance, VK_OBJECT_TYPE_INSTANCE);
