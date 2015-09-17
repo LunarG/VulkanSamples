@@ -71,15 +71,10 @@ static VkResult dev_create_queues(struct intel_dev *dev,
 {
     uint32_t i;
 
-    /* TODOVV: make sure test is covered by validation layer */
-//    if (!count)
-//        return VK_ERROR_INVALID_POINTER;
-
     for (i = 0; i < count; i++) {
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
 
-        /* TODOVV: make sure test is covered by validation layer */
         assert((q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
             q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
         ret = intel_queue_create(dev, q->queueFamilyIndex,
@@ -105,9 +100,9 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
     uint32_t i;
     VkResult ret;
 
-    /* TODOVV: Make sure test is covered by validation layer */
-//    if (gpu->winsys)
-//        return VK_ERROR_DEVICE_ALREADY_CREATED;
+    // ICD limited to a single virtual device
+    if (gpu->winsys)
+        return VK_ERROR_INITIALIZATION_FAILED;
 
     dev = (struct intel_dev *) intel_base_create(&gpu->handle,
             sizeof(*dev), false,
@@ -231,22 +226,13 @@ ICD_EXPORT void VKAPI vkDestroyDevice(
 
 ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
     VkDevice                                  device,
-    uint32_t                                  queueNodeIndex,
+    uint32_t                                  queueFamilyIndex,
     uint32_t                                  queueIndex,
     VkQueue*                                  pQueue)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    /* TODOVV: Move to validation layer */
-//    if (queueNodeIndex >= INTEL_GPU_ENGINE_COUNT) {
-//        return VK_ERROR_UNAVAILABLE;
-//    }
-
-    /* TODOVV: Move to validation layer */
-//    if (queueIndex > 0)
-//        return VK_ERROR_UNAVAILABLE;
-
-    *pQueue = (VkQueue) dev->queues[queueNodeIndex];
+    *pQueue = (VkQueue) dev->queues[queueFamilyIndex];
     return VK_SUCCESS;
 }
 
