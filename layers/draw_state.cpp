@@ -1740,7 +1740,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     //  2. Create state is then validated (which uses flags setup during shadowing)
     //  3. If everything looks good, we'll then create the pipeline and add NODE to pipelineMap
     VkBool32 skipCall = VK_FALSE;
-    PIPELINE_NODE* pPipeNode[count] = {};
+    // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
+    vector<PIPELINE_NODE*> pPipeNode(count);
     uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
     for (i=0; i<count; i++) {
