@@ -673,6 +673,7 @@ class GenericLayerSubcommand(Subcommand):
                          '    if (result == VK_SUCCESS) {\n'
                          '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
                          '    }\n'
+                         '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call()))
         else:
             funcs.append('%s' % self.lineinfo.get())
