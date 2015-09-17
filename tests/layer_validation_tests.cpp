@@ -13,6 +13,7 @@
 #define DRAW_STATE_TESTS 1
 #define THREADING_TESTS 1
 #define SHADER_CHECKER_TESTS 1
+#define DEVICE_LIMITS_TESTS 1
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
@@ -182,12 +183,14 @@ protected:
         instance_layer_names.push_back("MemTracker");
         instance_layer_names.push_back("DrawState");
         instance_layer_names.push_back("ShaderChecker");
+        instance_layer_names.push_back("DeviceLimits");
 
         device_layer_names.push_back("Threading");
         device_layer_names.push_back("ObjectTracker");
         device_layer_names.push_back("MemTracker");
         device_layer_names.push_back("DrawState");
         device_layer_names.push_back("ShaderChecker");
+        device_layer_names.push_back("DeviceLimits");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -770,8 +773,9 @@ TEST_F(VkLayerTest, InvalidUsageBits)
         FAIL() << "Error received was not 'Invalid usage flag for image...'";
     }
 }
-#endif
-#endif
+#endif // 0
+#endif // MEM_TRACKER_TESTS
+
 #if OBJ_TRACKER_TESTS
 TEST_F(VkLayerTest, LineWidthStateNotBound)
 {
@@ -1083,7 +1087,8 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         FAIL() << "Error received from BindMemoryToDestroyedObject was not 'Invalid VkImage Object 0x<handle>' but rather '" << msgString.c_str() << "'";
     }
 }
-#endif
+#endif // OBJ_TRACKER_TESTS
+
 #if DRAW_STATE_TESTS
 TEST_F(VkLayerTest, CmdBufferTwoSubmits)
 {
@@ -1435,7 +1440,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    
+
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.count = 1;
@@ -1445,7 +1450,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.count = 1;
         ds_pool_ci.pTypeCount = &ds_type_count;
- 
+
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
     ASSERT_VK_SUCCESS(err);
@@ -1556,7 +1561,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
         rp_begin.pNext = NULL;
         rp_begin.renderPass = renderPass();
         rp_begin.framebuffer = framebuffer();
- 
+
     vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -1922,7 +1927,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
- 
+
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.count = 1;
@@ -2115,7 +2120,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.count = 1;
         ds_layout_ci.pBinding = &dsl_binding;
-  
+
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -2141,7 +2146,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
-    
+
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
@@ -2256,7 +2261,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
     }
 }
-#endif
+#endif // DRAW_STATE_TESTS
+
 #if THREADING_TESTS
 #if GTEST_IS_THREADSAFE
 struct thread_data_struct {
@@ -2324,8 +2330,9 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     }
 
 }
-#endif
-#endif
+#endif // GTEST_IS_THREADSAFE
+#endif // THREADING_TESTS
+
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
@@ -2923,7 +2930,11 @@ TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
         FAIL() << "Incorrect warning: " << msgString;
     }
 }
-#endif
+#endif // SHADER_CHECKER_TESTS
+
+#if DEVICE_LIMITS_TESTS
+// TBD
+#endif // DEVICE_LIMITS_TESTS
 
 int main(int argc, char **argv) {
     int result;
