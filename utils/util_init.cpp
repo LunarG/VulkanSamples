@@ -492,6 +492,14 @@ void init_window(struct sample_info &info)
     const uint32_t coords[] = {100,  100};
     xcb_configure_window(info.connection, info.window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
+    xcb_flush(info.connection);
+
+    xcb_generic_event_t *e;
+    while ((e = xcb_wait_for_event(info.connection))) {
+       if  ((e->response_type & ~0x80) == XCB_EXPOSE)
+           break;
+    }
+
 }
 
 void destroy_window(struct sample_info &info)
