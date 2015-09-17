@@ -466,12 +466,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
        return VK_SUCCESS;
    }
 
-   /* TODOVV: Move test to validation layer */
-   if (*pCount > INTEL_GPU_ENGINE_COUNT) {
-//       return VK_ERROR_INVALID_VALUE;
-       return VK_ERROR_VALIDATION_FAILED;
-   }
-
    for (engine = 0; engine < *pCount; engine++) {
        intel_gpu_get_queue_props(gpu, engine, pProperties);
        pProperties++;
