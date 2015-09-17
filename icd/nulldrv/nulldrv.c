@@ -228,22 +228,6 @@ static struct nulldrv_gpu *nulldrv_gpu(VkPhysicalDevice gpu)
     return (struct nulldrv_gpu *) gpu;
 }
 
-static VkResult nulldrv_rt_view_create(struct nulldrv_dev *dev,
-                                const VkImageViewCreateInfo *info,
-                                struct nulldrv_rt_view **view_ret)
-{
-    struct nulldrv_rt_view *view;
-
-    view = (struct nulldrv_rt_view *) nulldrv_base_create(dev, sizeof(*view),
-            VK_OBJECT_TYPE_ATTACHMENT_VIEW);
-    if (!view)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *view_ret = view;
-
-    return VK_SUCCESS;
-}
-
 static VkResult nulldrv_fence_create(struct nulldrv_dev *dev,
                               const VkFenceCreateInfo *info,
                               struct nulldrv_fence **fence_ret)
