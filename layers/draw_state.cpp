@@ -2381,15 +2381,29 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
             if (!pCB->activeRenderPass) {
                 skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrect call to vkCmdBindIndexBuffer() without an active RenderPass.");
-            } else {
-                // TODO : Can be more exact in tracking/validating details for Idx buffer, for now just make sure *something* was bound
-                pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
-                updateCBTracking(cmdBuffer);
-                skipCall |= addCmd(pCB, CMD_BINDINDEXBUFFER);
+            }
+            VkDeviceSize offset_align = 0;
+            switch (indexType) {
+                case VK_INDEX_TYPE_UINT16:
+                    offset_align = 2;
+                    break;
+                case VK_INDEX_TYPE_UINT32:
+                    offset_align = 4;
+                    break;
+                default:
+                    // ParamChecker should catch bad enum, we'll also throw alignment error below if offset_align stays 0
+                    break;
+            }
+            if (!offset_align || (offset % offset_align)) {
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR, "DS",
+                    "vkCmdBindIndexBuffer() offset (%#" PRIxLEAST64 ") does not fall on alignment (%s) boundary.", offset, string_VkIndexType(indexType));
             }
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
+        pCB->status |= CBSTATUS_INDEX_BUFFER_BOUND;
+        updateCBTracking(cmdBuffer);
+        skipCall |= addCmd(pCB, CMD_BINDINDEXBUFFER);
     }
     if (VK_FALSE == skipCall)
         get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);

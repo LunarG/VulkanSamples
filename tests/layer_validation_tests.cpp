@@ -1784,6 +1784,41 @@ TEST_F(VkLayerTest, VtxBufferNoRenderPass)
     }
 }
 
+TEST_F(VkLayerTest, IdxBufferAlignmentError)
+{
+    // Bind a BeginRenderPass within an active RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buffCI = {};
+        buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffCI.size = 1024;
+        buffCI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        buffCI.queueFamilyCount = 1;
+        buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer ib;
+    err = vkCreateBuffer(m_device->device(), &buffCI, &ib);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    ASSERT_VK_SUCCESS(err);
+    //vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // Should error before calling to driver so don't care about actual data
+    vkCmdBindIndexBuffer(m_cmdBuffer->GetBufferHandle(), ib, 7, VK_INDEX_TYPE_UINT16);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
+    if (!strstr(msgString.c_str(),"vkCmdBindIndexBuffer() offset (0x7) does not fall on ")) {
+        FAIL() << "Error received was not 'vkCmdBindIndexBuffer() offset (0x7) does not fall on ...' but instead '" << msgString.c_str() << "'";
+    }
+}
+
 TEST_F(VkLayerTest, DSTypeMismatch)
 {
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type

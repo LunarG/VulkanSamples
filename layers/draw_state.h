@@ -40,6 +40,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
     DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
+    DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed

@@ -263,16 +263,8 @@ static void gen6_3DSTATE_INDEX_BUFFER(struct intel_cmd *cmd,
         offset_align = 4;
         break;
     default:
-        /* TODOVV: Make sure covered in validation test */
-//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
-        return;
+        assert(!"unsupported index type");
         break;
-    }
-
-    if (offset % offset_align) {
-        /* TODOVV: Make sure covered in validation test */
-//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
-        return;
     }
 
     /* aligned and inclusive */
