@@ -663,7 +663,6 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
 
     TEST_DESCRIPTION("VK-style shaders, but force test framework to compile shader to SPV and pass SPV to driver.");
 
-    ScopedUseGlsl useGlsl(false);
     VKTriangleTest(vertShaderText, fragShaderText, true);
 }
 
@@ -689,8 +688,6 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
        "}\n";
 
     TEST_DESCRIPTION("Same shader as GreenTriangle, but compiles shader to SPV and gives SPV to driver.");
-
-    ScopedUseGlsl useGlsl(false);
 
     VKTriangleTest(vertShaderText, fragShaderText, false);
 }

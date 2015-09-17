@@ -128,21 +128,6 @@ private:
     string                                  m_testName;
 };
 
-class ScopedUseGlsl
-{
-    bool saved_value;
-public:
-    ScopedUseGlsl(bool value)
-        : saved_value(VkTestFramework::m_use_glsl)
-    {
-        VkTestFramework::m_use_glsl = value;
-    }
-
-    ~ScopedUseGlsl() {
-        VkTestFramework::m_use_glsl = saved_value;
-    }
-};
-
 class TestEnvironment : public ::testing::Environment
 {
  public:

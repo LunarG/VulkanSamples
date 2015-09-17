@@ -2465,7 +2465,6 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2516,7 +2515,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2566,7 +2564,6 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2618,7 +2615,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     VkVertexInputBindingDescription input_binding;
     memset(&input_binding, 0, sizeof(input_binding));
@@ -2677,7 +2673,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2727,7 +2722,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     VkVertexInputBindingDescription input_binding;
     memset(&input_binding, 0, sizeof(input_binding));
@@ -2787,7 +2781,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    ScopedUseGlsl useGlsl(false);
 
     /* Two binding descriptions for binding 0 */
     VkVertexInputBindingDescription input_bindings[2];
@@ -2850,7 +2843,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2899,7 +2891,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -2953,7 +2944,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
@@ -3004,7 +2994,6 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
     VkFlags msgFlags;
     std::string msgString;
     ASSERT_NO_FATAL_FAILURE(InitState());
-    ScopedUseGlsl useGlsl(false);
 
     char const *vsSource =
         "#version 140\n"
