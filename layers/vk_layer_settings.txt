@@ -11,10 +11,11 @@
 #  be taken when a layer wants to report information. Possible settings values
 #  are defined in the vk_layer.h header file. These settings are:
 #  VK_DBG_LAYER_ACTION_IGNORE - Take no action
-#  VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
-#     have been registered via the vkDbgCreateMsgCallback() extension.
 #  VK_DBG_LAYER_ACTION_LOG_MSG - Log a txt message to stdout or to a log file
 #     specified via the <LayerName>LogFilename setting (see below)
+#  VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
+#     have been registered via the vkDbgCreateMsgCallback() extension. Since
+#     app must register callback, this is a NOOP for the settings file.
 #  VK_DBG_LAYER_ACTION_BREAK - Trigger a breakpoint.
 #
 # <LayerName>ReportFlags : This is a comma-delineated list of options telling
@@ -33,42 +34,42 @@
 # Example of actual settings for each layer
 #
 # DeviceLimits Settings
-DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DeviceLimitsReportFlags = error,warn,perf
 DeviceLimitsLogFilename = stdout
 
 # DrawState Settings
-DrawStateDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+DrawStateDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DrawStateReportFlags = error,warn,perf
 DrawStateLogFilename = stdout
 
 # Image Settings
-ImageDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ImageDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ImageReportFlags = error,warn,perf
 ImageLogFilename = stdout
 
 # MemTracker Settings
-MemTrackerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+MemTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 MemTrackerReportFlags = error,warn,perf
 MemTrackerLogFilename = stdout
 
 # ObjectTracker Settings
-ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ObjectTrackerReportFlags = error,warn,perf
 ObjectTrackerLogFilename = stdout
 
 # ParamChecker Settings
-ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ParamCheckerReportFlags = error,warn,perf
 ParamCheckerLogFilename = stdout
 
 # ShaderChecker Settings
-ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ShaderCheckerReportFlags = error,warn,perf
 ShaderCheckerLogFilename = stdout
 
 # Threading Settings
-ThreadingDebugAction = VK_DBG_LAYER_ACTION_CALLBACK
+ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ThreadingReportFlags = error,warn,perf
 ThreadingLogFilename = stdout
 
