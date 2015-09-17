@@ -133,6 +133,27 @@ int main(int argc, char **argv)
     vkCmdDraw(info.cmd, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(info.cmd);
 
+    VkSemaphore presentCompleteSemaphore;
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = NULL,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+
+    res = vkCreateSemaphore(info.device,
+                            &presentCompleteSemaphoreCreateInfo,
+                            &presentCompleteSemaphore);
+    assert(!res);
+
+    // Get the index of the next available swapchain image:
+    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+                                      UINT64_MAX,
+                                      presentCompleteSemaphore,
+                                      &info.current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(!res);
+
     end_and_submit_command_buffer(info);
 
     /* Now present the image in the window */
@@ -155,6 +176,7 @@ int main(int argc, char **argv)
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
+    vkDestroySemaphore(info.device, presentCompleteSemaphore);
     vkDestroyDynamicViewportState(info.device, info.dyn_viewport);
     vkDestroyDynamicLineWidthState(info.device, info.dyn_line_width);
     vkDestroyDynamicDepthBiasState(info.device, info.dyn_depth_bias);
