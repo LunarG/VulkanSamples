@@ -3288,8 +3288,6 @@ TEST_F(VkRenderTest, TextureGather)
         return;
     }
 
-    ScopedUseGlsl useGlsl(true);
-
     static const char *vertShaderText =
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
