@@ -731,7 +731,6 @@ ICD_EXPORT void VKAPI vkDestroyBuffer(
     VkBuffer                                  buffer)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
@@ -748,7 +747,6 @@ ICD_EXPORT void VKAPI vkDestroyCommandPool(
     VkCmdPool                                   cmdPool)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandPool(
@@ -777,7 +775,6 @@ ICD_EXPORT void VKAPI vkDestroyCommandBuffer(
     VkCmdBuffer                               cmdBuffer)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
@@ -1362,7 +1359,6 @@ ICD_EXPORT void VKAPI vkDestroyDevice(
     VkDevice                                  device)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
@@ -1398,7 +1394,6 @@ ICD_EXPORT void VKAPI vkDestroyEvent(
     VkEvent                                   event)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetEventStatus(
@@ -1442,7 +1437,6 @@ ICD_EXPORT void VKAPI vkDestroyFence(
     VkFence                                  fence)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
@@ -1611,7 +1605,6 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     VkImage                                   image)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
@@ -1646,7 +1639,6 @@ ICD_EXPORT void VKAPI vkFreeMemory(
     VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkMapMemory(
@@ -1671,7 +1663,6 @@ ICD_EXPORT void VKAPI vkUnmapMemory(
     VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
@@ -1723,7 +1714,6 @@ ICD_EXPORT void VKAPI vkDestroyInstance(
     VkInstance                                pInstance)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
@@ -1862,7 +1852,6 @@ ICD_EXPORT void VKAPI vkDestroyPipeline(
     VkPipeline                                pipeline)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 void VKAPI vkDestroyPipelineCache(
@@ -1870,7 +1859,6 @@ void VKAPI vkDestroyPipelineCache(
     VkPipelineCache                             pipelineCache)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
@@ -1944,7 +1932,6 @@ ICD_EXPORT void VKAPI vkDestroyQueryPool(
     VkQueryPool                               queryPoool)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
@@ -1991,7 +1978,6 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
     VkSemaphore                               semaphore)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
@@ -2027,7 +2013,6 @@ ICD_EXPORT void VKAPI vkDestroySampler(
     VkSampler                                 sampler)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
@@ -2046,7 +2031,6 @@ ICD_EXPORT void VKAPI vkDestroyShaderModule(
 {
     // TODO: Fill in with real data
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateShader(
@@ -2065,7 +2049,6 @@ ICD_EXPORT void VKAPI vkDestroyShader(
     VkShader                                  shader)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
@@ -2085,7 +2068,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicViewportState(
     VkDynamicViewportState                    dynamicViewportState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
@@ -2117,7 +2099,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicLineWidthState(
     VkDynamicLineWidthState                   dynamicLineWidthState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(
@@ -2125,7 +2106,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(
     VkDynamicDepthBiasState                   dynamicDepthBiasState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
@@ -2145,7 +2125,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicBlendState(
     VkDynamicBlendState                       dynamicBlendState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
@@ -2165,7 +2144,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(
     VkDynamicDepthBoundsState                 dynamicDepthBoundsState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
@@ -2186,7 +2164,6 @@ ICD_EXPORT void VKAPI vkDestroyDynamicStencilState(
     VkDynamicStencilState                     dynamicStencilState)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
@@ -2206,7 +2183,6 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
     VkBufferView                              bufferView)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateImageView(
@@ -2226,7 +2202,6 @@ ICD_EXPORT void VKAPI vkDestroyImageView(
     VkImageView                               imageView)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
@@ -2246,7 +2221,6 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     VkDescriptorSetLayout                     descriptorSetLayout)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI  vkCreatePipelineLayout(
@@ -2267,7 +2241,6 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     VkPipelineLayout                          pipelineLayout)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
@@ -2287,7 +2260,6 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     VkDescriptorPool                          descriptorPool)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
@@ -2343,7 +2315,6 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
@@ -2362,7 +2333,6 @@ ICD_EXPORT void VKAPI vkDestroyFramebuffer(
     VkFramebuffer                             framebuffer)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
@@ -2381,7 +2351,6 @@ ICD_EXPORT void VKAPI vkDestroyRenderPass(
     VkRenderPass                              renderPass)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT void VKAPI vkCmdPushConstants(
