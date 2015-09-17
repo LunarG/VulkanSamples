@@ -31,14 +31,10 @@
 #include "intel.h"
 #include "obj.h"
 
-/* Should we add intel_state back, as the base class for dynamic states? */
-
 struct intel_dynamic_viewport {
-    struct intel_obj obj;
-
     uint32_t viewport_count;
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
-    uint32_t *cmd;
+    uint32_t cmd[INTEL_MAX_VIEWPORTS * (16 /* viewport */ + 2 /* cc */ + 2 /* scissor */)];
     uint32_t cmd_len;
     uint32_t cmd_clip_pos;
     uint32_t cmd_cc_pos;
@@ -46,118 +42,33 @@ struct intel_dynamic_viewport {
 };
 
 struct intel_dynamic_line_width {
-    struct intel_obj obj;
-    VkDynamicLineWidthStateCreateInfo line_width_info;
+    float line_width;
 };
 
 struct intel_dynamic_depth_bias {
-    struct intel_obj obj;
-    VkDynamicDepthBiasStateCreateInfo depth_bias_info;
+    float depth_bias;
+    float depth_bias_clamp;
+    float slope_scaled_depth_bias;
 };
 
 struct intel_dynamic_blend {
-    struct intel_obj obj;
-    VkDynamicBlendStateCreateInfo blend_info;
+    float blend_const[4];
 };
 
 struct intel_dynamic_depth_bounds {
-    struct intel_obj obj;
-    VkDynamicDepthBoundsStateCreateInfo depth_bounds_info;
+    float min_depth_bounds;
+    float max_depth_bounds;
+};
+
+struct intel_dynamic_stencil_face {
+    uint32_t stencil_compare_mask;
+    uint32_t stencil_write_mask;
+    uint32_t stencil_reference;
 };
 
 struct intel_dynamic_stencil {
-    struct intel_obj obj;
-    VkDynamicStencilStateCreateInfo stencil_info_front;
+    struct intel_dynamic_stencil_face front;
     /* TODO: enable back facing stencil state */
-    /*VkDynamicStencilStateCreateInfo stencil_info_back;*/
+    struct intel_dynamic_stencil_face back;
 };
-
-static inline struct intel_dynamic_viewport *intel_dynamic_viewport(VkDynamicViewportState state)
-{
-    return *(struct intel_dynamic_viewport **) &state;
-}
-
-static inline struct intel_dynamic_viewport *intel_viewport_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_viewport *) obj;
-}
-
-static inline struct intel_dynamic_line_width *intel_dynamic_line_width(VkDynamicLineWidthState state)
-{
-    return *(struct intel_dynamic_line_width **) &state;
-}
-
-static inline struct intel_dynamic_line_width *intel_line_width_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_line_width *) obj;
-}
-
-static inline struct intel_dynamic_depth_bias *intel_dynamic_depth_bias(VkDynamicDepthBiasState state)
-{
-    return *(struct intel_dynamic_depth_bias **) &state;
-}
-
-static inline struct intel_dynamic_depth_bias *intel_depth_bias_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_depth_bias *) obj;
-}
-
-static inline struct intel_dynamic_blend *intel_dynamic_blend(VkDynamicBlendState state)
-{
-    return *(struct intel_dynamic_blend **) &state;
-}
-
-static inline struct intel_dynamic_blend *intel_blend_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_blend *) obj;
-}
-
-static inline struct intel_dynamic_depth_bounds *intel_dynamic_depth_bounds(VkDynamicDepthBoundsState state)
-{
-    return *(struct intel_dynamic_depth_bounds **) &state;
-}
-
-static inline struct intel_dynamic_depth_bounds *intel_depth_bounds_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_depth_bounds *) obj;
-}
-
-static inline struct intel_dynamic_stencil *intel_dynamic_stencil(VkDynamicStencilState state)
-{
-    return *(struct intel_dynamic_stencil **) &state;
-}
-
-static inline struct intel_dynamic_stencil *intel_stencil_state_from_obj(struct intel_obj *obj)
-{
-    return (struct intel_dynamic_stencil *) obj;
-}
-
-VkResult intel_viewport_state_create(struct intel_dev *dev,
-                                       const VkDynamicViewportStateCreateInfo *info,
-                                       struct intel_dynamic_viewport **state_ret);
-void intel_viewport_state_destroy(struct intel_dynamic_viewport *state);
-
-VkResult intel_line_width_state_create(struct intel_dev *dev,
-                                        const VkDynamicLineWidthStateCreateInfo *info,
-                                        struct intel_dynamic_line_width **state_ret);
-void intel_line_width_state_destroy(struct intel_dynamic_line_width *state);
-VkResult intel_depth_bias_state_create(struct intel_dev *dev,
-                                              const VkDynamicDepthBiasStateCreateInfo *info,
-                                              struct intel_dynamic_depth_bias **state_ret);
-void intel_depth_bias_state_destroy(struct intel_dynamic_depth_bias *state);
-VkResult intel_blend_state_create(struct intel_dev *dev,
-                                    const VkDynamicBlendStateCreateInfo *info,
-                                    struct intel_dynamic_blend **state_ret);
-void intel_blend_state_destroy(struct intel_dynamic_blend *state);
-
-VkResult intel_depth_bounds_state_create(struct intel_dev *dev,
-                                 const VkDynamicDepthBoundsStateCreateInfo *info,
-                                 struct intel_dynamic_depth_bounds **state_ret);
-void intel_depth_bounds_state_destroy(struct intel_dynamic_depth_bounds *state);
-
-VkResult intel_stencil_state_create(struct intel_dev *dev,
-                                 const VkDynamicStencilStateCreateInfo *info_front,
-                                 const VkDynamicStencilStateCreateInfo *info_back,
-                                 struct intel_dynamic_stencil **state_ret);
-void intel_stencil_state_destroy(struct intel_dynamic_stencil *state);
 #endif /* STATE_H */

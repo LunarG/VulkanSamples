@@ -97,30 +97,6 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     case VK_OBJECT_TYPE_DESCRIPTOR_SET:
         /* no create info */
         break;
-    case VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicViewportStateCreateInfo);
-        break;
-    case VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicLineWidthStateCreateInfo);
-        break;
-    case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicDepthBiasStateCreateInfo);
-        break;
-    case VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicBlendStateCreateInfo);
-        break;
-    case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicDepthBoundsStateCreateInfo);
-        break;
-    case VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO);
-        shallow_copy = sizeof(VkDynamicStencilStateCreateInfo);
-        break;
     case VK_OBJECT_TYPE_CMD_POOL:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkCmdPoolCreateInfo);

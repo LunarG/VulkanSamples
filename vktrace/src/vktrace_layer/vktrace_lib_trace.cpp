@@ -342,35 +342,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicViewportState(
-    VkDevice device,
-    const VkDynamicViewportStateCreateInfo* pCreateInfo,
-    VkDynamicViewportState* pState)
-{
-    vktrace_trace_packet_header* pHeader;
-    VkResult result;
-    packet_vkCreateDynamicViewportState* pPacket = NULL;
-    // begin custom code (needs to call get_struct_chain_size)
-    uint32_t vpsCount = (pCreateInfo != NULL && pCreateInfo->pViewports != NULL) ? pCreateInfo->viewportAndScissorCount : 0;
-    CREATE_TRACE_PACKET(vkCreateDynamicViewportState,  get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDynamicViewportState));
-    // end custom code
-    result = mdd(device)->devTable.CreateDynamicViewportState(device, pCreateInfo, pState);
-    vktrace_set_packet_entrypoint_end_time(pHeader);
-    pPacket = interpret_body_as_vkCreateDynamicViewportState(pHeader);
-    pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDynamicViewportStateCreateInfo), pCreateInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VkViewport), pCreateInfo->pViewports);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VkRect2D), pCreateInfo->pScissors);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pState), sizeof(VkDynamicViewportState), pState);
-    pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pState));
-    FINISH_TRACE_PACKET();
-    return result;
-}
-
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo,
@@ -1100,38 +1071,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDynamicStencilState(
-    VkDevice device,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoFront,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoBack,
-    VkDynamicStencilState* pState)
-{
-    vktrace_trace_packet_header* pHeader;
-    VkResult result;
-    packet_vkCreateDynamicStencilState* pPacket = NULL;
-
-    /* If front and back pointers are the same, only track front */
-    const VkDynamicStencilStateCreateInfo* pLocalCreateInfoBack = (pCreateInfoFront == pCreateInfoBack) ? NULL : pCreateInfoBack;
-    uint32_t createInfoMultiplier = (pLocalCreateInfoBack != NULL) ? 2 : 1;
-
-    CREATE_TRACE_PACKET(vkCreateDynamicStencilState, createInfoMultiplier * sizeof(VkDynamicStencilStateCreateInfo) + sizeof(VkDynamicStencilState));
-    result = mdd(device)->devTable.CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
-    vktrace_set_packet_entrypoint_end_time(pHeader);
-    pPacket = interpret_body_as_vkCreateDynamicStencilState(pHeader);
-    pPacket->device = device;
-
-
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfoFront), sizeof(VkDynamicStencilStateCreateInfo), pCreateInfoFront);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfoBack), sizeof(VkDynamicStencilStateCreateInfo), pLocalCreateInfoBack);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pState), sizeof(VkDynamicStencilState), pState);
-    pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfoFront));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfoBack));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pState));
-    FINISH_TRACE_PACKET();
-    return result;
-}
-
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice physicalDevice,
@@ -1309,30 +1248,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkFreeDescriptorSets;
     if (!strcmp(name, "UpdateDescriptorSets"))
         return (PFN_vkVoidFunction) __HOOKED_vkUpdateDescriptorSets;
-    if (!strcmp(name, "CreateDynamicViewportState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicViewportState;
-    if (!strcmp(name, "DestroyDynamicViewportState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicViewportState;
-    if (!strcmp(name, "CreateDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicLineWidthState;
-    if (!strcmp(name, "DestroyDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicLineWidthState;
-    if (!strcmp(name, "CreateDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicDepthBiasState;
-    if (!strcmp(name, "DestroyDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicDepthBiasState;
-    if (!strcmp(name, "CreateDynamicBlendState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicBlendState;
-    if (!strcmp(name, "DestroyDynamicBlendState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicBlendState;
-    if (!strcmp(name, "CreateDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicDepthBoundsState;
-    if (!strcmp(name, "DestroyDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicDepthBoundsState;
-    if (!strcmp(name, "CreateDynamicStencilState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateDynamicStencilState;
-    if (!strcmp(name, "DestroyDynamicStencilState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyDynamicStencilState;
     if (!strcmp(name, "CreateCommandPool"))
         return (PFN_vkVoidFunction) __HOOKED_vkCreateCommandPool;
     if (!strcmp(name, "DestroyCommandPool"))
@@ -1351,18 +1266,22 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkResetCommandBuffer;
     if (!strcmp(name, "CmdBindPipeline"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdBindPipeline;
-    if (!strcmp(name, "CmdBindDynamicViewportState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicViewportState;
-    if (!strcmp(name, "CmdBindDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicLineWidthState;
-    if (!strcmp(name, "CmdBindDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicDepthBiasState;
-    if (!strcmp(name, "CmdBindDynamicBlendState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicBlendState;
-    if (!strcmp(name, "CmdBindDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicDepthBoundsState;
-    if (!strcmp(name, "CmdBindDynamicStencilState"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDynamicStencilState;
+    if (!strcmp(name, "CmdSetViewport"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetViewport;
+    if (!strcmp(name, "CmdSetLineWidth"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetLineWidth;
+    if (!strcmp(name, "CmdSetDepthBias"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetDepthBias;
+    if (!strcmp(name, "CmdSetBlendConstants"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetBlendConstants;
+    if (!strcmp(name, "CmdSetDepthBounds"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetDepthBounds;
+    if (!strcmp(name, "CmdSetStencilCompareMask"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetStencilCompareMask;
+    if (!strcmp(name, "CmdSetStencilWriteMask"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetStencilWriteMask;
+    if (!strcmp(name, "CmdSetStencilReference"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetStencilReference;
     if (!strcmp(name, "CmdBindDescriptorSets"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdBindDescriptorSets;
     if (!strcmp(name, "CmdBindIndexBuffer"))

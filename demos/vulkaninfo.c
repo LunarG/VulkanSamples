@@ -890,7 +890,6 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxSamplerLodBias                       = %f\n",                 limits->maxSamplerLodBias                      );
     printf("\t\tmaxSamplerAnisotropy                    = %f\n",                 limits->maxSamplerAnisotropy                   );
     printf("\t\tmaxViewports                            = 0x%" PRIxLEAST32 "\n", limits->maxViewports                           );
-    printf("\t\tmaxDynamicViewportStates                = 0x%" PRIxLEAST32 "\n", limits->maxDynamicViewportStates               );
     printf("\t\tmaxViewportDimensions[0]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[0]               );
     printf("\t\tmaxViewportDimensions[1]                = 0x%" PRIxLEAST32 "\n", limits->maxViewportDimensions[1]               );
     printf("\t\tviewportBoundsRange[0]                  = %f\n",                 limits->viewportBoundsRange[0]                 );

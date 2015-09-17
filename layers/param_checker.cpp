@@ -4962,330 +4962,6 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(
     get_dispatch_table(pc_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
 }
 
-bool PreCreateDynamicViewportState(
-    VkDevice device,
-    const VkDynamicViewportStateCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicViewportState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    if(pCreateInfo->pViewports != nullptr)
-    {
-    }
-    if(pCreateInfo->pScissors != nullptr)
-    {
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicViewportState(
-    VkDevice device,
-    VkDynamicViewportState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicViewportState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
-    VkDevice device,
-    const VkDynamicViewportStateCreateInfo* pCreateInfo,
-    VkDynamicViewportState* pState)
-{
-    PreCreateDynamicViewportState(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicViewportState(device, pCreateInfo, pState);
-
-    PostCreateDynamicViewportState(device, pState, result);
-
-    return result;
-}
-
-bool PreCreateDynamicLineWidthState(
-    VkDevice device,
-    const VkDynamicLineWidthStateCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicLineWidthState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicLineWidthState(
-    VkDevice device,
-    VkDynamicLineWidthState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicLineWidthState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
-    VkDevice device,
-    const VkDynamicLineWidthStateCreateInfo* pCreateInfo,
-    VkDynamicLineWidthState* pState)
-{
-    PreCreateDynamicLineWidthState(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicLineWidthState(device, pCreateInfo, pState);
-
-    PostCreateDynamicLineWidthState(device, pState, result);
-
-    return result;
-}
-
-bool PreCreateDynamicDepthBiasState(
-    VkDevice device,
-    const VkDynamicDepthBiasStateCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicDepthBiasState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicDepthBiasState(
-    VkDevice device,
-    VkDynamicDepthBiasState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicDepthBiasState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
-    VkDevice device,
-    const VkDynamicDepthBiasStateCreateInfo* pCreateInfo,
-    VkDynamicDepthBiasState* pState)
-{
-    PreCreateDynamicDepthBiasState(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicDepthBiasState(device, pCreateInfo, pState);
-
-    PostCreateDynamicDepthBiasState(device, pState, result);
-
-    return result;
-}
-
-bool PreCreateDynamicBlendState(
-    VkDevice device,
-    const VkDynamicBlendStateCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicBlendState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicBlendState(
-    VkDevice device,
-    VkDynamicBlendState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicBlendState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
-    VkDevice device,
-    const VkDynamicBlendStateCreateInfo* pCreateInfo,
-    VkDynamicBlendState* pState)
-{
-    PreCreateDynamicBlendState(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicBlendState(device, pCreateInfo, pState);
-
-    PostCreateDynamicBlendState(device, pState, result);
-
-    return result;
-}
-
-bool PreCreateDynamicDepthBoundsState(
-    VkDevice device,
-    const VkDynamicDepthBoundsStateCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicDepthBoundsState parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicDepthBoundsState(
-    VkDevice device,
-    VkDynamicDepthBoundsState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicDepthBoundsState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
-    VkDevice device,
-    const VkDynamicDepthBoundsStateCreateInfo* pCreateInfo,
-    VkDynamicDepthBoundsState* pState)
-{
-    PreCreateDynamicDepthBoundsState(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicDepthBoundsState(device, pCreateInfo, pState);
-
-    PostCreateDynamicDepthBoundsState(device, pState, result);
-
-    return result;
-}
-
-bool PreCreateDynamicStencilState(
-    VkDevice device,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoFront,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoBack)
-{
-    if(pCreateInfoFront != nullptr)
-    {
-    if(pCreateInfoFront->sType != VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicStencilState parameter, VkStructureType pCreateInfoFront->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    if(pCreateInfoBack != nullptr)
-    {
-    if(pCreateInfoBack->sType != VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDynamicStencilState parameter, VkStructureType pCreateInfoBack->sType, is an invalid enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateDynamicStencilState(
-    VkDevice device,
-    VkDynamicStencilState* pState,
-    VkResult result)
-{
-
-    if(pState != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateDynamicStencilState parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
-    VkDevice device,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoFront,
-    const VkDynamicStencilStateCreateInfo* pCreateInfoBack,
-    VkDynamicStencilState* pState)
-{
-    PreCreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
-
-    PostCreateDynamicStencilState(device, pState, result);
-
-    return result;
-}
-
 bool PreCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo)
@@ -5821,108 +5497,44 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
     PostCmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-bool PostCmdBindDynamicViewportState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicViewportState dynamicViewportState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
 {
-
-
-    return true;
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicViewportState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicViewportState dynamicViewportState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicViewportState(cmdBuffer, dynamicViewportState);
-
-    PostCmdBindDynamicViewportState(cmdBuffer, dynamicViewportState);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetLineWidth(cmdBuffer, lineWidth);
 }
 
-bool PostCmdBindDynamicLineWidthState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicLineWidthState dynamicLineWidthState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias)
 {
-
-
-    return true;
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicLineWidthState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicLineWidthState dynamicLineWidthState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicLineWidthState(cmdBuffer, dynamicLineWidthState);
-
-    PostCmdBindDynamicLineWidthState(cmdBuffer, dynamicLineWidthState);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConst);
 }
 
-bool PostCmdBindDynamicDepthBiasState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicDepthBiasState dynamicDepthBiasState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
 {
-
-
-    return true;
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicDepthBiasState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicDepthBiasState dynamicDepthBiasState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicDepthBiasState(cmdBuffer, dynamicDepthBiasState);
-
-    PostCmdBindDynamicDepthBiasState(cmdBuffer, dynamicDepthBiasState);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
 }
 
-bool PostCmdBindDynamicBlendState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicBlendState dynamicBlendState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
 {
-
-
-    return true;
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicBlendState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicBlendState dynamicBlendState)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicBlendState(cmdBuffer, dynamicBlendState);
-
-    PostCmdBindDynamicBlendState(cmdBuffer, dynamicBlendState);
-}
-
-bool PostCmdBindDynamicDepthBoundsState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicDepthBoundsState dynamicDepthBoundsState)
-{
-    return true;
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicDepthBoundsState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicDepthBoundsState dynamicDepthBoundsState)
-{
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicDepthBoundsState(cmdBuffer, dynamicDepthBoundsState);
-
-    PostCmdBindDynamicDepthBoundsState(cmdBuffer, dynamicDepthBoundsState);
-}
-
-bool PostCmdBindDynamicStencilState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicStencilState dynamicStencilState)
-{
-    return true;
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStencilState(
-    VkCmdBuffer cmdBuffer,
-    VkDynamicStencilState dynamicStencilState)
-{
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDynamicStencilState(cmdBuffer, dynamicStencilState);
-
-    PostCmdBindDynamicStencilState(cmdBuffer, dynamicStencilState);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
 }
 
 bool PreCmdBindDescriptorSets(
@@ -7368,18 +6980,22 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkResetDescriptorPool;
     if (!strcmp(funcName, "vkAllocDescriptorSets"))
         return (PFN_vkVoidFunction) vkAllocDescriptorSets;
-    if (!strcmp(funcName, "vkCreateDynamicViewportState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicViewportState;
-    if (!strcmp(funcName, "vkCreateDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicLineWidthState;
-    if (!strcmp(funcName, "vkCreateDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicDepthBiasState;
-    if (!strcmp(funcName, "vkCreateDynamicBlendState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicBlendState;
-    if (!strcmp(funcName, "vkCreateDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicDepthBoundsState;
-    if (!strcmp(funcName, "vkCreateDynamicStencilState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicStencilState;
+    if (!strcmp(funcName, "vkCmdSetViewport"))
+        return (PFN_vkVoidFunction) vkCmdSetViewport;
+    if (!strcmp(funcName, "vkCmdSetLineWidth"))
+        return (PFN_vkVoidFunction) vkCmdSetLineWidth;
+    if (!strcmp(funcName, "vkCmdSetDepthBias"))
+        return (PFN_vkVoidFunction) vkCmdSetDepthBias;
+    if (!strcmp(funcName, "vkCmdSetBlendConstants"))
+        return (PFN_vkVoidFunction) vkCmdSetBlendConstants;
+    if (!strcmp(funcName, "vkCmdSetDepthBounds"))
+        return (PFN_vkVoidFunction) vkCmdSetDepthBounds;
+    if (!strcmp(funcName, "vkCmdSetStencilCompareMask"))
+        return (PFN_vkVoidFunction) vkCmdSetStencilCompareMask;
+    if (!strcmp(funcName, "vkCmdSetStencilWriteMask"))
+        return (PFN_vkVoidFunction) vkCmdSetStencilWriteMask;
+    if (!strcmp(funcName, "vkCmdSetStencilReference"))
+        return (PFN_vkVoidFunction) vkCmdSetStencilReference;
     if (!strcmp(funcName, "vkCreateCommandBuffer"))
         return (PFN_vkVoidFunction) vkCreateCommandBuffer;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))

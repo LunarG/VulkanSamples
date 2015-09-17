@@ -32,6 +32,7 @@
 #include "intel.h"
 #include "obj.h"
 #include "view.h"
+#include "state.h"
 
 struct intel_pipeline;
 struct intel_pipeline_shader;
@@ -163,12 +164,12 @@ struct intel_cmd_bind {
     } pipeline;
 
     struct {
-        const struct intel_dynamic_viewport *viewport;
-        const struct intel_dynamic_line_width *line_width;
-        const struct intel_dynamic_depth_bias *depth_bias;
-        const struct intel_dynamic_blend *blend;
-        const struct intel_dynamic_depth_bounds *depth_bounds;
-        const struct intel_dynamic_stencil *stencil;
+        struct intel_dynamic_viewport viewport;
+        struct intel_dynamic_line_width line_width;
+        struct intel_dynamic_depth_bias depth_bias;
+        struct intel_dynamic_blend blend;
+        struct intel_dynamic_depth_bounds depth_bounds;
+        struct intel_dynamic_stencil stencil;
     } state;
 
     struct {

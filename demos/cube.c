@@ -372,13 +372,6 @@ struct demo {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkDynamicViewportState dynamic_viewport;
-    VkDynamicLineWidthState dynamic_line_width;
-    VkDynamicDepthBiasState dynamic_depth_bias;
-    VkDynamicBlendState dynamic_blend;
-    VkDynamicDepthBoundsState dynamic_depth_bounds;
-    VkDynamicStencilState dynamic_stencil;
-
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
@@ -549,12 +542,34 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
             0, 1, &demo->desc_set, 0, NULL);
 
-    vkCmdBindDynamicViewportState(cmd_buf, demo->dynamic_viewport);
-    vkCmdBindDynamicLineWidthState(cmd_buf,  demo->dynamic_line_width);
-    vkCmdBindDynamicDepthBiasState(cmd_buf,  demo->dynamic_depth_bias);
-    vkCmdBindDynamicBlendState(cmd_buf, demo->dynamic_blend);
-    vkCmdBindDynamicDepthBoundsState(cmd_buf, demo->dynamic_depth_bounds);
-    vkCmdBindDynamicStencilState(cmd_buf, demo->dynamic_stencil);
+    VkViewport viewport;
+    memset(&viewport, 0, sizeof(viewport));
+    viewport.height = (float) demo->height;
+    viewport.width = (float) demo->width;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
+
+    VkRect2D scissor;
+    memset(&scissor, 0, sizeof(scissor));
+    scissor.extent.width = demo->width;
+    scissor.extent.height = demo->height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    vkCmdSetViewport(cmd_buf, 1, &viewport, &scissor);
+
+    vkCmdSetLineWidth(cmd_buf, 1.0);
+    vkCmdSetDepthBias(cmd_buf, 0.0f, 0.0f, 0.0f);
+
+    float blend[4];
+    blend[0] = 1.0f;
+    blend[1] = 1.0f;
+    blend[2] = 1.0f;
+    blend[3] = 1.0f;
+    vkCmdSetBlendConstants(cmd_buf, blend);
+    vkCmdSetDepthBounds(cmd_buf, 0.0f, 1.0f);
+    vkCmdSetStencilCompareMask(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
+    vkCmdSetStencilWriteMask(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
+    vkCmdSetStencilReference(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
 
     vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(cmd_buf);
@@ -1571,84 +1586,6 @@ static void demo_prepare_pipeline(struct demo *demo)
     vkDestroyShaderModule(demo->device, demo->vert_shader_module);
 }
 
-static void demo_prepare_dynamic_states(struct demo *demo)
-{
-    VkDynamicViewportStateCreateInfo viewport_create;
-    VkDynamicLineWidthStateCreateInfo line_width;
-    VkDynamicDepthBiasStateCreateInfo depth_bias;
-    VkDynamicBlendStateCreateInfo blend;
-    VkDynamicDepthBoundsStateCreateInfo depth_bounds;
-    VkDynamicStencilStateCreateInfo stencil;
-    VkResult U_ASSERT_ONLY err;
-
-    memset(&viewport_create, 0, sizeof(viewport_create));
-    viewport_create.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
-    viewport_create.viewportAndScissorCount = 1;
-    VkViewport viewport;
-    memset(&viewport, 0, sizeof(viewport));
-    viewport.height = (float) demo->height;
-    viewport.width = (float) demo->width;
-    viewport.minDepth = (float) 0.0f;
-    viewport.maxDepth = (float) 1.0f;
-    viewport_create.pViewports = &viewport;
-    VkRect2D scissor;
-    memset(&scissor, 0, sizeof(scissor));
-    scissor.extent.width = demo->width;
-    scissor.extent.height = demo->height;
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    viewport_create.pScissors = &scissor;
-
-    memset(&line_width, 0, sizeof(line_width));
-    line_width.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
-    line_width.lineWidth = 1.0;
-
-    memset(&depth_bias, 0, sizeof(depth_bias));
-    depth_bias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
-    depth_bias.depthBias = 0.0f;
-    depth_bias.depthBiasClamp = 0.0f;
-    depth_bias.slopeScaledDepthBias = 0.0f;
-
-    memset(&blend, 0, sizeof(blend));
-    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
-    blend.blendConst[0] = 1.0f;
-    blend.blendConst[1] = 1.0f;
-    blend.blendConst[2] = 1.0f;
-    blend.blendConst[3] = 1.0f;
-
-    memset(&depth_bounds, 0, sizeof(depth_bounds));
-    depth_bounds.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
-    depth_bounds.minDepthBounds = 0.0f;
-    depth_bounds.maxDepthBounds = 1.0f;
-
-    memset(&stencil, 0, sizeof(stencil));
-    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
-    stencil.stencilReference = 0;
-    stencil.stencilCompareMask = 0xff;
-    stencil.stencilWriteMask = 0xff;
-
-    err = vkCreateDynamicViewportState(demo->device, &viewport_create, &demo->dynamic_viewport);
-    assert(!err);
-
-    err = vkCreateDynamicLineWidthState(demo->device, &line_width, &demo->dynamic_line_width);
-    assert(!err);
-
-    err = vkCreateDynamicDepthBiasState(demo->device, &depth_bias, &demo->dynamic_depth_bias);
-    assert(!err);
-
-    err = vkCreateDynamicBlendState(demo->device,
-            &blend, &demo->dynamic_blend);
-    assert(!err);
-
-    err = vkCreateDynamicDepthBoundsState(demo->device,
-            &depth_bounds, &demo->dynamic_depth_bounds);
-    assert(!err);
-
-    err = vkCreateDynamicStencilState(demo->device,
-            &stencil, &stencil, &demo->dynamic_stencil);
-    assert(!err);
-}
-
 static void demo_prepare_descriptor_pool(struct demo *demo)
 {
     const VkDescriptorTypeCount type_counts[2] = {
@@ -1768,7 +1705,6 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_descriptor_layout(demo);
     demo_prepare_render_pass(demo);
     demo_prepare_pipeline(demo);
-    demo_prepare_dynamic_states(demo);
 
     for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
         err = vkCreateCommandBuffer(demo->device, &cmd, &demo->buffers[i].cmd);
@@ -1806,13 +1742,6 @@ static void demo_cleanup(struct demo *demo)
     }
     vkFreeDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
     vkDestroyDescriptorPool(demo->device, demo->desc_pool);
-
-    vkDestroyDynamicViewportState(demo->device, demo->dynamic_viewport);
-    vkDestroyDynamicLineWidthState(demo->device, demo->dynamic_line_width);
-    vkDestroyDynamicDepthBiasState(demo->device, demo->dynamic_depth_bias);
-    vkDestroyDynamicBlendState(demo->device, demo->dynamic_blend);
-    vkDestroyDynamicDepthBoundsState(demo->device, demo->dynamic_depth_bounds);
-    vkDestroyDynamicStencilState(demo->device, demo->dynamic_stencil);
 
     vkDestroyPipeline(demo->device, demo->pipeline);
     vkDestroyPipelineCache(demo->device, demo->pipelineCache);

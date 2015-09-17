@@ -391,15 +391,6 @@ static void track_object_status(VkObject object, VkStateBindPoint stateBindPoint
 
     while (pTrav) {
         if (pTrav->obj.object == object) {
-            if (stateBindPoint == VK_STATE_BIND_POINT_VIEWPORT) {
-                pTrav->obj.status |= OBJSTATUS_VIEWPORT_BOUND;
-            } else if (stateBindPoint == VK_STATE_BIND_POINT_RASTER) {
-                pTrav->obj.status |= OBJSTATUS_RASTER_BOUND;
-            } else if (stateBindPoint == VK_STATE_BIND_POINT_COLOR_BLEND) {
-                pTrav->obj.status |= OBJSTATUS_COLOR_BLEND_BOUND;
-            } else if (stateBindPoint == VK_STATE_BIND_POINT_DEPTH_STENCIL) {
-                pTrav->obj.status |= OBJSTATUS_DEPTH_STENCIL_BOUND;
-            }
             return;
         }
         pTrav = pTrav->pNextObj;
@@ -1217,102 +1208,6 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet 
     nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicViewportState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterLineState(VkDevice device, const VkDynamicRasterLineStateCreateInfo* pCreateInfo, VkDynamicRasterLineState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicRasterLineState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_LINE_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicRasterDepthBiasState(VkDevice device, const VkDynamicRasterDepthBiasStateCreateInfo* pCreateInfo, VkDynamicRasterDepthBiasState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicRasterDepthBiasState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_RASTER_DEPTH_BIAS_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicColorBlendState(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicColorBlendState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_CB_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicDepthState(VkDevice device, const VkDynamicDepthStateCreateInfo* pCreateInfo, VkDynamicDepthState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicDepthState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_DEPTH_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(VkDevice device, const VkDynamicStencilStateCreateInfo* pCreateInfo, VkDynamicStencilState* pState)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateDynamicStencilState(device, pCreateInfo, pState);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pState, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
@@ -1343,10 +1238,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    reset_status(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, (OBJSTATUS_VIEWPORT_BOUND    |
-                                                                OBJSTATUS_RASTER_BOUND      |
-                                                                OBJSTATUS_COLOR_BLEND_BOUND |
-                                                                OBJSTATUS_DEPTH_STENCIL_BOUND));
     VkResult result = nextTable.EndCommandBuffer(cmdBuffer);
     return result;
 }
@@ -1366,15 +1257,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
     ll_increment_use_count(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
     nextTable.CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdBindDynamicStateObject(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject state)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
-    loader_platform_thread_unlock_mutex(&objLock);
-    track_object_status(cmdBuffer, stateBindPoint);
-    nextTable.CmdBindDynamicStateObject(cmdBuffer, stateBindPoint, state);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)

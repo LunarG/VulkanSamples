@@ -207,12 +207,6 @@ core = Extension(
         "VkSampler",
         "VkDescriptorPool",
         "VkDescriptorSet",
-        "VkDynamicViewportState",
-        "VkDynamicLineWidthState",
-        "VkDynamicDepthBiasState",
-        "VkDynamicBlendState",
-        "VkDynamicDepthBoundsState",
-        "VkDynamicStencilState",
         "VkRenderPass",
         "VkFramebuffer",
     ],
@@ -650,61 +644,6 @@ core = Extension(
              Param("uint32_t", "copyCount"),
              Param("const VkCopyDescriptorSet*", "pDescriptorCopies")]),
 
-        Proto("VkResult", "CreateDynamicViewportState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicViewportStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicViewportState*", "pState")]),
-
-        Proto("void", "DestroyDynamicViewportState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicViewportState", "dynamicViewportState")]),
-
-        Proto("VkResult", "CreateDynamicLineWidthState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicLineWidthStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicLineWidthState*", "pState")]),
-
-        Proto("void", "DestroyDynamicLineWidthState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicLineWidthState", "dynamicLineWidthState")]),
-
-        Proto("VkResult", "CreateDynamicDepthBiasState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicDepthBiasStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicDepthBiasState*", "pState")]),
-
-        Proto("void", "DestroyDynamicDepthBiasState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicDepthBiasState", "dynamicDepthBiasState")]),
-
-        Proto("VkResult", "CreateDynamicBlendState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicBlendStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicBlendState*", "pState")]),
-
-        Proto("void", "DestroyDynamicBlendState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicBlendState", "DynamicBlendState")]),
-
-        Proto("VkResult", "CreateDynamicDepthBoundsState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicDepthBoundsStateCreateInfo*", "pCreateInfo"),
-             Param("VkDynamicDepthBoundsState*", "pState")]),
-
-        Proto("void", "DestroyDynamicDepthBoundsState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicDepthBoundsState", "dynamicDepthBoundsState")]),
-
-        Proto("VkResult", "CreateDynamicStencilState",
-            [Param("VkDevice", "device"),
-             Param("const VkDynamicStencilStateCreateInfo*", "pCreateInfoFront"),
-             Param("const VkDynamicStencilStateCreateInfo*", "pCreateInfoBack"),
-             Param("VkDynamicStencilState*", "pState")]),
-
-        Proto("void", "DestroyDynamicStencilState",
-            [Param("VkDevice", "device"),
-             Param("VkDynamicStencilState", "dynamicStencilState")]),
-
         Proto("VkResult", "CreateCommandPool",
             [Param("VkDevice", "device"),
              Param("const VkCmdPoolCreateInfo*", "pCreateInfo"),
@@ -743,30 +682,6 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineBindPoint", "pipelineBindPoint"),
              Param("VkPipeline", "pipeline")]),
-
-        Proto("void", "CmdBindDynamicViewportState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicViewportState", "dynamicViewportState")]),
-
-        Proto("void", "CmdBindDynamicLineWidthState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicLineWidthState", "dynamicLineWidthState")]),
-
-        Proto("void", "CmdBindDynamicDepthBiasState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicDepthBiasState", "dynamicDepthBiasState")]),
-
-        Proto("void", "CmdBindDynamicBlendState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicBlendState", "DynamicBlendState")]),
-
-        Proto("void", "CmdBindDynamicDepthBoundsState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicDepthBoundsState", "dynamicDepthBoundsState")]),
-
-        Proto("void", "CmdBindDynamicStencilState",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkDynamicStencilState", "dynamicStencilState")]),
 
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -1035,6 +950,46 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("uint32_t", "cmdBuffersCount"),
              Param("const VkCmdBuffer*", "pCmdBuffers")]),
+
+        Proto("void", "CmdSetViewport",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("uint32_t", "viewportAndScissorCount"),
+             Param("const VkViewport*", "pViewports"),
+             Param("const VkRect2D*", "pScissors")]),
+
+        Proto("void", "CmdSetLineWidth",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "lineWidth")]),
+
+        Proto("void", "CmdSetDepthBias",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "depthBias"),
+             Param("float", "depthBiasClamp"),
+             Param("float", "slopeScaledDepthBias")]),
+
+        Proto("void", "CmdSetBlendConstants",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("const float*", "blendConst")]),
+
+        Proto("void", "CmdSetDepthBounds",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "minDepthBounds"),
+             Param("float", "maxDepthBounds")]),
+
+        Proto("void", "CmdSetStencilCompareMask",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilCompareMask")]),
+
+        Proto("void", "CmdSetStencilWriteMask",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilWriteMask")]),
+
+        Proto("void", "CmdSetStencilReference",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilReference")]),
     ],
 )
 
@@ -1176,12 +1131,6 @@ object_non_dispatch_list = [
     "VkSampler",
     "VkDescriptorPool",
     "VkDescriptorSet",
-    "VkDynamicViewportState",
-    "VkDynamicLineWidthState",
-    "VkDynamicDepthBiasState",
-    "VkDynamicBlendState",
-    "VkDynamicDepthBoundsState",
-    "VkDynamicStencilState",
     "VkRenderPass",
     "VkFramebuffer",
     "VkSwapchainKHR",

@@ -54,12 +54,6 @@ class DescriptorSetLayout;
 class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
-class DynamicViewportState;
-class DynamicLineWidthState;
-class DynamicDepthBiasState;
-class DynamicBlendState;
-class DynamicDepthBoundsState;
-class DynamicStencilState;
 class CmdBuffer;
 class CmdPool;
 
@@ -548,54 +542,6 @@ public:
 
 private:
     VkDescriptorPool pool_;
-};
-
-class DynamicViewportState : public internal::NonDispHandle<VkDynamicViewportState> {
-public:
-    ~DynamicViewportState();
-
-    // vkCreateDynamicViewportState()
-    void init(const Device &dev, const VkDynamicViewportStateCreateInfo &info);
-};
-
-class DynamicLineWidthState : public internal::NonDispHandle<VkDynamicLineWidthState> {
-public:
-    ~DynamicLineWidthState();
-
-    // vkCreateDynamicLineWidthState()
-    void init(const Device &dev, const VkDynamicLineWidthStateCreateInfo &info);
-};
-
-class DynamicDepthBiasState : public internal::NonDispHandle<VkDynamicDepthBiasState> {
-public:
-    ~DynamicDepthBiasState();
-
-    // vkCreateDynamicDepthBiasState()
-    void init(const Device &dev, const VkDynamicDepthBiasStateCreateInfo &info);
-};
-
-class DynamicBlendState : public internal::NonDispHandle<VkDynamicBlendState> {
-public:
-    ~DynamicBlendState();
-
-    // vkCreateDynamicBlendState()
-    void init(const Device &dev, const VkDynamicBlendStateCreateInfo &info);
-};
-
-class DynamicDepthBoundsState : public internal::NonDispHandle<VkDynamicDepthBoundsState> {
-public:
-    ~DynamicDepthBoundsState();
-
-    // vkCreateDynamicDepthBoundsState()
-    void init(const Device &dev, const VkDynamicDepthBoundsStateCreateInfo &info);
-};
-
-class DynamicStencilState : public internal::NonDispHandle<VkDynamicStencilState> {
-public:
-    ~DynamicStencilState();
-
-    // vkCreateDynamicStencilState()
-    void init(const Device &dev, const VkDynamicStencilStateCreateInfo &frontInfo, const VkDynamicStencilStateCreateInfo &backInfo);
 };
 
 class CmdPool : public internal::NonDispHandle<VkCmdPool> {

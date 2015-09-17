@@ -123,18 +123,6 @@ static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
             return "VK_OBJECT_TYPE_DEVICE";
         case VK_OBJECT_TYPE_DEVICE_MEMORY:
             return "VK_OBJECT_TYPE_DEVICE_MEMORY";
-        case VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
-            return "VK_OBJECT_TYPE_DYNAMIC_VIEPORT_STATE";
         case VK_OBJECT_TYPE_EVENT:
             return "VK_OBJECT_TYPE_EVENT";
         case VK_OBJECT_TYPE_FENCE:

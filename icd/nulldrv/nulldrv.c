@@ -480,103 +480,6 @@ static VkResult graphics_pipeline_create(struct nulldrv_dev *dev,
     return VK_SUCCESS;
 }
 
-static VkResult nulldrv_viewport_state_create(struct nulldrv_dev *dev,
-                                       const VkDynamicViewportStateCreateInfo *info,
-                                       struct nulldrv_dynamic_vp **state_ret)
-{
-    struct nulldrv_dynamic_vp *state;
-
-    state = (struct nulldrv_dynamic_vp *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_line_width_state_create(struct nulldrv_dev *dev,
-                                     const VkDynamicLineWidthStateCreateInfo *info,
-                                     struct nulldrv_dynamic_line_width **state_ret)
-{
-    struct nulldrv_dynamic_line_width *state;
-
-    state = (struct nulldrv_dynamic_line_width *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_depth_bias_state_create(struct nulldrv_dev *dev,
-                                     const VkDynamicDepthBiasStateCreateInfo *info,
-                                     struct nulldrv_dynamic_depth_bias **state_ret)
-{
-    struct nulldrv_dynamic_depth_bias *state;
-
-    state = (struct nulldrv_dynamic_depth_bias *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_blend_state_create(struct nulldrv_dev *dev,
-                                    const VkDynamicBlendStateCreateInfo *info,
-                                    struct nulldrv_dynamic_blend **state_ret)
-{
-    struct nulldrv_dynamic_blend *state;
-
-    state = (struct nulldrv_dynamic_blend *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_depth_bounds_state_create(struct nulldrv_dev *dev,
-                                 const VkDynamicDepthBoundsStateCreateInfo *info,
-                                 struct nulldrv_dynamic_depth_bounds **state_ret)
-{
-    struct nulldrv_dynamic_depth_bounds *state;
-
-    state = (struct nulldrv_dynamic_depth_bounds *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-static VkResult nulldrv_stencil_state_create(struct nulldrv_dev *dev,
-                                 const VkDynamicStencilStateCreateInfo *infoFront,
-                                 const VkDynamicStencilStateCreateInfo *infoBack,
-                                 struct nulldrv_dynamic_stencil **state_ret)
-{
-    struct nulldrv_dynamic_stencil *state;
-
-    state = (struct nulldrv_dynamic_stencil *) nulldrv_base_create(dev,
-            sizeof(*state), VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
 static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
                             const VkCmdBufferCreateInfo *info,
                             struct nulldrv_cmd **cmd_ret)
@@ -1174,44 +1077,42 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicViewportState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicViewportState                    state)
+ICD_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicLineWidthState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicLineWidthState                   state)
+ICD_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicDepthBiasState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicDepthBiasState                   state)
+ICD_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicBlendState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicBlendState                       state)
+ICD_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicDepthBoundsState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicDepthBoundsState                 state)
+ICD_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDynamicStencilState(
-    VkCmdBuffer                               cmdBuffer,
-    VkDynamicStencilState                     state)
+ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdSetStencilReference(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -2031,121 +1932,6 @@ ICD_EXPORT VkResult VKAPI vkCreateShader(
 ICD_EXPORT void VKAPI vkDestroyShader(
     VkDevice                                  device,
     VkShader                                  shader)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
-    VkDevice                                 device,
-    const VkDynamicViewportStateCreateInfo*  pCreateInfo,
-    VkDynamicViewportState*                  pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_viewport_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_vp **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicViewportState(
-    VkDevice                                  device,
-    VkDynamicViewportState                    dynamicViewportState)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
-    VkDevice                                  device,
-    const VkDynamicLineWidthStateCreateInfo*  pCreateInfo,
-    VkDynamicLineWidthState*                  pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_line_width_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_line_width **) pState);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
-    VkDevice                                       device,
-    const VkDynamicDepthBiasStateCreateInfo*       pCreateInfo,
-    VkDynamicDepthBiasState*                       pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_depth_bias_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_depth_bias **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicLineWidthState(
-    VkDevice                                  device,
-    VkDynamicLineWidthState                   dynamicLineWidthState)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(
-    VkDevice                                  device,
-    VkDynamicDepthBiasState                   dynamicDepthBiasState)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
-    VkDevice                                     device,
-    const VkDynamicBlendStateCreateInfo*         pCreateInfo,
-    VkDynamicBlendState*                         pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_blend_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_blend **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicBlendState(
-    VkDevice                                  device,
-    VkDynamicBlendState                       dynamicBlendState)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
-    VkDevice                                     device,
-    const VkDynamicDepthBoundsStateCreateInfo*   pCreateInfo,
-    VkDynamicDepthBoundsState*                   pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_depth_bounds_state_create(dev, pCreateInfo,
-            (struct nulldrv_dynamic_depth_bounds **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(
-    VkDevice                                  device,
-    VkDynamicDepthBoundsState                 dynamicDepthBoundsState)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
-    VkDevice                                     device,
-    const VkDynamicStencilStateCreateInfo*       pCreateInfoFront,
-    const VkDynamicStencilStateCreateInfo*       pCreateInfoBack,
-    VkDynamicStencilState*                       pState)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return nulldrv_stencil_state_create(dev, pCreateInfoFront, pCreateInfoBack,
-            (struct nulldrv_dynamic_stencil **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicStencilState(
-    VkDevice                                  device,
-    VkDynamicStencilState                     dynamicStencilState)
 {
     NULLDRV_LOG_FUNC;
 }

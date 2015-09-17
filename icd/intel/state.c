@@ -29,6 +29,7 @@
 #include "genhw/genhw.h"
 #include "dev.h"
 #include "state.h"
+#include "cmd.h"
 
 static void
 viewport_get_guardband(const struct intel_gpu *gpu,
@@ -89,66 +90,62 @@ viewport_get_guardband(const struct intel_gpu *gpu,
    *max_gby = (float) (center_y + half_len);
 }
 
-static VkResult
-viewport_state_alloc_cmd(struct intel_dynamic_viewport *state,
-                         const struct intel_gpu *gpu,
-                         const VkDynamicViewportStateCreateInfo *info)
+static void
+viewport_state_cmd(struct intel_dynamic_viewport *state,
+                   const struct intel_gpu *gpu,
+                   uint32_t count)
 {
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
-    state->viewport_count = info->viewportAndScissorCount;
+    state->viewport_count = count;
 
-    assert(info->viewportAndScissorCount <= INTEL_MAX_VIEWPORTS);
+    assert(count <= INTEL_MAX_VIEWPORTS);
 
     if (intel_gpu_gen(gpu) >= INTEL_GEN(7)) {
-        state->cmd_len = 16 * info->viewportAndScissorCount;
+        state->cmd_len = 16 * count;
 
         state->cmd_clip_pos = 8;
     } else {
-        state->cmd_len = 8 * info->viewportAndScissorCount;
+        state->cmd_len = 8 * count;
 
         state->cmd_clip_pos = state->cmd_len;
-        state->cmd_len += 4 * info->viewportAndScissorCount;
+        state->cmd_len += 4 * count;
     }
 
     state->cmd_cc_pos = state->cmd_len;
-    state->cmd_len += 2 * info->viewportAndScissorCount;
+    state->cmd_len += 2 * count;
 
     state->cmd_scissor_rect_pos = state->cmd_len;
-    state->cmd_len += 2 * info->viewportAndScissorCount;
+    state->cmd_len += 2 * count;
 
-    state->cmd = intel_alloc(state, sizeof(uint32_t) * state->cmd_len,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-    if (!state->cmd)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    return VK_SUCCESS;
+    assert(sizeof(uint32_t) * state->cmd_len <= sizeof(state->cmd));
 }
 
-static VkResult
-viewport_state_init(struct intel_dynamic_viewport *state,
-                    const struct intel_gpu *gpu,
-                    const VkDynamicViewportStateCreateInfo *info)
+static void
+set_viewport_state(
+        struct intel_cmd*               cmd,
+        uint32_t                        count,
+        const VkViewport*               viewports,
+        const VkRect2D*                 scissors)
 {
+    const struct intel_gpu *gpu = cmd->dev->gpu;
+    struct intel_dynamic_viewport *state = &cmd->bind.state.viewport;
     const uint32_t sf_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 8;
     const uint32_t clip_stride = (intel_gpu_gen(gpu) >= INTEL_GEN(7)) ? 16 : 4;
     uint32_t *sf_viewport, *clip_viewport, *cc_viewport, *scissor_rect;
     uint32_t i;
-    VkResult ret;
 
     INTEL_GPU_ASSERT(gpu, 6, 7.5);
 
-    ret = viewport_state_alloc_cmd(state, gpu, info);
-    if (ret != VK_SUCCESS)
-        return ret;
+    viewport_state_cmd(state, gpu, count);
 
     sf_viewport = state->cmd;
     clip_viewport = state->cmd + state->cmd_clip_pos;
     cc_viewport = state->cmd + state->cmd_cc_pos;
     scissor_rect = state->cmd + state->cmd_scissor_rect_pos;
 
-    for (i = 0; i < info->viewportAndScissorCount; i++) {
-        const VkViewport *viewport = &info->pViewports[i];
+    for (i = 0; i < count; i++) {
+        const VkViewport *viewport = &viewports[i];
         uint32_t *dw = NULL;
         float translate[3], scale[3];
         int min_gbx, max_gbx, min_gby, max_gby;
@@ -190,8 +187,8 @@ viewport_state_init(struct intel_dynamic_viewport *state,
         cc_viewport += 2;
     }
 
-    for (i = 0; i < info->viewportAndScissorCount; i++) {
-        const VkRect2D *scissor = &info->pScissors[i];
+    for (i = 0; i < count; i++) {
+        const VkRect2D *scissor = &scissors[i];
         /* SCISSOR_RECT */
         int16_t max_x, max_y;
         uint32_t *dw = NULL;
@@ -210,165 +207,59 @@ viewport_state_init(struct intel_dynamic_viewport *state,
         }
         scissor_rect += 2;
     }
-
-    return VK_SUCCESS;
 }
 
-static void viewport_state_destroy(struct intel_obj *obj)
+ICD_EXPORT void VKAPI vkCmdSetViewport(
+    VkCmdBuffer                         cmdBuffer,
+    uint32_t                            viewportAndScissorCount,
+    const VkViewport*                   pViewports,
+    const VkRect2D*                     pScissors)
 {
-    struct intel_dynamic_viewport *state = intel_viewport_state_from_obj(obj);
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    intel_viewport_state_destroy(state);
+    set_viewport_state(cmd, viewportAndScissorCount, pViewports, pScissors);
 }
 
-VkResult intel_viewport_state_create(struct intel_dev *dev,
-                                       const VkDynamicViewportStateCreateInfo *info,
-                                       struct intel_dynamic_viewport **state_ret)
+ICD_EXPORT void VKAPI vkCmdSetLineWidth(
+    VkCmdBuffer                              cmdBuffer,
+    float                                    line_width)
 {
-    struct intel_dynamic_viewport *state;
-    VkResult ret;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    state = (struct intel_dynamic_viewport *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE,
-            info, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = viewport_state_destroy;
-
-    ret = viewport_state_init(state, dev->gpu, info);
-    if (ret != VK_SUCCESS) {
-        intel_viewport_state_destroy(state);
-        return ret;
-    }
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
+    cmd->bind.state.line_width.line_width = line_width;
 }
 
-void intel_viewport_state_destroy(struct intel_dynamic_viewport *state)
+ICD_EXPORT void VKAPI vkCmdSetDepthBias(
+    VkCmdBuffer                         cmdBuffer,
+    float                               depthBias,
+    float                               depthBiasClamp,
+    float                               slopeScaledDepthBias)
 {
-    intel_free(state, state->cmd);
-    intel_base_destroy(&state->obj.base);
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    cmd->bind.state.depth_bias.depth_bias = depthBias;
+    cmd->bind.state.depth_bias.depth_bias_clamp = depthBiasClamp;
+    cmd->bind.state.depth_bias.slope_scaled_depth_bias = slopeScaledDepthBias;
 }
 
-static void line_width_state_destroy(struct intel_obj *obj)
+ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
+    VkCmdBuffer                         cmdBuffer,
+    const float                         blendConst[4])
 {
-    struct intel_dynamic_line_width *state = intel_line_width_state_from_obj(obj);
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    intel_line_width_state_destroy(state);
+    cmd->bind.state.blend.blend_const[0] = blendConst[0];
+    cmd->bind.state.blend.blend_const[1] = blendConst[1];
+    cmd->bind.state.blend.blend_const[2] = blendConst[2];
+    cmd->bind.state.blend.blend_const[3] = blendConst[3];
 }
 
-VkResult intel_line_width_state_create(struct intel_dev *dev,
-                                        const VkDynamicLineWidthStateCreateInfo *info,
-                                        struct intel_dynamic_line_width **state_ret)
+ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
+    VkCmdBuffer                         cmdBuffer,
+    float                               minDepthBounds,
+    float                               maxDepthBounds)
 {
-    struct intel_dynamic_line_width *state;
-
-    state = (struct intel_dynamic_line_width *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE,
-            info, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = line_width_state_destroy;
-    state->line_width_info = *info;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-void intel_line_width_state_destroy(struct intel_dynamic_line_width *state)
-{
-    intel_base_destroy(&state->obj.base);
-}
-
-static void depth_bias_state_destroy(struct intel_obj *obj)
-{
-    struct intel_dynamic_depth_bias *state = intel_depth_bias_state_from_obj(obj);
-
-    intel_depth_bias_state_destroy(state);
-}
-
-VkResult intel_depth_bias_state_create(struct intel_dev *dev,
-                                              const VkDynamicDepthBiasStateCreateInfo *info,
-                                              struct intel_dynamic_depth_bias **state_ret)
-{
-    struct intel_dynamic_depth_bias *state;
-
-    state = (struct intel_dynamic_depth_bias *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE,
-            info, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = depth_bias_state_destroy;
-    state->depth_bias_info = *info;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-void intel_depth_bias_state_destroy(struct intel_dynamic_depth_bias *state)
-{
-    intel_base_destroy(&state->obj.base);
-}
-
-static void blend_state_destroy(struct intel_obj *obj)
-{
-    struct intel_dynamic_blend *state = intel_blend_state_from_obj(obj);
-
-    intel_blend_state_destroy(state);
-}
-
-VkResult intel_blend_state_create(struct intel_dev *dev,
-                                    const VkDynamicBlendStateCreateInfo *info,
-                                    struct intel_dynamic_blend **state_ret)
-{
-    struct intel_dynamic_blend *state;
-
-    state = (struct intel_dynamic_blend *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE,
-            info, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = blend_state_destroy;
-    state->blend_info = *info;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
-}
-
-void intel_blend_state_destroy(struct intel_dynamic_blend *state)
-{
-    intel_base_destroy(&state->obj.base);
-}
-
-static void depth_bounds_state_destroy(struct intel_obj *obj)
-{
-    struct intel_dynamic_depth_bounds *state = intel_depth_bounds_state_from_obj(obj);
-
-    intel_depth_bounds_state_destroy(state);
-}
-
-VkResult intel_depth_bounds_state_create(struct intel_dev *dev,
-                                 const VkDynamicDepthBoundsStateCreateInfo *info,
-                                 struct intel_dynamic_depth_bounds **state_ret)
-{
-    struct intel_dynamic_depth_bounds *state;
-
-    state = (struct intel_dynamic_depth_bounds *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE,
-            info, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = depth_bounds_state_destroy;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     /*
      * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -384,45 +275,20 @@ VkResult intel_depth_bounds_state_create(struct intel_dev *dev,
      *
      * TODO We do not check these yet.
      */
-
-    state->depth_bounds_info = *info;
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
+    cmd->bind.state.depth_bounds.min_depth_bounds = minDepthBounds;
+    cmd->bind.state.depth_bounds.max_depth_bounds = maxDepthBounds;
 }
 
-void intel_depth_bounds_state_destroy(struct intel_dynamic_depth_bounds *state)
+ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
+    VkCmdBuffer                         cmdBuffer,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilCompareMask)
 {
-    intel_base_destroy(&state->obj.base);
-}
-
-static void stencil_state_destroy(struct intel_obj *obj)
-{
-    struct intel_dynamic_stencil *state = intel_stencil_state_from_obj(obj);
-
-    intel_stencil_state_destroy(state);
-}
-
-VkResult intel_stencil_state_create(struct intel_dev *dev,
-                                 const VkDynamicStencilStateCreateInfo *info_front,
-                                 const VkDynamicStencilStateCreateInfo *info_back,
-                                 struct intel_dynamic_stencil **state_ret)
-{
-    struct intel_dynamic_stencil *state;
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
     /* TODO: enable back facing stencil state */
     /* Some plumbing needs to be done if we want to support info_back.
      * In the meantime, catch that back facing info has been submitted. */
-    assert(info_front == info_back || info_back == NULL);
-
-    state = (struct intel_dynamic_stencil *) intel_base_create(&dev->base.handle,
-            sizeof(*state), dev->base.dbg, VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE,
-            info_front, 0);
-    if (!state)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    state->obj.destroy = stencil_state_destroy;
 
     /*
      * From the Sandy Bridge PRM, volume 2 part 1, page 359:
@@ -438,144 +304,39 @@ VkResult intel_stencil_state_create(struct intel_dev *dev,
      *
      * TODO We do not check these yet.
      */
-
-    state->stencil_info_front = *info_front;
-    /* TODO: enable back facing stencil state */
-    /*state->stencil_info_back  = *info_back;*/
-
-    *state_ret = state;
-
-    return VK_SUCCESS;
+    if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
+        cmd->bind.state.stencil.front.stencil_compare_mask = stencilCompareMask;
+    }
+    if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
+        cmd->bind.state.stencil.back.stencil_compare_mask = stencilCompareMask;
+    }
 }
 
-void intel_stencil_state_destroy(struct intel_dynamic_stencil *state)
+ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
+    VkCmdBuffer                         cmdBuffer,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilWriteMask)
 {
-    intel_base_destroy(&state->obj.base);
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
+        cmd->bind.state.stencil.front.stencil_write_mask = stencilWriteMask;
+    }
+    if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
+        cmd->bind.state.stencil.back.stencil_write_mask = stencilWriteMask;
+    }
 }
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicViewportState(
-    VkDevice                                    device,
-    const VkDynamicViewportStateCreateInfo*     pCreateInfo,
-    VkDynamicViewportState*                     pState)
+ICD_EXPORT void VKAPI vkCmdSetStencilReference(
+    VkCmdBuffer                         cmdBuffer,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilReference)
 {
-    struct intel_dev *dev = intel_dev(device);
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
-    return intel_viewport_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_viewport **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicViewportState(
-    VkDevice                                device,
-    VkDynamicViewportState                  dynamicViewportState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicViewportState.handle);
-
-    obj->destroy(obj);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(
-    VkDevice                                  device,
-    const VkDynamicLineWidthStateCreateInfo*  pCreateInfo,
-    VkDynamicLineWidthState*                  pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_line_width_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_line_width **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicLineWidthState(
-    VkDevice                                device,
-    VkDynamicLineWidthState                 dynamicLineWidthState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicLineWidthState.handle);
-
-    obj->destroy(obj);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(
-    VkDevice                                        device,
-    const VkDynamicDepthBiasStateCreateInfo*        pCreateInfo,
-    VkDynamicDepthBiasState*                        pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_depth_bias_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_depth_bias **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(
-    VkDevice                                device,
-    VkDynamicDepthBiasState                 dynamicDepthBiasState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicDepthBiasState.handle);
-
-    obj->destroy(obj);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicBlendState(
-    VkDevice                                      device,
-    const VkDynamicBlendStateCreateInfo*          pCreateInfo,
-    VkDynamicBlendState*                          pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_blend_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_blend **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicBlendState(
-    VkDevice                                device,
-    VkDynamicBlendState                     dynamicBlendState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicBlendState.handle);
-
-    obj->destroy(obj);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(
-    VkDevice                                        device,
-    const VkDynamicDepthBoundsStateCreateInfo*      pCreateInfo,
-    VkDynamicDepthBoundsState*                      pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_depth_bounds_state_create(dev, pCreateInfo,
-            (struct intel_dynamic_depth_bounds **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(
-    VkDevice                                device,
-    VkDynamicDepthBoundsState               dynamicDepthBoundsState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicDepthBoundsState.handle);
-
-    obj->destroy(obj);
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateDynamicStencilState(
-    VkDevice                                        device,
-    const VkDynamicStencilStateCreateInfo*          pCreateInfoFront,
-    const VkDynamicStencilStateCreateInfo*          pCreateInfoBack,
-    VkDynamicStencilState*                          pState)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return intel_stencil_state_create(dev, pCreateInfoFront, pCreateInfoBack,
-            (struct intel_dynamic_stencil **) pState);
-}
-
-ICD_EXPORT void VKAPI vkDestroyDynamicStencilState(
-    VkDevice                                device,
-    VkDynamicStencilState                   dynamicStencilState)
-
-{
-    struct intel_obj *obj = intel_obj(dynamicStencilState.handle);
-
-    obj->destroy(obj);
+    if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
+        cmd->bind.state.stencil.front.stencil_reference = stencilReference;
+    }
+    if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
+        cmd->bind.state.stencil.back.stencil_reference = stencilReference;
+    }
 }

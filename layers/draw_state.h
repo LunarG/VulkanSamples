@@ -41,7 +41,6 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
-    DRAWSTATE_INVALID_DYNAMIC_STATE_OBJECT,     // Invalid dyn state object
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
@@ -167,12 +166,14 @@ typedef enum _CMD_TYPE
 {
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
-    CMD_BINDDYNAMICVIEWPORTSTATE,
-    CMD_BINDDYNAMICLINEWIDTHSTATE,
-    CMD_BINDDYNAMICDEPTHBIASSTATE,
-    CMD_BINDDYNAMICBLENDSTATE,
-    CMD_BINDDYNAMICDEPTHBOUNDSSTATE,
-    CMD_BINDDYNAMICSTENCILSTATE,
+    CMD_SETVIEWPORTSTATE,
+    CMD_SETLINEWIDTHSTATE,
+    CMD_SETDEPTHBIASSTATE,
+    CMD_SETBLENDSTATE,
+    CMD_SETDEPTHBOUNDSSTATE,
+    CMD_SETSTENCILREADMASKSTATE,
+    CMD_SETSTENCILWRITEMASKSTATE,
+    CMD_SETSTENCILREFERENCESTATE,
     CMD_BINDDESCRIPTORSETS,
     CMD_BINDINDEXBUFFER,
     CMD_BINDVERTEXBUFFER,
@@ -230,17 +231,25 @@ typedef VkFlags CBStatusFlags;
 typedef enum _CBStatusFlagBits
 {
     CBSTATUS_NONE                              = 0x00000000, // No status is set
-    CBSTATUS_VIEWPORT_BOUND                    = 0x00000001, // Viewport state object has been bound
-    CBSTATUS_LINE_WIDTH_BOUND                  = 0x00000002, // Line width state object has been bound
-    CBSTATUS_DEPTH_BIAS_BOUND                  = 0x00000004, // Raster state object has been bound
-    CBSTATUS_COLOR_BLEND_WRITE_ENABLE          = 0x00000008, // PSO w/ CB Enable set has been bound
-    CBSTATUS_BLEND_BOUND                       = 0x00000010, // Blend state object has been bound
-    CBSTATUS_DEPTH_WRITE_ENABLE                = 0x00000020, // PSO w/ Depth Enable set has been bound
-    CBSTATUS_STENCIL_TEST_ENABLE               = 0x00000040, // PSO w/ Stencil Enable set has been bound
-    CBSTATUS_DEPTH_BOUNDS_BOUND                = 0x00000080, // Depth bounds state object has been bound
-    CBSTATUS_STENCIL_BOUND                     = 0x00000100, // Stencil state object has been bound
-    CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000200, // Index buffer has been bound
+    CBSTATUS_VIEWPORT_SET                      = 0x00000001, // Viewport has been set
+    CBSTATUS_LINE_WIDTH_SET                    = 0x00000002, // Line width has been set
+    CBSTATUS_DEPTH_BIAS_SET                    = 0x00000004, // Depth bias has been set
+    CBSTATUS_COLOR_BLEND_WRITE_ENABLE          = 0x00000008, // PSO w/ CB Enable set has been set
+    CBSTATUS_BLEND_SET                         = 0x00000010, // Blend state object has been set
+    CBSTATUS_DEPTH_WRITE_ENABLE                = 0x00000020, // PSO w/ Depth Enable set has been set
+    CBSTATUS_STENCIL_TEST_ENABLE               = 0x00000040, // PSO w/ Stencil Enable set has been set
+    CBSTATUS_DEPTH_BOUNDS_SET                  = 0x00000080, // Depth bounds state object has been set
+    CBSTATUS_STENCIL_READ_MASK_SET             = 0x00000100, // Stencil read mask has been set
+    CBSTATUS_STENCIL_WRITE_MASK_SET            = 0x00000200, // Stencil write mask has been set
+    CBSTATUS_STENCIL_REFERENCE_SET             = 0x00000400, // Stencil reference has been set
+    CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000800, // Index buffer has been set
 } CBStatusFlagBits;
+
+typedef struct stencil_data {
+    uint32_t                     stencilCompareMask;
+    uint32_t                     stencilWriteMask;
+    uint32_t                     stencilReference;
+} CBStencilData;
 
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
@@ -259,7 +268,17 @@ typedef struct _GLOBAL_CB_NODE {
     //  each individual CMD_NODE referencing its own "lastBound" state
     VkPipeline                   lastBoundPipeline;
     uint32_t                     lastVtxBinding;
-    uint64_t                     lastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
+    vector<VkViewport>           viewports;
+    vector<VkRect2D>             scissors;
+    float                        lineWidth;
+    float                        depthBias;
+    float                        depthBiasClamp;
+    float                        slopeScaledDepthBias;
+    float                        blendConst[4];
+    float                        minDepthBounds;
+    float                        maxDepthBounds;
+    CBStencilData                front;
+    CBStencilData                back;
     VkDescriptorSet              lastBoundDescriptorSet;
     VkPipelineLayout             lastBoundPipelineLayout;
     VkRenderPass                 activeRenderPass;

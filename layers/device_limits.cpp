@@ -297,6 +297,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(Vk
     return result;
 }
 
+VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
+    VkCmdBuffer                         cmdBuffer,
+    uint32_t                            viewportAndScissorCount,
+    const VkViewport*                   pViewports,
+    const VkRect2D*                     pScissors)
+{
+    VkBool32 skipCall = VK_FALSE;
+    /* TODO: Verify viewportAndScissorCount < maxViewports from VkPhysicalDeviceLimits */
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(device_limits_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+    }
+}
+
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i;
@@ -575,18 +588,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyDescriptorSetLayout;
     if (!strcmp(funcName, "vkDestroyDescriptorPool"))
         return (PFN_vkVoidFunction) vkDestroyDescriptorPool;
-    if (!strcmp(funcName, "vkDestroyDynamicViewportState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicViewportState;
-    if (!strcmp(funcName, "vkDestroyDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicLineWidthState;
-    if (!strcmp(funcName, "vkDestroyDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicDepthBiasState;
-    if (!strcmp(funcName, "vkDestroyDynamicBlendState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicBlendState;
-    if (!strcmp(funcName, "vkDestroyDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicDepthBoundsState;
-    if (!strcmp(funcName, "vkDestroyDynamicStencilState"))
-        return (PFN_vkVoidFunction) vkDestroyDynamicStencilState;
     if (!strcmp(funcName, "vkDestroyCommandBuffer"))
         return (PFN_vkVoidFunction) vkDestroyCommandBuffer;
     if (!strcmp(funcName, "vkDestroyFramebuffer"))
@@ -627,18 +628,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkAllocDescriptorSets;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
-    if (!strcmp(funcName, "vkCreateDynamicViewportState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicViewportState;
-    if (!strcmp(funcName, "vkCreateDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicLineWidthState;
-    if (!strcmp(funcName, "vkCreateDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicDepthBiasState;
-    if (!strcmp(funcName, "vkCreateDynamicBlendState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicBlendState;
-    if (!strcmp(funcName, "vkCreateDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicDepthBoundsState;
-    if (!strcmp(funcName, "vkCreateDynamicStencilState"))
-        return (PFN_vkVoidFunction) vkCreateDynamicStencilState;
     if (!strcmp(funcName, "vkCreateCommandBuffer"))
         return (PFN_vkVoidFunction) vkCreateCommandBuffer;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
@@ -649,18 +638,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkResetCommandBuffer;
     if (!strcmp(funcName, "vkCmdBindPipeline"))
         return (PFN_vkVoidFunction) vkCmdBindPipeline;
-    if (!strcmp(funcName, "vkCmdBindDynamicViewportState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicViewportState;
-    if (!strcmp(funcName, "vkCmdBindDynamicLineWidthState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicLineWidthState;
-    if (!strcmp(funcName, "vkCmdBindDynamicDepthBiasState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicDepthBiasState;
-    if (!strcmp(funcName, "vkCmdBindDynamicBlendState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicBlendState;
-    if (!strcmp(funcName, "vkCmdBindDynamicDepthBoundsState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicDepthBoundsState;
-    if (!strcmp(funcName, "vkCmdBindDynamicStencilState"))
-        return (PFN_vkVoidFunction) vkCmdBindDynamicStencilState;
+    if (!strcmp(funcName, "vkCmdSetViewport"))
+        return (PFN_vkVoidFunction) vkCmdSetViewport;
     if (!strcmp(funcName, "vkCmdBindDescriptorSets"))
         return (PFN_vkVoidFunction) vkCmdBindDescriptorSets;
     if (!strcmp(funcName, "vkCmdBindVertexBuffers"))

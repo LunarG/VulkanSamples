@@ -108,7 +108,6 @@ struct MT_OBJ_BINDING_INFO {
 // Track all command buffers
 struct MT_CB_INFO {
     VkCmdBufferCreateInfo       createInfo;
-    uint64_t                    pLastBoundDynamicState[VK_NUM_STATE_BIND_POINT];
     VkPipeline                  pipelines[VK_PIPELINE_BIND_POINT_NUM];
     uint32_t                    attachmentCount;
     VkCmdBuffer                 cmdBuffer;

@@ -789,48 +789,6 @@ DescriptorSet::~DescriptorSet()
     }
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicViewportState, vkDestroyDynamicViewportState)
-
-void DynamicViewportState::init(const Device &dev, const VkDynamicViewportStateCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicViewportState, dev, &info);
-}
-
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicLineWidthState, vkDestroyDynamicLineWidthState)
-
-void DynamicLineWidthState::init(const Device &dev, const VkDynamicLineWidthStateCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicLineWidthState, dev, &info);
-}
-
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthBiasState, vkDestroyDynamicDepthBiasState)
-
-void DynamicDepthBiasState::init(const Device &dev, const VkDynamicDepthBiasStateCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthBiasState, dev, &info);
-}
-
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicBlendState, vkDestroyDynamicBlendState)
-
-void DynamicBlendState::init(const Device &dev, const VkDynamicBlendStateCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicBlendState, dev, &info);
-}
-
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicDepthBoundsState, vkDestroyDynamicDepthBoundsState)
-
-void DynamicDepthBoundsState::init(const Device &dev, const VkDynamicDepthBoundsStateCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicDepthBoundsState, dev, &info);
-}
-
-NON_DISPATCHABLE_HANDLE_DTOR(DynamicStencilState, vkDestroyDynamicStencilState)
-
-void DynamicStencilState::init(const Device &dev, const VkDynamicStencilStateCreateInfo &frontInfo, const VkDynamicStencilStateCreateInfo &backInfo)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateDynamicStencilState, dev, &frontInfo, &backInfo);
-}
-
 NON_DISPATCHABLE_HANDLE_DTOR(CmdPool, vkDestroyCommandPool)
 
 void CmdPool::init(const Device &dev, const VkCmdPoolCreateInfo &info)

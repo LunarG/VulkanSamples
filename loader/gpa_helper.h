@@ -205,30 +205,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkFreeDescriptorSets;
     if (!strcmp(name, "UpdateDescriptorSets"))
         return (void*) vkUpdateDescriptorSets;
-    if (!strcmp(name, "CreateDynamicViewportState"))
-        return (void*) vkCreateDynamicViewportState;
-    if (!strcmp(name, "DestroyDynamicViewportState"))
-        return (void*) vkDestroyDynamicViewportState;
-    if (!strcmp(name, "CreateDynamicLineWidthState"))
-        return (void*) vkCreateDynamicLineWidthState;
-    if (!strcmp(name, "DestroyDynamicLineWidthState"))
-        return (void*) vkDestroyDynamicLineWidthState;
-    if (!strcmp(name, "CreateDynamicDepthBiasState"))
-        return (void*) vkCreateDynamicDepthBiasState;
-    if (!strcmp(name, "DestroyDynamicDepthBiasState"))
-        return (void*) vkDestroyDynamicDepthBiasState;
-    if (!strcmp(name, "CreateDynamicBlendState"))
-        return (void*) vkCreateDynamicBlendState;
-    if (!strcmp(name, "DestroyDynamicBlendState"))
-        return (void*) vkDestroyDynamicBlendState;
-    if (!strcmp(name, "CreateDynamicDepthBoundsState"))
-        return (void*) vkCreateDynamicDepthBoundsState;
-    if (!strcmp(name, "DestroyDynamicDepthBoundsState"))
-        return (void*) vkDestroyDynamicDepthBoundsState;
-    if (!strcmp(name, "CreateDynamicStencilState"))
-        return (void*) vkCreateDynamicStencilState;
-    if (!strcmp(name, "DestroyDynamicStencilState"))
-        return (void*) vkDestroyDynamicStencilState;
     if (!strcmp(name, "CreateFramebuffer"))
         return (void*) vkCreateFramebuffer;
     if (!strcmp(name, "DestroyFramebuffer"))
@@ -257,20 +233,22 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkResetCommandBuffer;
     if (!strcmp(name, "CmdBindPipeline"))
         return (void*) vkCmdBindPipeline;
-    if (!strcmp(name, "CmdBindDynamicViewportState"))
-        return (void*) vkCmdBindDynamicViewportState;
-    if (!strcmp(name, "CmdBindDynamicLineWidthState"))
-        return (void*) vkCmdBindDynamicLineWidthState;
-    if (!strcmp(name, "CmdBindDynamicDepthBiasState"))
-        return (void*) vkCmdBindDynamicDepthBiasState;
-    if (!strcmp(name, "CmdBindDynamicBlendState"))
-        return (void*) vkCmdBindDynamicBlendState;
-    if (!strcmp(name, "CmdBindDynamicDepthBoundsState"))
-        return (void*) vkCmdBindDynamicDepthBoundsState;
-    if (!strcmp(name, "CmdBindDynamicStencilState"))
-        return (void*) vkCmdBindDynamicStencilState;
-    if (!strcmp(name, "CmdBindDescriptorSets"))
-        return (void*) vkCmdBindDescriptorSets;
+    if (!strcmp(name, "CmdSetViewport"))
+        return (void*) vkCmdSetViewport;
+    if (!strcmp(name, "CmdSetLineWidth"))
+        return (void*) vkCmdSetLineWidth;
+    if (!strcmp(name, "CmdSetDepthBias"))
+        return (void*) vkCmdSetDepthBias;
+    if (!strcmp(name, "CmdSetBlendConstants"))
+        return (void*) vkCmdSetBlendConstants;
+    if (!strcmp(name, "CmdSetDepthBounds"))
+        return (void*) vkCmdSetDepthBounds;
+    if (!strcmp(name, "CmdSetStencilCompareMask"))
+        return (void*) vkCmdSetStencilCompareMask;
+    if (!strcmp(name, "CmdSetStencilWriteMask"))
+        return (void*) vkCmdSetStencilWriteMask;
+    if (!strcmp(name, "CmdSetStencilReference"))
+        return (void*) vkCmdSetStencilReference;
     if (!strcmp(name, "CmdBindIndexBuffer"))
         return (void*) vkCmdBindIndexBuffer;
     if (!strcmp(name, "CmdBindVertexBuffers"))

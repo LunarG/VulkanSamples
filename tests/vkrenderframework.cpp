@@ -40,12 +40,6 @@ VkRenderFramework::VkRenderFramework() :
     m_cmdBuffer(),
     m_renderPass(VK_NULL_HANDLE),
     m_framebuffer(VK_NULL_HANDLE),
-    m_stateLineWidth( VK_NULL_HANDLE ),
-    m_stateDepthBias( VK_NULL_HANDLE ),
-    m_stateBlend( VK_NULL_HANDLE ),
-    m_stateViewport( VK_NULL_HANDLE ),
-    m_stateDepthBounds( VK_NULL_HANDLE ),
-    m_stateStencil( VK_NULL_HANDLE ),
     m_width( 256.0 ),                   // default window width
     m_height( 256.0 ),                  // default window height
     m_render_target_fmt( VK_FORMAT_R8G8B8A8_UNORM ),
@@ -155,11 +149,6 @@ void VkRenderFramework::InitFramework(
 
 void VkRenderFramework::ShutdownFramework()
 {
-    if (m_stateBlend) vkDestroyDynamicBlendState(device(), m_stateBlend);
-    if (m_stateDepthBounds) vkDestroyDynamicDepthBoundsState(device(), m_stateDepthBounds);
-    if (m_stateStencil) vkDestroyDynamicStencilState(device(), m_stateStencil);
-    if (m_stateLineWidth) vkDestroyDynamicLineWidthState(device(), m_stateLineWidth);
-    if (m_stateDepthBias) vkDestroyDynamicDepthBiasState(device(), m_stateDepthBias);
     if (m_cmdBuffer)
         delete m_cmdBuffer;
     if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool);
@@ -169,9 +158,6 @@ void VkRenderFramework::ShutdownFramework()
     if (m_globalMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_globalMsgCallback);
     if (m_devMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_devMsgCallback);
 
-    if (m_stateViewport) {
-        vkDestroyDynamicViewportState(device(), m_stateViewport);
-    }
     while (!m_renderTargets.empty()) {
         vkDestroyImageView(device(), m_renderTargets.back()->targetView(m_render_target_fmt));
         vkDestroyImage(device(), m_renderTargets.back()->image());
@@ -215,43 +201,23 @@ void VkRenderFramework::InitState()
     m_render_target_fmt = surfFormats[0].format;
     free(surfFormats);
 
-    VkDynamicLineWidthStateCreateInfo lineWidth = {};
-    lineWidth.sType = VK_STRUCTURE_TYPE_DYNAMIC_LINE_WIDTH_STATE_CREATE_INFO;
-    lineWidth.lineWidth = 1;
-    err = vkCreateDynamicLineWidthState( device(), &lineWidth, &m_stateLineWidth );
-    ASSERT_VK_SUCCESS(err);
+    m_lineWidth = 1.0f;
 
-    VkDynamicDepthBiasStateCreateInfo depthBias = {};
-    depthBias.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BIAS_STATE_CREATE_INFO;
-    depthBias.depthBias = 0.0f;
-    depthBias.depthBiasClamp = 0.0f;
-    depthBias.slopeScaledDepthBias = 0.0f;
-    err = vkCreateDynamicDepthBiasState( device(), &depthBias, &m_stateDepthBias );
-    ASSERT_VK_SUCCESS(err);
+    m_depthBias = 0.0f;
+    m_depthBiasClamp = 0.0f;
+    m_slopeScaledDepthBias = 0.0f;
 
-    VkDynamicBlendStateCreateInfo blend = {};
-    blend.sType = VK_STRUCTURE_TYPE_DYNAMIC_BLEND_STATE_CREATE_INFO;
-    blend.blendConst[0] = 1.0f;
-    blend.blendConst[1] = 1.0f;
-    blend.blendConst[2] = 1.0f;
-    blend.blendConst[3] = 1.0f;
-    err = vkCreateDynamicBlendState(device(), &blend, &m_stateBlend);
-    ASSERT_VK_SUCCESS( err );
+    m_blendConst[0] = 1.0f;
+    m_blendConst[1] = 1.0f;
+    m_blendConst[2] = 1.0f;
+    m_blendConst[3] = 1.0f;
 
-    VkDynamicDepthBoundsStateCreateInfo depth = {};
-    depth.sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE_CREATE_INFO;
-    depth.minDepthBounds = 0.f;
-    depth.maxDepthBounds = 1.f;
-    err = vkCreateDynamicDepthBoundsState( device(), &depth, &m_stateDepthBounds );
-    ASSERT_VK_SUCCESS( err );
+    m_minDepthBounds = 0.f;
+    m_maxDepthBounds = 1.f;
 
-    VkDynamicStencilStateCreateInfo stencil = {};
-    stencil.sType = VK_STRUCTURE_TYPE_DYNAMIC_STENCIL_STATE_CREATE_INFO;
-    stencil.stencilCompareMask = 0xff;
-    stencil.stencilWriteMask = 0xff;
-    stencil.stencilReference = 0;
-    err = vkCreateDynamicStencilState( device(), &stencil, &stencil, &m_stateStencil );
-    ASSERT_VK_SUCCESS( err );
+    m_stencilCompareMask = 0xff;
+    m_stencilWriteMask = 0xff;
+    m_stencilReference = 0;
 
     VkCmdPoolCreateInfo cmd_pool_info;
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
@@ -266,29 +232,22 @@ void VkRenderFramework::InitState()
 
 void VkRenderFramework::InitViewport(float width, float height)
 {
-    VkResult err;
-
     VkViewport viewport;
     VkRect2D scissor;
-
-    VkDynamicViewportStateCreateInfo viewportCreate = {};
-    viewportCreate.sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO;
-    viewportCreate.viewportAndScissorCount         = 1;
     viewport.originX  = 0;
     viewport.originY  = 0;
     viewport.width    = 1.f * width;
     viewport.height   = 1.f * height;
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
+    m_viewports.push_back(viewport);
+
     scissor.extent.width = (int32_t) width;
     scissor.extent.height = (int32_t) height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    viewportCreate.pViewports = &viewport;
-    viewportCreate.pScissors = &scissor;
+    m_scissors.push_back(scissor);
 
-    err = vkCreateDynamicViewportState( device(), &viewportCreate, &m_stateViewport );
-    ASSERT_VK_SUCCESS( err );
     m_width = width;
     m_height = height;
 }
@@ -1480,34 +1439,59 @@ void VkCommandBufferObj::EndRenderPass()
     vkCmdEndRenderPass(handle());
 }
 
-void VkCommandBufferObj::BindDynamicViewportState(VkDynamicViewportState viewportState)
+void VkCommandBufferObj::SetViewport(
+    uint32_t                            viewportAndScissorCount,
+    const VkViewport*                   pViewports,
+    const VkRect2D*                     pScissors)
 {
-    vkCmdBindDynamicViewportState( handle(), viewportState);
+    vkCmdSetViewport( handle(), viewportAndScissorCount, pViewports, pScissors);
 }
 
-void VkCommandBufferObj::BindDynamicLineWidthState(VkDynamicLineWidthState lineWidthState)
+void VkCommandBufferObj::SetLineWidth(float lineWidth)
 {
-    vkCmdBindDynamicLineWidthState( handle(), lineWidthState);
+    vkCmdSetLineWidth( handle(), lineWidth);
 }
 
-void VkCommandBufferObj::BindDynamicDepthBiasState(VkDynamicDepthBiasState depthBiasState)
+void VkCommandBufferObj::SetDepthBias(
+    float                               depthBias,
+    float                               depthBiasClamp,
+    float                               slopeScaledDepthBias)
 {
-    vkCmdBindDynamicDepthBiasState( handle(), depthBiasState);
+    vkCmdSetDepthBias( handle(), depthBias, depthBiasClamp, slopeScaledDepthBias);
 }
 
-void VkCommandBufferObj::BindDynamicBlendState(VkDynamicBlendState blendState)
+void VkCommandBufferObj::SetBlendConstants(
+    const float                         blendConst[4])
 {
-    vkCmdBindDynamicBlendState( handle(), blendState);
+    vkCmdSetBlendConstants( handle(), blendConst);
 }
 
-void VkCommandBufferObj::BindDynamicDepthBoundsState(VkDynamicDepthBoundsState depthBoundsState)
+void VkCommandBufferObj::SetDepthBounds(
+    float                               minDepthBounds,
+    float                               maxDepthBounds)
 {
-    vkCmdBindDynamicDepthBoundsState( handle(), depthBoundsState);
+    vkCmdSetDepthBounds( handle(), minDepthBounds, maxDepthBounds);
 }
 
-void VkCommandBufferObj::BindDynamicStencilState(VkDynamicStencilState stencilState)
+void VkCommandBufferObj::SetStencilReadMask(
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilCompareMask)
 {
-    vkCmdBindDynamicStencilState( handle(), stencilState);
+    vkCmdSetStencilCompareMask( handle(), faceMask, stencilCompareMask);
+}
+
+void VkCommandBufferObj::SetStencilWriteMask(
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilWriteMask)
+{
+    vkCmdSetStencilWriteMask( handle(), faceMask, stencilWriteMask);
+}
+
+void VkCommandBufferObj::SetStencilReference(
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilReference)
+{
+    vkCmdSetStencilReference( handle(), faceMask, stencilReference);
 }
 
 void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)

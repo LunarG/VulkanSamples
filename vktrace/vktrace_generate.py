@@ -215,12 +215,6 @@ class Subcommand(object):
                                                                      '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts), pCreateInfo->descriptorSetCount * sizeof(VkDescriptorSetLayout), pCreateInfo->pSetLayouts);',
                                                      'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts));\n'
                                                                      '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkDynamicViewportStateCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDynamicViewportStateCreateInfo), pCreateInfo);\n'
-                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pViewports), vpsCount * sizeof(VkViewport), pCreateInfo->pViewports);\n'
-                                                                     '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pScissors), vpsCount * sizeof(VkRect2D), pCreateInfo->pScissors)',
-                                                     'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pViewports));\n'
-                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pScissors));\n'
-                                                                     '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VkMemoryAllocInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkMemoryAllocInfo), pAllocInfo);\n'
                                                             '    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
                                             'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
@@ -356,7 +350,6 @@ class Subcommand(object):
         func_body = []
         manually_written_hooked_funcs = ['AllocMemory',
                                          'AllocDescriptorSets',
-                                         'CreateDynamicViewportState',
                                          'CreateDescriptorPool',
                                          'CreateDevice',
                                          'CreateFramebuffer',
@@ -388,7 +381,6 @@ class Subcommand(object):
                                          'CreateSwapchainKHR',
                                          'GetSwapchainImagesKHR',
                                          'QueuePresentKHR',
-                                         'CreateDynamicStencilState',
                                          ]
 
         # validate the manually_written_hooked_funcs list
@@ -770,9 +762,6 @@ class Subcommand(object):
                               # TODO138 : Just ripped out a bunch of custom code here that was out of date. Need to scrub these function and verify they're correct
         custom_case_dict = { #'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
                               #                 'pInfo->pCode = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
-                             'CreateDynamicViewportState' : {'param': 'pCreateInfo', 'txt': ['VkDynamicViewportStateCreateInfo* pInfo = (VkDynamicViewportStateCreateInfo*)pPacket->pCreateInfo;\n',
-                                                                                             'pInfo->pViewports = (VkViewport*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pViewports);\n',
-                                                                                             'pInfo->pScissors = (VkRect2D*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pScissors);']},
                              #'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkFramebufferCreateInfo* pInfo = (VkFramebufferCreateInfo*)pPacket->pCreateInfo;\n',
                               #                      'pInfo->pColorAttachments = (VkColorAttachmentBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
                                #                     'pInfo->pDepthStencilAttachment = (VkDepthStencilBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},

@@ -384,12 +384,15 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     }
 
     cmdBuffer->PrepareAttachments();
-    cmdBuffer->BindDynamicLineWidthState(m_stateLineWidth);
-    cmdBuffer->BindDynamicDepthBiasState(m_stateDepthBias);
-    cmdBuffer->BindDynamicViewportState(m_stateViewport);
-    cmdBuffer->BindDynamicBlendState(m_stateBlend);
-    cmdBuffer->BindDynamicDepthBoundsState(m_stateDepthBounds);
-    cmdBuffer->BindDynamicStencilState(m_stateStencil);
+    cmdBuffer->SetLineWidth(m_lineWidth);
+    cmdBuffer->SetDepthBias(m_depthBias, m_depthBiasClamp, m_slopeScaledDepthBias);
+    cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data(), m_scissors.data());
+    cmdBuffer->SetBlendConstants(m_blendConst);
+    cmdBuffer->SetDepthBounds(m_minDepthBounds, m_maxDepthBounds);
+    cmdBuffer->SetStencilReadMask(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilCompareMask);
+    cmdBuffer->SetStencilWriteMask(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilWriteMask);
+    cmdBuffer->SetStencilReference(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilReference);
+
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     ASSERT_VK_SUCCESS(err);

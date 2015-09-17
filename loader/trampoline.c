@@ -980,114 +980,6 @@ LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeC
     disp->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicViewportState(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicViewportState(device, pCreateInfo, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicViewportState(VkDevice device, VkDynamicViewportState dynamicViewportState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicViewportState(device, dynamicViewportState);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicLineWidthState(VkDevice device, const VkDynamicLineWidthStateCreateInfo* pCreateInfo, VkDynamicLineWidthState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicLineWidthState(device, pCreateInfo, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicLineWidthState(VkDevice device, VkDynamicLineWidthState dynamicLineWidthState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicLineWidthState(device, dynamicLineWidthState);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthBiasState(VkDevice device, const VkDynamicDepthBiasStateCreateInfo* pCreateInfo, VkDynamicDepthBiasState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicDepthBiasState(device, pCreateInfo, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicDepthBiasState(VkDevice device, VkDynamicDepthBiasState dynamicDepthBiasState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicDepthBiasState(device, dynamicDepthBiasState);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicBlendState(VkDevice device, const VkDynamicBlendStateCreateInfo* pCreateInfo, VkDynamicBlendState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicBlendState(device, pCreateInfo, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicBlendState(VkDevice device, VkDynamicBlendState dynamicBlendState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicBlendState(device, dynamicBlendState);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicDepthBoundsState(VkDevice device, const VkDynamicDepthBoundsStateCreateInfo* pCreateInfo, VkDynamicDepthBoundsState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicDepthBoundsState(device, pCreateInfo, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicDepthBoundsState(VkDevice device, VkDynamicDepthBoundsState dynamicDepthBoundsState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicDepthBoundsState(device, dynamicDepthBoundsState);
-}
-
-LOADER_EXPORT VkResult VKAPI vkCreateDynamicStencilState(VkDevice device, const VkDynamicStencilStateCreateInfo* pCreateInfoFront, const VkDynamicStencilStateCreateInfo* pCreateInfoBack, VkDynamicStencilState* pState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateDynamicStencilState(device, pCreateInfoFront, pCreateInfoBack, pState);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyDynamicStencilState(VkDevice device, VkDynamicStencilState dynamicStencilState)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyDynamicStencilState(device, dynamicStencilState);
-}
-
 LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
     const VkLayerDispatchTable *disp;
@@ -1220,58 +1112,76 @@ LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBind
     disp->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicViewportState(VkCmdBuffer cmdBuffer, VkDynamicViewportState state)
+LOADER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicViewportState(cmdBuffer, state);
+    disp->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicLineWidthState(VkCmdBuffer cmdBuffer, VkDynamicLineWidthState state)
+LOADER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicLineWidthState(cmdBuffer, state);
+    disp->CmdSetLineWidth(cmdBuffer, lineWidth);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicDepthBiasState(VkCmdBuffer cmdBuffer, VkDynamicDepthBiasState state)
+LOADER_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicDepthBiasState(cmdBuffer, state);
+    disp->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicBlendState(VkCmdBuffer cmdBuffer, VkDynamicBlendState state)
+LOADER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicBlendState(cmdBuffer, state);
+    disp->CmdSetBlendConstants(cmdBuffer, blendConst);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicDepthBoundsState(VkCmdBuffer cmdBuffer, VkDynamicDepthBoundsState state)
+LOADER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicDepthBoundsState(cmdBuffer, state);
+    disp->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDynamicStencilState(VkCmdBuffer cmdBuffer, VkDynamicStencilState state)
+LOADER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDynamicStencilState(cmdBuffer, state);
+    disp->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
+}
+
+LOADER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
+}
+
+LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)

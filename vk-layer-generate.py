@@ -1443,7 +1443,7 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_command_buffer_validates(self):
         cbv_txt = []
         cbv_txt.append('%s' % self.lineinfo.get())
-        for o in ['VkPipeline', 'VkDynamicViewportState', 'VkDynamicLineWidthState', 'VkDynamicDepthBiasState', 'VkDynamicBlendState', 'VkDynamicDepthBoundsState', 'VkDynamicStencilState',
+        for o in ['VkPipeline',
                   'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
             cbv_txt.append('static VkBool32 validate_object(VkCmdBuffer dispatchable_object, %s object)' % (o))
             cbv_txt.append('{')
@@ -1682,12 +1682,6 @@ class ThreadingSubcommand(Subcommand):
         'VkSampler' : 'VK_OBJECT_TYPE_SAMPLER',
         'VkDescriptorPool' : 'VK_OBJECT_TYPE_DESCRIPTOR_POOL',
         'VkDescriptorSet' : 'VK_OBJECT_TYPE_DESCRIPTOR_SET',
-        'VkDynamicViewportState' : 'VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE',
-        'VkDynamicLineWidthState' : 'VK_OBJECT_TYPE_DYNAMIC_LINE_WIDTH_STATE',
-        'VkDynamicDepthBiasState' : 'VK_OBJECT_TYPE_DYNAMIC_DEPTH_BIAS_STATE',
-        'VkDynamicBlendState' : 'VK_OBJECT_TYPE_DYNAMIC_BLEND_STATE',
-        'VkDynamicDepthBoundsState' : 'VK_OBJECT_TYPE_DYNAMIC_DEPTH_BOUNDS_STATE',
-        'VkDynamicStencilState' : 'VK_OBJECT_TYPE_DYNAMIC_STENCIL_STATE',
         'VkFramebuffer' : 'VK_OBJECT_TYPE_FRAMEBUFFER',
         'VkCmdPool' : 'VK_OBJECT_TYPE_CMD_POOL',
     }
