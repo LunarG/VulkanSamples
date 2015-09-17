@@ -312,6 +312,15 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 {
     uint32_t i;
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
+    PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
+    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
+    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
+    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
+    pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
+    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
+    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
+    pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
+    pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
@@ -671,7 +680,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateCommandPool;
 
     VkLayerDispatchTable *pDisp =  get_dispatch_table(screenshot_device_table_map, dev);
-    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].wsi_enabled)
+    if (deviceExtMap.size() != 0 && deviceExtMap[pDisp].wsi_enabled)
     {
         if (!strcmp(funcName, "vkCreateSwapchainKHR"))
             return (PFN_vkVoidFunction) vkCreateSwapchainKHR;

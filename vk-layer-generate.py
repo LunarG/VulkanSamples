@@ -435,7 +435,7 @@ class Subcommand(object):
                 extra_space = ""
                 for (ext_enable, ext_list) in extensions:
                     if 0 != len(ext_enable):
-                        func_body.append('    if (deviceExtMap.size() == 0 || deviceExtMap[pDisp].%s)' % ext_enable)
+                        func_body.append('    if (deviceExtMap.size() != 0 && deviceExtMap[pDisp].%s)' % ext_enable)
                         func_body.append('    {')
                         extra_space = "    "
                     for ext_name in ext_list:
@@ -593,6 +593,15 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('{')
         gen_header.append('    uint32_t i;')
         gen_header.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
+        gen_header.append('    PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;')
+        gen_header.append('    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");')
+        gen_header.append('    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");')
+        gen_header.append('    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");')
+        gen_header.append('    pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");')
+        gen_header.append('    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");')
+        gen_header.append('    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");')
+        gen_header.append('    pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");')
+        gen_header.append('    pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");\n')
         gen_header.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         gen_header.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
         gen_header.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)')
@@ -675,8 +684,10 @@ class GenericLayerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "Generic"
         extensions=[('wsi_enabled', 
-                     ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
-                      'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
+                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
+                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                      'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
+                      'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self._generate_layer_initialization(True),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
@@ -773,6 +784,15 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('{')
         header_txt.append('    uint32_t i;')
         header_txt.append('    VkLayerDispatchTable *pDisp  = device_dispatch_table(device);')
+        header_txt.append('    PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;')
+        header_txt.append('    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");')
+        header_txt.append('    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");')
+        header_txt.append('    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");')
+        header_txt.append('    pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");')
+        header_txt.append('    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");')
+        header_txt.append('    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");')
+        header_txt.append('    pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");')
+        header_txt.append('    pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");\n')
         header_txt.append('    deviceExtMap[pDisp].wsi_enabled = false;')
         header_txt.append('    for (i = 0; i < pCreateInfo->extensionCount; i++) {')
         header_txt.append('        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)')
@@ -928,8 +948,8 @@ class APIDumpSubcommand(Subcommand):
                     if p.name == proto.params[y].name:
                         cp = True
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
-            if p.name == "pSwapchain":
-                log_func += '%s = " << %s->handle << ", ' % (p.name, p.name)
+            if p.name == "pSwapchain" or p.name == "pSwapchainImages":
+                log_func += '%s = " << ((%s == NULL) ? 0 : %s->handle) << ", ' % (p.name, p.name, p.name)
             elif p.name == "swapchain":
                 log_func += '%s = " << %s.handle << ", ' % (p.name, p.name)
             else:
@@ -1085,8 +1105,10 @@ class APIDumpSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDump"
         extensions=[('wsi_enabled',
-                    ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
-                    'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
+                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
+                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                      'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
+                      'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_init(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions)]
@@ -1597,8 +1619,10 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "ObjectTracker"
         extensions=[('wsi_enabled',
-                    ['vkCreateSwapchainKHR', 'vkDestroySwapchainKHR',
-                     'vkGetSwapchainImagesKHR', 'vkQueuePresentKHR'])]
+                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
+                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                      'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
+                      'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

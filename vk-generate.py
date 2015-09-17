@@ -124,7 +124,7 @@ class DispatchTableOpsSubcommand(Subcommand):
             for proto in self.protos:
                 if proto.name == "CreateInstance" or proto.name == "GetGlobalExtensionProperties" or proto.name == "GetGlobalLayerProperties" or proto.params[0].ty == "VkInstance" or (proto.params[0].ty == "VkPhysicalDevice" and proto.name != "CreateDevice"):
                     continue
-                if proto.name != "GetDeviceProcAddr":
+                if proto.name != "GetDeviceProcAddr" and 'KHR' not in proto.name:
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseDevice, \"vk%s\");" %
                         (proto.name, proto.name, proto.name))
             func.append("static inline void %s_initialize_dispatch_table(VkLayerDispatchTable *table,"
@@ -143,7 +143,7 @@ class DispatchTableOpsSubcommand(Subcommand):
                     continue
                 if proto.name == "CreateDevice":
                     continue
-                if proto.name != "GetInstanceProcAddr":
+                if proto.name != "GetInstanceProcAddr" and 'KHR' not in proto.name:
                     stmts.append("table->%s = (PFN_vk%s) gpa(baseInstance, \"vk%s\");" %
                           (proto.name, proto.name, proto.name))
             func.append("static inline void %s_init_instance_dispatch_table(VkLayerInstanceDispatchTable *table,"
