@@ -505,10 +505,16 @@ static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_
         skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH must be set as IA topology for tessellation pipelines");
     }
-    if ((pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
-        (~pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT)) {
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+    if (pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH) {
+        if (~pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines");
+        }
+        if (!pPipeline->tessStateCI.patchControlPoints || (pPipeline->tessStateCI.patchControlPoints > 32)) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+                    "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology used with patchControlPoints value %u."
+                    " patchControlPoints should be >0 and <=32.", pPipeline->tessStateCI.patchControlPoints);
+        }
     }
     return skipCall;
 }

@@ -338,19 +338,12 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
     case VK_PRIMITIVE_TOPOLOGY_PATCH:
-        if (!info->tess.patchControlPoints ||
-            info->tess.patchControlPoints > 32) {
-            /* TODOVV: Move test to validation layer */
-//            return VK_ERROR_BAD_PIPELINE_DATA;
-            return VK_ERROR_VALIDATION_FAILED;
-        }
         pipeline->prim_type = GEN7_3DPRIM_PATCHLIST_1 +
             info->tess.patchControlPoints - 1;
         break;
     default:
-        /* TODOVV: Move test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
+        assert(!"unsupported primitive topology format");
+        break;
     }
 
     if (info->ia.primitiveRestartEnable) {
@@ -453,63 +446,6 @@ static void pipeline_destroy(struct intel_obj *obj)
     }
 
     intel_base_destroy(&pipeline->obj.base);
-}
-
-static VkResult pipeline_validate(struct intel_pipeline *pipeline)
-{
-    /*
-     * Validate required elements
-     */
-    if (!(pipeline->active_shaders & SHADER_VERTEX_FLAG)) {
-        // TODO: Log debug message: Vertex Shader required.
-        /* TODOVV: Add test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    /*
-     * Tessalation control and evaluation have to both have a shader defined or
-     * neither should have a shader defined.
-     */
-    if (((pipeline->active_shaders & SHADER_TESS_CONTROL_FLAG) == 0) !=
-         ((pipeline->active_shaders & SHADER_TESS_EVAL_FLAG) == 0) ) {
-        // TODO: Log debug message: Both Tess control and Tess eval are required to use tessalation
-        /* TODOVV: Add test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    if ((pipeline->active_shaders & SHADER_COMPUTE_FLAG) &&
-        (pipeline->active_shaders & (SHADER_VERTEX_FLAG | SHADER_TESS_CONTROL_FLAG |
-                                     SHADER_TESS_EVAL_FLAG | SHADER_GEOMETRY_FLAG |
-                                     SHADER_FRAGMENT_FLAG))) {
-        // TODO: Log debug message: Can only specify compute shader when doing compute
-        /* TODOVV: Add test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    /*
-     * VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
-     * Mismatching primitive topology and tessellation fails graphics pipeline creation.
-     */
-    if (pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG) &&
-        (pipeline->topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
-        // TODO: Log debug message: Invalid topology used with tessellation shader.
-        /* TODOVV: Add test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    if ((pipeline->topology == VK_PRIMITIVE_TOPOLOGY_PATCH) &&
-        (~pipeline->active_shaders & (SHADER_TESS_CONTROL_FLAG | SHADER_TESS_EVAL_FLAG))) {
-        // TODO: Log debug message: Cannot use TOPOLOGY_PATCH on non-tessellation shader.
-        /* TODOVV: Add test to validation layer */
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    return VK_SUCCESS;
 }
 
 static void pipeline_build_urb_alloc_gen6(struct intel_pipeline *pipeline,
@@ -1146,11 +1082,15 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
     if (ret != VK_SUCCESS)
         return ret;
 
-    /* TODOVV: Move test to validation layer */
+    /* TODOVV: Move test to validation layer
+     *  This particular test is based on a limit imposed by
+     *  INTEL_MAX_VERTEX_BINDING_COUNT, which should be migrated
+     *  to API-defined maxVertexInputBindings setting and then
+     *  this check can be in DeviceLimits layer
+     */
     if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb)) {
-//        return VK_ERROR_BAD_PIPELINE_DATA;
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_UNKNOWN;
     }
 
     pipeline->vb_count = info->vi.bindingCount;
@@ -1232,9 +1172,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
                 dst = &info->compute;
                 break;
             default:
-                /* TODOVV: Move test to validation layer */
-//                return VK_ERROR_BAD_PIPELINE_DATA;
-            return VK_ERROR_VALIDATION_FAILED;
+                assert(!"unsupported shader stage");
                 break;
         }
         memcpy(dst, thisStage, sizeof(VkPipelineShaderStageCreateInfo));
@@ -1296,8 +1234,6 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
     pipeline->obj.destroy = pipeline_destroy;
 
     ret = pipeline_build_all(pipeline, &info);
-    if (ret == VK_SUCCESS)
-        ret = pipeline_validate(pipeline);
     if (ret != VK_SUCCESS) {
         pipeline_destroy(&pipeline->obj);
         return ret;

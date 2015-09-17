@@ -1531,7 +1531,126 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: Vtx Shader required'";
     }
 }
+/*// TODO : This test should be good, but needs Tess support in compiler to run
+TEST_F(VkLayerTest, InvalidPatchControlPoints)
+{
+    // Attempt to Create Gfx Pipeline w/o a VS
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
 
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1, &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineShaderStageCreateInfo shaderStages[3];
+    memset(&shaderStages, 0, 3 * sizeof(VkPipelineShaderStageCreateInfo));
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    // Just using VS txt for Tess shaders as we don't care about functionality
+    VkShaderObj tc(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESS_CONTROL, this);
+    VkShaderObj te(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESS_EVALUATION, this);
+
+    shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader = vs.handle();
+    shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[1].stage  = VK_SHADER_STAGE_TESS_CONTROL;
+    shaderStages[1].shader = tc.handle();
+    shaderStages[2].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[2].stage  = VK_SHADER_STAGE_TESS_EVALUATION;
+    shaderStages[2].shader = te.handle();
+
+    VkPipelineInputAssemblyStateCreateInfo iaCI = {};
+        iaCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        iaCI.topology = VK_PRIMITIVE_TOPOLOGY_PATCH;
+
+    VkPipelineTessellationStateCreateInfo tsCI = {};
+        tsCI.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        tsCI.patchControlPoints = 0; // This will cause an error
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.pNext = NULL;
+        gp_ci.stageCount = 3;
+        gp_ci.pStages = shaderStages;
+        gp_ci.pVertexInputState = NULL;
+        gp_ci.pInputAssemblyState = &iaCI;
+        gp_ci.pTessellationState = &tsCI;
+        gp_ci.pViewportState = NULL;
+        gp_ci.pRasterState = NULL;
+        gp_ci.pMultisampleState = NULL;
+        gp_ci.pDepthStencilState = NULL;
+        gp_ci.pColorBlendState = NULL;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        pc_ci.pNext = NULL;
+        pc_ci.initialSize = 0;
+        pc_ci.initialData = 0;
+        pc_ci.maxSize = 0;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Tess Gfx Pipeline w/ 0 patchControlPoints.";
+    if (!strstr(msgString.c_str(),"Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive ")) {
+        FAIL() << "Error received was not 'Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive...' but instead '" << msgString.c_str() << "'";
+    }
+}
+*/
 TEST_F(VkLayerTest, NullRenderPass)
 {
     // Bind a NULL RenderPass

@@ -98,6 +98,7 @@ Additional work to be done
  4. INT & FLOAT bordercolors. Border color int/float selection must match associated texture format.
  5. Flag error on VkBufferCreateInfo if buffer size is 0
  6. VkImageViewCreateInfo.format must be set
+ 7. For vkCreateGraphicsPipelines, correctly handle array of pCreateInfos and array of pStages within each element of pCreatInfos
 
 ## Image
 
