@@ -28,6 +28,7 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | Cmd Buffer End | Verifies that EndCommandBuffer was called for this cmdBuffer at QueueSubmit time | NO_END_CMD_BUFFER | vkQueueSubmit | NoEndCmdBuffer | NA |
 | Cmd Buffer Begin | Check that BeginCommandBuffer was called for this command buffer when binding commands or calling end | NO_BEGIN_CMD_BUFFER | vkEndCommandBuffer vkCmdBindPipeline vkCmdBindDynamicViewportState vkCmdBindDynamicLineWidthState vkCmdBindDynamicDepthBiasState vkCmdBindDynamicBlendState vkCmdBindDynamicDepthBoundsState vkCmdBindDynamicStencilState vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorAttachment vkCmdClearDepthStencilAttachment vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp | NoBeginCmdBuffer | NA |
 | Cmd Buffer Submit Count | Verify that ONE_TIME submit cmdbuffer is not submitted multiple times | CMD_BUFFER_SINGLE_SUBMIT_VIOLATION | vkBeginCommandBuffer, vkQueueSubmit | CmdBufferTwoSubmits | NA |
+| Valid Secondary CmdBuffer | Validates that no primary command buffers are sent to vkCmdExecuteCommands() are | INVALID_SECONDARY_CMD_BUFFER | vkCmdExecuteCommands | ExecuteCommandsPrimaryCB | NA |
 | Descriptor Type | Verify Descriptor type in bound descriptor set layout matches descriptor type specified in update | DESCRIPTOR_TYPE_MISMATCH | vkUpdateDescriptorSets | DSTypeMismatch | With various DS API updates, need to revisit this code |
 | DS Update Size | DS update out of bounds for given layout section | DESCRIPTOR_UPDATE_OUT_OF_BOUNDS | vkUpdateDescriptorSets | DSUpdateOutOfBounds | NA |
 | DS Update Index | DS update binding too large for layout count | INVALID_UPDATE_INDEX | vkUpdateDescriptorSets | InvalidDSUpdateIndex | NA |
@@ -101,6 +102,7 @@ Additional work to be done
  6. VkImageViewCreateInfo.format must be set
  7. For vkCreateGraphicsPipelines, correctly handle array of pCreateInfos and array of pStages within each element of pCreatInfos
  8. Check for valid VkIndexType in vkCmdBindIndexBuffer() should be in PreCmdBindIndexBuffer() call
+ 9. Check for valid VkPipelineBindPoint in vkCmdBindPipeline() & vkCmdBindDescriptorSets() should be in PreCmdBindPipeline() & PreCmdBindDescriptorSets() calls respectively.
 
 ## Image
 

@@ -52,6 +52,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
     DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
     DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
+    DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER,     // vkCmdExecuteCommands() called with a primary cmdBuffer in pCmdBuffers array
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
     DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state object bound
     DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state object bound

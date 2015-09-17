@@ -3115,10 +3115,20 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t 
         if (!pCB->activeRenderPass) {
             skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                     "Incorrect call to vkCmdExecuteCommands() without an active RenderPass.");
-        } else {
-            updateCBTracking(cmdBuffer);
-            skipCall |= addCmd(pCB, CMD_EXECUTECOMMANDS);
         }
+        GLOBAL_CB_NODE* pSubCB = NULL;
+        for (uint32_t i=0; i<cmdBuffersCount; i++) {
+            pSubCB = getCBNode(pCmdBuffers[i]);
+            if (!pSubCB) {
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER, "DS",
+                    "vkCmdExecuteCommands() called w/ invalid Cmd Buffer %p in element %u of pCmdBuffers array.", (void*)pCmdBuffers[i], i);
+            } else if (VK_CMD_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER, "DS",
+                    "vkCmdExecuteCommands() called w/ Primary Cmd Buffer %p in element %u of pCmdBuffers array. All cmd buffers in pCmdBuffers array must be secondary.", (void*)pCmdBuffers[i], i);
+            }
+        }
+        updateCBTracking(cmdBuffer);
+        skipCall |= addCmd(pCB, CMD_EXECUTECOMMANDS);
     }
     if (VK_FALSE == skipCall)
         get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
@@ -3407,6 +3417,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdNextSubpass;
     if (!strcmp(funcName, "vkCmdEndRenderPass"))
         return (PFN_vkVoidFunction) vkCmdEndRenderPass;
+    if (!strcmp(funcName, "vkCmdExecuteCommands"))
+        return (PFN_vkVoidFunction) vkCmdExecuteCommands;
 
     VkLayerDispatchTable* pTable = get_dispatch_table(draw_state_device_table_map, dev);
     if (deviceExtMap.size() == 0 || deviceExtMap[pTable].debug_marker_enabled)

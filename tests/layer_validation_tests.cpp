@@ -1819,6 +1819,28 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError)
     }
 }
 
+TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB)
+{
+    // Attempt vkCmdExecuteCommands w/ a primary cmd buffer (should only be secondary)
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    BeginCommandBuffer();
+    //ASSERT_VK_SUCCESS(err);
+    VkCmdBuffer primCB = m_cmdBuffer->GetBufferHandle();
+    vkCmdExecuteCommands(m_cmdBuffer->GetBufferHandle(), 1, &primCB);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
+    if (!strstr(msgString.c_str(),"vkCmdExecuteCommands() called w/ Primary Cmd Buffer ")) {
+        FAIL() << "Error received was not 'vkCmdExecuteCommands() called w/ Primary Cmd Buffer ' but instead '" << msgString.c_str() << "'";
+    }
+}
+
 TEST_F(VkLayerTest, DSTypeMismatch)
 {
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type

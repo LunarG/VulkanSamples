@@ -3459,8 +3459,7 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
         cmd_bind_graphics_pipeline(cmd, intel_pipeline(pipeline));
         break;
     default:
-        /* TODOVV: Move test to validation layer */
-//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
+        assert(!"unsupported pipelineBindPoint");
         break;
     }
 }
@@ -3551,9 +3550,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
         data = &cmd->bind.dset.graphics_data;
         break;
     default:
-        /* TODOVV: Move test to validation layer */
-//        cmd_fail(cmd, VK_ERROR_INVALID_VALUE);
-        return;
+        assert(!"unsupported pipelineBindPoint");
         break;
     }
 
