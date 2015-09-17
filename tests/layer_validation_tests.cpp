@@ -2388,7 +2388,7 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2420,7 +2420,7 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2453,7 +2453,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
 
-    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
+    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"Shader is not SPIR-V")) {
         FAIL() << "Incorrect warning: " << msgString;
     }
@@ -2996,63 +2996,6 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT));
     if (!strstr(msgString.c_str(),"does not match FS output type")) {
         FAIL() << "Incorrect error: " << msgString;
-    }
-}
-
-TEST_F(VkLayerTest, CreatePipelineNonSpirvShader)
-{
-    VkFlags msgFlags;
-    std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    /* Intentionally provided GLSL rather than compiling to SPIRV first */
-    ScopedUseGlsl useGlsl(true);
-
-    char const *vsSource =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
-        "\n"
-        "void main(){\n"
-        "   gl_Position = vec4(1);\n"
-        "}\n";
-    char const *fsSource =
-        "#version 140\n"
-        "#extension GL_ARB_separate_shader_objects: require\n"
-        "#extension GL_ARB_shading_language_420pack: require\n"
-        "\n"
-        "layout(location=0) out vec4 x;\n"
-        "void main(){\n"
-        "   x = vec4(1);\n"
-        "}\n";
-
-    m_errorMonitor->ClearState();
-
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
-
-
-    VkPipelineObj pipe(m_device);
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-
-    /* set up CB 0; type is UNORM by default */
-    pipe.AddColorAttachment();
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-
-    VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
-
-    VkResult res = pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
-    /* pipeline creation should have succeeded */
-    ASSERT_EQ(VK_SUCCESS, res);
-
-    /* should have emitted a warning: the shader is not SPIRV, so we're
-     * not going to be able to analyze it */
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT);
-    if (!strstr(msgString.c_str(),"is not SPIR-V")) {
-        FAIL() << "Incorrect warning: " << msgString;
     }
 }
 
