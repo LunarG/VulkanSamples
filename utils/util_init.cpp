@@ -49,7 +49,7 @@ VkResult init_global_extension_properties(
     layer_name = layer_props.properties.layerName;
 
     do {
-        res = vkGetGlobalExtensionProperties(layer_name, &instance_extension_count, NULL);
+        res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, NULL);
         if (res)
             return res;
 
@@ -59,7 +59,7 @@ VkResult init_global_extension_properties(
 
         layer_props.extensions.resize(instance_extension_count);
         instance_extensions = layer_props.extensions.data();
-        res = vkGetGlobalExtensionProperties(
+        res = vkEnumerateInstanceExtensionProperties(
                   layer_name,
                   &instance_extension_count,
                   instance_extensions);
@@ -90,7 +90,7 @@ VkResult init_global_layer_properties(struct sample_info &info)
      * of layers went down or is smaller than the size given.
      */
     do {
-        res = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         if (res)
             return res;
 
@@ -100,7 +100,7 @@ VkResult init_global_layer_properties(struct sample_info &info)
 
         vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /*
@@ -131,7 +131,7 @@ VkResult init_device_extension_properties(
     layer_name = layer_props.properties.layerName;
 
     do {
-        res = vkGetPhysicalDeviceExtensionProperties(
+        res = vkEnumerateDeviceExtensionProperties(
                   info.gpu,
                   layer_name, &device_extension_count, NULL);
         if (res)
@@ -143,7 +143,7 @@ VkResult init_device_extension_properties(
 
         layer_props.extensions.resize(device_extension_count);
         device_extensions = layer_props.extensions.data();
-        res = vkGetPhysicalDeviceExtensionProperties(
+        res = vkEnumerateDeviceExtensionProperties(
                   info.gpu,
                   layer_name,
                   &device_extension_count,
@@ -175,7 +175,7 @@ VkResult init_device_layer_properties(struct sample_info &info)
      * of layers went down or is smaller than the size given.
      */
     do {
-        res = vkGetPhysicalDeviceLayerProperties(info.gpu, &device_layer_count, NULL);
+        res = vkEnumerateDeviceLayerProperties(info.gpu, &device_layer_count, NULL);
         if (res)
             return res;
 
@@ -185,7 +185,7 @@ VkResult init_device_layer_properties(struct sample_info &info)
 
         vk_props = (VkLayerProperties *) realloc(vk_props, device_layer_count * sizeof(VkLayerProperties));
 
-        res = vkGetPhysicalDeviceLayerProperties(info.gpu, &device_layer_count, vk_props);
+        res = vkEnumerateDeviceLayerProperties(info.gpu, &device_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /*
@@ -264,6 +264,8 @@ VkResult init_device(struct sample_info &info)
     assert(!res);
 
     VkDeviceQueueCreateInfo queue_info = {};
+    queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
 
@@ -1291,11 +1293,12 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
+    descriptor_pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+    descriptor_pool.maxSets = 1;
     descriptor_pool.count = use_texture?2:1;
     descriptor_pool.pTypeCount = type_count;
 
     res = vkCreateDescriptorPool(info.device,
-        VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
         &descriptor_pool, &info.desc_pool);
     assert(!res);
 

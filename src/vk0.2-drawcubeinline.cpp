@@ -51,13 +51,13 @@ int main(int argc, char **argv)
     VkExtensionProperties *instance_extensions;
     uint32_t instance_extension_count = 0;
     uint32_t enabled_extension_count = 0;
-    res = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
+    res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!res);
 
     VkBool32 U_ASSERT_ONLY WSIextFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-    res = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, instance_extensions);
+    res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!res);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         if (!strcmp(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME, instance_extensions[i].extName)) {
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 
     uint32_t device_extension_count = 0;
     VkExtensionProperties *device_extensions = NULL;
-    res = vkGetPhysicalDeviceExtensionProperties(
+    res = vkEnumerateDeviceExtensionProperties(
               physicalDevice, NULL, &device_extension_count, NULL);
     assert(!res);
 
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
     device_extensions = (VkExtensionProperties *) malloc(sizeof(VkExtensionProperties) * device_extension_count);
-    res = vkGetPhysicalDeviceExtensionProperties(
+    res = vkEnumerateDeviceExtensionProperties(
               physicalDevice, NULL, &device_extension_count, device_extensions);
     assert(!res);
 
@@ -129,6 +129,8 @@ int main(int argc, char **argv)
     assert(!res);
 
     VkDeviceQueueCreateInfo queue_info = {};
+    queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
 
@@ -930,12 +932,13 @@ int main(int argc, char **argv)
     VkDescriptorPoolCreateInfo descriptor_pool_info = {};
     descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool_info.pNext = NULL;
+    descriptor_pool_info.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+    descriptor_pool_info.maxSets = 1;
     descriptor_pool_info.count = 1;
     descriptor_pool_info.pTypeCount = type_count;
 
     VkDescriptorPool desc_pool;
     res = vkCreateDescriptorPool(device,
-        VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
         &descriptor_pool_info, &desc_pool);
     assert(!res);
 

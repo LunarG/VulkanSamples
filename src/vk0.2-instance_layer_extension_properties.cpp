@@ -45,13 +45,13 @@ int main(int argc, char **argv)
      * request for VkLayerProperties. If that happens,
      * the number of VkLayerProperties could exceed the count
      * previously given. To alert the app to this change
-     * vkGetGlobalExtensionProperties will return a VK_INCOMPLETE
+     * vkEnumerateInstanceExtensionProperties will return a VK_INCOMPLETE
      * status.
      * The count parameter will be updated with the number of
      * entries actually loaded into the data pointer.
      */
     do {
-        res = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         if (res)
             break;
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 
         vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /* VULKAN_KEY_START */
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
             layer_name = layer_props.properties.layerName;
 
             do {
-                res = vkGetGlobalExtensionProperties(
+                res = vkEnumerateInstanceExtensionProperties(
                           layer_name,
                           &instance_extension_count,
                           NULL);
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
                 layer_props.extensions.resize(instance_extension_count);
                 instance_extensions = layer_props.extensions.data();
-                res = vkGetGlobalExtensionProperties(
+                res = vkEnumerateInstanceExtensionProperties(
                           layer_name,
                           &instance_extension_count,
                           instance_extensions);

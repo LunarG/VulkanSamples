@@ -54,11 +54,12 @@ int main(int argc, char **argv)
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
+    descriptor_pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+    descriptor_pool.maxSets = 1;
     descriptor_pool.count = 1;
     descriptor_pool.pTypeCount = type_count;
 
     res = vkCreateDescriptorPool(info.device,
-        VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT, 1,
         &descriptor_pool, &info.desc_pool);
     assert(!res);
 
