@@ -181,6 +181,7 @@ depends on the pair of pipeline stages involved.
 | FS mixed broadcast | Flag error if the fragment shader writes both the legacy gl_FragCoord (which broadcasts to all CBs) and custom FS outputs. | FS_MIXED_BROADCAST | vkCreateGraphicsPipelines | TODO | Reference compiler refuses to compile shaders which do this |
 | VI Binding Descriptions | Validate that there is a single vertex input binding description for each binding | INCONSISTENT_VI | vkCreateGraphicsPipelines | CreatePipelineAttribBindingConflict | NA |
 | Shader Stage Check | Warns if shader stage is unsupported | UNKNOWN_STAGE | vkCreateGraphicsPipelines | TBD | NA |
+| Missing Descriptor | Flags error if shader attempts to use a descriptor binding not declared in the layout | MISSING_DESCRIPTOR | vkCreateGraphicsPipelines | CreatePipelineUniformBlockNotProvided | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### ShaderChecker Pending Work
