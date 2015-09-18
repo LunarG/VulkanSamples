@@ -1027,7 +1027,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     for (uint32_t i = 0; i < rectCount; i++) {
            VkImageSubresourceRange range = {
                VK_IMAGE_ASPECT_DEPTH_BIT,
-               0, /* ds->mipLevel, */
+               view->mipLevel,
                1,
                pRects[i].offset.z,
                pRects[i].extent.depth
