@@ -3,7 +3,7 @@
     "layer" : {
         "name": "Vktrace",
         "type": "GLOBAL",
-        "library_path": "..\\vktrace\\vktrace_layer.dll",
+        "library_path": ".\\vktrace_layer.dll",
         "abi_versions": "1.0.0",
         "implementation_version": "1.0.0",
         "description": "Vktrace tracing library",
