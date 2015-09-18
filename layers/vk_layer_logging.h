@@ -231,6 +231,23 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(
 }
 
 /*
+ * Checks if the message will get logged.
+ * Allows layer to defer collecting & formating data if the
+ * message will be discarded.
+ */
+static inline VkBool32 will_log_msg(
+    debug_report_data          *debug_data,
+    VkFlags                     msgFlags)
+{
+    if (!debug_data || !(debug_data->active_flags & msgFlags)) {
+        /* message is not wanted */
+        return false;
+    }
+
+    return true;
+}
+
+/*
  * Output log message via DEBUG_REPORT
  * Takes format and variable arg list so that output string
  * is only computed if a message needs to be logged
