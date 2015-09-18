@@ -3714,31 +3714,32 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
             &pRenderPassBegin->pClearValues[i];
         VkImageSubresourceRange range;
 
-        if (!att->clear_on_load)
-            continue;
-
         view = fb->views[i];
         range.baseMipLevel = view->mipLevel;
         range.mipLevels = 1;
         range.baseArrayLayer = view->baseArrayLayer;
         range.arraySize = view->array_size;
+        range.aspectMask = 0;
 
         if (view->is_rt) {
-            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            /* color */
+            if (att->clear_on_load) {
+                range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-            cmd_meta_clear_color_image(cmdBuffer, view->img,
-                    att->initial_layout, &clear_val->color, 1, &range);
+                cmd_meta_clear_color_image(cmdBuffer, view->img,
+                        att->initial_layout, &clear_val->color, 1, &range);
+            }
         } else {
-            range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-            cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                    view->img, att->initial_layout,
-                    clear_val->depthStencil.depth, clear_val->depthStencil.stencil,
-                    1, &range);
+            /* depth/stencil */
+            if (att->clear_on_load) {
+                range.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            }
 
             if (att->stencil_clear_on_load) {
-                range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+                range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
 
+            if (range.aspectMask) {
                 cmd_meta_clear_depth_stencil_image(cmdBuffer,
                         view->img, att->initial_layout,
                         clear_val->depthStencil.depth, clear_val->depthStencil.stencil,
