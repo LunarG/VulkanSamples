@@ -79,8 +79,8 @@ ThreadingLogFilename = stdout
 APIDumpDetailed = TRUE
 # NoAddr TRUE causes "address" to be dumped in place of hex addresses
 APIDumpNoAddr = FALSE
-# File = TRUE indicates that output should be written to file
-APIDumpFile = TRUE
+# File = TRUE indicates that output should be written to file instead of STDOUT
+APIDumpFile = FALSE
 # LogFilename is file to dump to when "File = TRUE" default is "vk_apidump.txt"
 APIDumpLogFilename = stdout
 # Flush = TRUE causes IO to be flushed after each line that's written
