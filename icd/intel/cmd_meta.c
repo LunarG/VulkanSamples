@@ -1025,25 +1025,17 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
      * specify the xy bounds.
      */
     for (uint32_t i = 0; i < rectCount; i++) {
-           VkImageSubresourceRange range = {
-               VK_IMAGE_ASPECT_DEPTH_BIT,
-               view->mipLevel,
-               1,
-               pRects[i].offset.z,
-               pRects[i].extent.depth
-           };
+        VkImageSubresourceRange range = {
+            aspectMask,
+            view->mipLevel,
+            1,
+            pRects[i].offset.z,
+            pRects[i].extent.depth
+        };
 
-           if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-               cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                       view->img, imageLayout,
-                       pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
-           }
-           if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-               range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-               cmd_meta_clear_depth_stencil_image(cmdBuffer,
-                       view->img, imageLayout,
-                       pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
-           }
+        cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                view->img, imageLayout,
+                pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
     }
 }
 
