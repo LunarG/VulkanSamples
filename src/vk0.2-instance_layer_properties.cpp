@@ -53,7 +53,7 @@ int main(int argc, char **argv)
      * of layers went down or is smaller than the size given.
      */
     do {
-        res = vkGetGlobalLayerProperties(&instance_layer_count, NULL);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         if (res)
             break;
 
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
         vk_props = (VkLayerProperties *) realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
 
-        res = vkGetGlobalLayerProperties(&instance_layer_count, vk_props);
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Layers:" << std::endl;

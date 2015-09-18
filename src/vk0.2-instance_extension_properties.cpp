@@ -47,14 +47,14 @@ int main(int argc, char **argv)
      * request for VkLayerProperties. If that happens,
      * the number of VkLayerProperties could exceed the count
      * previously given. To alert the app to this change
-     * vkGetGlobalExtensionProperties will return a VK_INCOMPLETE
+     * vkEnumerateInstanceExtensionProperties will return a VK_INCOMPLETE
      * status.
      * The count parameter will be updated with the number of
      * entries actually loaded into the data pointer.
      */
 
     do {
-        res = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, NULL);
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
         if (res)
             break;
 
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 
         vk_props = (VkExtensionProperties *) realloc(vk_props, instance_extension_count * sizeof(VkExtensionProperties));
 
-        res = vkGetGlobalExtensionProperties(NULL, &instance_extension_count, vk_props);
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     std::cout << "Instance Extensions:" << std::endl;
