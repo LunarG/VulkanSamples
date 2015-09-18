@@ -293,7 +293,7 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
  */
 static uint32_t loader_make_version(const char *vers_str)
 {
-    uint32_t vers = 0, major, minor, patch;
+    uint32_t vers = 0, major=0, minor=0, patch=0;
     char *minor_str= NULL;
     char *patch_str = NULL;
     char *cstr;
@@ -1443,7 +1443,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
 #undef GET_JSON_OBJECT
 
         // add list entry
-        struct loader_layer_properties *props;
+        struct loader_layer_properties *props=NULL;
         if (!strcmp(type, "DEVICE")) {
             if (layer_device_list == NULL) {
                 layer_node = layer_node->next;
@@ -1470,6 +1470,11 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                 continue;
             }
             props->type = (is_implicit) ? VK_LAYER_TYPE_GLOBAL_IMPLICIT : VK_LAYER_TYPE_GLOBAL_EXPLICIT;
+        }
+
+        if (props == NULL) {
+            layer_node = layer_node->next;
+            continue;
         }
 
         strncpy(props->info.layerName, name, sizeof (props->info.layerName));
@@ -1526,7 +1531,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         }
 
         cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
-        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *version;
+        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *version=NULL;
         GET_JSON_OBJECT(layer_node, functions)
         if (functions != NULL) {
             GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
@@ -3084,7 +3089,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
 {
-    struct loader_extension_list *global_ext_list;
+    struct loader_extension_list *global_ext_list=NULL;
     struct loader_layer_list instance_layers;
     struct loader_extension_list icd_extensions;
     struct loader_icd_libs icd_libs;
@@ -3199,7 +3204,7 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
     uint32_t copy_size;
 
     uint32_t count;
-    struct loader_extension_list *dev_ext_list;
+    struct loader_extension_list *dev_ext_list=NULL;
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
@@ -3214,7 +3219,7 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
         dev_ext_list = &icd->device_extension_cache[gpu_index];
     }
 
-    count = dev_ext_list->count;
+    count = (dev_ext_list == NULL) ? 0: dev_ext_list->count;
     if (pProperties == NULL) {
         *pCount = count;
         return VK_SUCCESS;
