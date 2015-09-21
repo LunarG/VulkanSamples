@@ -105,14 +105,8 @@ VkResult intel_query_create(struct intel_dev *dev,
         query_init_pipeline_statistics(dev, info, query);
         break;
     default:
+        assert(!"unknown query type");
         break;
-    }
-
-    if (!query->slot_stride) {
-        intel_query_destroy(query);
-        /* TODOVV: Move test to validation layer */
-//        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_VALIDATION_FAILED;
     }
 
     VkMemoryAllocInfo mem_reqs;
@@ -241,9 +235,7 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
         *pDataSize = query->slot_stride * queryCount;
         break;
     default:
-        /* TODOVV: Move test to validation layer */
-//        return VK_ERROR_INVALID_HANDLE;
-        return VK_ERROR_VALIDATION_FAILED;
+        assert(!"unknown query type");
         break;
     }
 
