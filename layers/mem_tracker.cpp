@@ -2237,8 +2237,25 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     VkCmdBuffer                         cmdBuffer,
-    uint32_t                            viewportAndScissorCount,
-    const VkViewport*                   pViewports,
+    uint32_t                            viewportCount,
+    const VkViewport*                   pViewports)
+{
+    VkBool32 skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&globalLock);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    if (!pCmdBuf) {
+        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+    VkCmdBuffer                         cmdBuffer,
+    uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -2250,7 +2267,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
     }
 }
 
@@ -2949,6 +2966,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCmdBindPipeline;
     if (!strcmp(funcName, "vkCmdSetViewport"))
         return (PFN_vkVoidFunction) vkCmdSetViewport;
+    if (!strcmp(funcName, "vkCmdSetScissor"))
+        return (PFN_vkVoidFunction) vkCmdSetScissor;
     if (!strcmp(funcName, "vkCmdSetLineWidth"))
         return (PFN_vkVoidFunction) vkCmdSetLineWidth;
     if (!strcmp(funcName, "vkCmdSetDepthBias"))

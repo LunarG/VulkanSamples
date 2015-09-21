@@ -1112,13 +1112,22 @@ LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBind
     disp->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
+LOADER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+    disp->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+}
+
+LOADER_EXPORT void VKAPI vkCmdSetScissor(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+{
+    const VkLayerDispatchTable *disp;
+
+    disp = loader_get_dispatch(cmdBuffer);
+
+    disp->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
 }
 
 LOADER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)

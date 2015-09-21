@@ -325,7 +325,10 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
         cmdBuffer->SetDepthBias(m_depthBias, m_depthBiasClamp, m_slopeScaledDepthBias);
     }
     if ((failMask & BsoFailViewport) != BsoFailViewport) {
-        cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data(), m_scissors.data());
+        /* TODO: Need separate test for missing scissor */
+        /* TODO: Need test for mismatched viewport and scissor count */
+        cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data());
+        cmdBuffer->SetScissor(m_scissors.size(), m_scissors.data());
     }
     if ((failMask & BsoFailBlend) != BsoFailBlend) {
         cmdBuffer->SetBlendConstants(m_blendConst);

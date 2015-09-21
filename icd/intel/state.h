@@ -33,6 +33,8 @@
 
 struct intel_dynamic_viewport {
     uint32_t viewport_count;
+    VkViewport viewports[INTEL_MAX_VIEWPORTS];
+    VkRect2D scissors[INTEL_MAX_VIEWPORTS];
     /* SF_CLIP_VIEWPORTs, CC_VIEWPORTs, and SCISSOR_RECTs */
     uint32_t cmd[INTEL_MAX_VIEWPORTS * (16 /* viewport */ + 2 /* cc */ + 2 /* scissor */)];
     uint32_t cmd_len;

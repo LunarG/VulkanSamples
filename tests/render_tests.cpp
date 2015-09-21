@@ -386,7 +386,8 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipel
     cmdBuffer->PrepareAttachments();
     cmdBuffer->SetLineWidth(m_lineWidth);
     cmdBuffer->SetDepthBias(m_depthBias, m_depthBiasClamp, m_slopeScaledDepthBias);
-    cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data(), m_scissors.data());
+    cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data());
+    cmdBuffer->SetScissor(m_scissors.size(), m_scissors.data());
     cmdBuffer->SetBlendConstants(m_blendConst);
     cmdBuffer->SetDepthBounds(m_minDepthBounds, m_maxDepthBounds);
     cmdBuffer->SetStencilReadMask(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilCompareMask);

@@ -235,6 +235,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCmdBindPipeline;
     if (!strcmp(name, "CmdSetViewport"))
         return (void*) vkCmdSetViewport;
+    if (!strcmp(name, "CmdSetScissor"))
+        return (void*) vkCmdSetScissor;
     if (!strcmp(name, "CmdSetLineWidth"))
         return (void*) vkCmdSetLineWidth;
     if (!strcmp(name, "CmdSetDepthBias"))

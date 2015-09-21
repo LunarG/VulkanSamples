@@ -118,6 +118,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCmdBindVertexBuffers CmdBindVertexBuffers;
     PFN_vkCmdBindIndexBuffer CmdBindIndexBuffer;
     PFN_vkCmdSetViewport CmdSetViewport;
+    PFN_vkCmdSetScissor CmdSetScissor;
     PFN_vkCmdSetLineWidth CmdSetLineWidth;
     PFN_vkCmdSetDepthBias CmdSetDepthBias;
     PFN_vkCmdSetBlendConstants CmdSetBlendConstants;

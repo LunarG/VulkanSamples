@@ -1268,6 +1268,8 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkCmdBindPipeline;
     if (!strcmp(name, "CmdSetViewport"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdSetViewport;
+    if (!strcmp(name, "CmdSetScissor"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdSetScissor;
     if (!strcmp(name, "CmdSetLineWidth"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdSetLineWidth;
     if (!strcmp(name, "CmdSetDepthBias"))

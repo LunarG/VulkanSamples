@@ -167,6 +167,7 @@ typedef enum _CMD_TYPE
     CMD_BINDPIPELINE,
     CMD_BINDPIPELINEDELTA,
     CMD_SETVIEWPORTSTATE,
+    CMD_SETSCISSORSTATE,
     CMD_SETLINEWIDTHSTATE,
     CMD_SETDEPTHBIASSTATE,
     CMD_SETBLENDSTATE,
@@ -243,6 +244,7 @@ typedef enum _CBStatusFlagBits
     CBSTATUS_STENCIL_WRITE_MASK_SET            = 0x00000200, // Stencil write mask has been set
     CBSTATUS_STENCIL_REFERENCE_SET             = 0x00000400, // Stencil reference has been set
     CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000800, // Index buffer has been set
+    CBSTATUS_SCISSOR_SET                       = 0x00001000, // Scissor has been set
 } CBStatusFlagBits;
 
 typedef struct stencil_data {

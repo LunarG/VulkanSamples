@@ -299,14 +299,26 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(Vk
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     VkCmdBuffer                         cmdBuffer,
-    uint32_t                            viewportAndScissorCount,
-    const VkViewport*                   pViewports,
+    uint32_t                            viewportCount,
+    const VkViewport*                   pViewports)
+{
+    VkBool32 skipCall = VK_FALSE;
+    /* TODO: Verify viewportCount < maxViewports from VkPhysicalDeviceLimits */
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(device_limits_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+    VkCmdBuffer                         cmdBuffer,
+    uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
     VkBool32 skipCall = VK_FALSE;
-    /* TODO: Verify viewportAndScissorCount < maxViewports from VkPhysicalDeviceLimits */
+    /* TODO: Verify scissorCount < maxViewports from VkPhysicalDeviceLimits */
+    /* TODO: viewportCount and scissorCount must match at draw time */
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(device_limits_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+        get_dispatch_table(device_limits_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
     }
 }
 

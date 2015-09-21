@@ -953,8 +953,12 @@ core = Extension(
 
         Proto("void", "CmdSetViewport",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("uint32_t", "viewportAndScissorCount"),
-             Param("const VkViewport*", "pViewports"),
+             Param("uint32_t", "viewportCount"),
+             Param("const VkViewport*", "pViewports")]),
+
+        Proto("void", "CmdSetScissor",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("uint32_t", "scissorCount"),
              Param("const VkRect2D*", "pScissors")]),
 
         Proto("void", "CmdSetLineWidth",

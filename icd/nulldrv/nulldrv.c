@@ -1077,7 +1077,12 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
+ICD_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+{
+    NULLDRV_LOG_FUNC;
+}
+
+ICD_EXPORT void VKAPI vkCmdSetScissor(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
 {
     NULLDRV_LOG_FUNC;
 }

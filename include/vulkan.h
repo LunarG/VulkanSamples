@@ -2158,7 +2158,8 @@ typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const 
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
 typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags);
 typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
-typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors);
+typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports);
+typedef void (VKAPI *PFN_vkCmdSetScissor)(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
 typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCmdBuffer cmdBuffer, float lineWidth);
 typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
 typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCmdBuffer cmdBuffer, const float blendConst[4]);
@@ -2700,8 +2701,12 @@ void VKAPI vkCmdBindPipeline(
 
 void VKAPI vkCmdSetViewport(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    viewportAndScissorCount,
-    const VkViewport*                           pViewports,
+    uint32_t                                    viewportCount,
+    const VkViewport*                           pViewports);
+
+void VKAPI vkCmdSetScissor(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    scissorCount,
     const VkRect2D*                             pScissors);
 
 void VKAPI vkCmdSetLineWidth(

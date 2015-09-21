@@ -123,6 +123,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->ResetCommandBuffer = (PFN_vkResetCommandBuffer) gpa(dev, "vkResetCommandBuffer");
     table->CmdBindPipeline = (PFN_vkCmdBindPipeline) gpa(dev, "vkCmdBindPipeline");
     table->CmdSetViewport = (PFN_vkCmdSetViewport) gpa(dev, "vkCmdSetViewport");
+    table->CmdSetScissor = (PFN_vkCmdSetScissor) gpa(dev, "vkCmdSetScissor");
     table->CmdSetLineWidth = (PFN_vkCmdSetLineWidth) gpa(dev, "vkCmdSetLineWidth");
     table->CmdSetDepthBias = (PFN_vkCmdSetDepthBias) gpa(dev, "vkCmdSetDepthBias");
     table->CmdSetBlendConstants = (PFN_vkCmdSetBlendConstants) gpa(dev, "vkCmdSetBlendConstants");
@@ -360,6 +361,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdBindPipeline;
     if (!strcmp(name, "CmdSetViewport"))
         return (void *) table->CmdSetViewport;
+    if (!strcmp(name, "CmdSetScissor"))
+        return (void *) table->CmdSetScissor;
     if (!strcmp(name, "CmdSetLineWidth"))
         return (void *) table->CmdSetLineWidth;
     if (!strcmp(name, "CmdSetDepthBias"))

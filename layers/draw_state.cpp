@@ -1969,9 +1969,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     VkCmdBuffer                         cmdBuffer,
-    uint32_t                            viewportAndScissorCount,
-    const VkViewport*                   pViewports,
-    const VkRect2D*                     pScissors)
+    uint32_t                            viewportCount,
+    const VkViewport*                   pViewports)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -1985,17 +1984,43 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
             }
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_VIEWPORT_SET;
-            pCB->viewports.resize(viewportAndScissorCount);
-            memcpy(pCB->viewports.data(), pViewports, viewportAndScissorCount);
-            pCB->scissors.resize(viewportAndScissorCount);
-            memcpy(pCB->scissors.data(), pScissors, viewportAndScissorCount);
+            pCB->viewports.resize(viewportCount);
+            memcpy(pCB->viewports.data(), pViewports, viewportCount);
             loader_platform_thread_unlock_mutex(&globalLock);
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdSetViewport()");
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+    VkCmdBuffer                         cmdBuffer,
+    uint32_t                            scissorCount,
+    const VkRect2D*                     pScissors)
+{
+    VkBool32 skipCall = VK_FALSE;
+    GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    if (pCB) {
+        if (pCB->state == CB_UPDATE_ACTIVE) {
+            updateCBTracking(cmdBuffer);
+            skipCall |= addCmd(pCB, CMD_SETSCISSORSTATE);
+            if (!pCB->activeRenderPass) {
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "Incorrect call to vkCmdSetScissor() without an active RenderPass.");
+            }
+            loader_platform_thread_lock_mutex(&globalLock);
+            pCB->status |= CBSTATUS_SCISSOR_SET;
+            pCB->scissors.resize(scissorCount);
+            memcpy(pCB->scissors.data(), pScissors, scissorCount);
+            loader_platform_thread_unlock_mutex(&globalLock);
+        } else {
+            skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdSetScissor()");
+        }
+    }
+    if (VK_FALSE == skipCall)
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
@@ -2307,6 +2332,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW]++;
             skipCall |= validate_draw_state(pCB, VK_FALSE);
+            /* TODO: Check that scissor and viewport counts are the same */
             // TODO : Need to pass cmdBuffer as srcObj here
             skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
@@ -3179,6 +3205,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdBindPipeline;
     if (!strcmp(funcName, "vkCmdSetViewport"))
         return (PFN_vkVoidFunction) vkCmdSetViewport;
+    if (!strcmp(funcName, "vkCmdSetScissor"))
+        return (PFN_vkVoidFunction) vkCmdSetScissor;
     if (!strcmp(funcName, "vkCmdSetLineWidth"))
         return (PFN_vkVoidFunction) vkCmdSetLineWidth;
     if (!strcmp(funcName, "vkCmdSetDepthBias"))

@@ -5497,9 +5497,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
     PostCmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportAndScissorCount, const VkViewport* pViewports, const VkRect2D* pScissors)
+VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportAndScissorCount, pViewports, pScissors);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+{
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
@@ -6982,6 +6987,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkAllocDescriptorSets;
     if (!strcmp(funcName, "vkCmdSetViewport"))
         return (PFN_vkVoidFunction) vkCmdSetViewport;
+    if (!strcmp(funcName, "vkCmdSetScissor"))
+        return (PFN_vkVoidFunction) vkCmdSetScissor;
     if (!strcmp(funcName, "vkCmdSetLineWidth"))
         return (PFN_vkVoidFunction) vkCmdSetLineWidth;
     if (!strcmp(funcName, "vkCmdSetDepthBias"))
