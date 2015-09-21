@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 170, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 170, 2)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -206,9 +206,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 43,
     VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO = 44,
     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 45,
+    VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO = 46,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -668,6 +669,22 @@ typedef enum {
     VK_BLEND_OP_NUM = (VK_BLEND_OP_MAX - VK_BLEND_OP_ADD + 1),
     VK_BLEND_OP_MAX_ENUM = 0x7FFFFFFF
 } VkBlendOp;
+
+typedef enum {
+    VK_DYNAMIC_STATE_VIEWPORT = 0,
+    VK_DYNAMIC_STATE_SCISSOR = 1,
+    VK_DYNAMIC_STATE_LINE_WIDTH = 2,
+    VK_DYNAMIC_STATE_DEPTH_BIAS = 3,
+    VK_DYNAMIC_STATE_BLEND_CONSTANTS = 4,
+    VK_DYNAMIC_STATE_DEPTH_BOUNDS = 5,
+    VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK = 6,
+    VK_DYNAMIC_STATE_STENCIL_WRITE_MASK = 7,
+    VK_DYNAMIC_STATE_STENCIL_REFERENCE = 8,
+    VK_DYNAMIC_STATE_BEGIN_RANGE = VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_END_RANGE = VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+    VK_DYNAMIC_STATE_NUM = (VK_DYNAMIC_STATE_STENCIL_REFERENCE - VK_DYNAMIC_STATE_VIEWPORT + 1),
+    VK_DYNAMIC_STATE_MAX_ENUM = 0x7FFFFFFF
+} VkDynamicState;
 
 typedef enum {
     VK_TEX_FILTER_NEAREST = 0,
@@ -1640,6 +1657,9 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    viewportCount;
+    const VkViewport*                           pViewports;
+    uint32_t                                    scissorCount;
+    const VkRect2D*                             pScissors;
 } VkPipelineViewportStateCreateInfo;
 
 typedef struct {
@@ -1651,6 +1671,10 @@ typedef struct {
     VkCullMode                                  cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
+    float                                       depthBias;
+    float                                       depthBiasClamp;
+    float                                       slopeScaledDepthBias;
+    float                                       lineWidth;
 } VkPipelineRasterStateCreateInfo;
 
 typedef struct {
@@ -1667,6 +1691,9 @@ typedef struct {
     VkStencilOp                                 stencilPassOp;
     VkStencilOp                                 stencilDepthFailOp;
     VkCompareOp                                 stencilCompareOp;
+    uint32_t                                    stencilCompareMask;
+    uint32_t                                    stencilWriteMask;
+    uint32_t                                    stencilReference;
 } VkStencilOpState;
 
 typedef struct {
@@ -1679,6 +1706,8 @@ typedef struct {
     VkBool32                                    stencilTestEnable;
     VkStencilOpState                            front;
     VkStencilOpState                            back;
+    float                                       minDepthBounds;
+    float                                       maxDepthBounds;
 } VkPipelineDepthStencilStateCreateInfo;
 
 typedef struct {
@@ -1701,7 +1730,15 @@ typedef struct {
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
     const VkPipelineColorBlendAttachmentState*  pAttachments;
+    float                                       blendConst[4];
 } VkPipelineColorBlendStateCreateInfo;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    dynamicStateCount;
+    const VkDynamicState*                       pDynamicStates;
+} VkPipelineDynamicStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1716,6 +1753,7 @@ typedef struct {
     const VkPipelineMultisampleStateCreateInfo* pMultisampleState;
     const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
     const VkPipelineColorBlendStateCreateInfo*  pColorBlendState;
+    const VkPipelineDynamicStateCreateInfo*     pDynamicState;
     VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
     VkRenderPass                                renderPass;

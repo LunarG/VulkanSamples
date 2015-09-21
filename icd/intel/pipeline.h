@@ -33,6 +33,7 @@
 #include "obj.h"
 #include "desc.h"
 #include "dev.h"
+#include "state.h"
 
 enum intel_pipeline_shader_use {
     INTEL_SHADER_USE_VID                = (1 << 0),
@@ -230,6 +231,18 @@ struct intel_pipeline {
      */
     // VkPipelineDsStateCreateInfo ds_state
     bool stencilTestEnable;
+
+    /* Dynamic state specified at PSO create time */
+    struct {
+        VkFlags use_pipeline_dynamic_state;
+        struct intel_dynamic_viewport viewport;
+        struct intel_dynamic_line_width line_width;
+        struct intel_dynamic_depth_bias depth_bias;
+        struct intel_dynamic_blend blend;
+        struct intel_dynamic_depth_bounds depth_bounds;
+        struct intel_dynamic_stencil stencil;
+    } state;
+
     uint32_t cmd_depth_stencil;
     uint32_t cmd_depth_test;
 

@@ -73,4 +73,34 @@ struct intel_dynamic_stencil {
     /* TODO: enable back facing stencil state */
     struct intel_dynamic_stencil_face back;
 };
+
+struct intel_cmd;
+void intel_set_viewport(struct intel_cmd *cmd, uint32_t count, const VkViewport *viewports);
+void intel_set_scissor(struct intel_cmd *cmd, uint32_t count, const VkRect2D *scissors);
+void intel_set_line_width(struct intel_cmd *cmd, float line_width);
+void intel_set_depth_bias(
+    struct intel_cmd                   *cmd,
+    float                               depthBias,
+    float                               depthBiasClamp,
+    float                               slopeScaledDepthBias);
+void intel_set_blend_constants(
+    struct intel_cmd                   *cmd,
+    const float                         blendConst[4]);
+void intel_set_depth_bounds(
+    struct intel_cmd                   *cmd,
+    float                               minDepthBounds,
+    float                               maxDepthBounds);
+void intel_set_stencil_compare_mask(
+    struct intel_cmd                   *cmd,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilCompareMask);
+void intel_set_stencil_write_mask(
+    struct intel_cmd                   *cmd,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilWriteMask);
+void intel_set_stencil_reference(
+    struct intel_cmd                   *cmd,
+    VkStencilFaceFlags                  faceMask,
+    uint32_t                            stencilReference);
+
 #endif /* STATE_H */

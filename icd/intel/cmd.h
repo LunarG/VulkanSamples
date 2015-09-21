@@ -124,6 +124,18 @@ enum intel_cmd_writer_type {
     INTEL_CMD_WRITER_COUNT,
 };
 
+enum intel_use_pipeline_dynamic_state {
+    INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT                  = (1 << 0),
+    INTEL_USE_PIPELINE_DYNAMIC_SCISSOR                   = (1 << 1),
+    INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH                = (1 << 2),
+    INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS                = (1 << 3),
+    INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS           = (1 << 4),
+    INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS              = (1 << 5),
+    INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK      = (1 << 6),
+    INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK        = (1 << 7),
+    INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE         = (1 << 8)
+};
+
 struct intel_cmd_shader_cache {
     struct {
         const void *shader;
@@ -164,6 +176,7 @@ struct intel_cmd_bind {
     } pipeline;
 
     struct {
+        VkFlags use_pipeline_dynamic_state;
         struct intel_dynamic_viewport viewport;
         struct intel_dynamic_line_width line_width;
         struct intel_dynamic_depth_bias depth_bias;

@@ -3328,10 +3328,61 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
     return true;
 }
 
+static void cmd_bind_dynamic_state(struct intel_cmd *cmd,
+                                   const struct intel_pipeline *pipeline)
+
+{
+    VkFlags use_flags = pipeline->state.use_pipeline_dynamic_state;
+    if (!use_flags) {
+        return;
+    }
+    cmd->bind.state.use_pipeline_dynamic_state = use_flags;
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
+        const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
+        intel_set_viewport(cmd, viewport->viewport_count, viewport->viewports);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
+        const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
+        intel_set_scissor(cmd, viewport->viewport_count, viewport->scissors);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
+        intel_set_line_width(cmd, pipeline->state.line_width.line_width);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS) {
+        const struct intel_dynamic_depth_bias *s = &pipeline->state.depth_bias;
+        intel_set_depth_bias(cmd, s->depth_bias, s->depth_bias_clamp, s->slope_scaled_depth_bias);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS) {
+        const struct intel_dynamic_blend *s = &pipeline->state.blend;
+        intel_set_blend_constants(cmd, s->blend_const);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS) {
+        const struct intel_dynamic_depth_bounds *s = &pipeline->state.depth_bounds;
+        intel_set_depth_bounds(cmd, s->min_depth_bounds, s->max_depth_bounds);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK) {
+        const struct intel_dynamic_stencil *s = &pipeline->state.stencil;
+        intel_set_stencil_compare_mask(cmd, VK_STENCIL_FACE_FRONT_BIT, s->front.stencil_compare_mask);
+        intel_set_stencil_compare_mask(cmd, VK_STENCIL_FACE_BACK_BIT, s->back.stencil_compare_mask);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK) {
+        const struct intel_dynamic_stencil *s = &pipeline->state.stencil;
+        intel_set_stencil_write_mask(cmd, VK_STENCIL_FACE_FRONT_BIT, s->front.stencil_write_mask);
+        intel_set_stencil_write_mask(cmd, VK_STENCIL_FACE_BACK_BIT, s->back.stencil_write_mask);
+    }
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE) {
+        const struct intel_dynamic_stencil *s = &pipeline->state.stencil;
+        intel_set_stencil_reference(cmd, VK_STENCIL_FACE_FRONT_BIT, s->front.stencil_reference);
+        intel_set_stencil_reference(cmd, VK_STENCIL_FACE_BACK_BIT, s->back.stencil_reference);
+    }
+}
+
 static void cmd_bind_graphics_pipeline(struct intel_cmd *cmd,
                                        const struct intel_pipeline *pipeline)
 {
     cmd->bind.pipeline.graphics = pipeline;
+
+    cmd_bind_dynamic_state(cmd, pipeline);
 
     cmd_alloc_dset_data(cmd, &cmd->bind.dset.graphics_data,
             pipeline->pipeline_layout);

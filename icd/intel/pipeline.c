@@ -111,6 +111,7 @@ static int translate_stencil_op(VkStencilOp op)
 }
 
 struct intel_pipeline_create_info {
+    VkFlags                                use_pipeline_dynamic_state;
     VkGraphicsPipelineCreateInfo           graphics;
     VkPipelineVertexInputStateCreateInfo   vi;
     VkPipelineInputAssemblyStateCreateInfo ia;
@@ -1072,11 +1073,56 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 
 }
 
+static void pipeline_build_state(struct intel_pipeline *pipeline,
+                                 const struct intel_pipeline_create_info *info)
+{
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
+        pipeline->state.viewport.viewport_count = info->vp.viewportCount;
+        memcpy(pipeline->state.viewport.viewports, info->vp.pViewports, sizeof(info->vp.viewportCount) * sizeof(VkViewport));
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
+        memcpy(pipeline->state.viewport.scissors, info->vp.pScissors, sizeof(info->vp.viewportCount) * sizeof(VkRect2D));
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
+        pipeline->state.line_width.line_width = info->rs.lineWidth;
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS) {
+        pipeline->state.depth_bias.depth_bias = info->rs.depthBias;
+        pipeline->state.depth_bias.depth_bias_clamp = info->rs.depthBiasClamp;
+        pipeline->state.depth_bias.slope_scaled_depth_bias = info->rs.slopeScaledDepthBias;
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS) {
+        pipeline->state.blend.blend_const[0] = info->cb.blendConst[0];
+        pipeline->state.blend.blend_const[1] = info->cb.blendConst[1];
+        pipeline->state.blend.blend_const[2] = info->cb.blendConst[2];
+        pipeline->state.blend.blend_const[3] = info->cb.blendConst[3];
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS) {
+        pipeline->state.depth_bounds.min_depth_bounds = info->db.minDepthBounds;
+        pipeline->state.depth_bounds.max_depth_bounds = info->db.maxDepthBounds;
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK) {
+        pipeline->state.stencil.front.stencil_compare_mask = info->db.front.stencilCompareMask;
+        pipeline->state.stencil.back.stencil_compare_mask = info->db.back.stencilCompareMask;
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK) {
+
+        pipeline->state.stencil.front.stencil_write_mask = info->db.front.stencilWriteMask;
+        pipeline->state.stencil.back.stencil_write_mask = info->db.back.stencilWriteMask;
+    }
+    if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE) {
+        pipeline->state.stencil.front.stencil_reference = info->db.front.stencilReference;
+        pipeline->state.stencil.back.stencil_reference = info->db.back.stencilReference;
+    }
+}
+
 
 static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
-                                     const struct intel_pipeline_create_info *info)
+                                   const struct intel_pipeline_create_info *info)
 {
     VkResult ret;
+
+    pipeline_build_state(pipeline, info);
 
     ret = pipeline_build_shaders(pipeline, info);
     if (ret != VK_SUCCESS)
@@ -1202,8 +1248,42 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     if (vkinfo->pViewportState != NULL) {
         memcpy(&info->vp, vkinfo->pViewportState, sizeof (info->vp));
     }
-    if (vkinfo->pViewportState != NULL) {
-        memcpy(&info->vp, vkinfo->pViewportState, sizeof (info->vp));
+
+    if (vkinfo->pDynamicState != NULL) {
+        for (uint32_t i = 0; i < vkinfo->pDynamicState->dynamicStateCount; i++) {
+            switch (vkinfo->pDynamicState->pDynamicStates[i]) {
+            case VK_DYNAMIC_STATE_VIEWPORT:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT;
+                break;
+            case VK_DYNAMIC_STATE_SCISSOR:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_SCISSOR;
+                break;
+            case VK_DYNAMIC_STATE_LINE_WIDTH:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH;
+                break;
+            case VK_DYNAMIC_STATE_DEPTH_BIAS:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS;
+                break;
+            case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS;
+                break;
+            case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS;
+                break;
+            case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK;
+                break;
+            case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK;
+                break;
+            case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
+                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE;
+                break;
+            default:
+                assert(!"Invalid dynamic state");
+                break;
+            }
+        }
     }
 
     return VK_SUCCESS;

@@ -2332,7 +2332,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW]++;
             skipCall |= validate_draw_state(pCB, VK_FALSE);
-            /* TODO: Check that scissor and viewport counts are the same */
+            /* TODOVV: Check that scissor and viewport counts are the same */
+            /* TODOVV: Do we need to check that viewportCount given in pipeline's
+             * VkPipelineViewportStateCreateInfo matches scissor & viewport counts
+             * given as dynamic state? Or is the count given in VkPipelineViewportStateCreateInfo
+             * simply indicate the number of viewport / scissor to use at this time?
+             */
             // TODO : Need to pass cmdBuffer as srcObj here
             skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
