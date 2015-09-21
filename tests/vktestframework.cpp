@@ -27,7 +27,9 @@
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
+#ifndef _WIN32
 #include <xcb/xcb.h>
+#endif
 #include "vk_ext_khr_swapchain.h"
 #include "vk_ext_khr_device_swapchain.h"
 
@@ -156,7 +158,9 @@ private:
     std::list<VkTestImageRecord>::iterator m_display_image;
 
     void Display();
+#ifndef _WIN32
     void HandleEvent(xcb_generic_event_t *event);
+#endif
 };
 
 #ifndef _WIN32
@@ -324,7 +328,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     ASSERT_TRUE(file.is_open()) << "Unable to open file: " << filename;
 
     file << "P6\n";
-    file << displayImage.width() << "\n";
+    file << displayImage.width() << " ";
     file << displayImage.height() << "\n";
     file << 255 << "\n";
 

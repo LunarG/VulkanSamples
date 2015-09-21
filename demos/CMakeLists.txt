@@ -2,14 +2,8 @@ if(NOT WIN32)
     find_package(XCB REQUIRED)
 endif()
 
-if(NOT WIN32)
-    if(NOT EXISTS /usr/include/png.h)
-        message(FATAL_ERROR "Necessary png12-dev headers cannot be found: sudo apt-get install libpng12-dev")
-    endif()
-endif()
-
 file(GLOB TEXTURES
-  "${PROJECT_SOURCE_DIR}/demos/*.png"
+  "${PROJECT_SOURCE_DIR}/demos/*.ppm"
   )
 file(COPY ${TEXTURES} DESTINATION ${CMAKE_BINARY_DIR}/demos)
 
@@ -73,13 +67,11 @@ if(NOT WIN32)
        "${PROJECT_SOURCE_DIR}/icd/common"
        )
 
-    link_libraries(${XCB_LIBRARIES} vulkan png m)
+    link_libraries(${XCB_LIBRARIES} vulkan m)
 endif()
 if(WIN32)
     include_directories (
        "${PROJECT_SOURCE_DIR}/icd/common"
-       "${PROJECT_SOURCE_DIR}/libs/libpng"
-       "${PROJECT_SOURCE_DIR}/libs/zlib"
        )
 
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES")
@@ -109,10 +101,7 @@ else()
     else()
         set (LIB_DIR "Win32")
     endif()
-    add_library(libpngd STATIC IMPORTED)
-    set_target_properties(libpngd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/libpngd.lib)
-    add_library(zlibd STATIC IMPORTED)
-    set_target_properties(zlibd PROPERTIES IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/libs/${LIB_DIR}/zlibd.lib)
+
     add_executable(cube WIN32 cube.c ${CMAKE_BINARY_DIR}/demos/cube-vert.spv ${CMAKE_BINARY_DIR}/demos/cube-frag.spv)
-    target_link_libraries(cube ${LIBRARIES} libpngd zlibd)
+    target_link_libraries(cube ${LIBRARIES} )
 endif()

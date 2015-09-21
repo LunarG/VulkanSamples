@@ -23,7 +23,7 @@ cd vktracereplay_tmp
 cp ..\..\vktrace\$dPath\vkreplay.exe .
 cp ..\..\vktrace\$dPath\vktrace.exe .
 cp ..\..\demos\$dPath\cube.exe .
-cp ..\..\demos\*.png .
+cp ..\..\demos\*.ppm .
 cp ..\..\demos\*.spv .
 cp ..\..\loader\$dPath\vulkan-0.dll .
 cp ..\..\layers\$dPath\VKLayerScreenShot.dll .

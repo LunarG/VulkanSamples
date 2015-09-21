@@ -45,7 +45,6 @@
 
 #include "vk_sdk_platform.h"
 #include "linmath.h"
-#include <png.h>
 
 #define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
@@ -110,7 +109,7 @@ struct texture_object {
 };
 
 static char *tex_files[] = {
-    "lunarg-logo-256x256-solid.png"
+    "lunarg.ppm"
 };
 
 struct vkcube_vs_uniform {
@@ -890,156 +889,46 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 }
 
-/** loadTexture
- *     loads a png file into an memory object, using cstdio , libpng.
- *
- *        \param demo : Needed to access VK calls
- *     \param filename : the png file to be loaded
- *     \param width : width of png, to be updated as a side effect of this function
- *     \param height : height of png, to be updated as a side effect of this function
- *
- *     \return bool : an opengl texture id.  true if successful?,
- *                     should be validated by the client of this function.
- *
- * Source: http://en.wikibooks.org/wiki/OpenGL_Programming/Intermediate/Textures
- * Modified to copy image to memory
- *
- */
+/* Load a ppm file into memory */
 bool loadTexture(const char *filename, uint8_t *rgba_data,
                  VkSubresourceLayout *layout,
                  int32_t *width, int32_t *height)
 {
-  //header for testing if it is a png
-  png_byte header[8];
-  int is_png, bit_depth, color_type, rowbytes;
-  size_t retval;
-  png_uint_32 i, twidth, theight;
-  png_structp  png_ptr;
-  png_infop info_ptr, end_info;
-  png_byte *image_data;
-  png_bytep *row_pointers;
+    FILE *fPtr = fopen(filename,"rb");
+    char header[256], *cPtr;
 
-  //open file as binary
-  FILE *fp = fopen(filename, "rb");
-  if (!fp) {
-    return false;
-  }
+    if (!fPtr)
+        return false;
 
-  //read the header
-  retval = fread(header, 1, 8, fp);
-  if (retval != 8) {
-      fclose(fp);
-      return false;
-  }
+    cPtr = fgets(header, 256, fPtr); // P6
+    if (cPtr == NULL || strncmp(header, "P6\n", 3))
+        return false;
 
-  //test if png
-  is_png = !png_sig_cmp(header, 0, 8);
-  if (!is_png) {
-    fclose(fp);
-    return false;
-  }
+    do {
+        cPtr = fgets(header, 256, fPtr);
+        if (cPtr == NULL)
+            return false;
+    } while ( !strncmp(header, "#", 1) );
 
-  //create png struct
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-      NULL, NULL);
-  if (!png_ptr) {
-    fclose(fp);
-    return (false);
-  }
+    sscanf(header, "%u %u", height, width);
+    if (rgba_data == NULL)
+        return true;
+    fgets(header, 256, fPtr); // Format
+    if (cPtr == NULL || strncmp(header, "255\n", 3))
+        return false;
 
-  //create png info struct
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr) {
-    png_destroy_read_struct(&png_ptr, (png_infopp) NULL, (png_infopp) NULL);
-    fclose(fp);
-    return (false);
-  }
-
-  //create png info struct
-  end_info = png_create_info_struct(png_ptr);
-  if (!end_info) {
-    png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp) NULL);
-    fclose(fp);
-    return (false);
-  }
-
-  //png error stuff, not sure libpng man suggests this.
-  if (setjmp(png_jmpbuf(png_ptr))) {
-    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-    fclose(fp);
-    return (false);
-  }
-
-  //init png reading
-  png_init_io(png_ptr, fp);
-
-  //let libpng know you already read the first 8 bytes
-  png_set_sig_bytes(png_ptr, 8);
-
-  // read all the info up to the image data
-  png_read_info(png_ptr, info_ptr);
-
-  // get info about png
-  png_get_IHDR(png_ptr, info_ptr, &twidth, &theight, &bit_depth, &color_type,
-      NULL, NULL, NULL);
-
-  //update width and height based on png info
-  *width = twidth;
-  *height = theight;
-
-  // Require that incoming texture be 8bits per color component
-  // and 4 components (RGBA).
-  if (png_get_bit_depth(png_ptr, info_ptr) != 8 ||
-      png_get_channels(png_ptr, info_ptr) != 4) {
-      return false;
-  }
-
-  if (rgba_data == NULL) {
-      // If data pointer is null, we just want the width & height
-      // clean up memory and close stuff
-      png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-      fclose(fp);
-
-      return true;
-  }
-
-  // Update the png info struct.
-  png_read_update_info(png_ptr, info_ptr);
-
-  // Row size in bytes.
-  rowbytes = png_get_rowbytes(png_ptr, info_ptr);
-
-  // Allocate the image_data as a big block, to be given to opengl
-  image_data = (png_byte *)malloc(rowbytes * theight * sizeof(png_byte));
-  if (!image_data) {
-    //clean up memory and close stuff
-    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-    fclose(fp);
-    return false;
-  }
-
-  // row_pointers is for pointing to image_data for reading the png with libpng
-  row_pointers = (png_bytep *)malloc(theight * sizeof(png_bytep));
-  if (!row_pointers) {
-    //clean up memory and close stuff
-    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-    // delete[] image_data;
-    fclose(fp);
-    return false;
-  }
-  // set the individual row_pointers to point at the correct offsets of image_data
-  for (i = 0; i < theight; ++i)
-    row_pointers[theight - 1 - i] = rgba_data + i * layout->rowPitch;
-
-  // read the png into image_data through row_pointers
-  png_read_image(png_ptr, row_pointers);
-
-  // clean up memory and close stuff
-  png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-  free(row_pointers);
-  free(image_data);
-  fclose(fp);
-
+    for(int y = 0; y < *height; y++)
+    {
+        uint8_t *rowPtr = rgba_data;
+        for(int x = 0; x < *width; x++)
+        {
+            fread(rowPtr, 3, 1, fPtr);
+            rowPtr[3] = 255; /* Alpha of 1 */
+            rowPtr += 4;
+        }
+        rgba_data += layout->rowPitch;
+    }
+    fclose(fPtr);
   return true;
 }
 
@@ -2127,7 +2016,7 @@ static void demo_run(struct demo *demo)
         // Wait for work to finish before updating MVP.
         vkDeviceWaitIdle(demo->device);
         demo->curFrame++;
-        if (demo->frameCount != INT_MAX && demo->curFrame == demo->frameCount)
+        if (demo->frameCount != INT32_MAX && demo->curFrame == demo->frameCount)
             demo->quit = true;
 
     }
@@ -2624,7 +2513,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     vec3 up = {0.0f, 1.0f, 0.0};
 
     memset(demo, 0, sizeof(*demo));
-    demo->frameCount = INT_MAX;
+    demo->frameCount = INT32_MAX;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
@@ -2644,7 +2533,7 @@ static void demo_init(struct demo *demo, int argc, char **argv)
             continue;
         }
         if (strcmp(argv[i], "--c") == 0 &&
-            demo->frameCount == INT_MAX &&
+            demo->frameCount == INT32_MAX &&
             i < argc-1 &&
             sscanf(argv[i+1],"%d", &demo->frameCount) == 1 &&
             demo->frameCount >= 0)

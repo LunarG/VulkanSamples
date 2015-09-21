@@ -20,7 +20,7 @@ cp ../../vktrace/vkreplay .
 cp ../../vktrace/vktrace .
 cp ../../vktrace/libvktrace_layer.so .
 cp ../../demos/cube .
-cp ../../demos/*png .
+cp ../../demos/*ppm .
 cp ../../demos/*spv .
 export LD_LIBRARY_PATH=`pwd`/../loader:$LD_LIBRARY_PATH
 export VK_LAYER_PATH=`pwd`/../../layers
