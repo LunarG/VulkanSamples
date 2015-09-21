@@ -157,6 +157,9 @@ static inline VkResult layer_create_msg_callback(
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    // Handle of 0 is logging_callback so use allocated Node address as unique handle
+    if (!(*pMsgCallback))
+        *pMsgCallback = (uint64_t) pNewDbgFuncNode;
     pNewDbgFuncNode->msgCallback = *pMsgCallback;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->msgFlags = msgFlags;
