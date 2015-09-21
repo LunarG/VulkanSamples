@@ -1090,7 +1090,7 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
      */
     if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.attributeCount > ARRAY_SIZE(pipeline->vb)) {
-        return VK_ERROR_UNKNOWN;
+        return VK_ERROR_VALIDATION_FAILED;
     }
 
     pipeline->vb_count = info->vi.bindingCount;
