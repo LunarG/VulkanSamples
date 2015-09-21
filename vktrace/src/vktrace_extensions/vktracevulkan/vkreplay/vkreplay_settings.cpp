@@ -26,7 +26,7 @@
 
 #include "vkreplay_settings.h"
 // declared as extern in header
-static vkreplay_settings s_defaultVkReplaySettings = { 1, "",
+static vkreplay_settings s_defaultVkReplaySettings = { "",
                                                        STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
                                                        STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK),
                                                        STRINGIFY(VK_DBG_LAYER_LEVEL_ERROR), STRINGIFY(VK_DBG_LAYER_ACTION_CALLBACK)};
@@ -34,7 +34,6 @@ vkreplay_settings g_vkReplaySettings;
 
 vktrace_SettingInfo g_vk_settings_info[] =
 {
-    { "dl", "DebugLevel", VKTRACE_SETTING_UINT, &g_vkReplaySettings.debugLevel, &s_defaultVkReplaySettings.debugLevel, FALSE, "Sets the Debug Level of the Vulkan validation layers."},
     { "e", "EnableLayers", VKTRACE_SETTING_STRING, &g_vkReplaySettings.enableLayers, &s_defaultVkReplaySettings.enableLayers, TRUE, "Comma separated list of Vulkan layers to enable."},
     { "dsrf", "DrawStateReportFlags", VKTRACE_SETTING_STRING, &g_vkReplaySettings.drawStateReportFlags, &s_defaultVkReplaySettings.drawStateReportFlags, TRUE, "DrawState Layer reporting level"},
     { "dsda", "DrawStateDebugAction", VKTRACE_SETTING_STRING, &g_vkReplaySettings.drawStateDebugAction, &s_defaultVkReplaySettings.drawStateDebugAction, TRUE, "DrawState Layer debug action"},

@@ -34,7 +34,6 @@ extern "C"
 
 typedef struct vkreplay_settings
 {
-    uint32_t debugLevel;
     const char* enableLayers;
     const char* drawStateReportFlags;
     const char* drawStateDebugAction;

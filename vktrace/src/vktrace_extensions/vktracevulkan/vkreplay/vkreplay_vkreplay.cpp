@@ -145,139 +145,166 @@ int vkReplay::dump_validation_data()
 VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkInstanceCreateInfo *pCreateInfo;
+    char **ppEnabledLayerNames = NULL, **saved_ppLayers;
     if (!m_display->m_initedVK)
     {
         VkInstance inst;
-        if (g_vkReplaySettings.debugLevel > 0)
-        {
 
-            // get the list of layers that the user wants to enable
-            uint32_t userLayerCount  = 0;
-            char ** userLayerNames = get_enableLayers_list(&userLayerCount);
+        // get the list of layers that the user wants to enable
+        uint32_t userLayerCount = 0;
+        char ** userLayerNames = get_enableLayers_list(&userLayerCount);
 
-            apply_layerSettings_overrides();
-            if (userLayerCount > 0)
-            {
-                // enumerate layers
-//                VkResult err;
-                VkExtensionProperties *instance_extensions;
-                uint32_t instance_extension_count = 0;
-//                size_t extSize = sizeof(uint32_t);
-                uint32_t total_extension_count = 1;
+        apply_layerSettings_overrides();
+        if (userLayerCount > 0) {
+            // enumerate layers
+            //                VkResult err;
+            VkExtensionProperties *instance_extensions;
+            uint32_t instance_extension_count = 0;
+            //                size_t extSize = sizeof(uint32_t);
+            uint32_t total_extension_count = 1;
 
-                // TODO : Need to update this for new extension interface
-//                err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
-//                if (err != VK_SUCCESS)
-//                {
-//                    vktrace_LogWarning("Internal call to vkGetGlobalExtensionInfo failed to get number of extensions available.");
-//                }
-//
-//                vktrace_LogDebug("Total Extensions found: %u", total_extension_count);
+            // TODO : Need to update this for new extension interface
+            //                err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_COUNT, 0, &extSize, &total_extension_count);
+            //                if (err != VK_SUCCESS)
+            //                {
+            //                    vktrace_LogWarning("Internal call to vkGetGlobalExtensionInfo failed to get number of extensions available.");
+            //                }
+            //
+            //                vktrace_LogDebug("Total Extensions found: %u", total_extension_count);
 
-                VkExtensionProperties extProp;
-//                extSize = sizeof(VkExtensionProperties);
-                instance_extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * total_extension_count);
-                //extProp.extName[0] = requiredLayerNames;
-                // TODO : Bug here only copying into one extProp and re-checking that in loop below. Do we need any of this anymore?
- //               memcpy(extProp.extName, requiredLayerNames[0], strlen(requiredLayerNames[0])*sizeof(char));
-                extProp.specVersion = 0;
-                for (uint32_t i = 0; i < total_extension_count; i++)
-                {
-//                    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
-//                    vktrace_LogDebug("Ext %u: '%s' v%u from '%s'.", i, extProp.name, extProp.version, extProp.description);
-//
-//                    bool bCheckIfNeeded = true;
-                    bool bFound = false;
-//
-                    // First, check extensions required by vkreplay
+            VkExtensionProperties extProp;
+            //                extSize = sizeof(VkExtensionProperties);
+            instance_extensions = (VkExtensionProperties*) malloc(sizeof (VkExtensionProperties) * total_extension_count);
+            //extProp.extName[0] = requiredLayerNames;
+            // TODO : Bug here only copying into one extProp and re-checking that in loop below. Do we need any of this anymore?
+            //               memcpy(extProp.extName, requiredLayerNames[0], strlen(requiredLayerNames[0])*sizeof(char));
+            extProp.specVersion = 0;
+            for (uint32_t i = 0; i < total_extension_count; i++) {
+                //                    err = vkGetGlobalExtensionInfo(VK_EXTENSION_INFO_TYPE_PROPERTIES, i, &extSize, &extProp);
+                //                    vktrace_LogDebug("Ext %u: '%s' v%u from '%s'.", i, extProp.name, extProp.version, extProp.description);
+                //
+                //                    bool bCheckIfNeeded = true;
+                bool bFound = false;
+                //
+                // First, check extensions required by vkreplay
 #if 0
-                    if (bCheckIfNeeded)
-                    {
-                        for (uint32_t j = 0; j < requiredLayerCount; j++)
-                        {
-                            if (strncmp(requiredLayerNames[j], extProp.extName, strlen(requiredLayerNames[j])) == 0)
-                            {
-                                bCheckIfNeeded = false;
-                                bFound = true;
-                                vktrace_LogDebug("... required by vkreplay.");
-                                break;
-                            }
+                if (bCheckIfNeeded) {
+                    for (uint32_t j = 0; j < requiredLayerCount; j++) {
+                        if (strncmp(requiredLayerNames[j], extProp.extName, strlen(requiredLayerNames[j])) == 0) {
+                            bCheckIfNeeded = false;
+                            bFound = true;
+                            vktrace_LogDebug("... required by vkreplay.");
+                            break;
                         }
                     }
+                }
 #endif
-//
-//                    // Second, check extensions requested by user
-//                    if (bCheckIfNeeded)
-//                    {
-//                        for (uint32_t j = 0; j < userLayerCount; j++)
-//                        {
-//                            if (strcmp(userLayerNames[j], extProp.name) == 0)
-//                            {
-//                                //bCheckIfNeeded = false;
-//                                bFound = true;
-//                                vktrace_LogDebug("... required by user.");
-//                                break;
-//                            }
-//                        }
-//                    }
-//
-//                    // Third, check extensions requested by the application
-//                    if (bCheckIfNeeded)
-//                    {
-//                        for (uint32_t j = 0; j < pPacket->pCreateInfo->extensionCount; j++)
-//                        {
-//                            if (memcmp(&pPacket->pCreateInfo->pEnabledExtensions[j], &extProp, sizeof(VkExtensionProperties)) == 0)
-//                            {
-//                                bCheckIfNeeded = false;
-//                                bFound = true;
-//                                vktrace_LogDebug("... required by application.");
-//                                break;
-//                            }
-//                        }
-//                    }
-//
-                    // if extension was found in one of the required lists, then copy it into the list to enable.
-                    if (bFound)
-                    {
-                        memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof(VkExtensionProperties));
+                //
+                //                    // Second, check extensions requested by user
+                //                    if (bCheckIfNeeded)
+                //                    {
+                //                        for (uint32_t j = 0; j < userLayerCount; j++)
+                //                        {
+                //                            if (strcmp(userLayerNames[j], extProp.name) == 0)
+                //                            {
+                //                                //bCheckIfNeeded = false;
+                //                                bFound = true;
+                //                                vktrace_LogDebug("... required by user.");
+                //                                break;
+                //                            }
+                //                        }
+                //                    }
+                //
+                //                    // Third, check extensions requested by the application
+                //                    if (bCheckIfNeeded)
+                //                    {
+                //                        for (uint32_t j = 0; j < pPacket->pCreateInfo->extensionCount; j++)
+                //                        {
+                //                            if (memcmp(&pPacket->pCreateInfo->pEnabledExtensions[j], &extProp, sizeof(VkExtensionProperties)) == 0)
+                //                            {
+                //                                bCheckIfNeeded = false;
+                //                                bFound = true;
+                //                                vktrace_LogDebug("... required by application.");
+                //                                break;
+                //                            }
+                //                        }
+                //                    }
+                //
+                // if extension was found in one of the required lists, then copy it into the list to enable.
+                if (bFound) {
+                    memcpy(&instance_extensions[instance_extension_count++], &extProp, sizeof (VkExtensionProperties));
+                }
+            }
+
+            VkInstanceCreateInfo createInfo;
+            createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+            createInfo.pNext = NULL;
+            createInfo.pAppInfo = pPacket->pCreateInfo->pAppInfo;
+            createInfo.pAllocCb = NULL;
+            createInfo.layerCount = 0;
+            createInfo.ppEnabledLayerNames = NULL;
+            createInfo.extensionCount = instance_extension_count;
+            //                createInfo.ppEnabledExtensionNames = requiredLayerNames;
+
+            // make the call
+            replayResult = m_vkFuncs.real_vkCreateInstance(&createInfo, &inst);
+
+            // clean up
+            free(instance_extensions);
+        } else {
+            VkAllocCallbacks **pACB = (VkAllocCallbacks**) & pPacket->pCreateInfo->pAllocCb;
+            const char strScreenShot[] = "ScreenShot";
+            *pACB = NULL;
+            pCreateInfo = (VkInstanceCreateInfo *) pPacket->pCreateInfo;
+            if (g_pReplaySettings->screenshotList != NULL) {
+                // enable screenshot layer if it is available and not already in list
+                bool found_ss = false;
+                for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
+                    if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
+                        found_ss = true;
+                        break;
                     }
                 }
+                if (!found_ss) {
+                    uint32_t count;
 
-                VkInstanceCreateInfo createInfo;
-                createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-                createInfo.pNext = NULL;
-                createInfo.pAppInfo = pPacket->pCreateInfo->pAppInfo;
-                createInfo.pAllocCb = NULL;
-                createInfo.layerCount = 0;
-                createInfo.ppEnabledLayerNames = NULL;
-                createInfo.extensionCount = instance_extension_count;
-//                createInfo.ppEnabledExtensionNames = requiredLayerNames;
-
-                // make the call
-                replayResult = m_vkFuncs.real_vkCreateInstance(&createInfo, &inst);
-
-                // clean up
-                free(instance_extensions);
+                    // query to find if ScreenShot layer is available
+                    m_vkFuncs.real_vkEnumerateInstanceLayerProperties(&count, NULL);
+                    VkLayerProperties *props = (VkLayerProperties *) vktrace_malloc(count * sizeof (VkLayerProperties));
+                    if (props && count > 0)
+                        m_vkFuncs.real_vkEnumerateInstanceLayerProperties(&count, props);
+                    for (uint32_t i = 0; i < count; i++) {
+                        if (!strcmp(props[i].layerName, strScreenShot)) {
+                            found_ss = true;
+                            break;
+                        }
+                    }
+                    if (found_ss) {
+                        // screenshot layer is available so enable it
+                        ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->layerCount + 1) * sizeof (char *));
+                        for (uint32_t i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++) {
+                            ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
+                        }
+                        ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
+                        strcpy(ppEnabledLayerNames[pCreateInfo->layerCount++], strScreenShot);
+                        saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
+                        pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
+                    }
+                    vktrace_free(props);
+                }
             }
-            else
-            {
-                VkAllocCallbacks **pACB = (VkAllocCallbacks**) &pPacket->pCreateInfo->pAllocCb;
-                *pACB = NULL;
-                replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
-            }
-            release_enableLayer_list(userLayerNames);
-
-            // get entrypoints from layers that we plan to call
-//#if !defined(_WIN32)
-//            m_pDSDump = (void (*)(char*)) m_vkFuncs.real_vkGetInstanceProcAddr(inst, "drawStateDumpDotFile");
-//            m_pCBDump = (void (*)(char*)) m_vkFuncs.real_vkGetInstanceProcAddr(inst, "drawStateDumpCommandBufferDotFile");
-////            m_pVktraceSnapshotPrint = (VKTRACESNAPSHOT_PRINT_OBJECTS) m_vkFuncs.real_vkGetInstanceProcAddr(inst, "vktraceSnapshotPrintObjects");
-//#endif
-        }
-        else
-        {
             replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
+            if (ppEnabledLayerNames) {
+                // restore the packets CreateInfo struct
+                vktrace_free(ppEnabledLayerNames[pCreateInfo->layerCount - 1]);
+                vktrace_free(ppEnabledLayerNames);
+                pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
+            }
         }
+        release_enableLayer_list(userLayerNames);
+
+
         if (replayResult == VK_SUCCESS)
         {
             m_objMapper.add_to_instances_map(*(pPacket->pInstance), inst);
@@ -300,10 +327,10 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
             return VK_ERROR_VALIDATION_FAILED;
         }
         const char strScreenShot[] = "ScreenShot";
-        char *strScreenShotEnv = vktrace_get_global_var("_VK_SCREENSHOT");
+        //char *strScreenShotEnv = vktrace_get_global_var("_VK_SCREENSHOT");
 
         pCreateInfo = (VkDeviceCreateInfo *) pPacket->pCreateInfo;
-        if (strScreenShotEnv && strlen(strScreenShotEnv) != 0) {
+        if (g_pReplaySettings->screenshotList != NULL) {
             // enable screenshot layer if it is available and not already in list
             bool found_ss = false;
             for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
