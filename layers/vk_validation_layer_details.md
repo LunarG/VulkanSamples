@@ -113,10 +113,13 @@ The Image layer is responsible for validating format-related information and enf
 
 DETAILS TABLE PENDING
 
-| Check | Overview | ENUM | Relevant API | Testname | Notes/TODO |
+| Check | Overview | ENUM IMAGE_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
-| Image Format | Verifies returned format to ensure that it is a supported Vulkan format | NA | vkCreateImage vkCreateRenderPass | TBD | NA |
-| Image Format | Validates that attachment image layouts, loadOps, and storeOps are valid Vulkan values; Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | NA | vkCreateRenderPass | TBD | NA |
+| Image Format | Verifies that requested format is a supported Vulkan format on this device | FORMAT_UNSUPPORTED | vkCreateImage vkCreateRenderPass | TBD | NA |
+| RenderPass Attachments | Validates that attachment image layouts, loadOps, and storeOps are valid Vulkan values | RENDERPASS_INVALID_ATTACHMENT | vkCreateRenderPass | TBD | NA |
+| Subpass DS Settings | Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | RENDERPASS_INVALID_DS_ATTACHMENT | vkCreateRenderPass | TBD | NA |
+| View Creation | Verify that requested Image View Creation parameters are reasonable for the image that the view is being created for | VIEW_CREATE_ERROR | vkCreateImageView | TBD | NA |
+| NA | Enum used for informational messages | NONE | | NA | None |
 
 ### Image Pending Work
 Additional work to be done

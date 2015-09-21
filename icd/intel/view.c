@@ -1155,7 +1155,6 @@ void intel_buf_view_init(struct intel_dev *dev,
                              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     VkFormat format;
     VkDeviceSize stride;
-    VkDeviceSize range = info->range;
     uint32_t *cmd;
     int i;
 
@@ -1297,17 +1296,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
                                const VkImageViewCreateInfo *info,
                                struct intel_img_view **view_ret)
 {
-    struct intel_img *img = intel_img(info->image);
     struct intel_img_view *view;
-
-    if (info->subresourceRange.baseMipLevel >= img->mip_levels ||
-        info->subresourceRange.baseArrayLayer >= img->array_size ||
-        !info->subresourceRange.mipLevels ||
-        !info->subresourceRange.arraySize) {
-        /* TODOVV: Move test to validation layer */
-//        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
             sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_IMAGE_VIEW, info, 0);

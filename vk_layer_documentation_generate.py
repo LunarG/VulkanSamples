@@ -74,9 +74,13 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/draw_state.h',
                                 'generated' : True,
                                 'error_enum' : 'OBJECT_TRACK_ERROR',},
                  'device_limits' : {'header' : 'layers/device_limits.h',
-                                'source' : 'dbuild/layers/device_limits.cpp',
-                                'generated' : False,
-                                'error_enum' : 'DEV_LIMITS_ERROR',},
+                                    'source' : 'layers/device_limits.cpp',
+                                    'generated' : False,
+                                    'error_enum' : 'DEV_LIMITS_ERROR',},
+                 'image' : {'header' : 'layers/image.h',
+                            'source' : 'layers/image.cpp',
+                            'generated' : False,
+                            'error_enum' : 'IMAGE_ERROR',},
     }
 
 builtin_headers = [layer_inputs[ln]['header'] for ln in layer_inputs]

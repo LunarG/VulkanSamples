@@ -30,10 +30,11 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <memory>
 
+#include "image.h"
 #include "vk_loader_platform.h"
 #include "vk_layer.h"
-#include "vk_layer_config.h"
 #include "vk_enum_validate_helper.h"
 #include "vk_struct_validate_helper.h"
 //The following is #included again to catch certain OS-specific functions being used:
@@ -41,16 +42,18 @@
 
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
-#include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
+
+using namespace std;
 
 typedef struct _layer_data {
     debug_report_data *report_data;
     VkDbgMsgCallback logging_callback;
     VkPhysicalDevice physicalDevice;
+    unordered_map<uint64_t, unique_ptr<VkImageCreateInfo>> imageMap;
 } layer_data;
 
-static std::unordered_map<void*, layer_data*> layer_data_map;
+static unordered_map<void*, layer_data*> layer_data_map;
 static device_table_map image_device_table_map;
 static instance_table_map image_instance_table_map;
 
@@ -258,28 +261,37 @@ bool is_depth_format(VkFormat format)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
-        layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
         VkFormatProperties properties;
         VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
                 device_data->physicalDevice, pCreateInfo->format, &properties);
-        if(result != VK_SUCCESS)
-        {
+        if(result != VK_SUCCESS) {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be validated";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", str);
+            log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
 
         if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains unsupported format";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", str);
+            log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
     }
 
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
+    if(result == VK_SUCCESS) {
+        device_data->imageMap[pImage->handle] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
+    }
     return result;
+}
+
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
+{
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    device_data->imageMap.erase(image.handle);
+    get_dispatch_table(image_device_table_map, device)->DestroyImage(device, image);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
@@ -296,7 +308,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], cannot be validated";
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
                 continue;
             }
 
@@ -304,7 +316,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], contains unsupported format";
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
             }
         }
     }
@@ -316,7 +328,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -326,7 +338,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -336,7 +348,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -353,13 +365,46 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             if (pCreateInfo->pSubpasses[i].depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
-                log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "IMAGE", ss.str().c_str());
+                log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", ss.str().c_str());
             }
         }
     }
 
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
 
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto imageEntry = device_data->imageMap.find(pCreateInfo->image.handle);
+    if (imageEntry != device_data->imageMap.end()) {
+        if (pCreateInfo->subresourceRange.baseMipLevel >= imageEntry->second->mipLevels) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with baseMipLevel " << pCreateInfo->subresourceRange.baseMipLevel << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second->mipLevels << " mip levels.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
+        }
+        if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second->arraySize) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second->arraySize << " mip levels.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
+        }
+        if (!pCreateInfo->subresourceRange.mipLevels) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.mipLevels.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
+        }
+        if (!pCreateInfo->subresourceRange.arraySize) {
+            std::stringstream ss;
+            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.arraySize.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
+        }
+    }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
+    VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
     return result;
 }
 
