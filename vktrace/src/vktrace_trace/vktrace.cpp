@@ -48,22 +48,6 @@ vktrace_SettingInfo g_settings_info[] =
     { "w", "WorkingDir", VKTRACE_SETTING_STRING, &g_settings.working_dir, &g_default_settings.working_dir, TRUE, "The program's working directory."},
     { "o", "OutputTrace", VKTRACE_SETTING_STRING, &g_settings.output_trace, &g_default_settings.output_trace, TRUE, "Path to the generated output trace file."},
     { "s", "ScreenShot", VKTRACE_SETTING_STRING, &g_settings.screenshotList, &g_default_settings.screenshotList, TRUE, "Comma separated list of frame numbers on which to take a screen snapshot."},
-    { "l0", "TraceLibrary0", VKTRACE_SETTING_STRING, &g_settings.trace_library[0], &g_default_settings.trace_library[0], TRUE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l1", "TraceLibrary1", VKTRACE_SETTING_STRING, &g_settings.trace_library[1], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l2", "TraceLibrary2", VKTRACE_SETTING_STRING, &g_settings.trace_library[2], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l3", "TraceLibrary3", VKTRACE_SETTING_STRING, &g_settings.trace_library[3], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l4", "TraceLibrary4", VKTRACE_SETTING_STRING, &g_settings.trace_library[4], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l5", "TraceLibrary5", VKTRACE_SETTING_STRING, &g_settings.trace_library[5], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l6", "TraceLibrary6", VKTRACE_SETTING_STRING, &g_settings.trace_library[6], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l7", "TraceLibrary7", VKTRACE_SETTING_STRING, &g_settings.trace_library[7], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l8", "TraceLibrary8", VKTRACE_SETTING_STRING, &g_settings.trace_library[8], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l9", "TraceLibrary9", VKTRACE_SETTING_STRING, &g_settings.trace_library[9], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l10", "TraceLibrary10", VKTRACE_SETTING_STRING, &g_settings.trace_library[10], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l11", "TraceLibrary11", VKTRACE_SETTING_STRING, &g_settings.trace_library[11], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l12", "TraceLibrary12", VKTRACE_SETTING_STRING, &g_settings.trace_library[12], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l13", "TraceLibrary13", VKTRACE_SETTING_STRING, &g_settings.trace_library[13], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l14", "TraceLibrary14", VKTRACE_SETTING_STRING, &g_settings.trace_library[14], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
-    { "l15", "TraceLibrary15", VKTRACE_SETTING_STRING, &g_settings.trace_library[15], NULL, FALSE, "Path to the dynamic tracer library to be injected, may use [0-15]."},
     { "ptm", "PrintTraceMessages", VKTRACE_SETTING_BOOL, &g_settings.print_trace_messages, &g_default_settings.print_trace_messages, TRUE, "Print trace messages to vktrace console."},
 
     //{ "z", "pauze", VKTRACE_SETTING_BOOL, &g_settings.pause, &g_default_settings.pause, TRUE, "Wait for a key at startup (so a debugger can be attached)" },
@@ -99,43 +83,16 @@ void MessageLoop()
 }
 #endif
 
-// returns the number of tracers that need to be injected
 int PrepareTracers(vktrace_process_capture_trace_thread_info** ppTracerInfo)
 {
-    // determine number of tracers to load and inject
-    unsigned int num_tracers = 0;
-    for (unsigned int i = 0; i < VKTRACE_MAX_TRACER_ID_ARRAY_SIZE; i++)
-    {
-        if (g_settings.trace_library[i] != NULL)
-        {
-            ++num_tracers;
-        }
-    }
+    unsigned int num_tracers = 1;
 
     assert(ppTracerInfo != NULL && *ppTracerInfo == NULL);
     *ppTracerInfo = VKTRACE_NEW_ARRAY(vktrace_process_capture_trace_thread_info, num_tracers);
     memset(*ppTracerInfo, 0, sizeof(vktrace_process_capture_trace_thread_info) * num_tracers);
 
-    // consolidate the list, but also reverse the order so that the entrypoints should be hooked in the expected order
-    unsigned int tmpTracerIndex = num_tracers;
-    for (unsigned int i = 0; i < VKTRACE_MAX_TRACER_ID_ARRAY_SIZE; i++)
-    {
-        if (g_settings.trace_library[i] != NULL)
-        {
-            --tmpTracerIndex;
-            (*ppTracerInfo)[tmpTracerIndex].tracerPath = g_settings.trace_library[i];
-            // we only support Vulkan tracer
-            (*ppTracerInfo)[tmpTracerIndex].tracerId = VKTRACE_TID_VULKAN;
-        }
-    }
-
-    if (tmpTracerIndex > 0)
-    {
-        vktrace_LogError("One or more tracers could not be loaded. Please correct the issue and try again.");
-        VKTRACE_DELETE(*ppTracerInfo);
-        *ppTracerInfo = NULL;
-        return 0;
-    }
+    // we only support Vulkan tracer
+    (*ppTracerInfo)[0].tracerId = VKTRACE_TID_VULKAN;
 
     return num_tracers;
 }
@@ -143,38 +100,22 @@ int PrepareTracers(vktrace_process_capture_trace_thread_info** ppTracerInfo)
 bool InjectTracersIntoProcess(vktrace_process_info* pInfo)
 {
     bool bRecordingThreadsCreated = true;
-    for (unsigned int i = 0; i < pInfo->tracerCount; i++)
-    {
-        // inject tracers
-        if (vktrace_platform_remote_load_library(pInfo->hProcess, pInfo->pCaptureThreads[i].tracerPath, &pInfo->pCaptureThreads[i].tracingThread, NULL))
-        {
-            // prepare data for capture threads
-            pInfo->pCaptureThreads[i].pProcessInfo = pInfo;
-            pInfo->pCaptureThreads[i].recordingThread = VKTRACE_NULL_THREAD;
+    vktrace_thread tracingThread;
+    if (vktrace_platform_remote_load_library(pInfo->hProcess, NULL, &tracingThread, NULL)) {
+        // prepare data for capture threads
+        pInfo->pCaptureThreads[0].pProcessInfo = pInfo;
+        pInfo->pCaptureThreads[0].recordingThread = VKTRACE_NULL_THREAD;
 
-            // create thread to record trace packets from the tracer
-            pInfo->pCaptureThreads[i].recordingThread = vktrace_platform_create_thread(Process_RunRecordTraceThread, &(pInfo->pCaptureThreads[i]));
-            if (pInfo->pCaptureThreads[i].recordingThread == VKTRACE_NULL_THREAD)
-            {
-                vktrace_LogError("Failed to create trace recording thread.");
-                bRecordingThreadsCreated = false;
-            }
-
-#if defined(WIN32)
-            // wait for the hooking / tracing thread to complete now that its recording thread is listening
-            if (WaitForSingleObject(pInfo->pCaptureThreads[i].tracingThread, INFINITE) != WAIT_OBJECT_0)
-            {
-                vktrace_LogError("Injected tracer's thread did not return successfully.");
-                bRecordingThreadsCreated = false;
-            }
-#endif
-        }
-        else
-        {
-            // failed to inject a DLL
+        // create thread to record trace packets from the tracer
+        pInfo->pCaptureThreads[0].recordingThread = vktrace_platform_create_thread(Process_RunRecordTraceThread, &(pInfo->pCaptureThreads[0]));
+        if (pInfo->pCaptureThreads[0].recordingThread == VKTRACE_NULL_THREAD) {
+            vktrace_LogError("Failed to create trace recording thread.");
             bRecordingThreadsCreated = false;
-            break;
         }
+
+    } else {
+        // failed to inject a DLL
+        bRecordingThreadsCreated = false;
     }
     return bRecordingThreadsCreated;
 }
@@ -215,11 +156,6 @@ int main(int argc, char* argv[])
     g_default_settings.output_trace = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "vktrace_out.vktrace");
     g_default_settings.print_trace_messages = FALSE;
     g_default_settings.screenshotList = NULL;
-#if defined(WIN32)
-    g_default_settings.trace_library[0] = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "vulkan_trace.dll");
-#elif defined(PLATFORM_LINUX)
-    g_default_settings.trace_library[0] = vktrace_copy_and_append(execDir, VKTRACE_PATH_SEPARATOR, "libvktrace_layer.so");
-#endif
 
     // free binary directory string
     vktrace_free(execDir);
@@ -229,41 +165,13 @@ int main(int argc, char* argv[])
         // invalid cmd-line parameters
         vktrace_SettingGroup_delete(&g_settingGroup);
         vktrace_free(g_default_settings.output_trace);
-        vktrace_free(g_default_settings.trace_library[0]);
         return -1;
     }
     else
     {
         // Validate vktrace inputs
         BOOL validArgs = TRUE;
-        if (g_settings.trace_library[0] == NULL)
-        {
-            vktrace_LogError("Missing required -l0 parameter to specify the tracer library.");
-            validArgs = FALSE;
-        }
-        if (!strcmp(g_settings.trace_library[0], g_default_settings.trace_library[0]))
-        {
-            // look for default trace library in CWD then system directories
-            void *handle;
-            if ((handle = vktrace_platform_open_library(g_settings.trace_library[0])) == NULL)
-            {
-                char *filename = strrchr(g_settings.trace_library[0], VKTRACE_PATH_SEPARATOR[0]);
-                if (!filename || (handle = vktrace_platform_open_library(filename+1)) == NULL)
-                {
-                    vktrace_LogError("No -l0 arg and default tracer library file can't be found.");
-                    validArgs = FALSE;
-                }
-                else
-                {
-                    g_settings.trace_library[0] = filename+1;
-                    vktrace_platform_close_library(handle);
-                }
-            }
-            else
-            {
-                vktrace_platform_close_library(handle);
-            }
-        }
+
         if (g_settings.output_trace == NULL || strlen (g_settings.output_trace) == 0)
         {
             vktrace_LogError("No output trace file (-o) parameter found: Please specify a valid trace file to generate.");
@@ -352,15 +260,8 @@ int main(int argc, char* argv[])
 
         procInfo.parentThreadId = vktrace_platform_get_thread_id();
 
-        // setup tracers
-        procInfo.tracerCount = PrepareTracers(&procInfo.pCaptureThreads);
-
-        if (procInfo.tracerCount == 0)
-        {
-            vktrace_SettingGroup_print(&g_settingGroup);
-            vktrace_process_info_delete(&procInfo);
-            return -1;
-        }
+        // setup tracer, only Vulkan tracer suppported
+        PrepareTracers(&procInfo.pCaptureThreads);
 
         if (g_settings.program != NULL)
         {
@@ -406,10 +307,8 @@ int main(int argc, char* argv[])
 
 #if defined(PLATFORM_LINUX)
             // Sync wait for local threads and remote process to complete.
-            for (unsigned int i = 0; i < procInfo.tracerCount; i++)
-            {
-                vktrace_platform_sync_wait_for_thread(&(procInfo.pCaptureThreads[i].recordingThread));
-            }
+
+            vktrace_platform_sync_wait_for_thread(&(procInfo.pCaptureThreads[0].recordingThread));
 
             if (g_settings.program != NULL)
                 vktrace_platform_sync_wait_for_thread(&procInfo.watchdogThread);

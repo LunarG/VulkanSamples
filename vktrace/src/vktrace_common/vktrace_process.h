@@ -45,7 +45,6 @@ typedef struct vktrace_process_info
 
     volatile BOOL serverRequestsTermination;
 
-    unsigned int tracerCount;
     vktrace_process_capture_trace_thread_info* pCaptureThreads;
 
     // process id, handle, and main thread
@@ -65,11 +64,9 @@ typedef struct vktrace_process_tracer_dll
 
 struct vktrace_process_capture_trace_thread_info
 {
-    vktrace_thread tracingThread;
     vktrace_thread recordingThread;
     vktrace_process_info* pProcessInfo;
     VKTRACE_TRACER_ID tracerId;
-    char* tracerPath;
 };
 
 BOOL vktrace_process_spawn(vktrace_process_info* pInfo);

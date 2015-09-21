@@ -51,7 +51,6 @@ void vktrace_delete_trace_file_header(vktrace_trace_file_header** ppHeader);
 static FILE* vktrace_write_trace_file_header(vktrace_process_info* pProcInfo)
 {
     FILE* tracefp = NULL;
-    unsigned int index = 0;
     vktrace_trace_file_header* pHeader = NULL;
     size_t items_written = 0;
     assert(pProcInfo != NULL);
@@ -67,13 +66,11 @@ static FILE* vktrace_write_trace_file_header(vktrace_process_info* pProcInfo)
     // populate header information
     pHeader = vktrace_create_trace_file_header();
     pHeader->first_packet_offset = sizeof(vktrace_trace_file_header);
-    pHeader->tracer_count = pProcInfo->tracerCount;
+    pHeader->tracer_count = 1;
 
-    for (index = 0; index < pProcInfo->tracerCount; index++)
-    {
-        pHeader->tracer_id_array[index].id = pProcInfo->pCaptureThreads[index].tracerId;
-        pHeader->tracer_id_array[index].is_64_bit = (sizeof(intptr_t) == 8) ? 1 : 0;
-    }
+
+    pHeader->tracer_id_array[0].id = pProcInfo->pCaptureThreads[0].tracerId;
+    pHeader->tracer_id_array[0].is_64_bit = (sizeof(intptr_t) == 8) ? 1 : 0;
 
     // create critical section
     vktrace_create_critical_section(&pProcInfo->traceFileCriticalSection);

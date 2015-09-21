@@ -42,7 +42,6 @@ typedef struct vktrace_settings
     char* arguments;
     char* working_dir;
     char* output_trace;
-    char* trace_library[16];
     BOOL print_trace_messages;
     char* screenshotList;
 } vktrace_settings;

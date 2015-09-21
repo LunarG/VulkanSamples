@@ -113,13 +113,9 @@ BOOL vktrace_process_spawn(vktrace_process_info* pInfo)
 
 void vktrace_process_info_delete(vktrace_process_info* pInfo)
 {
-    unsigned int i = 0;
     if (pInfo->pCaptureThreads != NULL)
     {
-        for (i = 0; i < pInfo->tracerCount; i++)
-        {
-            vktrace_platform_delete_thread(&(pInfo->pCaptureThreads[i].recordingThread));
-        }
+        vktrace_platform_delete_thread(&(pInfo->pCaptureThreads[0].recordingThread));
         VKTRACE_DELETE(pInfo->pCaptureThreads);
     }
 
