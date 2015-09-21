@@ -100,7 +100,7 @@ void MessageLoop()
 #endif
 
 // returns the number of tracers that need to be injected
-int PrepareTracers(vktrace_settings* pSettings, vktrace_process_capture_trace_thread_info** ppTracerInfo)
+int PrepareTracers(vktrace_process_capture_trace_thread_info** ppTracerInfo)
 {
     // determine number of tracers to load and inject
     unsigned int num_tracers = 0;
@@ -122,28 +122,10 @@ int PrepareTracers(vktrace_settings* pSettings, vktrace_process_capture_trace_th
     {
         if (g_settings.trace_library[i] != NULL)
         {
-            void* hLibrary = vktrace_platform_open_library(g_settings.trace_library[i]);
-            if (hLibrary == NULL)
-            {
-                vktrace_LogError("Failed to load tracer: %s", g_settings.trace_library[i]);
-            }
-            else
-            {
-                funcptr_VKTRACE_GetTracerId VKTRACE_GetTracerId = NULL;
-                VKTRACE_GetTracerId = (funcptr_VKTRACE_GetTracerId)vktrace_platform_get_library_entrypoint(hLibrary, "VKTRACE_GetTracerId");
-
-                if (VKTRACE_GetTracerId != NULL)
-                {
-                    --tmpTracerIndex;
-                    (*ppTracerInfo)[tmpTracerIndex].tracerPath = g_settings.trace_library[i];
-                    (*ppTracerInfo)[tmpTracerIndex].tracerId = VKTRACE_GetTracerId();
-                }
-                else
-                {
-                    vktrace_LogError("Missing entrypoint VKTRACE_GetTracerId() from %s", g_settings.trace_library[i]);
-                }
-                vktrace_platform_close_library(hLibrary);
-            }
+            --tmpTracerIndex;
+            (*ppTracerInfo)[tmpTracerIndex].tracerPath = g_settings.trace_library[i];
+            // we only support Vulkan tracer
+            (*ppTracerInfo)[tmpTracerIndex].tracerId = VKTRACE_TID_VULKAN;
         }
     }
 
@@ -371,7 +353,7 @@ int main(int argc, char* argv[])
         procInfo.parentThreadId = vktrace_platform_get_thread_id();
 
         // setup tracers
-        procInfo.tracerCount = PrepareTracers(&g_settings, &procInfo.pCaptureThreads);
+        procInfo.tracerCount = PrepareTracers(&procInfo.pCaptureThreads);
 
         if (procInfo.tracerCount == 0)
         {

@@ -34,11 +34,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-// this is needed to be loaded by vktrace
-VKTRACER_EXPORT VKTRACE_TRACER_ID VKTRACER_CDECL VKTRACE_GetTracerId(void)
-{
-    return VKTRACE_TID_VULKAN;
-}
 
 VKTRACER_LEAVE _Unload(void);
 
@@ -72,7 +67,7 @@ void loggingCallback(VktraceLogLevel level, const char* pMessage)
     if (vktrace_trace_get_trace_file() != NULL)
     {
         size_t requiredLength = strlen(pMessage) + 1;
-        vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_GetTracerId(), VKTRACE_TPI_MESSAGE, sizeof(vktrace_trace_packet_message), requiredLength);
+        vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_TID_VULKAN, VKTRACE_TPI_MESSAGE, sizeof(vktrace_trace_packet_message), requiredLength);
         vktrace_trace_packet_message* pPacket = vktrace_interpret_body_as_trace_packet_message(pHeader);
         pPacket->type = level;
         pPacket->length = requiredLength;
@@ -130,7 +125,7 @@ VKTRACER_LEAVE _Unload(void)
     if (vktrace_is_loaded_into_vktrace() == FALSE)
     {
         if (vktrace_trace_get_trace_file() != NULL) {
-            vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_GetTracerId(), VKTRACE_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
+            vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_TID_VULKAN, VKTRACE_TPI_MARKER_TERMINATE_PROCESS, 0, 0);
             vktrace_finalize_trace_packet(pHeader);
             vktrace_write_trace_packet(pHeader, vktrace_trace_get_trace_file());
             vktrace_delete_trace_packet(&pHeader);
