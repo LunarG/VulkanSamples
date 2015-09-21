@@ -30,23 +30,27 @@ function update_glslang () {
 function create_LunarGLASS () {
    rm -rf $BASEDIR/LunarGLASS
    echo "Creating local LunarGLASS repository ($BASEDIR/LunarGLASS)."
-   mkdir -p $BASEDIR/LunarGLASS/Core/LLVM
-   cd $BASEDIR/LunarGLASS/Core/LLVM 
+   mkdir -p $BASEDIR/LunarGLASS
+   cd $BASEDIR/LunarGLASS
+   git clone https://github.com/LunarG/LunarGLASS.git .
+   mkdir -p Core/LLVM
+   cd Core/LLVM 
    wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
    tar --gzip -xf llvm-3.4.src.tar.gz
-   cd $BASEDIR/LunarGLASS
-   svn checkout --force https://lunarglass.googlecode.com/svn/trunk/ .
-   svn revert --depth=infinity .
+   git checkout -f .  # put back the LunarGLASS versions of some LLVM files
+   git checkout $LUNARGLASS_REVISION
 }
 
 function update_LunarGLASS () {
    echo "Updating $BASEDIR/LunarGLASS"
    cd $BASEDIR/LunarGLASS
-   svn update -r "$LUNARGLASS_REVISION" |& tee svnout
-   if grep --quiet LLVM svnout ; then
-      rm -rf $BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4/build
-   fi
-   rm -rf svnout
+   git fetch
+   git checkout $LUNARGLASS_REVISION |& tee gitout
+   # Figure out how to do this with git
+   #if grep --quiet LLVM gitout ; then
+   #   rm -rf $BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4/build
+   #fi
+   rm -rf gitout
 }
 
 function build_glslang () {
@@ -81,7 +85,7 @@ function build_LunarGLASS () {
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" ]; then
    create_glslang
 fi
-if [ ! -d "$BASEDIR/LunarGLASS" ]; then
+if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
    create_LunarGLASS
 fi
 
