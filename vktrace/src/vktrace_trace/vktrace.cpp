@@ -265,9 +265,33 @@ int main(int argc, char* argv[])
 
         if (g_settings.program != NULL)
         {
-            // Add vktrace_layer enable env var if needed
             char *instEnv = vktrace_get_global_var("VK_INSTANCE_LAYERS");
-            if (!instEnv)
+            // Add ScreenShot layer if enabled
+            if (g_settings.screenshotList && (!instEnv || !strstr(instEnv, "ScreenShot")))
+            {
+                if (!instEnv || strlen(instEnv)  == 0)
+                    vktrace_set_global_var("VK_INSTANCE_LAYERS", "ScreenShot");
+                else
+                {
+                    char *newEnv = vktrace_copy_and_append(instEnv, VKTRACE_LIST_SEPARATOR, "ScreenShot");
+                    vktrace_set_global_var("VK_INSTANCE_LAYERS", newEnv);
+                }
+                instEnv = vktrace_get_global_var("VK_INSTANCE_LAYERS");
+            }
+            char *devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
+            if (g_settings.screenshotList && (!devEnv || !strstr(devEnv, "ScreenShot")))
+            {
+                if (!devEnv || strlen(devEnv) == 0)
+                    vktrace_set_global_var("VK_DEVICE_LAYERS", "ScreenShot");
+                else
+                {
+                    char *newEnv = vktrace_copy_and_append(devEnv, VKTRACE_LIST_SEPARATOR, "ScreenShot");
+                    vktrace_set_global_var("VK_DEVICE_LAYERS", newEnv);
+                }
+                devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
+            }
+            // Add vktrace_layer enable env var if needed
+            if (!instEnv || strlen(instEnv) == 0)
             {
                 vktrace_set_global_var("VK_INSTANCE_LAYERS", "Vktrace");
             }
@@ -276,8 +300,7 @@ int main(int argc, char* argv[])
                 char *newEnv = vktrace_copy_and_append("Vktrace", VKTRACE_LIST_SEPARATOR, instEnv);
                 vktrace_set_global_var("VK_INSTANCE_LAYERS", newEnv);
             }
-            char *devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
-            if (!devEnv)
+            if (!devEnv || strlen(devEnv) == 0)
             {
                 vktrace_set_global_var("VK_DEVICE_LAYERS", "Vktrace");
             }

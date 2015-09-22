@@ -38,11 +38,6 @@ $Env:PATH = $pwd
 # Set up some modified env vars
 $Env:VK_LAYER_PATH = $pwd
 
-# Temporarily set ScreenShot layer by hand until these are worked out
-$Env:_VK_SCREENSHOT = 1
-$Env:VK_INSTANCE_LAYERS = "ScreenShot"
-$Env:VK_DEVICE_LAYERS = "ScreenShot"
-
 # Do a trace and replay
 & vktrace -o c01.vktrace -s 1 -p cube -a "--c 10" > trace.sout 2> trace.serr
 rename-item -path 1.ppm -newname 1-trace.ppm
@@ -125,7 +120,4 @@ if ($exitstatus) {
 cd ..
 rm -recurse -force vktracereplay_tmp  > $null 2> $null
 Remove-Item Env:\VK_LAYER_PATH
-Remove-Item Env:\_VK_SCREENSHOT
-Remove-Item Env:\VK_INSTANCE_LAYERS
-Remove-Item Env:\VK_DEVICE_LAYERS
 exit $exitstatus

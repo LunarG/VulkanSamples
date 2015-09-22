@@ -25,10 +25,6 @@ cp ../../demos/*spv .
 export LD_LIBRARY_PATH=`pwd`/../loader:$LD_LIBRARY_PATH
 export VK_LAYER_PATH=`pwd`/../../layers
 
-# Temporarily set ScreenShot layer by hand until these are worked out
-export VK_INSTANCE_LAYERS=ScreenShot
-export VK_DEVICE_LAYERS=ScreenShot
-
 (
     ./vktrace -s 1 -p cube  -o c01.vktrace &
     P=$!

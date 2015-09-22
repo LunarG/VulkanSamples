@@ -324,57 +324,8 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    uint32_t i, count;
-    const char strScreenShot[] = "ScreenShot";
-    char *strScreenShotEnv = vktrace_get_global_var("_VK_SCREENSHOT");
     packet_vkCreateDevice* pPacket = NULL;
-    char **ppEnabledLayerNames = NULL, **saved_ppELN;
-    VkDeviceCreateInfo **ppCI;
 
-    if (strScreenShotEnv && strlen(strScreenShotEnv) != 0)
-    {
-        // enable screenshot layer if it is available and not already in list
-        bool found_ss = false;
-        for (i = 0; i < pCreateInfo->layerCount; i++)
-        {
-            if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], "ScreenShot"))
-            {
-                found_ss = true;
-                break;
-            }
-        }
-        if (!found_ss)
-        {
-            // query to find if ScreenShot layer is available
-            VkLayerInstanceDispatchTable *pTable = &mid(physicalDevice)->instTable;
-            pTable->EnumerateDeviceLayerProperties(physicalDevice, &count, NULL);
-            VkLayerProperties *props = (VkLayerProperties *) vktrace_malloc(count * sizeof (VkLayerProperties));
-            if (props && count > 0)
-                pTable->EnumerateDeviceLayerProperties(physicalDevice, &count, props);
-            for (i = 0; i < count; i++) {
-                if (!strcmp(props[i].layerName, "ScreenShot"))
-                {
-                    found_ss = true;
-                    break;
-                }
-            }
-            if (found_ss)
-            {
-                // screenshot layer is available so enable it
-                ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->layerCount + 1) * sizeof (char *));
-                for (i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++) {
-                    ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
-                }
-                ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
-                ppCI = (VkDeviceCreateInfo **) &pCreateInfo;
-                strcpy(ppEnabledLayerNames[pCreateInfo->layerCount], strScreenShot);
-                (*ppCI)->layerCount = pCreateInfo->layerCount + 1;
-                saved_ppELN = (char **) pCreateInfo->ppEnabledLayerNames;
-                (*ppCI)->ppEnabledLayerNames = (const char*const*) ppEnabledLayerNames;
-            }
-            vktrace_free(props);
-        }
-    }
     CREATE_TRACE_PACKET(vkCreateDevice, get_struct_chain_size((void*)pCreateInfo) + sizeof(VkDevice));
     result = mdd(*pDevice)->devTable.CreateDevice(physicalDevice, pCreateInfo, pDevice);
     if (result == VK_SUCCESS)
@@ -387,12 +338,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDevice), sizeof(VkDevice), pDevice);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDevice));
-    if (ppEnabledLayerNames)
-    {
-        vktrace_free(ppEnabledLayerNames[pCreateInfo->layerCount-1]);
-        vktrace_free(ppEnabledLayerNames);
-        (*ppCI)->ppEnabledLayerNames = (const char*const*) saved_ppELN;
-    }
     FINISH_TRACE_PACKET();
     return result;
 }

@@ -96,7 +96,10 @@ BOOL vktrace_process_spawn(vktrace_process_info* pInfo)
         char *env = environ[0];
         idx = 0;
         while (env && strlen(env)) {
-            vktrace_LogDebug("env[%d] = %s", idx++, env);
+            if (strstr(env, "VK") || strstr(env, "LD"))
+                vktrace_LogDebug("env[%d] = %s", idx++, env);
+            else
+                idx++;
             env = environ[idx];
         }
 #endif
