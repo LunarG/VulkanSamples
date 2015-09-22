@@ -2216,6 +2216,8 @@ static void demo_init_vk(struct demo *demo)
         "DrawState",
         "ParamChecker",
         "ShaderChecker",
+        "DeviceLimits",
+        "Image",
     };
 
     char *device_validation_layers[] = {
@@ -2225,6 +2227,8 @@ static void demo_init_vk(struct demo *demo)
         "DrawState",
         "ParamChecker",
         "ShaderChecker",
+        "DeviceLimits",
+        "Image",
     };
 
     /* Look for validation layers */
@@ -2295,12 +2299,6 @@ static void demo_init_vk(struct demo *demo)
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? instance_validation_layers : NULL),
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
-    };
-    const VkDeviceQueueCreateInfo queue = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext = NULL,
-        .queueFamilyIndex = 0,
-        .queueCount = 1,
     };
 
     uint32_t gpu_count;
@@ -2389,17 +2387,6 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
 
-    VkDeviceCreateInfo device = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = NULL,
-        .queueRecordCount = 1,
-        .pRequestedQueues = &queue,
-        .layerCount = enabled_layer_count,
-        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
-        .extensionCount = enabled_extension_count,
-        .ppEnabledExtensionNames = (const char *const*) extension_names,
-    };
-
     if (demo->validate) {
         demo->dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
         demo->dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgDestroyMsgCallback");
@@ -2442,6 +2429,41 @@ static void demo_init_vk(struct demo *demo)
             break;
         }
     }
+    err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
+    assert(!err);
+
+    /* Call with NULL data to get count */
+    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
+    assert(!err);
+    assert(demo->queue_count >= 1);
+
+    demo->queue_props = (VkQueueFamilyProperties *) malloc(demo->queue_count * sizeof(VkQueueFamilyProperties));
+    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
+    assert(!err);
+    // Find a queue that supports gfx
+    uint32_t gfx_queue_idx = 0;
+    for (gfx_queue_idx = 0; gfx_queue_idx<demo->queue_count; gfx_queue_idx++) {
+        if (demo->queue_props[gfx_queue_idx].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            break;
+    }
+    assert(gfx_queue_idx < demo->queue_count);
+    const VkDeviceQueueCreateInfo queue = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .pNext = NULL,
+        .queueFamilyIndex = gfx_queue_idx,
+        .queueCount = 1,
+    };
+
+    VkDeviceCreateInfo device = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = NULL,
+        .queueRecordCount = 1,
+        .pRequestedQueues = &queue,
+        .layerCount = enabled_layer_count,
+        .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
+        .extensionCount = enabled_extension_count,
+        .ppEnabledExtensionNames = (const char *const*) extension_names,
+    };
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
     assert(!err);
@@ -2457,19 +2479,6 @@ static void demo_init_vk(struct demo *demo)
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
-
-    err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
-    assert(!err);
-
-    /* Call with NULL data to get count */
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
-    assert(!err);
-    assert(demo->queue_count >= 1);
-
-    demo->queue_props = (VkQueueFamilyProperties *) malloc(demo->queue_count * sizeof(VkQueueFamilyProperties));
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
-    assert(!err);
-    assert(demo->queue_count >= 1);
 }
 
 static void demo_init_vk_wsi(struct demo *demo)
