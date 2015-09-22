@@ -261,6 +261,7 @@ bool is_depth_format(VkFormat format)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
 {
+    VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
@@ -269,15 +270,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
                 device_data->physicalDevice, pCreateInfo->format, &properties);
         if(result != VK_SUCCESS) {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be validated";
-            log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
 
         if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains unsupported format";
-            log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
     }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
@@ -296,6 +299,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
+    VkBool32 skipCall = VK_FALSE;
     for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
         if(pCreateInfo->pAttachments[i].format != VK_FORMAT_UNDEFINED)
@@ -308,7 +312,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], cannot be validated";
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
                 continue;
             }
 
@@ -316,7 +320,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], contains unsupported format";
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
             }
         }
     }
@@ -328,7 +332,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -338,7 +342,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -348,7 +352,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", ss.str().c_str());
         }
     }
 
@@ -365,10 +369,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             if (pCreateInfo->pSubpasses[i].depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
-                log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", ss.str().c_str());
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", ss.str().c_str());
             }
         }
     }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
 
@@ -404,6 +410,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
+
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
     return result;
 }
