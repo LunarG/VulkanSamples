@@ -37,4 +37,12 @@ typedef enum _IMAGE_ERROR
     IMAGE_VIEW_CREATE_ERROR,                // Error occurred trying to create Image View
 } IMAGE_ERROR;
 
+typedef struct _IMAGE_STATE
+{
+    uint32_t mipLevels;
+    uint32_t arraySize;
+    _IMAGE_STATE():mipLevels(0), arraySize(0) {};
+    _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):mipLevels(pCreateInfo->mipLevels), arraySize(pCreateInfo->arraySize) {};
+} IMAGE_STATE;
+
 #endif // IMAGE_H

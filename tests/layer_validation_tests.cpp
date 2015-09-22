@@ -15,6 +15,7 @@
 #define THREADING_TESTS 1
 #define SHADER_CHECKER_TESTS 1
 #define DEVICE_LIMITS_TESTS 1
+#define IMAGE_TESTS 1
 
 //--------------------------------------------------------------------------------------
 // Mesh and VertexFormat Data
@@ -187,6 +188,7 @@ protected:
         instance_layer_names.push_back("DrawState");
         instance_layer_names.push_back("ShaderChecker");
         instance_layer_names.push_back("DeviceLimits");
+        instance_layer_names.push_back("Image");
 
         device_layer_names.push_back("Threading");
         device_layer_names.push_back("ObjectTracker");
@@ -194,6 +196,7 @@ protected:
         device_layer_names.push_back("DrawState");
         device_layer_names.push_back("ShaderChecker");
         device_layer_names.push_back("DeviceLimits");
+        device_layer_names.push_back("Image");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
@@ -3447,6 +3450,61 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
 }
 
 #endif // DEVICE_LIMITS_TESTS
+
+#if IMAGE_TESTS
+TEST_F(VkLayerTest, InvalidImageView)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create an image, allocate memory, free it, and then try to bind it
+    VkImage               image;
+
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &image);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageViewCreateInfo image_view_create_info = {};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_view_create_info.image = image;
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = tex_format;
+        image_view_create_info.subresourceRange.arraySize = 1;
+        image_view_create_info.subresourceRange.baseMipLevel = 10; // cause an error
+        image_view_create_info.subresourceRange.mipLevels = 1;
+
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &image_view_create_info, &view);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while creating an invalid ImageView";
+    if (!strstr(msgString.c_str(),"vkCreateImageView called with baseMipLevel 10 ")) {
+        FAIL() << "Error received was not 'vkCreateImageView called with baseMipLevel 10...' but instaed '" << msgString.c_str() << "'";
+    }
+}
+#endif // IMAGE_TESTS
 
 int main(int argc, char **argv) {
     int result;

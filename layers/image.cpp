@@ -50,7 +50,7 @@ typedef struct _layer_data {
     debug_report_data *report_data;
     VkDbgMsgCallback logging_callback;
     VkPhysicalDevice physicalDevice;
-    unordered_map<uint64_t, unique_ptr<VkImageCreateInfo>> imageMap;
+    unordered_map<uint64_t, unique_ptr<IMAGE_STATE>> imageMap;
 } layer_data;
 
 static unordered_map<void*, layer_data*> layer_data_map;
@@ -171,6 +171,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
         device_data->physicalDevice = physicalDevice;
+        device_data->imageMap.reserve(10);
     }
 
     return result;
@@ -285,7 +286,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
     if(result == VK_SUCCESS) {
-        device_data->imageMap[pImage->handle] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
+        device_data->imageMap[pImage->handle] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pCreateInfo));
     }
     return result;
 }
@@ -433,6 +434,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkCreateImage"))
         return (PFN_vkVoidFunction) vkCreateImage;
+    if (!strcmp(funcName, "vkCreateImageView"))
+        return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "vkCreateRenderPass"))
         return (PFN_vkVoidFunction) vkCreateRenderPass;
 
