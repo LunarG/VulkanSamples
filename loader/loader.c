@@ -83,6 +83,7 @@ uint32_t g_loader_log_msgs = 0;
 // all entrypoints on the instance chain need to be locked except GPA
 // additionally CreateDevice and DestroyDevice needs to be locked
 loader_platform_thread_mutex loader_lock;
+loader_platform_thread_mutex loader_json_lock;
 
 // This table contains the loader's instance dispatch table, which contains
 // default functions if no instance layers are activated.  This contains
@@ -1177,8 +1178,9 @@ static void loader_debug_init(void)
 
 void loader_initialize(void)
 {
-    // initialize a mutex
+    // initialize mutexs
     loader_platform_thread_create_mutex(&loader_lock);
+    loader_platform_thread_create_mutex(&loader_json_lock);
 
     // initialize logging
     loader_debug_init();
@@ -1805,6 +1807,7 @@ void loader_icd_scan(
                               DEFAULT_VK_DRIVERS_INFO, &manifest_files);
     if (manifest_files.count == 0)
         return;
+    loader_platform_thread_lock_mutex(&loader_json_lock);
     for (uint32_t i = 0; i < manifest_files.count; i++) {
         file_str = manifest_files.filename_list[i];
         if (file_str == NULL)
@@ -1816,8 +1819,10 @@ void loader_icd_scan(
             continue;
         cJSON *item;
         item = cJSON_GetObjectItem(json, "file_format_version");
-        if (item == NULL)
+        if (item == NULL) {
+            loader_platform_thread_unlock_mutex(&loader_json_lock);
             return;
+        }
         char *file_vers = cJSON_Print(item);
         loader_log(VK_DBG_REPORT_INFO_BIT, 0, "Found manifest file %s, version %s",
                    file_str, file_vers);
@@ -1888,7 +1893,7 @@ void loader_icd_scan(
         cJSON_Delete(json);
     }
     loader_heap_free(inst, manifest_files.filename_list);
-
+    loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
 
@@ -1926,7 +1931,7 @@ void loader_layer_scan(
     loader_delete_layer_properties(inst, instance_layers);
     loader_delete_layer_properties(inst, device_layers);
 
-
+    loader_platform_thread_lock_mutex(&loader_json_lock);
     for (i = 0; i < manifest_files.count; i++) {
         file_str = manifest_files.filename_list[i];
         if (file_str == NULL)
@@ -1952,7 +1957,7 @@ void loader_layer_scan(
         cJSON_Delete(json);
     }
     loader_heap_free(inst, manifest_files.filename_list);
-
+    loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
 static PFN_vkVoidFunction VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
@@ -3099,8 +3104,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     memset(&icd_extensions, 0, sizeof(icd_extensions));
     loader_platform_thread_once(&once_init, loader_initialize);
 
-    //TODO do we still need to lock? for loader.global_extensions
-    loader_platform_thread_lock_mutex(&loader_lock);
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
         memset(&instance_layers, 0, sizeof(instance_layers));
@@ -3124,14 +3127,12 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     }
 
     if (global_ext_list == NULL) {
-        loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_ERROR_LAYER_NOT_PRESENT;
     }
 
     if (pProperties == NULL) {
         *pCount = global_ext_list->count;
         loader_destroy_ext_list(NULL, &icd_extensions);
-        loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_SUCCESS;
     }
 
@@ -3143,7 +3144,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     }
     *pCount = copy_size;
     loader_destroy_ext_list(NULL, &icd_extensions);
-    loader_platform_thread_unlock_mutex(&loader_lock);
 
     if (copy_size < global_ext_list->count) {
         return VK_INCOMPLETE;
@@ -3164,9 +3164,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
 
     uint32_t copy_size;
 
-    /* TODO: do we still need to lock */
-    loader_platform_thread_lock_mutex(&loader_lock);
-
     /* get layer libraries */
     memset(&instance_layer_list, 0, sizeof(instance_layer_list));
     loader_layer_scan(NULL, &instance_layer_list, NULL);
@@ -3174,7 +3171,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     if (pProperties == NULL) {
         *pCount = instance_layer_list.count;
         loader_destroy_layer_list(NULL, &instance_layer_list);
-        loader_platform_thread_unlock_mutex(&loader_lock);
         return VK_SUCCESS;
     }
 
@@ -3184,7 +3180,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     }
     *pCount = copy_size;
     loader_destroy_layer_list(NULL, &instance_layer_list);
-    loader_platform_thread_unlock_mutex(&loader_lock);
 
     if (copy_size < instance_layer_list.count) {
         return VK_INCOMPLETE;
