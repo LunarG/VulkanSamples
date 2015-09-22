@@ -26,6 +26,7 @@ set(LAYER_JSON_FILES
     param_checker
     screenshot
     shader_checker
+    swapchain
     threading
     device_limits
     )
@@ -146,6 +147,7 @@ add_vk_layer(ShaderChecker shader_checker.cpp vk_layer_table.cpp)
 add_vk_layer(Image image.cpp vk_layer_table.cpp)
 add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
 add_vk_layer(ScreenShot screenshot.cpp vk_layer_table.cpp)
+add_vk_layer(Swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
 add_vk_layer(APIDump api_dump.cpp vk_layer_table.cpp)

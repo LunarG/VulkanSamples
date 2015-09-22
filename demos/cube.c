@@ -2032,6 +2032,7 @@ static void demo_init_vk(struct demo *demo)
         "DrawState",
         "ParamChecker",
         "ShaderChecker",
+        "Swapchain",
         "DeviceLimits",
         "Image",
     };
@@ -2043,6 +2044,7 @@ static void demo_init_vk(struct demo *demo)
         "DrawState",
         "ParamChecker",
         "ShaderChecker",
+        "Swapchain",
         "DeviceLimits",
         "Image",
     };

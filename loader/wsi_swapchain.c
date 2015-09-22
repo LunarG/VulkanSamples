@@ -73,13 +73,13 @@ VkResult wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
     const VkLayerInstanceDispatchTable *disp;
 // TBD/TODO: DO WE NEED TO DO LOCKING FOR THIS FUNCTION?
     disp = loader_get_instance_dispatch(physicalDevice);
-    loader_platform_thread_lock_mutex(&loader_lock);
+//    loader_platform_thread_lock_mutex(&loader_lock);
     VkResult res = disp->GetPhysicalDeviceSurfaceSupportKHR(
                                                       physicalDevice,
                                                       queueNodeIndex,
                                                       pSurfaceDescription,
                                                       pSupported);
-    loader_platform_thread_unlock_mutex(&loader_lock);
+//    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 

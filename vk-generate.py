@@ -314,7 +314,8 @@ class WinDefFileSubcommand(Subcommand):
         body.append("EXPORTS")
 
         for proto in self.exports:
-            body.append( proto)
+            if self.library != "VKLayerSwapchain" or proto != "vkEnumerateInstanceExtensionProperties" and proto != "vkEnumerateInstanceLayerProperties":
+                body.append( proto)
 
         return "\n".join(body)
 

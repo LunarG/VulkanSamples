@@ -68,6 +68,11 @@ ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ShaderCheckerReportFlags = error,warn,perf
 ShaderCheckerLogFilename = stdout
 
+# Swapchain Settings
+SwapchainDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+SwapchainReportFlags = error,warn,perf
+SwapchainLogFilename = stdout
+
 # Threading Settings
 ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ThreadingReportFlags = error,warn,perf
