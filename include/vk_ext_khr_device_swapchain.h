@@ -29,7 +29,7 @@
 
 #include "vulkan.h"
 
-#define VK_EXT_KHR_DEVICE_SWAPCHAIN_REVISION         51
+#define VK_EXT_KHR_DEVICE_SWAPCHAIN_REVISION         53
 #define VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NUMBER 2
 #define VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME   "VK_EXT_KHR_device_swapchain"
 
@@ -50,7 +50,7 @@ VK_DEFINE_NONDISP_HANDLE(VkSwapchainKHR);
 #define VK_EXT_KHR_DEVICE_SWAPCHAIN_ENUM_POSITIVE(type,id)    ((type)((int)0x40000000 + (VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NUMBER - 1) * 1024 + (id)))
 
 // Extend VkStructureType enum with extension specific constants
-#define VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR VK_EXT_KHR_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 0)
+#define VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR VK_EXT_KHR_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 0)
 #define VK_STRUCTURE_TYPE_PRESENT_INFO_KHR VK_EXT_KHR_DEVICE_SWAPCHAIN_ENUM(VkStructureType, 1)
 
 // Extend VkImageLayout enum with extension specific constants
@@ -109,7 +109,7 @@ typedef struct {
 } VkSurfaceFormatKHR;
 
 typedef struct {
-    VkStructureType                          sType;             // Must be VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR
+    VkStructureType                          sType;             // Must be VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
     const void*                              pNext;             // Pointer to next structure
 
     const VkSurfaceDescriptionKHR*           pSurfaceDescription;// describes the swap chain's target surface
