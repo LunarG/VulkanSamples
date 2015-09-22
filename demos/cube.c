@@ -103,6 +103,7 @@ struct texture_object {
     VkImage image;
     VkImageLayout imageLayout;
 
+    VkMemoryAllocInfo mem_alloc;
     VkDeviceMemory mem;
     VkImageView view;
     int32_t tex_width, tex_height;
@@ -353,6 +354,7 @@ struct demo {
         VkFormat format;
 
         VkImage image;
+        VkMemoryAllocInfo mem_alloc;
         VkDeviceMemory mem;
         VkImageView view;
     } depth;
@@ -361,6 +363,7 @@ struct demo {
 
     struct {
         VkBuffer buf;
+        VkMemoryAllocInfo mem_alloc;
         VkDeviceMemory mem;
         VkDescriptorInfo desc;
     } uniform_data;
@@ -594,7 +597,7 @@ void demo_update_data_buffer(struct demo *demo)
     mat4x4_rotate(demo->model_matrix, Model, 0.0f, 1.0f, 0.0f, (float)degreesToRadians(demo->spin_angle));
     mat4x4_mul(MVP, VP, demo->model_matrix);
 
-    err = vkMapMemory(demo->device, demo->uniform_data.mem, 0, 0, 0, (void **) &pData);
+    err = vkMapMemory(demo->device, demo->uniform_data.mem, 0, demo->uniform_data.mem_alloc.allocationSize, 0, (void **) &pData);
     assert(!err);
 
     memcpy(pData, (const void*) &MVP[0][0], matrixSize);
@@ -843,12 +846,7 @@ static void demo_prepare_depth(struct demo *demo)
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         .flags = 0,
     };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = NULL,
-        .allocationSize = 0,
-        .memoryTypeIndex = 0,
-    };
+
     VkImageViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = NULL,
@@ -878,15 +876,19 @@ static void demo_prepare_depth(struct demo *demo)
     err = vkGetImageMemoryRequirements(demo->device,
                     demo->depth.image, &mem_reqs);
 
-    mem_alloc.allocationSize = mem_reqs.size;
+    demo->depth.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    demo->depth.mem_alloc.pNext = NULL;
+    demo->depth.mem_alloc.allocationSize = mem_reqs.size;
+    demo->depth.mem_alloc.memoryTypeIndex = 0;
+
     err = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_DEVICE_ONLY,
-                                      &mem_alloc.memoryTypeIndex);
+                                      &demo->depth.mem_alloc.memoryTypeIndex);
     assert(!err);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &mem_alloc, &demo->depth.mem);
+    err = vkAllocMemory(demo->device, &demo->depth.mem_alloc, &demo->depth.mem);
     assert(!err);
 
     /* bind memory */
@@ -983,12 +985,6 @@ static void demo_prepare_texture_image(struct demo *demo,
         .usage = usage,
         .flags = 0,
     };
-    VkMemoryAllocInfo mem_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = NULL,
-        .allocationSize = 0,
-        .memoryTypeIndex = 0,
-    };
 
     VkMemoryRequirements mem_reqs;
 
@@ -999,13 +995,16 @@ static void demo_prepare_texture_image(struct demo *demo,
     err = vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
     assert(!err);
 
-    mem_alloc.allocationSize = mem_reqs.size;
+    tex_obj->mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    tex_obj->mem_alloc.pNext = NULL;
+    tex_obj->mem_alloc.allocationSize = mem_reqs.size;
+    tex_obj->mem_alloc.memoryTypeIndex = 0;
 
-    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, mem_props, &mem_alloc.memoryTypeIndex);
+    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, mem_props, &tex_obj->mem_alloc.memoryTypeIndex);
     assert(!err);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &mem_alloc,
+    err = vkAllocMemory(demo->device, &tex_obj->mem_alloc,
                 &(tex_obj->mem));
     assert(!err);
 
@@ -1026,7 +1025,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         err = vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
         assert(!err);
 
-        err = vkMapMemory(demo->device, tex_obj->mem, 0, 0, 0, &data);
+        err = vkMapMemory(demo->device, tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize, 0, &data);
         assert(!err);
 
         if (!loadTexture(filename, data, &layout, &tex_width, &tex_height)) {
@@ -1163,12 +1162,6 @@ static void demo_prepare_textures(struct demo *demo)
 void demo_prepare_cube_data_buffer(struct demo *demo)
 {
     VkBufferCreateInfo buf_info;
-    VkMemoryAllocInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-        .pNext = NULL,
-        .allocationSize = 0,
-        .memoryTypeIndex = 0,
-    };
     VkMemoryRequirements mem_reqs;
     uint8_t *pData;
     int i;
@@ -1202,17 +1195,21 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
     assert(!err);
 
-    alloc_info.allocationSize = mem_reqs.size;
+    demo->uniform_data.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    demo->uniform_data.mem_alloc.pNext = NULL;
+    demo->uniform_data.mem_alloc.allocationSize = mem_reqs.size;
+    demo->uniform_data.mem_alloc.memoryTypeIndex = 0;
+
     err = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                      &alloc_info.memoryTypeIndex);
+                                      &demo->uniform_data.mem_alloc.memoryTypeIndex);
     assert(!err);
 
-    err = vkAllocMemory(demo->device, &alloc_info, &(demo->uniform_data.mem));
+    err = vkAllocMemory(demo->device, &demo->uniform_data.mem_alloc, &(demo->uniform_data.mem));
     assert(!err);
 
-    err = vkMapMemory(demo->device, demo->uniform_data.mem, 0, 0, 0, (void **) &pData);
+    err = vkMapMemory(demo->device, demo->uniform_data.mem, 0, demo->uniform_data.mem_alloc.allocationSize, 0, (void **) &pData);
     assert(!err);
 
     memcpy(pData, &data, sizeof data);

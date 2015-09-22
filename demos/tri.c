@@ -784,7 +784,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         err = vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
         assert(!err);
 
-        err = vkMapMemory(demo->device, tex_obj->mem, 0, 0, 0, &data);
+        err = vkMapMemory(demo->device, tex_obj->mem, 0, mem_alloc.allocationSize, 0, &data);
         assert(!err);
 
         for (y = 0; y < tex_height; y++) {
@@ -964,7 +964,7 @@ static void demo_prepare_vertices(struct demo *demo)
     err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
     assert(!err);
 
-    err = vkMapMemory(demo->device, demo->vertices.mem, 0, 0, 0, &data);
+    err = vkMapMemory(demo->device, demo->vertices.mem, 0, mem_alloc.allocationSize, 0, &data);
     assert(!err);
 
     memcpy(data, vb, sizeof(vb));
