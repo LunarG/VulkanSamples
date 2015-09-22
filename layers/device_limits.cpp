@@ -298,16 +298,26 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    // Check that the requested queue properties are valid
-    for (uint32_t i=0; i<pCreateInfo->queueRecordCount; i++) {
-        uint32_t requestedIndex = pCreateInfo->pRequestedQueues[i].queueFamilyIndex;
-        auto qfp_it = queueFamilyPropertiesMap[gpu].find(requestedIndex);
-        if (qfp_it == queueFamilyPropertiesMap[gpu].end()) { // requested index is out of bounds for this physical device
-            log_msg(mdd(gpu), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-                "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
-        } else if (pCreateInfo->pRequestedQueues[i].queueCount > qfp_it->second->queueCount) {
-            log_msg(mdd(gpu), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-                "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but requested queueCount is %u.", requestedIndex, qfp_it->second->queueCount, pCreateInfo->pRequestedQueues[i].queueCount);
+    // First check is app has actually requested queueFamilyProperties
+    auto it = physicalDeviceMap.find(gpu);
+    if (it == physicalDeviceMap.end()) {
+        log_msg(mdd(gpu), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+            "Invalid call to vkCreateDevice() w/o first calling vkEnumeratePhysicalDevices().");
+    } else if (QUERY_DETAILS != it->second->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
+        log_msg(mdd(gpu), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+            "Invalid call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
+    } else {
+        // Check that the requested queue properties are valid
+        for (uint32_t i=0; i<pCreateInfo->queueRecordCount; i++) {
+            uint32_t requestedIndex = pCreateInfo->pRequestedQueues[i].queueFamilyIndex;
+            auto qfp_it = queueFamilyPropertiesMap[gpu].find(requestedIndex);
+            if (qfp_it == queueFamilyPropertiesMap[gpu].end()) { // requested index is out of bounds for this physical device
+                log_msg(mdd(gpu), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                    "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
+            } else if (pCreateInfo->pRequestedQueues[i].queueCount > qfp_it->second->queueCount) {
+                log_msg(mdd(gpu), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                    "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but requested queueCount is %u.", requestedIndex, qfp_it->second->queueCount, pCreateInfo->pRequestedQueues[i].queueCount);
+            }
         }
     }
     VkLayerDispatchTable *pDeviceTable = get_dispatch_table(device_limits_device_table_map, *pDevice);
