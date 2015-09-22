@@ -81,15 +81,6 @@ VkResult intel_img_create(struct intel_dev *dev,
     img->samples = info->samples;
     intel_layout_init(layout, dev, info, scanout);
 
-    if (layout->bo_stride > intel_max_resource_size / layout->bo_height) {
-        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
-                VK_NULL_HANDLE, 0, 0, "image too big");
-        intel_img_destroy(img);
-        /* TODOVV: Move test to validation layer */
-//        return VK_ERROR_INVALID_MEMORY_SIZE;
-        return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-    }
-
     img->total_size = img->layout.bo_stride * img->layout.bo_height;
 
     if (layout->aux != INTEL_LAYOUT_AUX_NONE) {

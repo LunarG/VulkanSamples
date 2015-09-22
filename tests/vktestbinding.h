@@ -122,7 +122,9 @@ public:
     explicit PhysicalDevice(VkPhysicalDevice phy) : Handle(phy)
     {
         memory_properties_ = memory_properties();
+        device_properties_ = properties();
     }
+
 
     VkPhysicalDeviceProperties properties() const;
     VkPhysicalDeviceMemoryProperties memory_properties() const;
@@ -144,6 +146,8 @@ private:
                                     std::vector<VkExtensionProperties> &ext_list);
 
     VkPhysicalDeviceMemoryProperties memory_properties_;
+
+    VkPhysicalDeviceProperties device_properties_;
 };
 
 class Device : public internal::Handle<VkDevice> {

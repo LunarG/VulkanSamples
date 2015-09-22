@@ -693,6 +693,13 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
     return ret;
 }
 
+// From the Ivy Bridge PRM, volume 1 part 1, page 105:
+//
+//     "In addition to restrictions on maximum height, width, and depth,
+//      surfaces are also restricted to a maximum size in bytes. This
+//      maximum is 2 GB for all products and all surface types."
+static const size_t intel_max_resource_size = 1u << 31;
+
 ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
@@ -702,7 +709,15 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-    /* TODO: Fill in real values */
     memset(pImageFormatProperties, 0, sizeof(*pImageFormatProperties));
+
+    // TODO: Add support for specific formats. For now, repeat info from
+    //       limits in gpu.c for ALL formats
+    // Format-specific values can be a superset of returned DeviceLimits
+    pImageFormatProperties->maxExtent.width  = 8192;
+    pImageFormatProperties->maxExtent.height = 8192;
+    pImageFormatProperties->maxExtent.depth  = 8192;
+    pImageFormatProperties->maxArraySize     = 2048;
+    pImageFormatProperties->maxResourceSize  = intel_max_resource_size;
     return VK_SUCCESS;
 }

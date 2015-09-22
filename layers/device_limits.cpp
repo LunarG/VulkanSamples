@@ -50,6 +50,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_layer_utils.h"
 
 typedef struct _layer_data {
     debug_report_data *report_data;
@@ -62,11 +63,12 @@ static device_table_map device_limits_device_table_map;
 static instance_table_map device_limits_instance_table_map;
 
 // Track state of each instance
-unordered_map<VkInstance, unique_ptr<INSTANCE_STATE>> instanceMap;
-unordered_map<VkPhysicalDevice, unique_ptr<PHYSICAL_DEVICE_STATE>> physicalDeviceMap;
+unordered_map<VkInstance,       unique_ptr<INSTANCE_STATE>>                                   instanceMap;
+unordered_map<VkPhysicalDevice, unique_ptr<PHYSICAL_DEVICE_STATE>>                            physicalDeviceMap;
 unordered_map<VkPhysicalDevice, unordered_map<uint32_t, unique_ptr<VkQueueFamilyProperties>>> queueFamilyPropertiesMap;
-unordered_map<VkPhysicalDevice, unique_ptr<VkPhysicalDeviceFeatures>> physicalDeviceFeaturesMap;
-unordered_map<VkDevice, VkPhysicalDevice> deviceMap;
+unordered_map<VkPhysicalDevice, unique_ptr<VkPhysicalDeviceFeatures>>                         physicalDeviceFeaturesMap;
+unordered_map<VkPhysicalDevice, unique_ptr<VkPhysicalDeviceProperties>>                       physicalDevicePropertiesMap;
+unordered_map<VkDevice,         VkPhysicalDevice>                                             deviceMap;
 
 struct devExts {
     bool debug_marker_enabled;
@@ -207,18 +209,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures)
 {
+    VkResult result = VK_SUCCESS;
     auto it = physicalDeviceMap.find(physicalDevice);
     if (it != physicalDeviceMap.end()) {
-        VkResult result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
+        result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
         // Save Features
-        physicalDeviceFeaturesMap[physicalDevice] = unique_ptr<VkPhysicalDeviceFeatures>(new VkPhysicalDeviceFeatures(*pFeatures));
-        return result;
+        if (VK_SUCCESS == result) {
+            physicalDeviceFeaturesMap[physicalDevice] =
+                unique_ptr<VkPhysicalDeviceFeatures>(new VkPhysicalDeviceFeatures(*pFeatures));
+        }
     }
+    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties)
 {
-    VkResult result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
+    VkResult result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(
+                                         physicalDevice, format, pFormatProperties);
     return result;
 }
 
@@ -230,7 +237,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysic
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties)
 {
-    VkResult result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
+    VkResult result = VK_SUCCESS;
+    auto it = physicalDeviceMap.find(physicalDevice);
+    if (it != physicalDeviceMap.end()) {
+        result = get_dispatch_table(device_limits_instance_table_map, physicalDevice)->
+                                    GetPhysicalDeviceProperties(physicalDevice, pProperties);
+        if (VK_SUCCESS == result) {
+            // Save Properties
+            physicalDevicePropertiesMap[physicalDevice] =
+                unique_ptr<VkPhysicalDeviceProperties>(new VkPhysicalDeviceProperties(*pProperties));
+        }
+    }
     return result;
 }
 
@@ -423,6 +440,66 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueF
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
+    VkDevice                 device,
+    const VkImageCreateInfo *pCreateInfo,
+    VkImage                 *pImage)
+{
+    VkBool32                skipCall       = VK_FALSE;
+    VkResult                result         = VK_ERROR_VALIDATION_FAILED;
+    VkPhysicalDevice        physicalDevice = deviceMap[device];
+    VkImageType             type;
+    VkImageFormatProperties ImageFormatProperties = {0};
+
+    // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
+    get_dispatch_table(device_limits_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(
+                       physicalDevice, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling,
+                       pCreateInfo->usage, pCreateInfo->flags, &ImageFormatProperties);
+
+    auto pdp_it = physicalDevicePropertiesMap.find(physicalDevice);
+    if (pdp_it == physicalDevicePropertiesMap.end()) {
+        skipCall = log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                       DEVLIMITS_MUST_QUERY_PROPERTIES, "DL",
+                       "CreateImage called before querying device properties ");
+    }
+    uint32_t imageGranularity = pdp_it->second->limits.bufferImageGranularity;
+    imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
+
+    if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
+        (pCreateInfo->extent.width  > ImageFormatProperties.maxExtent.width)  ||
+        (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
+        skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                       DEVLIMITS_LIMITS_VIOLATION, "DL",
+                       "CreateImage extents exceed allowable limits for format: "
+                       "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
+                       pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                       ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height, ImageFormatProperties.maxExtent.depth,
+                       string_VkFormat(pCreateInfo->format));
+
+    }
+
+    uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width               *
+                          (uint64_t)pCreateInfo->extent.height              *
+                          (uint64_t)pCreateInfo->extent.depth               *
+                          (uint64_t)pCreateInfo->arraySize                  *
+                          (uint64_t)pCreateInfo->samples                    *
+                          (uint64_t)vk_format_get_size(pCreateInfo->format) +
+                          (uint64_t)imageGranularity ) & ~(uint64_t)imageGranularity;
+
+    if (totalSize > ImageFormatProperties.maxResourceSize) {
+        skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                       DEVLIMITS_LIMITS_VIOLATION, "DL",
+                       "CreateImage resource size exceeds allowable maximum "
+                       "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
+                       totalSize, ImageFormatProperties.maxResourceSize);
+    }
+    if (VK_FALSE == skipCall) {
+        result = get_dispatch_table(device_limits_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
+    }
+    return result;
+}
+
+
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
@@ -518,6 +595,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyRenderPass;
     if (!strcmp(funcName, "vkCreateBufferView"))
         return (PFN_vkVoidFunction) vkCreateBufferView;
+*/
+    if (!strcmp(funcName, "vkCreateImage"))
+        return (PFN_vkVoidFunction) vkCreateImage;
+/*
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "CreatePipelineCache"))

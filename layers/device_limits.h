@@ -34,8 +34,10 @@ typedef enum _DEV_LIMITS_ERROR
     DEVLIMITS_INVALID_INSTANCE,                 // Invalid instance used
     DEVLIMITS_INVALID_PHYSICAL_DEVICE,          // Invalid physical device used
     DEVLIMITS_MUST_QUERY_COUNT,                 // Failed to make initial call to an API to query the count
+    DEVLIMITS_MUST_QUERY_PROPERTIES,            // Failed to make initial call to an API to query properties
     DEVLIMITS_COUNT_MISMATCH,                   // App requesting a count value different than actual value
     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,     // Invalid queue requested based on queue family properties
+    DEVLIMITS_LIMITS_VIOLATION,                 // Driver-specified limits/properties were exceeded
 } DEV_LIMITS_ERROR;
 
 typedef enum _CALL_STATE

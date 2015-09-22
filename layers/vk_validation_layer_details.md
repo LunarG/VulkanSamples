@@ -275,11 +275,14 @@ For the second category of errors, DeviceLimits stores its own internal record o
 | Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
+| Query Properties | Before creating an Image, warn if physical device properties have not been queried | MUST_QUERY_PROPERTIES | vkCreateImage | NA | Add validation test |
+| Valid Image Extents | When creating an Image, ensure that image extents are within device limits for the specified format | LIMITS_VIOLATION | vkCreateImage | CreateImageLimitsViolationWidth | NA |
+| Valid Image Resource Size | When creating an image, ensure the the total image resource size is less than the queried device maximum resource size  | LIMITS_VIOLATION | vkCreateImage | CreateImageResourceSizeViolation | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### Device Limitations Pending Work
 
- 1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors.
+ 1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors (this is done for Images).
 
 # Non-validation Layer Details
 

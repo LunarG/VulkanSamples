@@ -3222,7 +3222,96 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
 #endif // SHADER_CHECKER_TESTS
 
 #if DEVICE_LIMITS_TESTS
-// TBD
+TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create an image
+    VkImage image;
+
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext         = NULL;
+    image_create_info.imageType     = VK_IMAGE_TYPE_2D;
+    image_create_info.format        = tex_format;
+    image_create_info.extent.width  = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth  = 1;
+    image_create_info.mipLevels     = 1;
+    image_create_info.arraySize     = 1;
+    image_create_info.samples       = 1;
+    image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags         = 0;
+
+    // Introduce error by sending down a bogus width extent
+    image_create_info.extent.width = 65536;
+    vkCreateImage(m_device->device(), &image_create_info, &image);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while creating an image" <<
+        "with extents outside the queried limits";
+    if (!strstr(msgString.c_str(),"CreateImage extents exceed allowable limits for format")) {
+        FAIL() << "Error received did not match expected error message from vkCreateImage in DeviceLimits layer";
+    }
+}
+
+TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create an image
+    VkImage image;
+
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+    image_create_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext         = NULL;
+    image_create_info.imageType     = VK_IMAGE_TYPE_2D;
+    image_create_info.format        = tex_format;
+    image_create_info.extent.width  = tex_width;
+    image_create_info.extent.height = tex_height;
+    image_create_info.extent.depth  = 1;
+    image_create_info.mipLevels     = 1;
+    image_create_info.arraySize     = 1;
+    image_create_info.samples       = 1;
+    image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.flags         = 0;
+
+    // Introduce error by sending down individually allowable values that result in a surface size
+    // exceeding the device maximum
+    image_create_info.extent.width  = 8192;
+    image_create_info.extent.height = 8192;
+    image_create_info.extent.depth  = 16;
+    image_create_info.arraySize     = 4;
+    image_create_info.samples       = 2;
+    image_create_info.format        = VK_FORMAT_R8G8B8A8_UNORM;
+    vkCreateImage(m_device->device(), &image_create_info, &image);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while creating an image" <<
+        "with resource size exceeding queried limit";
+    if (!strstr(msgString.c_str(),"CreateImage resource size exceeds allowable maximum")) {
+        FAIL() << "Error received did not match expected error message from vkCreateImage in DeviceLimits layer";
+    }
+}
+
 #endif // DEVICE_LIMITS_TESTS
 
 int main(int argc, char **argv) {
