@@ -540,7 +540,7 @@ static void demo_prepare_buffers(struct demo *demo)
     }
 
     const VkSwapchainCreateInfoKHR swap_chain = {
-        .sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR,
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
         .pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&demo->surface_description,
         .minImageCount = desiredNumberOfSwapchainImages,

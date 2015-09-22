@@ -877,7 +877,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
     assert((surfProperties.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) != 0);
 
     VkSwapchainCreateInfoKHR swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR;
+    swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
     swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&m_surface_description;
     swap_chain.minImageCount = desiredNumberOfSwapchainImages;
