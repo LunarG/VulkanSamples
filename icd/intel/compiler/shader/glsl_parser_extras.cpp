@@ -33,7 +33,7 @@
 #include "Frontends/SPIRV/SpvToTop.h"
 #include "SPIRV/GlslangToSpv.h"
 #include "SPIRV/SPVRemapper.h"
-#include "SPIRV/GLSL450Lib.h"
+#include "SPIRV/GLSL.std.450.h"
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
 #include "glsl_glass_manager.h"
@@ -55,6 +55,12 @@ extern "C" {
 #include "loop_analysis.h"
 #include "threadpool.h"
 #include "SPIRV/spirv.hpp"
+
+namespace spv {
+
+   void GLSLstd450GetDebugNames(const char** names);
+
+} // spv
 
 
 /**
@@ -1570,7 +1576,7 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
-const char* GlslStd450DebugNames[GLSL_STD_450::Count];
+const char* GlslStd450DebugNames[GLSLstd450Count];
 
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
@@ -1659,7 +1665,7 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
                if (dump_SPV) {
                    spv::Parameterize();
-                   GLSL_STD_450::GetDebugNames(GlslStd450DebugNames);
+                   spv::GLSLstd450GetDebugNames(GlslStd450DebugNames);
                    spv::Disassemble(std::cout, spirv);
                }
 

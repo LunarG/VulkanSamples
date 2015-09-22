@@ -25,7 +25,7 @@
 
 #include "gtest-1.7.0/include/gtest/gtest.h"
 #include "glslang/Public/ShaderLang.h"
-#include "SPIRV/GLSL450Lib.h"
+#include "SPIRV/GLSL.std.450.h"
 #include "icd-spv.h"
 #include "test_common.h"
 #include "vktestbinding.h"

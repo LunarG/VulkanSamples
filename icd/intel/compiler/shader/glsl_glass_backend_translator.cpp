@@ -84,6 +84,7 @@ namespace {
                    interpLocation(gla::EILFragment),
                    qualifier(gla::EVQNone),
                    location(-1),
+                   binding(-1),
                    matrix(false), notSigned(false), block(false), mdAggregate(0), mdSampler(0) { }
       std::string                 name;
       gla::EMdPrecision           precision;
@@ -94,6 +95,7 @@ namespace {
       gla::EInterpolationLocation interpLocation;
       gla::EVariableQualifier     qualifier;
       int                         location;
+      int                         binding;
       bool                        matrix;
       bool                        notSigned;
       bool                        block;
@@ -110,9 +112,10 @@ namespace {
 
       if (ioRoot) {
          llvm::Type* proxyType;
+         unsigned int proxyQualifiers;
          int interpMode;
          if (! CrackIOMd(mdNode, metaType.name, metaType.ioKind, proxyType, metaType.typeLayout,
-                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn)) {
+                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn, metaType.binding, proxyQualifiers)) {
             return false;
          }
 
@@ -1206,10 +1209,10 @@ void MesaGlassTranslator::addIoDeclaration(gla::EVariableQualifier qualifier,
             MetaType metaType;
             decodeMdTypesEmitMdQualifiers(isIoMd(mdNode), mdNode, mdType, false, metaType);
 
-            if(metaType.location) {
+            if(metaType.binding != -1) {
                 var->data.explicit_binding = true;
-                // Note: location is now two 16-bit values combined
-                var->data.binding = metaType.location;
+                // Note: binding is now two 16-bit values combined
+                var->data.binding = metaType.binding;
             }
          }
       }
@@ -3657,15 +3660,15 @@ inline void MesaGlassTranslator::emitIRLoad(const llvm::Instruction* llvmInst)
 
 /**
  * -----------------------------------------------------------------------------
- * Location could be two combined 16-bit numbers, one for set, one for binding
+ * Binding is two combined 16-bit numbers, one for set, one for binding
  * This function extracts and returns each of them.
  * -----------------------------------------------------------------------------
  */
-inline void MesaGlassTranslator::unPackSetAndBinding(const int location, int& set, int& binding)
+inline void MesaGlassTranslator::unPackSetAndBinding(const int bindingIn, int& set, int& bindingOut)
 {
     // Logic mirrored from LunarGLASS GLSL backend
-    set = (unsigned) location >> 16;
-    binding = location & 0xFFFF;
+    set = (unsigned) bindingIn >> 16;
+    bindingOut = bindingIn & 0xFFFF;
 
     // Unbias set, which was biased by 1 to distinguish between "set=0" and nothing.
     bool setPresent = (set != 0);
@@ -3692,19 +3695,17 @@ void MesaGlassTranslator::setIoParameters(ir_variable* ioVar, const llvm::MDNode
       ioVar->data.origin_upper_left    = state->fs_origin_upper_left;
       ioVar->data.pixel_center_integer = state->fs_pixel_center_integer;
 
-      int location = 0;
-      int set = 0;
-      unPackSetAndBinding(metaType.location, set, location);
-
-      if (location >= 0 && location < gla::MaxUserLayoutLocation) {
-
-          if (metaType.block || metaType.mdSampler != 0) {
+      if (metaType.block || metaType.mdSampler != 0) {
+          if (metaType.binding != -1) {
               // If we have a sampler or a block, we need a binding
               ioVar->data.explicit_binding  = true;
               // Note: For sampler and UBO bindings, location is now two 16-bit
               // values combined, pass the whole thing!
-              ioVar->data.binding           = metaType.location;
-          } else {
+              ioVar->data.binding           = metaType.binding;
+          }
+      } else {
+          int location = metaType.location;
+          if (location >= 0 && location < gla::MaxUserLayoutLocation) {
               ioVar->data.explicit_location = true;
 
               if ((manager->getStage() == EShLangFragment) && metaType.qualifier == EVQOutput)
