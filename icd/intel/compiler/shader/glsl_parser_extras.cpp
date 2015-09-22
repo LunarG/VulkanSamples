@@ -1576,7 +1576,7 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
    }
 }
 
-const char* GlslStd450DebugNames[GLSLstd450Count];
+static const char* GlslStd450DebugNames[GLSLstd450Count];
 
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,

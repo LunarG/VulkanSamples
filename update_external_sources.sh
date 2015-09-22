@@ -8,6 +8,11 @@ GLSLANG_REVISION=$(cat $PWD/glslang_revision)
 echo "LUNARGLASS_REVISION=$LUNARGLASS_REVISION"
 echo "GLSLANG_REVISION=$GLSLANG_REVISION"
 
+LUNARGLASS_REVISION_R32=$(cat $PWD/LunarGLASS_revision_R32)
+GLSLANG_REVISION_R32=$(cat $PWD/glslang_revision_R32)
+echo "LUNARGLASS_REVISION_R32=$LUNARGLASS_REVISION_R32"
+echo "GLSLANG_REVISION_R32=$GLSLANG_REVISION_R32"
+
 BUILDDIR=$PWD
 BASEDIR=$BUILDDIR/..
 
@@ -18,13 +23,22 @@ function create_glslang () {
    cd $BASEDIR/glslang
    git clone https://github.com/KhronosGroup/glslang.git .
    git checkout $GLSLANG_REVISION
+   svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
+   svn update -r $GLSLANG_REVISION_R32
+   svn revert -R .
 }
 
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
    git fetch --all
+   git checkout -f .
    git checkout $GLSLANG_REVISION
+   if [ ! -d "$BASEDIR/glslang/.svn" ]; then
+      svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
+   fi
+   svn update -r $GLSLANG_REVISION_R32
+   svn revert -R .
 }
 
 function create_LunarGLASS () {
@@ -39,18 +53,28 @@ function create_LunarGLASS () {
    tar --gzip -xf llvm-3.4.src.tar.gz
    git checkout -f .  # put back the LunarGLASS versions of some LLVM files
    git checkout $LUNARGLASS_REVISION
+   svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/LunarGLASS/ .
+   svn update -r $LUNARGLASS_REVISION_R32
+   svn revert -R .
 }
 
 function update_LunarGLASS () {
    echo "Updating $BASEDIR/LunarGLASS"
    cd $BASEDIR/LunarGLASS
    git fetch
-   git checkout $LUNARGLASS_REVISION |& tee gitout
+   git checkout -f .
+   git checkout $LUNARGLASS_REVISION 
    # Figure out how to do this with git
+   #git checkout $LUNARGLASS_REVISION |& tee gitout
    #if grep --quiet LLVM gitout ; then
    #   rm -rf $BASEDIR/LunarGLASS/Core/LLVM/llvm-3.4/build
    #fi
-   rm -rf gitout
+   #rm -rf gitout
+   if [ ! -d "$BASEDIR/LunarGLASS/.svn" ]; then
+      svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/LunarGLASS/ .
+   fi
+   svn update -r $LUNARGLASS_REVISION_R32
+   svn revert -R .
 }
 
 function build_glslang () {
