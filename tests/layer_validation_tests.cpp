@@ -801,7 +801,6 @@ TEST_F(VkLayerTest, LineWidthStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a line width state object is not bound beforehand");
 
@@ -818,7 +817,6 @@ TEST_F(VkLayerTest, DepthBiasStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bias state object is not bound beforehand");
 
@@ -835,7 +833,6 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport state object is not bound beforehand");
 
@@ -852,7 +849,6 @@ TEST_F(VkLayerTest, BlendStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend state object is not bound beforehand");
 
@@ -869,7 +865,6 @@ TEST_F(VkLayerTest, DepthBoundsStateNotBound)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bounds state object is not bound beforehand");
 
@@ -920,7 +915,6 @@ TEST_F(VkLayerTest, StencilReferenceNotSet)
 {
     VkFlags msgFlags;
     std::string msgString;
-    ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil reference is not set beforehand");
 
