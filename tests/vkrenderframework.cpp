@@ -1505,14 +1505,14 @@ void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)
     m_renderTargets.push_back(renderTarget);
 }
 
-void VkCommandBufferObj::DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+void VkCommandBufferObj::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
-    vkCmdDrawIndexed(handle(), firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    vkCmdDrawIndexed(handle(), indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-void VkCommandBufferObj::Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+void VkCommandBufferObj::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
-    vkCmdDraw(handle(), firstVertex, vertexCount, firstInstance, instanceCount);
+    vkCmdDraw(handle(), vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void VkCommandBufferObj::QueueCommandBuffer()

@@ -572,7 +572,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdSetStencilWriteMask(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
     vkCmdSetStencilReference(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
 
-    vkCmdDraw(cmd_buf, 0, 12 * 3, 0, 1);
+    vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(cmd_buf);
 
     err = vkEndCommandBuffer(cmd_buf);

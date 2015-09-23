@@ -280,10 +280,10 @@ public:
     VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
     VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *beginInfo) { return BeginCommandBuffer(*m_cmdBuffer, beginInfo); }
     VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
-    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
-        { m_cmdBuffer->Draw(firstVertex, vertexCount, firstInstance, instanceCount); }
-    void DrawIndexed(uint32_t firstVertex, uint32_t vertexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
-        { m_cmdBuffer->DrawIndexed(firstVertex, vertexCount, vertexOffset,firstInstance, instanceCount); }
+    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        { m_cmdBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+        { m_cmdBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
     void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  VkConstantBufferObj *constantBuffer)
@@ -526,7 +526,7 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 #endif
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     ASSERT_VK_SUCCESS(EndCommandBuffer());
@@ -797,7 +797,7 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     BindVertexBuffer(&meshBuffer, 0, 0);
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     ASSERT_VK_SUCCESS(EndCommandBuffer());
@@ -884,7 +884,7 @@ TEST_F(VkRenderTest, TriangleMRT)
 #endif
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     ASSERT_VK_SUCCESS(EndCommandBuffer());
@@ -991,7 +991,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     BindIndexBuffer(&indexBuffer, 0);
 
     // render two triangles
-    DrawIndexed(0, 6, 0, 0, 1);
+    DrawIndexed(6, 1, 0, 0, 0);
 
     // finalize recording of the command buffer
     ASSERT_VK_SUCCESS(EndCommandBuffer());
@@ -1079,7 +1079,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
 #endif
 
     // render triangle
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1165,7 +1165,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1265,7 +1265,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1354,7 +1354,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1430,7 +1430,7 @@ TEST_F(VkRenderTest, TriangleVSUniform)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1506,7 +1506,7 @@ TEST_F(VkRenderTest, MixTriangle)
 #endif
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1595,7 +1595,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1698,7 +1698,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1791,7 +1791,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 #endif
 
     // render two triangles
-    Draw(0, 6, 0, 1);
+    Draw(6, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -1907,7 +1907,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 #endif
 
     // render triangles
-    Draw(0, 36, 0, 1);
+    Draw(36, 1, 0, 0);
 
 
     // finalize recording of the command buffer
@@ -1978,7 +1978,7 @@ TEST_F(VkRenderTest, VSTexture)
 #endif
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2048,7 +2048,7 @@ TEST_F(VkRenderTest, TexturedTriangle)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2126,7 +2126,7 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2194,7 +2194,7 @@ TEST_F(VkRenderTest, FSTriangle)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2281,7 +2281,7 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2361,7 +2361,7 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2460,7 +2460,7 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2554,7 +2554,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2672,7 +2672,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2799,7 +2799,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, num_verts, 0, 1);
+    Draw(num_verts, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2912,7 +2912,7 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3018,7 +3018,7 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3267,7 +3267,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     pDSDumpDot((char*)"triTest2.dot");
 #endif
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3374,7 +3374,7 @@ TEST_F(VkRenderTest, TextureGather)
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3478,7 +3478,7 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3829,7 +3829,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -3954,7 +3954,7 @@ TEST_F(VkRenderTest, GSPositions)
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -4089,7 +4089,7 @@ TEST_F(VkRenderTest, GSTriStrip)
     GenericDrawPreparation(pipelineobj, descriptorSet);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();

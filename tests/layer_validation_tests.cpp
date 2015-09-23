@@ -155,10 +155,10 @@ public:
     /* Convenience functions that use built-in command buffer */
     VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
     VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
-    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
-        { m_cmdBuffer->Draw(firstVertex, vertexCount, firstInstance, instanceCount); }
-    void DrawIndexed(uint32_t firstVertex, uint32_t vertexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
-        { m_cmdBuffer->DrawIndexed(firstVertex, vertexCount, vertexOffset,firstInstance, instanceCount); }
+    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        { m_cmdBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+        { m_cmdBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
     void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
     void QueueCommandBuffer(const VkFence& fence) { m_cmdBuffer->QueueCommandBuffer(fence); }
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
@@ -301,7 +301,7 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     GenericDrawPreparation(pipelineobj, descriptorSet, failMask);
 
     // render triangle
-    Draw(0, 3, 0, 1);
+    Draw(3, 1, 0, 0);
 
     // finalize recording of the command buffer
     EndCommandBuffer();
@@ -2584,7 +2584,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
     VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void*) &vbo_data);
     BindVertexBuffer(&vbo, (VkDeviceSize)0, 1); // VBO idx 1, but no VBO in PSO
-    Draw(0, 1, 0, 0);
+    Draw(1, 0, 0, 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";

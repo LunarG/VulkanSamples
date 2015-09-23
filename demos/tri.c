@@ -418,7 +418,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(demo->draw_cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
 
-    vkCmdDraw(demo->draw_cmd, 0, 3, 0, 1);
+    vkCmdDraw(demo->draw_cmd, 3, 1, 0, 0);
     vkCmdEndRenderPass(demo->draw_cmd);
 
     err = vkEndCommandBuffer(demo->draw_cmd);

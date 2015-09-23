@@ -5688,12 +5688,12 @@ bool PostCmdDraw(
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(
     VkCmdBuffer cmdBuffer,
-    uint32_t firstVertex,
     uint32_t vertexCount,
-    uint32_t firstInstance,
-    uint32_t instanceCount)
+    uint32_t instanceCount,
+    uint32_t firstVertex,
+    uint32_t firstInstance)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
     PostCmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
@@ -5717,13 +5717,13 @@ bool PostCmdDrawIndexed(
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(
     VkCmdBuffer cmdBuffer,
-    uint32_t firstIndex,
     uint32_t indexCount,
+    uint32_t instanceCount,
+    uint32_t firstIndex,
     int32_t vertexOffset,
-    uint32_t firstInstance,
-    uint32_t instanceCount)
+    uint32_t firstInstance)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 
     PostCmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }

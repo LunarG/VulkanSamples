@@ -2013,11 +2013,6 @@ typedef struct {
     uint32_t                                    stencil;
 } VkClearDepthStencilValue;
 
-typedef union {
-    VkClearColorValue                           color;
-    VkClearDepthStencilValue                    depthStencil;
-} VkClearValue;
-
 typedef struct {
     VkOffset3D                                  offset;
     VkExtent3D                                  extent;
@@ -2030,6 +2025,11 @@ typedef struct {
     VkOffset3D                                  destOffset;
     VkExtent3D                                  extent;
 } VkImageResolve;
+
+typedef union {
+    VkClearColorValue                           color;
+    VkClearDepthStencilValue                    depthStencil;
+} VkClearValue;
 
 typedef struct {
     VkStructureType                             sType;
@@ -2060,18 +2060,18 @@ typedef struct {
 } VkDispatchIndirectCmd;
 
 typedef struct {
-    uint32_t                                    firstIndex;
     uint32_t                                    indexCount;
+    uint32_t                                    instanceCount;
+    uint32_t                                    firstIndex;
     int32_t                                     vertexOffset;
     uint32_t                                    firstInstance;
-    uint32_t                                    instanceCount;
 } VkDrawIndexedIndirectCmd;
 
 typedef struct {
-    uint32_t                                    firstVertex;
     uint32_t                                    vertexCount;
-    uint32_t                                    firstInstance;
     uint32_t                                    instanceCount;
+    uint32_t                                    firstVertex;
+    uint32_t                                    firstInstance;
 } VkDrawIndirectCmd;
 
 typedef struct {
@@ -2208,8 +2208,8 @@ typedef void (VKAPI *PFN_vkCmdSetStencilReference)(VkCmdBuffer cmdBuffer, VkSten
 typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
 typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
 typedef void (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
-typedef void (VKAPI *PFN_vkCmdDraw)(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
-typedef void (VKAPI *PFN_vkCmdDrawIndexed)(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
+typedef void (VKAPI *PFN_vkCmdDraw)(VkCmdBuffer cmdBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+typedef void (VKAPI *PFN_vkCmdDrawIndexed)(VkCmdBuffer cmdBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
 typedef void (VKAPI *PFN_vkCmdDrawIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
 typedef void (VKAPI *PFN_vkCmdDrawIndexedIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
 typedef void (VKAPI *PFN_vkCmdDispatch)(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z);
@@ -2806,18 +2806,18 @@ void VKAPI vkCmdBindVertexBuffers(
 
 void VKAPI vkCmdDraw(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    firstVertex,
     uint32_t                                    vertexCount,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount);
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstVertex,
+    uint32_t                                    firstInstance);
 
 void VKAPI vkCmdDrawIndexed(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    firstIndex,
     uint32_t                                    indexCount,
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstIndex,
     int32_t                                     vertexOffset,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount);
+    uint32_t                                    firstInstance);
 
 void VKAPI vkCmdDrawIndirect(
     VkCmdBuffer                                 cmdBuffer,

@@ -2325,7 +2325,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
@@ -2352,10 +2352,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     VkBool32 skipCall = VK_FALSE;
@@ -2376,7 +2376,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firs
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)

@@ -1220,22 +1220,22 @@ LOADER_EXPORT void VKAPI vkCmdBindVertexBuffers(VkCmdBuffer cmdBuffer, uint32_t 
     disp->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount)
+LOADER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    disp->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount)
+LOADER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    disp->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 LOADER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)

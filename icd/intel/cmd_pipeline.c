@@ -3727,11 +3727,11 @@ ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
 }
 
 ICD_EXPORT void VKAPI vkCmdDraw(
-    VkCmdBuffer                              cmdBuffer,
-    uint32_t                                    firstVertex,
+    VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    vertexCount,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount)
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstVertex,
+    uint32_t                                    firstInstance)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -3740,12 +3740,12 @@ ICD_EXPORT void VKAPI vkCmdDraw(
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexed(
-    VkCmdBuffer                              cmdBuffer,
-    uint32_t                                    firstIndex,
+    VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    indexCount,
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstIndex,
     int32_t                                     vertexOffset,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount)
+    uint32_t                                    firstInstance)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

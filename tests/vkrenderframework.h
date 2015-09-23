@@ -185,8 +185,8 @@ public:
     void BeginRenderPass(const VkRenderPassBeginInfo &info);
     void EndRenderPass();
     void FillBuffer(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize fill_size, uint32_t data);
-    void Draw(uint32_t firstVertex, uint32_t vertexCount, uint32_t firstInstance, uint32_t instanceCount);
-    void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, int32_t vertexOffset, uint32_t firstInstance, uint32_t instanceCount);
+    void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+    void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
     void QueueCommandBuffer();
     void QueueCommandBuffer(VkFence fence);
     void SetViewport(uint32_t viewportCount, const VkViewport* pViewports);
