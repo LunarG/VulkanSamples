@@ -110,8 +110,6 @@ static VkResult queue_select_pipeline(struct intel_queue *queue,
         bo = queue->select_compute_bo;
         break;
     default:
-        /* TODOVV: Make sure coved in validation test */
-//        return VK_ERROR_INVALID_VALUE;
         assert(0 && "Invalid pipeline select");
         break;
     }
@@ -190,7 +188,6 @@ static VkResult queue_init_hw_and_atomic_bo(struct intel_queue *queue)
 static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
-    /* TODOVV */
     if (unlikely(cmd->result != VK_SUCCESS || !cmd->primary)) {
         intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
                       &cmd->obj.base, 0, 0,
@@ -269,7 +266,6 @@ VkResult intel_queue_create(struct intel_dev *dev,
         ring = INTEL_RING_RENDER;
         break;
     default:
-        /* TODOVV: Verify test in validation layer */
         intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
                       &dev->base, 0, 0,
                       "invalid engine type");
