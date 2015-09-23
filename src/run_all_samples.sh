@@ -33,8 +33,6 @@ echo "Descriptor and Pipeline Layouts"
 ./vk0.2-descriptor_pipeline_layouts
 echo "Vertex Buffer"
 ./vk0.2-vertexbuffer
-echo "Dynamic State"
-./vk0.2-dynamicstate
 echo "Alloc Descriptor Sets"
 ./vk0.2-allocdescriptorsets
 echo "Initialize Shaders"

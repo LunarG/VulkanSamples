@@ -204,13 +204,6 @@ struct sample_info {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkDynamicViewportState dyn_viewport;
-    VkDynamicLineWidthState dyn_line_width;
-    VkDynamicBlendState dyn_blend;
-    VkDynamicDepthBiasState dyn_depth_bias;
-    VkDynamicDepthBoundsState dyn_depth_bounds;
-    VkDynamicStencilState dyn_stencil;
-
     VkShaderModule vert_shader_module;
     VkShaderModule frag_shader_module;
     VkPipelineShaderStageCreateInfo shaderStages[2];
