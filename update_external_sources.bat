@@ -194,9 +194,15 @@ set /p GLSLANG_REVISION= < glslang_revision
 echo LUNARGLASS_REVISION=%LUNARGLASS_REVISION%
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 
+set /p LUNARGLASS_REVISION_R32= < LunarGLASS_revision_R32
+set /p GLSLANG_REVISION_R32= < glslang_revision_R32
+echo LUNARGLASS_REVISION_R32=%LUNARGLASS_REVISION_R32%
+echo GLSLANG_REVISION_R32=%GLSLANG_REVISION_R32%
+
 echo Creating and/or updating glslang and LunarGLASS in %BASE_DIR%
 
 if %sync-glslang% equ 1 (
+   rd /S /Q %GLSLANG_DIR%
    if not exist %GLSLANG_DIR% (
       call:create_glslang
    )
@@ -262,8 +268,9 @@ goto:eof
    echo.
    echo Updating %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   git fetch --all
-   git checkout %GLSLANG_REVISION%
+   svn.exe checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
+   svn.exe update -r %GLSLANG_REVISION_R32%
+   svn.exe revert -R .
 goto:eof
 
 :create_LunarGLASS
