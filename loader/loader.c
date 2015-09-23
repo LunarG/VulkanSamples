@@ -2675,19 +2675,10 @@ void VKAPI loader_DestroyInstance(
         prev = next;
         next = next->next;
     }
-    /* TODOVV: Move this test to validation layer */
-//    if (next  == NULL) {
-//        // This must be an invalid instance handle or empty list
-//        return VK_ERROR_INVALID_HANDLE;
-//    }
 
     while (icds) {
         if (icds->instance) {
             icds->DestroyInstance(icds->instance);
-            /* TODOVV: Move this test to validation layer */
-            //if (res != VK_SUCCESS)
-            //    loader_log(VK_DBG_REPORT_WARN_BIT, 0,
-            //                "ICD ignored: failed to DestroyInstance on device");
         }
         next_icd = icds->next;
         icds->instance = VK_NULL_HANDLE;
