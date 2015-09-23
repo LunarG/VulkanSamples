@@ -961,6 +961,8 @@ class APIDumpSubcommand(Subcommand):
                     prev_count_name = "*%s" % p.name
                 else:
                     prev_count_name = p.name
+            else:
+                prev_count_name = ''
             pindex += 1
         log_func = log_func.strip(', ')
         log_func_no_addr = log_func_no_addr.strip(', ')
@@ -977,7 +979,7 @@ class APIDumpSubcommand(Subcommand):
         log_func_no_addr += ';'
         log_func += '\n    }\n    else {%s\n    }' % log_func_no_addr;
         log_func += '\n%s' % self.lineinfo.get()
-        #print("Proto %s has param_dict: %s" % (proto.name, sp_param_dict))
+        # log_func += '\n// Proto %s has param_dict: %s' % (proto.name, sp_param_dict)
         if len(sp_param_dict) > 0:
             indent = '    '
             log_func += '\n%sif (g_APIDumpDetailed) {' % indent
@@ -986,7 +988,7 @@ class APIDumpSubcommand(Subcommand):
             log_func += '\n%s' % self.lineinfo.get()
             log_func += '\n%sstring tmp_str;' % indent
             for sp_index in sp_param_dict:
-                #print("sp_index: %s" % str(sp_index))
+                # log_func += '\n// sp_index: %s' % str(sp_index)
                 if 'index' == sp_param_dict[sp_index]:
                     cis_print_func = 'vk_print_%s' % (proto.params[sp_index].ty.replace('const ', '').strip('*').lower())
                     local_name = proto.params[sp_index].name
