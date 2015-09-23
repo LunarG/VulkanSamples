@@ -102,8 +102,8 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     struct intel_render_pass *rp;
     uint32_t i;
 
-    /* TODOVV: Move to validation layer */
-    assert(!(info->dependencyCount) && "Invalid dependencyCount");
+    // TODO: Add support for subpass dependencies
+    assert(!(info->dependencyCount) && "No ICD support for subpass dependencies");
 
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
             sizeof(*rp), dev->base.dbg, VK_OBJECT_TYPE_RENDER_PASS, info, 0);
@@ -151,9 +151,8 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
         struct intel_render_pass_subpass *subpass = &rp->subpasses[i];
         uint32_t j;
 
-        /* missing SPIR support? */
-        /* TODOVV: What do we test here? */
-        assert(!(subpass_info->inputCount) && "Unknown render pass failure");
+        // TODO: Add support for Input Attachment References
+        assert(!(subpass_info->inputCount) && "No ICD support for Input Attachments");
 
         for (j = 0; j < subpass_info->colorCount; j++) {
             const VkAttachmentReference *color_ref =
