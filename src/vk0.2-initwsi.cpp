@@ -237,7 +237,7 @@ int main(int argc, char **argv)
     }
 
     VkSwapchainCreateInfoKHR swap_chain = {};
-    swap_chain.sType = VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_KHR;
+    swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swap_chain.pNext = NULL;
     swap_chain.pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&info.surface_description;
     swap_chain.minImageCount = desiredNumberOfSwapChainImages;
