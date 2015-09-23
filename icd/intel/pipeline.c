@@ -1078,10 +1078,10 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
 {
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
         pipeline->state.viewport.viewport_count = info->vp.viewportCount;
-        memcpy(pipeline->state.viewport.viewports, info->vp.pViewports, sizeof(info->vp.viewportCount) * sizeof(VkViewport));
+        memcpy(pipeline->state.viewport.viewports, info->vp.pViewports, info->vp.viewportCount * sizeof(VkViewport));
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
-        memcpy(pipeline->state.viewport.scissors, info->vp.pScissors, sizeof(info->vp.viewportCount) * sizeof(VkRect2D));
+        memcpy(pipeline->state.viewport.scissors, info->vp.pScissors, info->vp.scissorCount * sizeof(VkRect2D));
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
         pipeline->state.line_width.line_width = info->rs.lineWidth;
