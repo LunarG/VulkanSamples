@@ -91,7 +91,6 @@ int main(int argc, char **argv)
                        sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_set(info, true);
     init_pipeline(info);
-    init_dynamic_state(info);
 
     /* VULKAN_KEY_START */
 
@@ -124,13 +123,35 @@ int main(int argc, char **argv)
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
+    VkViewport viewport;
+    viewport.height = (float) info.height;
+    viewport.width = (float) info.width;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
+    viewport.originX = 0;
+    viewport.originY = 0;
+    vkCmdSetViewport(info.cmd, 1, &viewport);
 
-    vkCmdBindDynamicViewportState(info.cmd, info.dyn_viewport);
-    vkCmdBindDynamicLineWidthState(info.cmd,  info.dyn_line_width);
-    vkCmdBindDynamicDepthBiasState(info.cmd,  info.dyn_depth_bias);
-    vkCmdBindDynamicBlendState(info.cmd, info.dyn_blend);
-    vkCmdBindDynamicDepthBoundsState(info.cmd, info.dyn_depth_bounds);
-    vkCmdBindDynamicStencilState(info.cmd, info.dyn_stencil);
+    VkRect2D scissor;
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    vkCmdSetScissor(info.cmd, 1, &scissor);
+
+    vkCmdSetLineWidth(info.cmd, 1.0);
+    vkCmdSetDepthBias(info.cmd, 0.0f, 0.0f, 0.0f);
+
+    float blend[4];
+    blend[0] = 1.0f;
+    blend[1] = 1.0f;
+    blend[2] = 1.0f;
+    blend[3] = 1.0f;
+    vkCmdSetBlendConstants(info.cmd, blend);
+    vkCmdSetDepthBounds(info.cmd, 0.0f, 1.0f);
+    vkCmdSetStencilCompareMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
+    vkCmdSetStencilWriteMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
+    vkCmdSetStencilReference(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
 
     vkCmdDraw(info.cmd, 0, 12 * 3, 0, 1);
     vkCmdEndRenderPass(info.cmd);
@@ -179,12 +200,6 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore);
-    vkDestroyDynamicViewportState(info.device, info.dyn_viewport);
-    vkDestroyDynamicLineWidthState(info.device, info.dyn_line_width);
-    vkDestroyDynamicDepthBiasState(info.device, info.dyn_depth_bias);
-    vkDestroyDynamicBlendState(info.device, info.dyn_blend);
-    vkDestroyDynamicDepthBoundsState(info.device, info.dyn_depth_bounds);
-    vkDestroyDynamicStencilState(info.device, info.dyn_stencil);
     vkDestroyPipeline(info.device, info.pipeline);
     vkDestroyPipelineCache(info.device, info.pipelineCache);
     vkDestroySampler(info.device, info.textures[0].sampler);
