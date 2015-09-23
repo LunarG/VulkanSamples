@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
 set(SHADER_FILES ${SHADER_FILES} "")
-include_directories( ${SAMPLES_DATA_DIR} )
+include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} )
 
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes VULKAN_VERSION set (i.e. vk0.2)
@@ -57,6 +57,23 @@ function(sampleWithSingleFile)
         else()
             add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
+        endif()
+    endforeach(TARG)
+endfunction(sampleWithSingleFile)
+
+# function to build a simple single-source-file sample
+#   - assumes that code is standalone and doesn't depend on utilitites
+#   - assumes VULKAN_VERSION set (i.e. vk0.2)
+#   - assumes S_TARGETS set to list of build targets
+function(sampleWithSingleFileStandalone)
+    foreach(TARG ${S_TARGETS})
+        set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
+        if(UNIX)
+            add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
+            target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
+        else()
+            add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
+            target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
         endif()
     endforeach(TARG)
 endfunction(sampleWithSingleFile)
@@ -181,12 +198,16 @@ set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initwsi inittexture uniformbuffer
     descriptor_pipeline_layouts initcommandbuffer
     initrenderpass initframebuffers vertexbuffer
-    drawcube drawcubeinline drawtexturedcube
     allocdescriptorsets initshaders initpipeline
+    drawcube drawtexturedcube
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback)
 sampleWithSingleFile()
+
+# simple one file sample targets, no additional files
+set (S_TARGETS drawcubewithutilities)
+sampleWithSingleFileStandalone()
 
 # targets that use spv shaders
 
