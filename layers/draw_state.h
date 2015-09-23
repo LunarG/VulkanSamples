@@ -23,7 +23,7 @@
  */
 #include "vk_layer.h"
 #include <vector>
-#include "layer_common.h"
+#include "vk_debug_report_lunarg.h"
 
 using namespace std;
 

@@ -24,7 +24,7 @@
 #pragma once
 #include <vector>
 #include "vk_layer.h"
-#include "layer_common.h"
+#include "vk_debug_report_lunarg.h"
 
 #ifdef __cplusplus
 extern "C" {
