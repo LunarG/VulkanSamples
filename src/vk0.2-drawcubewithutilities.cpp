@@ -1234,6 +1234,7 @@ void init_pipeline(struct sample_info &info)
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;
+    pipeline.pDynamicState       = NULL;
     pipeline.pViewportState      = &vp;
     pipeline.pDepthStencilState  = &ds;
     pipeline.pStages             = info.shaderStages;
