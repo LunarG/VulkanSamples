@@ -52,6 +52,8 @@ echo "Draw Cube"
 & $dPath\vk0.2-drawcube
 echo "Draw Textured Cube"
 & $dPath\vk0.2-drawtexturedcube
+echo "Draw Cube With Utilities"
+& $dPath\vk0.2-drawcubewithutilities
 echo "Use GLSL Shader"
 & $dPath\vk0.2-useglslshader
 echo "Use SPIR-V Shader"
