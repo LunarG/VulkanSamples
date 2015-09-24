@@ -76,7 +76,7 @@ function(sampleWithSingleFileStandalone)
             target_link_libraries(${SAMPLE_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
         endif()
     endforeach(TARG)
-endfunction(sampleWithSingleFile)
+endfunction(sampleWithSingleFileStandalone)
 
 if(NOT WIN32)
     find_package(XCB REQUIRED)
