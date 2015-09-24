@@ -2570,6 +2570,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
         }
+        if (pCB->activeRenderPass) {
+            skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                                "CmdUpdateBuffer cmd issued within an active RenderPass -- vkCmdUpdateBuffer "
+                                "may only be called outside of a RenderPass.");
+        }
     }
     if (VK_FALSE == skipCall)
         get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
@@ -2585,6 +2591,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
             skipCall |= addCmd(pCB, CMD_FILLBUFFER);
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdBindIndexBuffer()");
+        }
+        if (pCB->activeRenderPass) {
+            skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                                "CmdFillBuffer cmd issued within an active RenderPass -- vkCmdFillBuffer "
+                                "may only be called outside of a RenderPass.");
         }
     }
     if (VK_FALSE == skipCall)
@@ -2611,8 +2623,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
                         " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             if (!pCB->activeRenderPass) {
-                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
-                        "Clear*Attachment cmd issued without an active RenderPass. vkCmdClearColorAttachment() must only be called inside of a RenderPass."
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                        (uint64_t)cmdBuffer, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
+                        "CmdClearColorAttachment cmd issued outside of an active RenderPass. "
+                        "vkCmdClearColorAttachment() must only be called inside of a RenderPass."
                         " vkCmdClearColorImage() should be used outside of a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
@@ -2672,9 +2686,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
-                        "Clear*Image cmd issued with an active RenderPass. vkCmdClearColorImage() must only be called outside of a RenderPass."
-                        " vkCmdClearColorAttachment() should be used within a RenderPass.");
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                            (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "CmdClearColorImage cmd issued within an active RenderPass. "
+                        "vkCmdClearColorImage() must only be called outside of a RenderPass. "
+                        "vkCmdClearColorAttachment() should be used within a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);
                 skipCall |= addCmd(pCB, CMD_CLEARCOLORIMAGE);
@@ -2699,8 +2715,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if (pCB->activeRenderPass) {
-                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
-                        "Clear*Image cmd issued with an active RenderPass. vkCmdClearDepthStencilImage() must only be called outside of a RenderPass."
+                skipCall |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                        (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "CmdClearDepthStencilImage cmd issued within an active RenderPass. "
+                        "vkCmdClearDepthStencilImage() must only be called outside of a RenderPass."
                         " vkCmdClearDepthStencilAttachment() should be used within a RenderPass.");
             } else {
                 updateCBTracking(cmdBuffer);

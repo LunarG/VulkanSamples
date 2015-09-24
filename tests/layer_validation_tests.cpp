@@ -1785,6 +1785,191 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
     }
 }
 
+TEST_F(VkLayerTest, FillBufferWithinRenderPass)
+{
+    // Call CmdFillBuffer within an active renderpass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Renderpass is started here
+    BeginCommandBuffer();
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer destBuffer;
+    destBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
+
+    m_cmdBuffer->FillBuffer(destBuffer.handle(), 0, 4, 0x11111111);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
+                "Did not receive error after calling CmdFillBuffer w/i an active RenderPass.";
+    if (!strstr(msgString.c_str(),"CmdFillBuffer cmd issued within an active RenderPass")) {
+        FAIL() << "Error received was not 'CmdFillBuffer cmd issued within an active RenderPass'";
+    }
+}
+
+TEST_F(VkLayerTest, UpdateBufferWithinRenderPass)
+{
+    // Call CmdUpdateBuffer within an active renderpass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Renderpass is started here
+    BeginCommandBuffer();
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer destBuffer;
+    destBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
+
+    VkDeviceSize    destOffset = 0;
+    VkDeviceSize    dataSize   = 1024;
+    const uint32_t *pData      = NULL;
+
+    vkCmdUpdateBuffer(m_cmdBuffer->GetBufferHandle(), destBuffer.handle(), destOffset, dataSize, pData);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
+                "Did not receive error after calling CmdUpdateBuffer w/i an active RenderPass.";
+    if (!strstr(msgString.c_str(),"CmdUpdateBuffer cmd issued within an active RenderPass")) {
+        FAIL() << "Error received was not 'CmdUpdateBuffer cmd issued within an active RenderPass'";
+    }
+}
+
+TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
+{
+    // Call CmdClearColorImage within an active RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Renderpass is started here
+    BeginCommandBuffer();
+
+    VkClearColorValue     clear_color       = {0};
+    VkMemoryPropertyFlags reqs              = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    const VkFormat        tex_format        = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t         tex_width         = 32;
+    const int32_t         tex_height        = 32;
+    VkImageCreateInfo     image_create_info = {};
+    image_create_info.sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.pNext                 = NULL;
+    image_create_info.imageType             = VK_IMAGE_TYPE_2D;
+    image_create_info.format                = tex_format;
+    image_create_info.extent.width          = tex_width;
+    image_create_info.extent.height         = tex_height;
+    image_create_info.extent.depth          = 1;
+    image_create_info.mipLevels             = 1;
+    image_create_info.arraySize             = 1;
+    image_create_info.samples               = 1;
+    image_create_info.tiling                = VK_IMAGE_TILING_LINEAR;
+    image_create_info.usage                 = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    vk_testing::Image destImage;
+    destImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
+
+    const VkImageSubresourceRange range =
+        vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    vkCmdClearColorImage(m_cmdBuffer->GetBufferHandle(),
+                         destImage.handle(),
+                         VK_IMAGE_LAYOUT_GENERAL,
+                         &clear_color,
+                         1,
+                         &range);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
+                "Did not receive error after calling CmdClearColorImage w/i an active RenderPass.";
+    if (!strstr(msgString.c_str(),"CmdClearColorImage cmd issued within an active RenderPass")) {
+        FAIL() << "Error received was not 'CmdClearColorImage cmd issued within an active RenderPass'";
+    }
+}
+
+TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass)
+{
+    // Call CmdClearDepthStencilImage within an active RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Renderpass is started here
+    BeginCommandBuffer();
+
+    VkClearDepthStencilValue clear_value = {0};
+    VkMemoryPropertyFlags    reqs        = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VkImageCreateInfo image_create_info  = vk_testing::Image::create_info();
+    image_create_info.imageType          = VK_IMAGE_TYPE_2D;
+    image_create_info.format             = VK_FORMAT_D24_UNORM_S8_UINT;
+    image_create_info.extent.width       = 64;
+    image_create_info.extent.height      = 64;
+    image_create_info.tiling             = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage              = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    vk_testing::Image destImage;
+    destImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
+
+    const VkImageSubresourceRange range =
+        vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    vkCmdClearDepthStencilImage(m_cmdBuffer->GetBufferHandle(),
+                                destImage.handle(),
+                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                &clear_value,
+                                1,
+                                &range);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
+                "Did not receive error after calling CmdClearDepthStencilImage w/i an active RenderPass.";
+    if (!strstr(msgString.c_str(),"CmdClearDepthStencilImage cmd issued within an active RenderPass")) {
+        FAIL() << "Error received was not 'CmdClearDepthStencilImage cmd issued within an active RenderPass'";
+    }
+}
+
+TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
+{
+    // Call CmdClearColorAttachments outside of an active RenderPass
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Start no RenderPass
+    err = m_cmdBuffer->BeginCommandBuffer();
+    ASSERT_VK_SUCCESS(err);
+
+    VkClearColorValue clear_color = {0};
+    VkRect3D          clear_rect  = { { 0, 0, 0 }, { 32, 32, 1 } };
+
+    vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0,
+                              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                              &clear_color, 1, &clear_rect);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
+                "Did not receive error after calling CmdClearColorAttachment outside of an active RenderPass.";
+    if (!strstr(msgString.c_str(),"CmdClearColorAttachment cmd issued outside of an active RenderPass")) {
+        FAIL() << "Error received was not 'CmdClearColorAttachment cmd issued outside of an active RenderPass'";
+    }
+}
+
 TEST_F(VkLayerTest, InvalidDynamicStateObject)
 {
     // Create a valid cmd buffer
