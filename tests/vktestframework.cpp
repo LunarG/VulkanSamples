@@ -1237,7 +1237,7 @@ void VkTestFramework::ProcessConfigFile()
     }
 
     if (config == 0) {
-        config = new char[strlen(DefaultConfig) + 1];
+        config = (char *) alloca(strlen(DefaultConfig) + 1);
         strcpy(config, DefaultConfig);
     }
 
@@ -1600,7 +1600,7 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
                                  const char *pshader,
                                  std::vector<unsigned int> &spirv)
 {
-    glslang::TProgram& program = *new glslang::TProgram;
+    glslang::TProgram program;
     const char *shaderStrings[1];
 
     // TODO: Do we want to load a special config file depending on the
@@ -1667,6 +1667,7 @@ bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
         spv::spirvbin_t(0).remap(spirv, spv::spirvbin_t::DO_EVERYTHING);
     }
 
+    delete shader;
 
     return true;
 }
