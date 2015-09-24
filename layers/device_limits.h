@@ -35,6 +35,8 @@ typedef enum _DEV_LIMITS_ERROR
     DEVLIMITS_INVALID_PHYSICAL_DEVICE,          // Invalid physical device used
     DEVLIMITS_MUST_QUERY_COUNT,                 // Failed to make initial call to an API to query the count
     DEVLIMITS_MUST_QUERY_PROPERTIES,            // Failed to make initial call to an API to query properties
+    DEVLIMITS_INVALID_CALL_SEQUENCE,            // Flag generic case of an invalid call sequence by the app
+    DEVLIMITS_INVALID_FEATURE_REQUESTED,        // App requested a feature not supported by physical device
     DEVLIMITS_COUNT_MISMATCH,                   // App requesting a count value different than actual value
     DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST,     // Invalid queue requested based on queue family properties
     DEVLIMITS_LIMITS_VIOLATION,                 // Driver-specified limits/properties were exceeded
@@ -60,6 +62,14 @@ typedef struct _PHYSICAL_DEVICE_STATE
     // Track the call state and array sizes for various query functions
     CALL_STATE vkGetPhysicalDeviceQueueFamilyPropertiesState;
     uint32_t queueFamilyPropertiesCount;
-    _PHYSICAL_DEVICE_STATE():vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED), queueFamilyPropertiesCount(0) {};
+    CALL_STATE vkGetPhysicalDeviceLayerPropertiesState;
+    uint32_t deviceLayerCount;
+    CALL_STATE vkGetPhysicalDeviceExtensionPropertiesState;
+    uint32_t deviceExtensionCount;
+    CALL_STATE vkGetPhysicalDeviceFeaturesState;
+    _PHYSICAL_DEVICE_STATE():vkGetPhysicalDeviceQueueFamilyPropertiesState(UNCALLED), queueFamilyPropertiesCount(0),
+                             vkGetPhysicalDeviceLayerPropertiesState(UNCALLED), deviceLayerCount(0),
+                             vkGetPhysicalDeviceExtensionPropertiesState(UNCALLED), deviceExtensionCount(0),
+                             vkGetPhysicalDeviceFeaturesState(UNCALLED) {};
 } PHYSICAL_DEVICE_STATE;
 

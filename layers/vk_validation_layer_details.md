@@ -280,6 +280,8 @@ For the second category of errors, DeviceLimits stores its own internal record o
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
 | Query Properties | Before creating an Image, warn if physical device properties have not been queried | MUST_QUERY_PROPERTIES | vkCreateImage | NA | Add validation test |
+| API Call Sequencing | This is a general error indicating that an app did not use vkGetPhysicalDevice* and other such query calls, but rather made an assumption about device capabilities. | INVALID_CALL_SEQUENCE | vkCreateDevice | NA | Add validation test |
+| Feature Request | Attempting to vkCreateDevice with a feature that is not supported by the underlying physical device. | INVALID_FEATURE_REQUESTED | vkCreateDevice | NA | Add validation test |
 | Valid Image Extents | When creating an Image, ensure that image extents are within device limits for the specified format | LIMITS_VIOLATION | vkCreateImage | CreateImageLimitsViolationWidth | NA |
 | Valid Image Resource Size | When creating an image, ensure the the total image resource size is less than the queried device maximum resource size  | LIMITS_VIOLATION | vkCreateImage | CreateImageResourceSizeViolation | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
