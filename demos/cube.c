@@ -1356,9 +1356,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         moduleCreateInfo.pCode = code;
         moduleCreateInfo.flags = 0;
         err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
-        if (err) {
-            free((void *) moduleCreateInfo.pCode);
-        }
+        assert(!err);
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
@@ -1388,6 +1386,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         shaderCreateInfo.pName = "main";
         shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        free((void *) moduleCreateInfo.pCode);
     }
     return shader;
 }
@@ -1418,13 +1417,16 @@ char *demo_read_spv(const char *filename, size_t *psize)
 static VkShader demo_prepare_vs(struct demo *demo)
 {
     if (!demo->use_glsl) {
+        VkShader shader;
         void *vertShaderCode;
         size_t size;
 
         vertShaderCode = demo_read_spv("cube-vert.spv", &size);
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX, &demo->vert_shader_module,
-                                   vertShaderCode, size);
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX, &demo->vert_shader_module,
+                                     vertShaderCode, size);
+        free(vertShaderCode);
+        return shader;
     } else {
         static const char *vertShaderText =
                 "#version 140\n"
@@ -1458,13 +1460,16 @@ static VkShader demo_prepare_vs(struct demo *demo)
 static VkShader demo_prepare_fs(struct demo *demo)
 {
     if (!demo->use_glsl) {
+        VkShader shader;
         void *fragShaderCode;
         size_t size;
 
         fragShaderCode = demo_read_spv("cube-frag.spv", &size);
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT, &demo->frag_shader_module,
-                                   fragShaderCode, size);
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT, &demo->frag_shader_module,
+                                     fragShaderCode, size);
+        free(fragShaderCode);
+        return shader;
     } else {
         static const char *fragShaderText =
                 "#version 140\n"
@@ -1768,6 +1773,8 @@ static void demo_cleanup(struct demo *demo)
     }
     free(demo->buffers);
 
+    free(demo->queue_props);
+
     vkDestroyCommandPool(demo->device, demo->cmd_pool);
     vkDestroyDevice(demo->device);
     if (demo->validate) {
@@ -1778,6 +1785,7 @@ static void demo_cleanup(struct demo *demo)
 #ifndef _WIN32
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
+    free(demo->atom_wm_delete_window);
 #endif // _WIN32
 }
 
