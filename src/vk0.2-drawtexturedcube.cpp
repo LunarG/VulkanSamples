@@ -153,7 +153,7 @@ int main(int argc, char **argv)
     vkCmdSetStencilWriteMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
     vkCmdSetStencilReference(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
 
-    vkCmdDraw(info.cmd, 0, 12 * 3, 0, 1);
+    vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
 
     VkSemaphore presentCompleteSemaphore;
