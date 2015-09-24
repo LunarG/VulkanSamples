@@ -1118,9 +1118,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
         moduleCreateInfo.pCode = code;
         moduleCreateInfo.flags = 0;
         err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
-        if (err) {
-            free((void *) moduleCreateInfo.pCode);
-        }
+        assert(!err);
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
@@ -1142,9 +1140,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
         memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
 
         err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
-        if (err) {
-            free((void *) moduleCreateInfo.pCode);
-        }
+        assert(!err);
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
@@ -1152,6 +1148,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
         shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
         assert(!err);
+        free((void *) moduleCreateInfo.pCode);
     }
     return shader;
 }
@@ -1182,14 +1179,17 @@ char *demo_read_spv(const char *filename, size_t *psize)
 static VkShader demo_prepare_vs(struct demo *demo)
 {
     if (!demo->use_glsl) {
-       void *vertShaderCode;
-       size_t size;
+        VkShader shader;
+        void *vertShaderCode;
+        size_t size;
 
-       vertShaderCode = demo_read_spv("tri-vert.spv", &size);
+        vertShaderCode = demo_read_spv("tri-vert.spv", &size);
 
-       return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
-                                  &demo->vert_shader_module,
-                                  vertShaderCode, size);
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+                                     &demo->vert_shader_module,
+                                     vertShaderCode, size);
+        free(vertShaderCode);
+        return shader;
     } else {
         static const char *vertShaderText =
             "#version 140\n"
@@ -1213,14 +1213,18 @@ static VkShader demo_prepare_vs(struct demo *demo)
 static VkShader demo_prepare_fs(struct demo *demo)
 {
     if (!demo->use_glsl) {
-       void *fragShaderCode;
-       size_t size;
+        VkShader shader;
+        void *fragShaderCode;
+        size_t size;
 
-       fragShaderCode = demo_read_spv("tri-frag.spv", &size);
+        fragShaderCode = demo_read_spv("tri-frag.spv", &size);
 
-       return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
-                                  &demo->frag_shader_module,
-                                  fragShaderCode, size);
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+                                     &demo->frag_shader_module,
+                                     fragShaderCode, size);
+
+        free(fragShaderCode);
+        return shader;
     } else {
         static const char *fragShaderText =
                 "#version 140\n"
@@ -2141,9 +2145,12 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyDevice(demo->device);
     vkDestroyInstance(demo->inst);
 
+    free(demo->queue_props);
+
 #ifndef _WIN32
     xcb_destroy_window(demo->connection, demo->window);
     xcb_disconnect(demo->connection);
+    free(demo->atom_wm_delete_window);
 #endif // _WIN32
 }
 
