@@ -247,8 +247,10 @@ void VkImageTest::DestroyImage()
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
                                    VkImageView *pView)
 {
+    VkResult err;
     pCreateInfo->image = this->m_image;
-    ASSERT_VK_SUCCESS(vkCreateImageView(device(), pCreateInfo, pView));
+    err = vkCreateImageView(device(), pCreateInfo, pView);
+    ASSERT_VK_SUCCESS(err);
 }
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
