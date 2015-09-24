@@ -2273,6 +2273,12 @@ static void demo_init_vk(struct demo *demo)
             break;
     }
     assert(gfx_queue_idx < demo->queue_count);
+    // Query fine-grained feature support for this device.
+    //  If app has specific feature requirements it should check supported features based on this query
+    VkPhysicalDeviceFeatures physDevFeatures = {};
+    err = vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
+    assert(!err);
+
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
@@ -2289,6 +2295,7 @@ static void demo_init_vk(struct demo *demo)
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
+        .pEnabledFeatures = NULL, // If specific features are required, pass them in here
     };
 
     err = vkCreateDevice(demo->gpu, &device, &demo->device);
