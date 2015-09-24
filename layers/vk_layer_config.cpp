@@ -30,7 +30,7 @@
 #include <vk_layer.h>
 #include <iostream>
 #include "vk_layer_config.h"
-#include "vk_loader_platform.h"
+#include "vk_sdk_platform.h"
 
 #define MAX_CHARS_PER_LINE 4096
 
