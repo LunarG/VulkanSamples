@@ -346,5 +346,4 @@ A place to capture general validation work to be done. This includes new checks 
 
  1. For Upcoming Dynamic State overhaul (if approved): If dynamic state value that is consumed is never set prior to consumption, flag an error
  2. For Upcoming Dynamic State overhaul (if approved): If dynamic state that was bound as "static" in current PSO is attempted to be set with vkCmdSet* flag an error
- 3. Need a WSI validation layer(s) to validate correct usage of WSI API. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties. Tons of other stuff including semaphore and synchronization validation.
- 4. Need to check VkShaderCreateInfo.stage is being set properly (Issue reported by Dan Ginsberg)
+ 3. Need to check VkShaderCreateInfo.stage is being set properly (Issue reported by Dan Ginsberg)
