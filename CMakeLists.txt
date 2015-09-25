@@ -17,6 +17,16 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
     endif()
 endif()
+
+
+set (EXTDIR "${CMAKE_SOURCE_DIR}/ext")
+set (GLMINCLUDES "${EXTDIR}")
+
+get_filename_component(GLMINC_PREFIX "${GLMINCLUDES}" ABSOLUTE)
+if(NOT EXISTS ${GLMINC_PREFIX})
+    message(FATAL_ERROR "Necessary glm headers do not exist: " ${GLMINC_PREFIX})
+endif()
+
 get_filename_component(GLSLANG_PREFIX "../glslang" ABSOLUTE)
 if(NOT EXISTS ${GLSLANG_PREFIX})
     message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})

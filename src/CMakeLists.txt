@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
 set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${PROJECT_SOURCE_DIR}/data")
 set(SHADER_FILES ${SHADER_FILES} "")
-include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} )
+include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
 # function to build a single-source-file sample that uses glsl shaders;
 #   - assumes VULKAN_VERSION set (i.e. vk0.2)
@@ -80,12 +80,6 @@ endfunction(sampleWithSingleFileStandalone)
 
 if(NOT WIN32)
     find_package(XCB REQUIRED)
-endif()
-
-if(NOT WIN32)
-    if(NOT EXISTS /usr/include/glm/glm.hpp)
-        message(FATAL_ERROR "Necessary libglm-dev headers cannot be found: sudo apt-get install libglm-dev")
-    endif()
 endif()
 
 if(WIN32)
