@@ -25,7 +25,7 @@ To add a single file sample to the build, include the base name (no prefix or
 .cpp) of the file in the `S_TARGETS` list.
 
 ```
-set(VULKAN_VERSION vk0.2)
+set(VULKAN_VERSION vk0.9)
 set (S_TARGETS instance device)
 sampleWithSingleFile()
 ```
@@ -39,7 +39,7 @@ of SPIRV shader file names (no .spv suffix) to the SAMPLE_SPIRV_SHADERS
 variable.
 
 ```
-set(VULKAN_VERSION vk0.2)
+set(VULKAN_VERSION vk0.9)
 set(SAMPLE_SPIRV_SHADERS spirvshader-vert spirvshader-frag)
 sampleWithSPIRVShaders(usespirvshader)
 ```
@@ -55,14 +55,14 @@ of GLSL shader file names (no suffixes) of the specific type to the
 appropriate SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS variables.
 
 ```
-set(VULKAN_VERSION vk0.2)
+set(VULKAN_VERSION vk0.9)
 set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 sampleWithGLSLShaders(useglslshader)
 ```
 
 In the example above, the files glslshader.vert and glslshader.frag reside in
-$VULKAN_SAMPLES/data/vk0.2.  These GLSL shaders are converted to SPIRV via
+$VULKAN_SAMPLES/data/vk0.9.  These GLSL shaders are converted to SPIRV via
 glslangValidator, with the resulting files named glslshader-frag.spv and
 glslshader-vert.spv, residing in the same directory as the originals.
 

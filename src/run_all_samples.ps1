@@ -9,52 +9,52 @@ if ($Debug) {
 }
 
 echo "Instance"
-& $dPath\vk0.2-instance
+& $dPath\vk0.9-instance
 echo "Instance Layer Properties"
-& $dPath\vk0.2-instance_layer_properties
+& $dPath\vk0.9-instance_layer_properties
 echo "Instance Layer Properties"
-& $dPath\vk0.2-instance_layer_properties
+& $dPath\vk0.9-instance_layer_properties
 echo "Instance Extension Properties"
-& $dPath\vk0.2-instance_extension_properties
+& $dPath\vk0.9-instance_extension_properties
 echo "Instance Layer ExtensionProperties"
-& $dPath\vk0.2-instance_layer_extension_properties
+& $dPath\vk0.9-instance_layer_extension_properties
 echo "Enumerate"
-& $dPath\vk0.2-enumerate
+& $dPath\vk0.9-enumerate
 echo "Device"
-& $dPath\vk0.2-device
+& $dPath\vk0.9-device
 echo "Enable Validation and Debug Message Callback"
-& $dPath\vk0.2-enable_validation_with_callback
+& $dPath\vk0.9-enable_validation_with_callback
 echo "Init WSI"
-& $dPath\vk0.2-initwsi
+& $dPath\vk0.9-initwsi
 echo "Init Command Buffer"
-& $dPath\vk0.2-initcommandbuffer
+& $dPath\vk0.9-initcommandbuffer
 echo "Depth Buffer"
-& $dPath\vk0.2-depthbuffer
+& $dPath\vk0.9-depthbuffer
 echo "Init Texture"
-& $dPath\vk0.2-inittexture
+& $dPath\vk0.9-inittexture
 echo "Uniform Buffer"
-& $dPath\vk0.2-uniformbuffer
+& $dPath\vk0.9-uniformbuffer
 echo "Init RenderPass"
-& $dPath\vk0.2-initrenderpass
+& $dPath\vk0.9-initrenderpass
 echo "Init Framebuffer"
-& $dPath\vk0.2-initframebuffers
+& $dPath\vk0.9-initframebuffers
 echo "Descriptor and Pipeline Layouts"
-& $dPath\vk0.2-descriptor_pipeline_layouts
+& $dPath\vk0.9-descriptor_pipeline_layouts
 echo "Vertex Buffer"
-& $dPath\vk0.2-vertexbuffer
+& $dPath\vk0.9-vertexbuffer
 echo "Alloc Descriptor Sets"
-& $dPath\vk0.2-allocdescriptorsets
+& $dPath\vk0.9-allocdescriptorsets
 echo "Initialize Shaders"
-& $dPath\vk0.2-initshaders
+& $dPath\vk0.9-initshaders
 echo "Initialize Pipeline"
-& $dPath\vk0.2-initpipeline
+& $dPath\vk0.9-initpipeline
 echo "Draw Cube"
-& $dPath\vk0.2-drawcube
+& $dPath\vk0.9-drawcube
 echo "Draw Textured Cube"
-& $dPath\vk0.2-drawtexturedcube
+& $dPath\vk0.9-drawtexturedcube
 echo "Draw Cube With Utilities"
-& $dPath\vk0.2-drawcubewithutilities
+& $dPath\vk0.9-drawcubewithutilities
 echo "Use GLSL Shader"
-& $dPath\vk0.2-useglslshader
+& $dPath\vk0.9-useglslshader
 echo "Use SPIR-V Shader"
-& $dPath\vk0.2-usespirvshader
+& $dPath\vk0.9-usespirvshader
