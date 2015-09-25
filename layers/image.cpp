@@ -51,7 +51,7 @@ struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDbgMsgCallback> logging_callback;
     VkPhysicalDevice physicalDevice;
-    unordered_map<uint64_t, unique_ptr<IMAGE_STATE>> imageMap;
+    unordered_map<uint64_t, IMAGE_STATE> imageMap;
 
     layer_data() :
         report_data(nullptr),
@@ -295,7 +295,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
     if(result == VK_SUCCESS) {
-        device_data->imageMap[pImage->handle] = unique_ptr<IMAGE_STATE>(new IMAGE_STATE(pCreateInfo));
+        device_data->imageMap[pImage->handle] = IMAGE_STATE(pCreateInfo);
     }
     return result;
 }
@@ -390,16 +390,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     auto imageEntry = device_data->imageMap.find(pCreateInfo->image.handle);
     if (imageEntry != device_data->imageMap.end()) {
-        if (pCreateInfo->subresourceRange.baseMipLevel >= imageEntry->second->mipLevels) {
+        if (pCreateInfo->subresourceRange.baseMipLevel >= imageEntry->second.mipLevels) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseMipLevel " << pCreateInfo->subresourceRange.baseMipLevel
-               << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second->mipLevels << " mip levels.";
+               << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second.mipLevels << " mip levels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
-        if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second->arraySize) {
+        if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second.arraySize) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image "
-               << pCreateInfo->image.handle << " that only has " << imageEntry->second->arraySize << " mip levels.";
+               << pCreateInfo->image.handle << " that only has " << imageEntry->second.arraySize << " mip levels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
         if (!pCreateInfo->subresourceRange.numLevels) {
@@ -414,7 +414,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
         }
 
         // Validate correct image aspect bits for desired formats and format consistency
-        VkFormat           imageFormat = imageEntry->second->format;
+        VkFormat           imageFormat = imageEntry->second.format;
         VkFormat           ivciFormat  = pCreateInfo->format;
         VkImageAspectFlags aspectMask  = pCreateInfo->subresourceRange.aspectMask;
 
@@ -578,21 +578,21 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
 
     if ((srcImageEntry != device_data->imageMap.end())
     && (destImageEntry != device_data->imageMap.end())) {
-        if (srcImageEntry->second->imageType != destImageEntry->second->imageType) {
+        if (srcImageEntry->second.imageType != destImageEntry->second.imageType) {
             char const str[] = "vkCmdCopyImage called with unmatched source and dest image types.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
         }
         // Check that format is same size or exact stencil/depth
-        if (is_depth_format(srcImageEntry->second->format)) {
-            if (srcImageEntry->second->format != destImageEntry->second->format) {
+        if (is_depth_format(srcImageEntry->second.format)) {
+            if (srcImageEntry->second.format != destImageEntry->second.format) {
                 char const str[] = "vkCmdCopyImage called with unmatched source and dest image depth/stencil formats.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                     (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
             }
         } else {
-            size_t srcSize = vk_format_get_size(srcImageEntry->second->format);
-            size_t destSize = vk_format_get_size(destImageEntry->second->format);
+            size_t srcSize = vk_format_get_size(srcImageEntry->second.format);
+            size_t destSize = vk_format_get_size(destImageEntry->second.format);
             if (srcSize != destSize) {
                 char const str[] = "vkCmdCopyImage called with unmatched source and dest image format sizes.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
@@ -723,8 +723,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     if ((srcImageEntry  != device_data->imageMap.end()) &&
         (destImageEntry != device_data->imageMap.end())) {
 
-        VkFormat srcFormat = srcImageEntry->second->format;
-        VkFormat dstFormat = destImageEntry->second->format;
+        VkFormat srcFormat = srcImageEntry->second.format;
+        VkFormat dstFormat = destImageEntry->second.format;
 
         // Validate consistency for signed and unsigned formats
         if ((vk_format_is_sint(srcFormat) && !vk_format_is_sint(dstFormat)) ||
@@ -830,22 +830,22 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
 
     if ((srcImageEntry  != device_data->imageMap.end()) &&
         (destImageEntry != device_data->imageMap.end())) {
-        if (srcImageEntry->second->format != destImageEntry->second->format) {
+        if (srcImageEntry->second.format != destImageEntry->second.format) {
             char const str[] =  "vkCmdResolveImage called with unmatched source and dest formats.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
         }
-        if (srcImageEntry->second->imageType != destImageEntry->second->imageType) {
+        if (srcImageEntry->second.imageType != destImageEntry->second.imageType) {
             char const str[] =  "vkCmdResolveImage called with unmatched source and dest image types.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
         }
-        if (srcImageEntry->second->samples <= 1) {
+        if (srcImageEntry->second.samples <= 1) {
             char const str[] =  "vkCmdResolveImage called with source sample count less than 2.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES,  "IMAGE", str);
         }
-        if (destImageEntry->second->samples > 1) {
+        if (destImageEntry->second.samples > 1) {
             char const str[] =  "vkCmdResolveImage called with dest sample count greater than 1.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES, "IMAGE", str);
@@ -872,7 +872,7 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
 
     // Validate that image aspects match formats
     if (imageEntry != device_data->imageMap.end()) {
-        format = imageEntry->second->format;
+        format = imageEntry->second.format;
         if (vk_format_is_color(format)) {
             if (pSubresource->aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
                 std::stringstream ss;
