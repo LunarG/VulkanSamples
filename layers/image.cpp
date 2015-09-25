@@ -57,6 +57,10 @@ static unordered_map<void*, layer_data*> layer_data_map;
 static device_table_map image_device_table_map;
 static instance_table_map image_instance_table_map;
 
+template static layer_data *get_my_data_ptr<layer_data>(
+        void *data_key,
+        std::unordered_map<void *, layer_data *> &data_map);
+
 // "my device data"
 debug_report_data *mdd(const void* object)
 {
@@ -171,7 +175,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
         layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
         device_data->physicalDevice = physicalDevice;
-        device_data->imageMap.reserve(10);
     }
 
     return result;
