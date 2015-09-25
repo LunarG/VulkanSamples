@@ -113,13 +113,9 @@ if(NOT WIN32)
     include_directories(
         ${XCB_INCLUDE_DIRS}
     )
-    link_libraries(${XCB_LIBRARIES} ${VULKAN_LOADER} png m )
+    link_libraries(${XCB_LIBRARIES} ${VULKAN_LOADER} m )
 endif()
 if(WIN32)
-    include_directories (
-       "${PROJECT_SOURCE_DIR}/libs/libpng"
-       "${PROJECT_SOURCE_DIR}/libs/zlib"
-       )
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_PROTOTYPES -D_CRT_SECURE_NO_WARNINGS -D_USE_MATH_DEFINES /wd4267")
 else()
