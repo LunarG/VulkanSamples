@@ -53,6 +53,9 @@ typedef struct _layer_data {
 #define LOG_ERROR(objType, type, obj, fmt, ...)                         \
     log_msg(&mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
             (uint64_t) (obj), 0, 0, LAYER_NAME, (fmt), __VA_ARGS__)
+#define LOG_PERF_WARNING(objType, type, obj, fmt, ...)                  \
+    log_msg(&mydata.report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
+            (uint64_t) (obj), 0, 0, LAYER_NAME, (fmt), __VA_ARGS__)
 
 
 // NOTE: The following struct's/typedef's are for keeping track of

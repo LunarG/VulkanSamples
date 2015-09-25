@@ -928,17 +928,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
             }
         }
         if (imagesOwnedByApp >= (pSwapchain->imageCount - 1)) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain,
-                                  "VkSwapchainKHR",
-                                  "%s() called when the application already "
-                                  "owns all presentable images in this "
-                                  "swapchain except for the image currently "
-                                  "being displayed.  This call to %s() cannot "
-                                  "succeed unless another thread calls the "
-                                  "vkQueuePresentKHR() function in order to "
-                                  "release ownership of one of the presentable "
-                                  "images of this swapchain.",
-                                  __FUNCTION__, __FUNCTION__);
+            skipCall |= LOG_PERF_WARNING(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                                         swapchain,
+                                         "VkSwapchainKHR",
+                                         "%s() called when the application "
+                                         "already owns all presentable images "
+                                         "in this swapchain except for the "
+                                         "image currently being displayed.  "
+                                         "This call to %s() cannot succeed "
+                                         "unless another thread calls the "
+                                         "vkQueuePresentKHR() function in "
+                                         "order to release ownership of one of "
+                                         "the presentable images of this "
+                                         "swapchain.",
+                                         __FUNCTION__, __FUNCTION__);
         }
     }
 
