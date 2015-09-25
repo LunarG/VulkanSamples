@@ -43,6 +43,7 @@
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_layer_utils.h"
 
 using namespace std;
 
@@ -518,22 +519,48 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     const VkImageCopy *pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
+    auto destImageEntry = device_data->imageMap.find(destImage.handle);
 
     // For each region, src aspect mask must match dest aspect mask
     // For each region, color aspects cannot be mixed with depth/stencil aspects
     for (uint32_t i = 0; i < regionCount; i++) {
         if (pRegions[i].srcSubresource.aspect != pRegions[i].destSubresource.aspect) {
-            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
             char const str[] = "vkCmdCopyImage: Src and dest aspectMasks for each region must match";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
         if ((pRegions[i].srcSubresource.aspect & VK_IMAGE_ASPECT_COLOR) &&
             (pRegions[i].srcSubresource.aspect & (VK_IMAGE_ASPECT_DEPTH | VK_IMAGE_ASPECT_STENCIL))) {
-            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
             char const str[] = "vkCmdCopyImage aspectMask cannot specify both COLOR and DEPTH/STENCIL aspects";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if ((srcImageEntry != device_data->imageMap.end())
+    && (destImageEntry != device_data->imageMap.end())) {
+        if (srcImageEntry->second->imageType != destImageEntry->second->imageType) {
+            char const str[] = "vkCmdCopyImage called with unmatched source and dest image types.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
+        }
+        // Check that format is same size or exact stencil/depth
+        if (is_depth_format(srcImageEntry->second->format)) {
+            if (srcImageEntry->second->format != destImageEntry->second->format) {
+                char const str[] = "vkCmdCopyImage called with unmatched source and dest image depth/stencil formats.";
+                skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                    (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
+            }
+        } else {
+            size_t srcSize = vk_format_get_size(srcImageEntry->second->format);
+            size_t destSize = vk_format_get_size(destImageEntry->second->format);
+            if (srcSize != destSize) {
+                char const str[] = "vkCmdCopyImage called with unmatched source and dest image format sizes.";
+                skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                    (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
+            }
         }
     }
 
@@ -634,15 +661,41 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     const VkImageResolve *pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
+    auto destImageEntry = device_data->imageMap.find(destImage.handle);
 
     // For each region, src and dest image aspect must be color only
     for (uint32_t i = 0; i < regionCount; i++) {
         if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR) ||
             (pRegions[i].destSubresource.aspect != VK_IMAGE_ASPECT_COLOR)) {
-            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
             char const str[] = "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if ((srcImageEntry != device_data->imageMap.end())
+    && (destImageEntry != device_data->imageMap.end())) {
+        if (srcImageEntry->second->format != destImageEntry->second->format) {
+            char const str[] =  "vkCmdResolveImage called with unmatched source and dest formats.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_FORMAT, "IMAGE", str);
+        }
+        if (srcImageEntry->second->imageType != destImageEntry->second->imageType) {
+            char const str[] =  "vkCmdResolveImage called with unmatched source and dest image types.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
+        }
+        if (srcImageEntry->second->samples <= 1) {
+            char const str[] =  "vkCmdResolveImage called with source sample count less than 2.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES,  "IMAGE", str);
+        }
+        if (destImageEntry->second->samples > 1) {
+            char const str[] =  "vkCmdResolveImage called with dest sample count greater than 1.";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES, "IMAGE", str);
         }
     }
 

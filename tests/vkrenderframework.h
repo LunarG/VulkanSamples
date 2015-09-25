@@ -198,6 +198,9 @@ public:
     void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
     void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
     void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t stencilReference);
+    void UpdateBuffer(VkBuffer buffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t *pData);
+    void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
+    void ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 
 protected:
     VkDeviceObj                        *m_device;

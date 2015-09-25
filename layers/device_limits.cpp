@@ -552,6 +552,66 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     return result;
 }
 
+VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
+    VkCmdBuffer cmdBuffer,
+    VkBuffer destBuffer,
+    VkDeviceSize destOffset,
+    VkDeviceSize dataSize,
+    const uint32_t* pData)
+{
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+
+    // destOffset is the byte offset into the buffer to start updating and must be a multiple of 4.
+    if (destOffset & 3) {
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        "vkCmdUpdateBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4")) {
+            return;
+        }
+    }
+
+    // dataSize is the number of bytes to update, which must be a multiple of 4.
+    if (dataSize & 3) {
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        "vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4")) {
+            return;
+        }
+    }
+
+    dev_data->device_dispatch_table->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
+    VkCmdBuffer cmdBuffer,
+    VkBuffer destBuffer,
+    VkDeviceSize destOffset,
+    VkDeviceSize fillSize,
+    uint32_t data)
+{
+    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+
+    // destOffset is the byte offset into the buffer to start filling and must be a multiple of 4.
+    if (destOffset & 3) {
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        "vkCmdFillBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4")) {
+            return;
+        }
+    }
+
+    // fillSize is the number of bytes to fill, which must be a multiple of 4.
+    if (fillSize & 3) {
+        layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        "vkCmdFillBuffer parameter, VkDeviceSize fillSize, is not a multiple of 4")) {
+            return;
+        }
+    }
+
+    dev_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
@@ -610,6 +670,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCreateCommandBuffer;
     if (!strcmp(funcName, "vkDestroyCommandBuffer"))
         return (PFN_vkVoidFunction) vkDestroyCommandBuffer;
+    if (!strcmp(funcName, "vkCmdUpdateBuffer"))
+        return (PFN_vkVoidFunction) vkCmdUpdateBuffer;
+    if (!strcmp(funcName, "vkCmdFillBuffer"))
+        return (PFN_vkVoidFunction) vkCmdFillBuffer;
 
     VkLayerDispatchTable* pTable = my_data->device_dispatch_table;
     {

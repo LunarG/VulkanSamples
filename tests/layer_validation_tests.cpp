@@ -4117,6 +4117,65 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
     }
 }
 
+TEST_F(VkLayerTest, UpdateBufferAlignment)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+    uint32_t updateData[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer buffer;
+    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
+
+    BeginCommandBuffer();
+    // Introduce failure by using offset that is not multiple of 4
+    m_cmdBuffer->UpdateBuffer(buffer.handle(), 1, 4, updateData);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling UpdateBuffer with bad offset";
+    if (!strstr(msgString.c_str(),"destOffset, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdUpdateBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4'";
+    }
+    // Introduce failure by using size that is not multiple of 4
+    m_cmdBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling UpdateBuffer with bad size";
+    if (!strstr(msgString.c_str(),"dataSize, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4'";
+    }
+    EndCommandBuffer();
+}
+
+TEST_F(VkLayerTest, FillBufferAlignment)
+{
+    VkFlags msgFlags;
+    std::string msgString;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk_testing::Buffer buffer;
+    buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
+
+    BeginCommandBuffer();
+    // Introduce failure by using offset that is not multiple of 4
+    m_cmdBuffer->FillBuffer(buffer.handle(), 1, 4, 0x11111111);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling FillBuffer with bad offset";
+    if (!strstr(msgString.c_str(),"destOffset, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4'";
+    }
+    // Introduce failure by using size that is not multiple of 4
+    m_cmdBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling FillBuffer with bad size";
+    if (!strstr(msgString.c_str(),"fillSize, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize fillSize, is not a multiple of 4'";
+    }
+    EndCommandBuffer();
+}
+
 #endif // DEVICE_LIMITS_TESTS
 
 #if IMAGE_TESTS
@@ -4129,7 +4188,7 @@ TEST_F(VkLayerTest, InvalidImageView)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
 
-    // Create an image, allocate memory, free it, and then try to bind it
+    // Create an image and try to create a view with bad baseMipLevel
     VkImage               image;
 
     const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
@@ -4169,8 +4228,639 @@ TEST_F(VkLayerTest, InvalidImageView)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error while creating an invalid ImageView";
     if (!strstr(msgString.c_str(),"vkCreateImageView called with baseMipLevel 10 ")) {
-        FAIL() << "Error received was not 'vkCreateImageView called with baseMipLevel 10...' but instaed '" << msgString.c_str() << "'";
+        FAIL() << "Error received was not 'vkCreateImageView called with baseMipLevel 10...' but instead '" << msgString.c_str() << "'";
     }
+}
+
+TEST_F(VkLayerTest, CopyImageTypeMismatch)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of different types and try to copy between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 32;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.arrayLayer = 0;
+    copyRegion.srcSubresource.arraySize = 0;
+    copyRegion.srcOffset.x = 0;
+    copyRegion.srcOffset.y = 0;
+    copyRegion.srcOffset.z = 0;
+    copyRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copyRegion.destSubresource.mipLevel = 0;
+    copyRegion.destSubresource.arrayLayer = 0;
+    copyRegion.destSubresource.arraySize = 0;
+    copyRegion.destOffset.x = 0;
+    copyRegion.destOffset.y = 0;
+    copyRegion.destOffset.z = 0;
+    copyRegion.extent.width = 1;
+    copyRegion.extent.height = 1;
+    copyRegion.extent.depth = 1;
+    m_cmdBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdCopyImage type mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdCopyImage called with unmatched source and dest image types")) {
+        FAIL() << "Error received was not 'vkCmdCopyImage called with unmatched source and dest image types' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
+}
+
+TEST_F(VkLayerTest, CopyImageFormatSizeMismatch)
+{
+    // TODO : Create two images with different format sizes and vkCmdCopyImage between them
+}
+
+TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of different types and try to copy between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 32;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    VkImageCopy copyRegion;
+    copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copyRegion.srcSubresource.mipLevel = 0;
+    copyRegion.srcSubresource.arrayLayer = 0;
+    copyRegion.srcSubresource.arraySize = 0;
+    copyRegion.srcOffset.x = 0;
+    copyRegion.srcOffset.y = 0;
+    copyRegion.srcOffset.z = 0;
+    copyRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copyRegion.destSubresource.mipLevel = 0;
+    copyRegion.destSubresource.arrayLayer = 0;
+    copyRegion.destSubresource.arraySize = 0;
+    copyRegion.destOffset.x = 0;
+    copyRegion.destOffset.y = 0;
+    copyRegion.destOffset.z = 0;
+    copyRegion.extent.width = 1;
+    copyRegion.extent.height = 1;
+    copyRegion.extent.depth = 1;
+    m_cmdBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdCopyImage type mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdCopyImage called with unmatched source and dest image types")) {
+        FAIL() << "Error received was not 'vkCmdCopyImage called with unmatched source and dest image types' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
+}
+
+TEST_F(VkLayerTest, ResolveImageLowSampleCount)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of sample count 1 and try to Resolve between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 1;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    // Need memory barrier to VK_IMAGE_LAYOUT_GENERAL for source and dest?
+    //VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    //VK_IMAGE_LAYOUT_GENERAL = 1,
+    VkImageResolve resolveRegion;
+    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.srcSubresource.mipLevel = 0;
+    resolveRegion.srcSubresource.arrayLayer = 0;
+    resolveRegion.srcSubresource.arraySize = 0;
+    resolveRegion.srcOffset.x = 0;
+    resolveRegion.srcOffset.y = 0;
+    resolveRegion.srcOffset.z = 0;
+    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.destSubresource.mipLevel = 0;
+    resolveRegion.destSubresource.arrayLayer = 0;
+    resolveRegion.destSubresource.arraySize = 0;
+    resolveRegion.destOffset.x = 0;
+    resolveRegion.destOffset.y = 0;
+    resolveRegion.destOffset.z = 0;
+    resolveRegion.extent.width = 1;
+    resolveRegion.extent.height = 1;
+    resolveRegion.extent.depth = 1;
+    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdResolveImage type mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdResolveImage called with source sample count less than 2.")) {
+        FAIL() << "Error received was not 'vkCmdResolveImage called with source sample count less than 2.' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
+}
+
+TEST_F(VkLayerTest, ResolveImageHighSampleCount)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of sample count 2 and try to Resolve between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 1;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 2;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    // Need memory barrier to VK_IMAGE_LAYOUT_GENERAL for source and dest?
+    //VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    //VK_IMAGE_LAYOUT_GENERAL = 1,
+    VkImageResolve resolveRegion;
+    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.srcSubresource.mipLevel = 0;
+    resolveRegion.srcSubresource.arrayLayer = 0;
+    resolveRegion.srcSubresource.arraySize = 0;
+    resolveRegion.srcOffset.x = 0;
+    resolveRegion.srcOffset.y = 0;
+    resolveRegion.srcOffset.z = 0;
+    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.destSubresource.mipLevel = 0;
+    resolveRegion.destSubresource.arrayLayer = 0;
+    resolveRegion.destSubresource.arraySize = 0;
+    resolveRegion.destOffset.x = 0;
+    resolveRegion.destOffset.y = 0;
+    resolveRegion.destOffset.z = 0;
+    resolveRegion.extent.width = 1;
+    resolveRegion.extent.height = 1;
+    resolveRegion.extent.depth = 1;
+    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdResolveImage type mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdResolveImage called with dest sample count greater than 1.")) {
+        FAIL() << "Error received was not 'vkCmdResolveImage called with dest sample count greater than 1.' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
+}
+
+TEST_F(VkLayerTest, ResolveImageFormatMismatch)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of different types and try to copy between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 1;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 2;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.format = VK_FORMAT_B8G8R8_SRGB;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        image_create_info.samples = 1;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    // Need memory barrier to VK_IMAGE_LAYOUT_GENERAL for source and dest?
+    //VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    //VK_IMAGE_LAYOUT_GENERAL = 1,
+    VkImageResolve resolveRegion;
+    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.srcSubresource.mipLevel = 0;
+    resolveRegion.srcSubresource.arrayLayer = 0;
+    resolveRegion.srcSubresource.arraySize = 0;
+    resolveRegion.srcOffset.x = 0;
+    resolveRegion.srcOffset.y = 0;
+    resolveRegion.srcOffset.z = 0;
+    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.destSubresource.mipLevel = 0;
+    resolveRegion.destSubresource.arrayLayer = 0;
+    resolveRegion.destSubresource.arraySize = 0;
+    resolveRegion.destOffset.x = 0;
+    resolveRegion.destOffset.y = 0;
+    resolveRegion.destOffset.z = 0;
+    resolveRegion.extent.width = 1;
+    resolveRegion.extent.height = 1;
+    resolveRegion.extent.depth = 1;
+    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdResolveImage format mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdResolveImage called with unmatched source and dest formats.")) {
+        FAIL() << "Error received was not 'vkCmdResolveImage called with unmatched source and dest formats.' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
+}
+
+TEST_F(VkLayerTest, ResolveImageTypeMismatch)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+
+    // Create two images of different types and try to copy between them
+    VkImage               srcImage;
+    VkImage               destImage;
+    VkDeviceMemory        srcMem;
+    VkDeviceMemory        destMem;
+    VkMemoryRequirements  memReqs;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = VK_FORMAT_B8G8R8A8_UNORM;
+        image_create_info.extent.width = 32;
+        image_create_info.extent.height = 1;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arraySize = 1;
+        image_create_info.samples = 2;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
+    ASSERT_VK_SUCCESS(err);
+
+        image_create_info.imageType = VK_IMAGE_TYPE_1D;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        image_create_info.samples = 1;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
+    ASSERT_VK_SUCCESS(err);
+
+    // Allocate memory
+    VkMemoryAllocInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+
+    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    ASSERT_VK_SUCCESS(err);
+    memAlloc.allocationSize = memReqs.size;
+    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
+    ASSERT_VK_SUCCESS(err);
+
+    err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
+    BeginCommandBuffer();
+    // Need memory barrier to VK_IMAGE_LAYOUT_GENERAL for source and dest?
+    //VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    //VK_IMAGE_LAYOUT_GENERAL = 1,
+    VkImageResolve resolveRegion;
+    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.srcSubresource.mipLevel = 0;
+    resolveRegion.srcSubresource.arrayLayer = 0;
+    resolveRegion.srcSubresource.arraySize = 0;
+    resolveRegion.srcOffset.x = 0;
+    resolveRegion.srcOffset.y = 0;
+    resolveRegion.srcOffset.z = 0;
+    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    resolveRegion.destSubresource.mipLevel = 0;
+    resolveRegion.destSubresource.arrayLayer = 0;
+    resolveRegion.destSubresource.arraySize = 0;
+    resolveRegion.destOffset.x = 0;
+    resolveRegion.destOffset.y = 0;
+    resolveRegion.destOffset.z = 0;
+    resolveRegion.extent.width = 1;
+    resolveRegion.extent.height = 1;
+    resolveRegion.extent.depth = 1;
+    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    EndCommandBuffer();
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from vkCmdResolveImage type mismatch";
+    if (!strstr(msgString.c_str(),"vkCmdResolveImage called with unmatched source and dest image types.")) {
+        FAIL() << "Error received was not 'vkCmdResolveImage called with unmatched source and dest image types.' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), srcImage);
+    vkDestroyImage(m_device->device(), destImage);
+    vkFreeMemory(m_device->device(), srcMem);
+    vkFreeMemory(m_device->device(), destMem);
 }
 #endif // IMAGE_TESTS
 

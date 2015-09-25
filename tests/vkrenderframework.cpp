@@ -1450,6 +1450,21 @@ void VkCommandBufferObj::FillBuffer(VkBuffer buffer, VkDeviceSize offset, VkDevi
     vkCmdFillBuffer( handle(), buffer, offset, fill_size, data);
 }
 
+void VkCommandBufferObj::UpdateBuffer(VkBuffer buffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t *pData)
+{
+    vkCmdUpdateBuffer(handle(), buffer, destOffset, dataSize, pData);
+}
+
+void VkCommandBufferObj::CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions)
+{
+    vkCmdCopyImage(handle(), srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+}
+
+void VkCommandBufferObj::ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions)
+{
+    vkCmdResolveImage(handle(), srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+}
+
 void VkCommandBufferObj::PrepareAttachments()
 {
     uint32_t i;

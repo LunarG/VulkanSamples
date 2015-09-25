@@ -27,7 +27,7 @@
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 
-// Draw State ERROR codes
+// Image ERROR codes
 typedef enum _IMAGE_ERROR
 {
     IMAGE_NONE,                             // Used for INFO & other non-error messages
@@ -37,14 +37,26 @@ typedef enum _IMAGE_ERROR
     IMAGE_INVALID_IMAGE_ASPECT,             // Image aspect mask bits are invalid for this API call
     IMAGE_MISMATCHED_IMAGE_ASPECT,          // Image aspect masks for source and dest images do not match
     IMAGE_VIEW_CREATE_ERROR,                // Error occurred trying to create Image View
+    IMAGE_MISMATCHED_IMAGE_TYPE,            // Image types for source and dest images do not match
+    IMAGE_MISMATCHED_IMAGE_FORMAT,          // Image formats for source and dest images do not match
+    IMAGE_INVALID_RESOLVE_SAMPLES,          // Image resolve source samples less than two or dest samples greater than one
 } IMAGE_ERROR;
 
 typedef struct _IMAGE_STATE
 {
     uint32_t mipLevels;
     uint32_t arraySize;
-    _IMAGE_STATE():mipLevels(0), arraySize(0) {};
-    _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):mipLevels(pCreateInfo->mipLevels), arraySize(pCreateInfo->arraySize) {};
+    VkFormat format;
+    uint32_t samples;
+    VkImageType imageType;
+    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(0), imageType(VK_IMAGE_TYPE_NUM) {};
+    _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):
+        mipLevels(pCreateInfo->mipLevels),
+        arraySize(pCreateInfo->arraySize),
+        format(pCreateInfo->format),
+        samples(pCreateInfo->samples),
+        imageType(pCreateInfo->imageType)
+        {};
 } IMAGE_STATE;
 
 #endif // IMAGE_H

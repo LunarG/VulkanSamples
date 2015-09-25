@@ -489,9 +489,6 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
     bool raw_copy = false;
     uint32_t i;
 
-    /* TODOVV: verify validation */
-    assert((src->type == dst->type) && "Mismatched source and destination types");
-
     if (src->layout.format == dst->layout.format) {
         raw_copy = true;
         raw_format = cmd_meta_img_raw_format(cmd, src->layout.format);
@@ -726,10 +723,6 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     uint32_t *ptr;
     uint32_t offset;
 
-    /* TODOVV: Is this an API requirement or driver requirement? */
-    /* must be 4-byte aligned */
-    assert(!((destOffset | dataSize) & 3) && "Offset and Size must be 4-byte aligned");
-
     /* write to dynamic state writer first */
     offset = cmd_state_pointer(cmd, INTEL_CMD_ITEM_BLOB, 32,
             (dataSize + 3) / 4, &ptr);
@@ -769,10 +762,6 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     struct intel_buf *dst = intel_buf(destBuffer);
     struct intel_cmd_meta meta;
     VkFormat format;
-
-    /* TODOVV: Is this an API requirement or driver requirement? */
-    /* must be 4-byte aligned */
-    assert(!((destOffset | fillSize) & 3) && "Offset and Size must be 4-byte aligned");
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_VS_POINTS;
@@ -1054,10 +1043,6 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     struct intel_cmd_meta meta;
     VkFormat format;
     uint32_t i;
-
-    /* TODOVV: Add validation */
-    assert(!(src->samples <= 1 || dst->samples > 1 ||
-        src->layout.format != dst->layout.format) && "Invalid vkCmdResolveImage");
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_FS_RECT;
