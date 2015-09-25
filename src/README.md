@@ -1,18 +1,18 @@
 # Code and Other Conventions for Vulkan Samples
 
   - The Vulkan version to which the sample is being written must be the prefix
-    in the sample code file name.  For example, vk0.2-SAMPLE.cpp.
+    in the sample code file name.  For example, vk0.9-SAMPLE.cpp.
 
   - A sample should highlight a specific Vulkan entry point or capability
     which must be identified in the name of the sample source file.  For
-    example, vk0.2-device-info.cpp.
+    example, vk0.9-device-info.cpp.
 
   - Use the data/ (Vulkan-release-independent) and data/VERSION/
     (Vulkan-release-dependent) directories for uniquely-named data, shaders,
     images, etc used by your sample.  VERSION must match the version prefix
     used in the sample file name.  For example, a shader file for
-    $VULKAN_SAMPLES/src/vk0.2-imageformat.cpp could be
-    $VULKAN_SAMPLES/data/vk0.2/texture-2d.spv. 
+    $VULKAN_SAMPLES/src/vk0.9-imageformat.cpp could be
+    $VULKAN_SAMPLES/data/vk0.9/texture-2d.spv. 
 
   - Each sample should include a comment of the following form used for auto-
     extraction of a short one-line description of the sample:

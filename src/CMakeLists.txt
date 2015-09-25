@@ -4,7 +4,7 @@ set(SHADER_FILES ${SHADER_FILES} "")
 include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
 # function to build a single-source-file sample that uses glsl shaders;
-#   - assumes VULKAN_VERSION set (i.e. vk0.2)
+#   - assumes VULKAN_VERSION set (i.e. vk0.9)
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
 #   - uses glslangValidator to convert glsl to spirv
@@ -32,7 +32,7 @@ function(sampleWithGLSLShaders SNAME)
 endfunction(sampleWithGLSLShaders)
 
 # function to build a single-source-file sample that uses spirv shaders
-#   - assumes VULKAN_VERSION set (i.e. vk0.2)
+#   - assumes VULKAN_VERSION set (i.e. vk0.9)
 #   - assumes SAMPLE_SPIRV_SHADERS is set to list to list of spirv shsders
 #     used by the sample, with the .spv omitted
 function(sampleWithSPIRVShaders SNAME)
@@ -46,7 +46,7 @@ function(sampleWithSPIRVShaders SNAME)
 endfunction(sampleWithSPIRVShaders)
 
 # function to build a simple single-source-file sample
-#   - assumes VULKAN_VERSION set (i.e. vk0.2)
+#   - assumes VULKAN_VERSION set (i.e. vk0.9)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
@@ -63,7 +63,7 @@ endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
 #   - assumes that code is standalone and doesn't depend on utilitites
-#   - assumes VULKAN_VERSION set (i.e. vk0.2)
+#   - assumes VULKAN_VERSION set (i.e. vk0.9)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFileStandalone)
     foreach(TARG ${S_TARGETS})
@@ -177,8 +177,8 @@ endif()
 # START BUILDING SAMPLES HERE
 #
 
-# TARGETS FOR VULKAN VERSION 0.2
-set(VULKAN_VERSION vk0.2)
+# TARGETS FOR VULKAN VERSION 0.9
+set(VULKAN_VERSION vk0.9)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
