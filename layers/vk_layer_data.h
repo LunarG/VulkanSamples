@@ -43,7 +43,6 @@ DATA_T *get_my_data_ptr(void *data_key,
 
     if ( got == layer_data_map.end() ) {
         debug_data = new DATA_T;
-        memset(debug_data, 0, sizeof(*debug_data));
         layer_data_map[(void *) data_key] = debug_data;
     } else {
         debug_data = got->second;
