@@ -298,6 +298,52 @@ APIDump layer is used for dumping a stream of all the Vulkan API calls that are 
 
  1. vkAllocDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
 
+
+
+
+## Swapchain
+
+### Swapchain Overview
+
+This layer is a work in progress. DeviceLimits layer is intended to capture two broad categories of errors:
+ 1. Incorrect use of APIs to query device capabilities
+ 2. Attempt to use API functionality beyond the capability of the underlying device
+
+For the first category, the layer tracks which calls are made and flags errors if calls are excluded that should not be, or if call sequencing is incorrect. An example is an app that assumes attempts to Query and use queues without ever having called vkGetPhysicalDeviceQueueFamilyProperties(). Also, if an app is calling vkGetPhysicalDeviceQueueFamilyProperties() to retrieve properties with some assumed count for array size instead of first calling vkGetPhysicalDeviceQueueFamilyProperties() w/ a NULL pQueueFamilyProperties parameter in order to query the actual count.
+For the second category of errors, DeviceLimits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
+
+### Swapchain Details Table
+
+| Check | Overview | ENUM SWAPCHAIN_* | Relevant API | Testname | Notes/TODO |
+| ----- | -------- | ---------------- | ------------ | -------- | ---------- |
+| Valid handle | If an invalid handle is used, this error will be flagged | INVALID_HANDLE | vkDestroyInstance vkEnumeratePhysicalDevices vkCreateDevice vkDestroyDevice vkGetPhysicalDeviceSurfaceSupportKHR vkGetSurfacePropertiesKHR vkGetSurfaceFormatsKHR vkGetSurfacePresentModesKHR vkCreateSwapchainKHR vkDestroySwapchainKHR vkGetSwapchainImagesKHR vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
+| Extension enabled before use | Validates that a WSI extension is enabled before its functions are used | EXT_NOT_ENABLED_BUT_USED |  vkGetPhysicalDeviceSurfaceSupportKHR vkGetSurfacePropertiesKHR vkGetSurfaceFormatsKHR vkGetSurfacePresentModesKHR vkCreateSwapchainKHR vkDestroySwapchainKHR vkGetSwapchainImagesKHR vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
+| Swapchains destroyed before devices | Validates that  vkDestroySwapchainKHR() is called for all swapchains associated with a device before vkDestroyDevice() is called | DEL_DEVICE_BEFORE_SWAPCHAINS | vkDestroyDevice | NA | None |
+| Queries occur before swapchain creation | Validates that vkGetSurfacePropertiesKHR(), vkGetSurfaceFormatsKHR() and vkGetSurfacePresentModesKHR() are called before vkCreateSwapchainKHR() | CREATE_SWAP_WITHOUT_QUERY | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->minImageCount) | Validates vkCreateSwapchainKHR(pCreateInfo->minImageCount) | CREATE_SWAP_BAD_MIN_IMG_COUNT | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageExtent) | Validates vkCreateSwapchainKHR(pCreateInfo->imageExtent) when window has no fixed size | CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageExtent) | Validates vkCreateSwapchainKHR(pCreateInfo->imageExtent) when window has a fixed size | CREATE_SWAP_EXTENTS_NO_MATCH_WIN | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->preTransform) | Validates vkCreateSwapchainKHR(pCreateInfo->preTransform) | CREATE_SWAP_BAD_PRE_TRANSFORM | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageArraySize) | Validates vkCreateSwapchainKHR(pCreateInfo->imageArraySize) | CREATE_SWAP_BAD_IMG_ARRAY_SIZE | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageUsageFlags) | Validates vkCreateSwapchainKHR(pCreateInfo->imageUsageFlags) | CREATE_SWAP_BAD_IMG_USAGE_FLAGS | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageColorSpace) | Validates vkCreateSwapchainKHR(pCreateInfo->imageColorSpace) | CREATE_SWAP_BAD_IMG_COLOR_SPACE | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageFormat) | Validates vkCreateSwapchainKHR(pCreateInfo->imageFormat) | CREATE_SWAP_BAD_IMG_FORMAT | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageFormat and pCreateInfo->imageColorSpace) | Validates vkCreateSwapchainKHR(pCreateInfo->imageFormat and pCreateInfo->imageColorSpace) | CREATE_SWAP_BAD_IMG_FMT_CLR_SP | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->presentMode) | Validates vkCreateSwapchainKHR(pCreateInfo->presentMode) | CREATE_SWAP_BAD_PRESENT_MODE | vkCreateSwapchainKHR | NA | None |
+| Use same device for swapchain | Validates that vkDestroySwapchainKHR() called with the same VkDevice as vkCreateSwapchainKHR() | DESTROY_SWAP_DIFF_DEVICE | vkDestroySwapchainKHR | NA | None |
+| Don't use too many images | Validates that app never tries to own too many swapchain images at a time | APP_OWNS_TOO_MANY_IMAGES | vkAcquireNextImageKHR | NA | None |
+| Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
+| Can't use an simultaneously use an image | If vkAcquireNextImageKHR() returns index of an image that is already owned by the application | INDEX_ALREADY_IN_USE | vkAcquireNextImageKHR | NA | None |
+| Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | NA | None |
+
+### Swapchain Pending Work
+Additional checks to be added to Swapchain
+
+ 1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
+ 2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
+ 3. Tons of other stuff including semaphore and synchronization validation.
+
+
 ## General Pending Work
 A place to capture general validation work to be done. This includes new checks that don't clearly fit into the above layers.
 

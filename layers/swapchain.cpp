@@ -354,6 +354,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
         deviceMap.erase(device);
         if (!pDevice->swapchains.empty()) {
             LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                      SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,
                       "%s() called before all of its associated "
                       "VkSwapchainKHRs were destroyed.",
                       __FUNCTION__);
@@ -384,6 +385,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDe
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_INSTANCE,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkInstance.",
@@ -424,6 +426,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePropertiesKHR(VkDevice device, const 
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -459,6 +462,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfaceFormatsKHR(VkDevice device, const VkS
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -503,6 +507,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePresentModesKHR(VkDevice device, cons
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -549,11 +554,13 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     SwpDevice *pDevice = &deviceMap[device];
     if (!pDevice) {
         return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                         SWAPCHAIN_INVALID_HANDLE,
                          "%s() called with a non-valid %s.",
                          fn, "VkDevice");
 
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                         SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                          "%s() called even though the "
                          VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                          "extension was not enabled for this VkDevice.",
@@ -563,6 +570,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     // Validate pCreateInfo with the results for previous queries:
     if (!pDevice->gotSurfaceProperties) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetSurfacePropertiesKHR().",
                               fn);
@@ -574,6 +582,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             ((pProps->maxImageCount > 0) &&
              (pCreateInfo->minImageCount > pProps->maxImageCount))) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,
                                   "%s() called with pCreateInfo->minImageCount "
                                   "= %d, which is outside the bounds returned "
                                   "by vkGetSurfacePropertiesKHR() (i.e. "
@@ -591,6 +600,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
              (pCreateInfo->imageExtent.height < pProps->minImageExtent.height) ||
              (pCreateInfo->imageExtent.height > pProps->maxImageExtent.height))) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is outside the bounds "
                                   "returned by vkGetSurfacePropertiesKHR(): "
@@ -610,6 +620,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             ((pCreateInfo->imageExtent.width != pProps->currentExtent.width) ||
              (pCreateInfo->imageExtent.height != pProps->currentExtent.height))) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN,
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is not equal to the "
                                   "currentExtent = (%d,%d) returned by "
@@ -649,14 +660,16 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             skipCall |= debug_report_log_msg(&mydata.report_data,
                                              VK_DBG_REPORT_ERROR_BIT,
                                              VK_OBJECT_TYPE_DEVICE,
-                                             (uint64_t) device,
-                                             0, 0, LAYER_NAME,
+                                             (uint64_t) device, 0, 
+                                             SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,
+                                             LAYER_NAME,
                                              errorString.c_str());
         }
         // Validate pCreateInfo->imageArraySize against
         // VkSurfacePropertiesKHR::maxImageArraySize:
         if (pCreateInfo->imageArraySize <= pProps->maxImageArraySize) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->imageArraySize (i.e. %d).  "
                                   "Maximum value is %d.",
@@ -670,6 +683,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             (pCreateInfo->imageUsageFlags !=
              (pCreateInfo->imageUsageFlags & pProps->supportedUsageFlags))) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->imageUsageFlags (i.e. 0x%08x)."
                                   "  Supported flag bits are 0x%08x.",
@@ -680,6 +694,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     }
     if (!pDevice->surfaceFormatCount) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetSurfaceFormatsKHR().",
                               fn);
@@ -709,6 +724,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                 if (!foundColorSpace) {
                     skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device,
                                           "VkDevice",
+                                          SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP,
                                           "%s() called with neither a "
                                           "supported pCreateInfo->imageFormat "
                                           "(i.e. %d) nor a supported "
@@ -719,13 +735,15 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                           pCreateInfo->imageColorSpace);
                 } else {
                     skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device,
-                                              "VkDevice",
+                                          "VkDevice",
+                                          SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,
                                           "%s() called with a non-supported "
                                           "pCreateInfo->imageFormat (i.e. %d).",
                                           fn, pCreateInfo->imageFormat);
                 }
             } else if (!foundColorSpace) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                      SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,
                                       "%s() called with a non-supported "
                                       "pCreateInfo->imageColorSpace (i.e. %d).",
                                       fn, pCreateInfo->imageColorSpace);
@@ -734,6 +752,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     }
     if (!pDevice->presentModeCount) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetSurfacePresentModesKHR().",
                               fn);
@@ -749,6 +768,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         }
         if (!foundMatch) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->presentMode (i.e. %s).",
                                   fn,
@@ -805,6 +825,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -819,6 +840,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
             pSwapchain->pDevice->swapchains.erase(swapchain.handle);
             if (device != pSwapchain->pDevice->device) {
                 LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                          SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
                           "%s() called with a different VkDevice than the "
                           "VkSwapchainKHR was created with.",
                           __FUNCTION__);
@@ -856,6 +878,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -907,6 +930,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the "
                               VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                               "extension was not enabled for this VkDevice.",
@@ -931,6 +955,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
             skipCall |= LOG_PERF_WARNING(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                                          swapchain,
                                          "VkSwapchainKHR",
+                                         SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,
                                          "%s() called when the application "
                                          "already owns all presentable images "
                                          "in this swapchain except for the "
@@ -955,6 +980,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
             if (*pImageIndex >= pSwapchain->imageCount) {
                 LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain,
                           "VkSwapchainKHR",
+                          SWAPCHAIN_INDEX_TOO_LARGE,
                           "%s() returned an index that's too large (i.e. %d).  "
                           "There are only %d images in this VkSwapchainKHR.",
                           __FUNCTION__, *pImageIndex, pSwapchain->imageCount);
@@ -962,6 +988,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
             if (pSwapchain->images[*pImageIndex].ownedByApp) {
                 LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain,
                           "VkSwapchainKHR",
+                          SWAPCHAIN_INDEX_ALREADY_IN_USE,
                           "%s() returned an index (i.e. %d) for an image that "
                           "is already owned by the application.\n",
                           __FUNCTION__, *pImageIndex);
@@ -994,6 +1021,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             if (!pSwapchain->pDevice->deviceSwapchainExtensionEnabled) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE,
                                       pSwapchain->pDevice, "VkDevice",
+                                      SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                                       "%s() called even though the "
                                       VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
                                       "extension was not enabled for this "
@@ -1004,6 +1032,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                                       pPresentInfo->swapchains[i].handle,
                                       "VkSwapchainKHR",
+                                      SWAPCHAIN_INDEX_TOO_LARGE,
                                       "%s() called for an index that is too "
                                       "large (i.e. %d).  There are only %d "
                                       "images in this VkSwapchainKHR.\n",
@@ -1014,6 +1043,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
                     skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                                           pPresentInfo->swapchains[i].handle,
                                           "VkSwapchainKHR",
+                                          SWAPCHAIN_INDEX_NOT_IN_USE,
                                           "%s() returned an index (i.e. %d) "
                                           "for an image that is not owned by "
                                           "the application.",

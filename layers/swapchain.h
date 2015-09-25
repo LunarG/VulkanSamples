@@ -39,6 +39,32 @@
 
 using namespace std;
 
+
+// Swapchain ERROR codes
+typedef enum _SWAPCHAIN_ERROR
+{
+    SWAPCHAIN_INVALID_HANDLE,                   // Handle used that isn't currently valid
+    SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
+    SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
+    SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetSurfacePropertiesKHR())
+    SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,    // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
+    SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,// Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
+    SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
+    SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,    // Called vkCreateSwapchainKHR() with a non-supported preTransform
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,   // Called vkCreateSwapchainKHR() with a non-supported imageArraySize
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,  // Called vkCreateSwapchainKHR() with a non-supported imageUsageFlags
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,  // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,       // Called vkCreateSwapchainKHR() with a non-supported imageFormat
+    SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP,   // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
+    SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,     // Called vkCreateSwapchainKHR() with a non-supported presentMode
+    SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,         // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
+    SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,         // vkAcquireNextImageKHR() asked for more images than are available
+    SWAPCHAIN_INDEX_TOO_LARGE,                  // Index is too large for swapchain
+    SWAPCHAIN_INDEX_ALREADY_IN_USE,             // vkAcquireNextImageKHR() returned index that is already owned by app
+    SWAPCHAIN_INDEX_NOT_IN_USE,                 // vkQueuePresentKHR() given index that is not owned by app
+} SWAPCHAIN_ERROR;
+
+
 // The following is for logging error messages:
 typedef struct _layer_data {
     debug_report_data report_data;
@@ -47,15 +73,15 @@ typedef struct _layer_data {
 #define LAYER_NAME (char *) "Swapchain"
 #define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                     \
     log_msg(&mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
-            (uint64_t) (obj), 0, 0, LAYER_NAME,                         \
+            (uint64_t) (obj), 0, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME,  \
             "%s() called with a non-valid %s.", __FUNCTION__, (obj))
 
-#define LOG_ERROR(objType, type, obj, fmt, ...)                         \
+#define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
     log_msg(&mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
-            (uint64_t) (obj), 0, 0, LAYER_NAME, (fmt), __VA_ARGS__)
-#define LOG_PERF_WARNING(objType, type, obj, fmt, ...)                  \
+            (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
+#define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)             \
     log_msg(&mydata.report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
-            (uint64_t) (obj), 0, 0, LAYER_NAME, (fmt), __VA_ARGS__)
+            (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
 
 
 // NOTE: The following struct's/typedef's are for keeping track of

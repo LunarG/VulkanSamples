@@ -81,6 +81,10 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/draw_state.h',
                             'source' : 'layers/image.cpp',
                             'generated' : False,
                             'error_enum' : 'IMAGE_ERROR',},
+                 'swapchain' : {'header' : 'layers/swapchain.h',
+                            'source' : 'layers/swapchain.cpp',
+                            'generated' : False,
+                            'error_enum' : 'SWAPCHAIN_ERROR',},
     }
 
 builtin_headers = [layer_inputs[ln]['header'] for ln in layer_inputs]
