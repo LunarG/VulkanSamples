@@ -288,19 +288,6 @@ For the second category of errors, DeviceLimits stores its own internal record o
 
  1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors (this is done for Images).
 
-# Non-validation Layer Details
-
-## APIDump
-
-APIDump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
-
-### APIDump Pending Work
-
- 1. vkAllocDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
-
-
-
-
 ## Swapchain
 
 ### Swapchain Overview
@@ -342,6 +329,16 @@ Additional checks to be added to Swapchain
  1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
  3. Tons of other stuff including semaphore and synchronization validation.
+
+# Non-validation Layer Details
+
+## APIDump
+
+APIDump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
+
+### APIDump Pending Work
+
+ 1. vkAllocDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
 
 
 ## General Pending Work
