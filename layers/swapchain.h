@@ -60,7 +60,6 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,         // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
     SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,         // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_INDEX_TOO_LARGE,                  // Index is too large for swapchain
-    SWAPCHAIN_INDEX_ALREADY_IN_USE,             // vkAcquireNextImageKHR() returned index that is already owned by app
     SWAPCHAIN_INDEX_NOT_IN_USE,                 // vkQueuePresentKHR() given index that is not owned by app
 } SWAPCHAIN_ERROR;
 

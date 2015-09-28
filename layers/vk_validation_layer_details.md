@@ -319,8 +319,7 @@ For the second category of errors, DeviceLimits stores its own internal record o
 | vkCreateSwapchainKHR(pCreateInfo->presentMode) | Validates vkCreateSwapchainKHR(pCreateInfo->presentMode) | CREATE_SWAP_BAD_PRESENT_MODE | vkCreateSwapchainKHR | NA | None |
 | Use same device for swapchain | Validates that vkDestroySwapchainKHR() called with the same VkDevice as vkCreateSwapchainKHR() | DESTROY_SWAP_DIFF_DEVICE | vkDestroySwapchainKHR | NA | None |
 | Don't use too many images | Validates that app never tries to own too many swapchain images at a time | APP_OWNS_TOO_MANY_IMAGES | vkAcquireNextImageKHR | NA | None |
-| Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkAcquireNextImageKHR vkQueuePresentKHR | NA | None |
-| Can't use an simultaneously use an image | If vkAcquireNextImageKHR() returns index of an image that is already owned by the application | INDEX_ALREADY_IN_USE | vkAcquireNextImageKHR | NA | None |
+| Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkQueuePresentKHR | NA | None |
 | Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | NA | None |
 
 ### Swapchain Pending Work

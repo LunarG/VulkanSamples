@@ -896,6 +896,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
         result = device_dispatch_table(device)->GetSwapchainImagesKHR(
                 device, swapchain, pCount, pSwapchainImages);
 
+// TBD: Should we validate that this function was called once with
+// pSwapchainImages set to NULL (and record pCount at that time), and then
+// called again with a non-NULL pSwapchainImages?
         if ((result == VK_SUCCESS) && pSwapchain &&pSwapchainImages &&
             pCount && (*pCount > 0)) {
             // Record the images and their state:
@@ -977,22 +980,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
 
         if (((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) &&
             pSwapchain) {
-            if (*pImageIndex >= pSwapchain->imageCount) {
-                LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain,
-                          "VkSwapchainKHR",
-                          SWAPCHAIN_INDEX_TOO_LARGE,
-                          "%s() returned an index that's too large (i.e. %d).  "
-                          "There are only %d images in this VkSwapchainKHR.",
-                          __FUNCTION__, *pImageIndex, pSwapchain->imageCount);
-            }
-            if (pSwapchain->images[*pImageIndex].ownedByApp) {
-                LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR, swapchain,
-                          "VkSwapchainKHR",
-                          SWAPCHAIN_INDEX_ALREADY_IN_USE,
-                          "%s() returned an index (i.e. %d) for an image that "
-                          "is already owned by the application.\n",
-                          __FUNCTION__, *pImageIndex);
-            }
             // Change the state of the image (now owned by the application):
             pSwapchain->images[*pImageIndex].ownedByApp = true;
         }
