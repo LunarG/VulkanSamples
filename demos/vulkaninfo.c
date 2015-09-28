@@ -1141,7 +1141,7 @@ bool SetStdOutToNewConsole()
     if (!GetConsoleScreenBufferInfo(consoleHandle, &csbi))
         return false;
     bufferSize.X = csbi.dwSize.X;
-    bufferSize.Y = 1000;
+    bufferSize.Y = 2000;
     if (!SetConsoleScreenBufferSize(consoleHandle, bufferSize))
         return false;
     r.Left = r.Top = 0;
