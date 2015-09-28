@@ -4,7 +4,7 @@
         "name": "Threading",
         "type": "GLOBAL",
         "library_path": "./libVKLayerThreading.so",
-        "abi_versions": "1.0.0",
+        "abi_versions": "0.9.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Validation Layer"
     }

@@ -4,7 +4,7 @@
         "name": "Basic",
         "type": "GLOBAL",
         "library_path": ".\\VKLayerBasic.dll",
-        "abi_versions": "1.0.0",
+        "abi_versions": "0.9.0",
         "implementation_version": "1.0.0",
         "description": "LunarG Sample Layer",
         "device_extensions": [

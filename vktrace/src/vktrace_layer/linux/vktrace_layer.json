@@ -4,7 +4,7 @@
         "name": "Vktrace",
         "type": "GLOBAL",
         "library_path": "../vktrace/libvktrace_layer.so",
-        "abi_versions": "1.0.0",
+        "abi_versions": "0.9.0",
         "implementation_version": "1.0.0",
         "description": "Vktrace tracing library",
         "functions" : {
