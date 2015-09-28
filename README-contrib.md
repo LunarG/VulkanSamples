@@ -5,6 +5,7 @@
   - All contributions MUST have a BSD-style license.
 
 ## Procedure for Contributing
+  0. contact LunarG for access to the VulkanSamplesKit repository
   1. clone the VulkanSamplesKit repository
   2. create a new branch for your work
   3. add contributions to your new branch

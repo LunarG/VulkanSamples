@@ -1,18 +1,20 @@
 # Vulkan Samples Kit
-  - This repository is a collection of Vulkan sample applications.
-  - Run the following script to obtain a short description of all samples:
+  - This repository is a collection of Vulkan C++ sample applications.
+  - Run the following script to obtain a short description of all or a 
+    specific sample:
     `$ src/get-short-descripts.sh`
-  - Run the following script to obtain a more detailed description of all or
-    specific samples:
+  - Run the following script to obtain a more detailed description of all
+    samples with a long description set:
     `$ src/get-descripts.sh`
 
 ## Requirements/Dependencies
   - A recent version of the LunarG Vulkan SDK must be installed on the system.
   - Linux package dependencies:
     - Vulkan SDK required packages
-    - other - cmake ??
+    - other - cmake
   - Windows dependencies include:
-    - cmake ??
+    - Vulkan SDK required components
+    - other - cmake
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
