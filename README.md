@@ -12,6 +12,9 @@
   - Linux package dependencies:
     - Vulkan SDK required packages
     - other - cmake
+    - NOTE:  the Linux samples currently require a glslang build directory in
+      the samples' parent directory to build; this will be addressed in the ISV
+      release 
   - Windows dependencies include:
     - Vulkan SDK required components
     - other - cmake
