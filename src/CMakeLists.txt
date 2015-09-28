@@ -84,10 +84,10 @@ endif()
 
 if(WIN32)
     set (VULKAN_LOADER
-        "C:\\VulkanSDK\\0.0.9.0\\Bin\\vulkan.0.lib"
+        "C:\\VulkanSDK\\0.9.0\\Bin\\vulkan-0.lib"
         )
     set (GLSLANG_VALIDATOR
-        "C:\\VulkanSDK\\0.0.9.0\\Bin\\glslangValidator.exe"
+        "C:\\VulkanSDK\\0.9.0\\Bin\\glslangValidator.exe"
         )
     set (MOVE_CMD "move")
 else()
