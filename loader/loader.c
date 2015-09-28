@@ -61,9 +61,6 @@ struct loader_struct loader = {0};
 // TLS for instance for alloc/free callbacks
 THREAD_LOCAL_DECL struct loader_instance *tls_instance;
 
-static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(
-        VkInstance instance,
-        const char * pName);
 static bool loader_init_ext_list(
         const struct loader_instance *inst,
         struct loader_extension_list *ext_info);
@@ -89,7 +86,7 @@ loader_platform_thread_mutex loader_json_lock;
 // default functions if no instance layers are activated.  This contains
 // pointers to "terminator functions".
 const VkLayerInstanceDispatchTable instance_disp = {
-    .GetInstanceProcAddr = loader_GetInstanceProcAddr,
+    .GetInstanceProcAddr = vkGetInstanceProcAddr,
     .CreateInstance = loader_CreateInstance,
     .DestroyInstance = loader_DestroyInstance,
     .EnumeratePhysicalDevices = loader_EnumeratePhysicalDevices,
@@ -3006,26 +3003,41 @@ VkResult VKAPI loader_CreateDevice(
     return res;
 }
 
-static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(VkInstance instance, const char * pName)
+/**
+ * Get an instance level or global level entry point address.
+ * @param instance
+ * @param pName
+ * @return
+ *    If instance == NULL returns a global level entrypoint for all core entry points
+ *    If instance is valid returns a instance relative entry point for instance level
+ *    entry points both core and extensions.
+ *    Instance relative means call down the instance chain. Global means trampoline entry points.
+ */
+LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
 {
-    if (instance == VK_NULL_HANDLE)
-        return NULL;
 
     void *addr;
-    /* get entrypoint addresses that are global (in the loader)*/
-    addr = globalGetProcAddr(pName);
-    if (addr)
-        return addr;
 
-    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+    if (instance == VK_NULL_HANDLE) {
+        struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+        /* get entrypoint addresses that are global (in the loader)*/
+        addr = globalGetProcAddr(pName);
+        if (addr)
+            return addr;
 
-    /* return any extension global entrypoints */
-    addr = debug_report_instance_gpa(ptr_instance, pName);
-    if (addr) {
+        /* return any extension global entrypoints */
+        addr = debug_report_instance_gpa(ptr_instance, pName);
+        if (addr) {
+            return addr;
+        }
+
+        addr = wsi_swapchain_GetInstanceProcAddr(ptr_instance, pName);
+
         return addr;
     }
 
-    addr = wsi_swapchain_GetInstanceProcAddr(ptr_instance, pName);
+    /* return any instance entrypoints that must resolve to loader code */
+    addr = loader_non_passthrough_gipa(pName);
     if (addr) {
         return addr;
     }
@@ -3039,25 +3051,35 @@ static PFN_vkVoidFunction VKAPI loader_GetInstanceProcAddr(VkInstance instance, 
     if (addr)
         return addr;
 
+    // NOTE: any instance extensions must be known to loader and resolved
+    // in the above call to loader_lookup_instance_dispatch_table())
     return NULL;
 }
 
-LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+/**
+ * Get a device level or global level entry point address.
+ * @param device
+ * @param pName
+ * @return
+ *    If device == NULL, returns a global level entrypoint for all core entry points
+ *    If device is valid, returns a device relative entry point for device level
+ *    entry points both core and extensions.
+ *    Device relative means call down the device chain. Global means trampoline entry points.
+ */
+LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
 {
-    return loader_GetInstanceProcAddr(instance, pName);
-}
+    void *addr;
 
-static PFN_vkVoidFunction VKAPI loader_GetDeviceProcAddr(VkDevice device, const char * pName)
-{
     if (device == VK_NULL_HANDLE) {
-        return NULL;
+        /* get entrypoint addresses that are global (in the loader)*/
+        addr = globalGetProcAddr(pName);
+        return addr;
     }
 
-    void *addr;
 
     /* for entrypoints that loader must handle (ie non-dispatchable or create object)
        make sure the loader entrypoint is returned */
-    addr = loader_non_passthrough_gpa(pName);
+    addr = loader_non_passthrough_gdpa(pName);
     if (addr) {
         return addr;
     }
@@ -3075,11 +3097,6 @@ static PFN_vkVoidFunction VKAPI loader_GetDeviceProcAddr(VkDevice device, const 
             return NULL;
         return disp_table->GetDeviceProcAddr(device, pName);
     }
-}
-
-LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
-{
-    return loader_GetDeviceProcAddr(device, pName);
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(

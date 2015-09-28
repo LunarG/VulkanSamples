@@ -326,7 +326,7 @@ static inline void* globalGetProcAddr(const char *name)
 *  They are not just generic trampoline code entrypoints.
 *  Thus GPA must return loader entrypoint for these instead of first function
 *  in the chain. */
-static inline void *loader_non_passthrough_gpa(const char *name)
+static inline void *loader_non_passthrough_gipa(const char *name)
 {
     if (!name || name[0] != 'v' || name[1] != 'k')
         return NULL;
@@ -336,32 +336,32 @@ static inline void *loader_non_passthrough_gpa(const char *name)
         return (void*) vkCreateInstance;
     if (!strcmp(name, "DestroyInstance"))
         return (void*) vkDestroyInstance;
+     // remove once no longer locks
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
-    if (!strcmp(name, "GetPhysicalDeviceFeatures"))
-        return (void*) vkGetPhysicalDeviceFeatures;
-    if (!strcmp(name, "GetPhysicalDeviceFormatProperties"))
-        return (void*) vkGetPhysicalDeviceFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceImageFormatProperties"))
-        return (void*) vkGetPhysicalDeviceImageFormatProperties;
-    if (!strcmp(name, "GetPhysicalDeviceQueueFamilyProperties"))
-        return (void*) vkGetPhysicalDeviceQueueFamilyProperties;
-    if (!strcmp(name, "GetPhysicalDeviceMemoryProperties"))
-        return (void*) vkGetPhysicalDeviceMemoryProperties;
-    if (!strcmp(name, "GetPhysicalDeviceProperties"))
-        return (void*) vkGetPhysicalDeviceProperties;
-    if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
-        return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(name, "GetInstanceProcAddr"))
-        return (void*) vkGetInstanceProcAddr;
-    if (!strcmp(name, "GetDeviceProcAddr"))
-        return (void*) vkGetDeviceProcAddr;
-    if (!strcmp(name, "CreateDevice"))
-        return (void*) vkCreateDevice;
     if (!strcmp(name, "EnumerateDeviceExtensionProperties"))
         return (void*) vkEnumerateDeviceExtensionProperties;
     if (!strcmp(name, "EnumerateDeviceLayerProperties"))
         return (void*) vkEnumerateDeviceLayerProperties;
+    if (!strcmp(name, "GetInstanceProcAddr"))
+        return (void*) vkGetInstanceProcAddr;
+
+    return NULL;
+}
+
+static inline void *loader_non_passthrough_gdpa(const char *name)
+{
+    if (!name || name[0] != 'v' || name[1] != 'k')
+        return NULL;
+
+    name += 2;
+
+    if (!strcmp(name, "GetDeviceProcAddr"))
+        return (void*) vkGetDeviceProcAddr;
+    if (!strcmp(name, "CreateDevice"))
+        return (void*) vkCreateDevice;
+    if (!strcmp(name, "DestroyDevice"))
+        return (void*) vkDestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
     if (!strcmp(name, "CreateCommandBuffer"))
