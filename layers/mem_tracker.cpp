@@ -50,12 +50,18 @@ static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // Object value will be used to identify them internally.
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = static_cast<VkDeviceMemory>(-1);
 
-typedef struct _layer_data {
+struct layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
     VkDbgMsgCallback logging_callback;
     bool wsi_enabled;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr),
+        wsi_enabled(false)
+    {};
+};
 
 static unordered_map<void *, layer_data *> layer_data_map;
 

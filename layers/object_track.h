@@ -65,13 +65,20 @@ uint64_t objTrackGetObjectsOfTypeCount(VkDevice, VkDbgObjectType type);
 typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VkDevice);
 typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDbgObjectType);
 
-typedef struct _layer_data {
+struct layer_data {
     debug_report_data *report_data;
     //TODO: put instance data here
     VkDbgMsgCallback   logging_callback;
     bool wsi_enabled;
     bool objtrack_extensions_enabled;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr),
+        wsi_enabled(false),
+        objtrack_extensions_enabled(false)
+    {};
+};
 
 struct instExts {
     bool wsi_enabled;

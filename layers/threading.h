@@ -34,10 +34,15 @@ typedef enum _THREADING_CHECKER_ERROR
     THREADING_CHECKER_SINGLE_THREAD_REUSE,              // Object used simultaneously by recursion in single thread
 } THREADING_CHECKER_ERROR;
 
-typedef struct _layer_data {
+struct layer_data {
     debug_report_data *report_data;
     VkDbgMsgCallback   logging_callback;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr)
+    {};
+};
 
 static std::unordered_map<void*, layer_data *> layer_data_map;
 static device_table_map                        Threading_device_table_map;

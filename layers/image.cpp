@@ -46,12 +46,18 @@
 
 using namespace std;
 
-typedef struct _layer_data {
+struct layer_data {
     debug_report_data *report_data;
     VkDbgMsgCallback logging_callback;
     VkPhysicalDevice physicalDevice;
     unordered_map<uint64_t, unique_ptr<IMAGE_STATE>> imageMap;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr),
+        physicalDevice(0)
+    {};
+};
 
 static unordered_map<void*, layer_data*> layer_data_map;
 static device_table_map image_device_table_map;

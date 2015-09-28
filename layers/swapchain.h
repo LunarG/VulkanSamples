@@ -65,21 +65,27 @@ typedef enum _SWAPCHAIN_ERROR
 
 
 // The following is for logging error messages:
-typedef struct _layer_data {
-    debug_report_data report_data;
+struct layer_data {
+    debug_report_data *report_data;
     VkDbgMsgCallback logging_callback;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr)
+    {};
+};
+
 #define LAYER_NAME (char *) "Swapchain"
 #define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                     \
-    log_msg(&mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
+    log_msg(mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
             (uint64_t) (obj), 0, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME,  \
             "%s() called with a non-valid %s.", __FUNCTION__, (obj))
 
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
-    log_msg(&mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
+    log_msg(mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
             (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
 #define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)             \
-    log_msg(&mydata.report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
+    log_msg(mydata.report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
             (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
 
 

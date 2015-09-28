@@ -52,11 +52,16 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 
-typedef struct _layer_data {
+struct layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
     VkDbgMsgCallback logging_callback;
-} layer_data;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr)
+    {};
+};
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
 static device_table_map device_limits_device_table_map;

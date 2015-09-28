@@ -145,7 +145,7 @@ static void initSwapchain(void)
         // Turn on logging, since it was requested:
         option_str = getLayerOption("SwapchainLogFilename");
         log_output = getLayerLogOutput(option_str, "Swapchain");
-        layer_create_msg_callback(&mydata.report_data, report_flags,
+        layer_create_msg_callback(mydata.report_data, report_flags,
                                   log_callback, (void *) log_output,
                                   &mydata.logging_callback);
     }
@@ -351,7 +351,6 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
         if (deviceMap[device].pPresentModes) {
             free(deviceMap[device].pPresentModes);
         }
-        deviceMap.erase(device);
         if (!pDevice->swapchains.empty()) {
             LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                       SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,
@@ -366,6 +365,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
             }
             pDevice->swapchains.clear();
         }
+        deviceMap.erase(device);
     }
 }
 
@@ -657,7 +657,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                 }
             }
             // Log the message that we've built up:
-            skipCall |= debug_report_log_msg(&mydata.report_data,
+            skipCall |= debug_report_log_msg(mydata.report_data,
                                              VK_DBG_REPORT_ERROR_BIT,
                                              VK_OBJECT_TYPE_DEVICE,
                                              (uint64_t) device, 0, 
@@ -1104,12 +1104,12 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)
 {
-    return layer_create_msg_callback(&mydata.report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    return layer_create_msg_callback(mydata.report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)
 {
-    layer_destroy_msg_callback(&mydata.report_data, msgCallback);
+    layer_destroy_msg_callback(mydata.report_data, msgCallback);
     return VK_SUCCESS;
 }
 
