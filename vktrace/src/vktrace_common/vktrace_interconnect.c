@@ -69,7 +69,8 @@ MessageStream* vktrace_MessageStream_create_port_string(BOOL _isHost, const char
 
     if (vktrace_MessageStream_SetupSocket(pStream) == FALSE)
     {
-        pStream->mErrorNum = VKTRACE_WSAGetLastError();
+        VKTRACE_DELETE(pStream);
+        pStream = NULL;
     }
 
     return pStream;
@@ -85,7 +86,7 @@ MessageStream* vktrace_MessageStream_create(BOOL _isHost, const char* _address, 
 
 void vktrace_MessageStream_destroy(MessageStream** ppStream)
 {
-    if ((*ppStream)->mSendBuffer != NULL) { 
+    if ((*ppStream)->mSendBuffer != NULL) {
         // Try to get our data out.
         vktrace_MessageStream_FlushSendBuffer(*ppStream, TRUE);
         vktrace_SimpleBuffer_destroy(&(*ppStream)->mSendBuffer);

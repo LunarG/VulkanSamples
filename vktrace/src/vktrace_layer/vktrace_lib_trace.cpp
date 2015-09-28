@@ -379,7 +379,6 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
-    vktrace_platform_thread_once(&gInitOnce, InitTracer);
     SEND_ENTRYPOINT_ID(vkCreateInstance);
     startTime = vktrace_get_time();
     result = mid(*pInstance)->instTable.CreateInstance(pCreateInfo, pInstance);
@@ -1434,43 +1433,51 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetDeviceProcAddr(VkDevice d
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", funcName)) {
         initDeviceData(g_deviceDataMap, (VkBaseLayerObject *) device);
-        return (PFN_vkVoidFunction) vktraceGetDeviceProcAddr;
+        if (gMessageStream != NULL) {
+            return (PFN_vkVoidFunction) vktraceGetDeviceProcAddr;
+        } else {
+            return (PFN_vkVoidFunction) __HOOKED_vkGetDeviceProcAddr;
+        }
     }
 
-    addr = layer_intercept_proc(funcName);
-    if (addr)
-        return addr;
 
     layer_device_data  *devData = mdd(device);
-    if (devData->KHRDeviceSwapchainEnabled)
-    {
-        if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePropertiesKHR;
-        if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfaceFormatsKHR;
-        if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePresentModesKHR;
-        if (!strcmp("vkCreateSwapchainKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkCreateSwapchainKHR;
-        if (!strcmp("vkDestroySwapchainKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkDestroySwapchainKHR;
-        if (!strcmp("vkGetSwapchainImagesKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkGetSwapchainImagesKHR;
-        if (!strcmp("vkAcquireNextImageKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkAcquireNextImageKHR;
-        if (!strcmp("vkQueuePresentKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkQueuePresentKHR;
-    }
-    if (devData->LunargDebugMarkerEnabled)
-    {
-        if (!strcmp("vkCmdDbgMarkerBegin", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerBegin;
-        if (!strcmp("vkCmdDbgMarkerEnd", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerEnd;
-        if (!strcmp("vkDbgSetObjectTag", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectTag;
-        if (!strcmp("vkDbgSetObjectName", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectName;
+    if (gMessageStream != NULL) {
+
+        addr = layer_intercept_proc(funcName);
+        if (addr)
+            return addr;
+
+        if (devData->KHRDeviceSwapchainEnabled)
+        {
+            if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePropertiesKHR;
+            if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfaceFormatsKHR;
+            if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePresentModesKHR;
+            if (!strcmp("vkCreateSwapchainKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateSwapchainKHR;
+            if (!strcmp("vkDestroySwapchainKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDestroySwapchainKHR;
+            if (!strcmp("vkGetSwapchainImagesKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetSwapchainImagesKHR;
+            if (!strcmp("vkAcquireNextImageKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkAcquireNextImageKHR;
+            if (!strcmp("vkQueuePresentKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkQueuePresentKHR;
+        }
+        if (devData->LunargDebugMarkerEnabled)
+        {
+            if (!strcmp("vkCmdDbgMarkerBegin", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerBegin;
+            if (!strcmp("vkCmdDbgMarkerEnd", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCmdDbgMarkerEnd;
+            if (!strcmp("vkDbgSetObjectTag", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectTag;
+            if (!strcmp("vkDbgSetObjectName", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDbgSetObjectName;
+        }
     }
     VkLayerDispatchTable *pDisp =  &devData->devTable;
     if (pDisp->GetDeviceProcAddr == NULL)
@@ -1508,32 +1515,43 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetInstanceProcAddr(VkInstan
         return NULL;
     }
 
+    vktrace_platform_thread_once(&gInitOnce, InitTracer);
+
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
         initInstanceData(g_instanceDataMap, (VkBaseLayerObject *) instance);
-        return (PFN_vkVoidFunction) vktraceGetInstanceProcAddr;
+        if (gMessageStream != NULL) {
+            return (PFN_vkVoidFunction) vktraceGetInstanceProcAddr;
+        } else {
+            return (PFN_vkVoidFunction) __HOOKED_vkGetInstanceProcAddr;
+        }
     }
-
-    addr = layer_intercept_instance_proc(funcName);
-    if (addr)
-        return addr;
 
     layer_instance_data  *instData = mid(instance);
-    if (instData->LunargDebugReportEnabled)
-    {
-        if (!strcmp("vkDbgCreateMsgCallback", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkDbgCreateMsgCallback;
-        if (!strcmp("vkDbgDestroyMsgCallback", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkDbgDestroyMsgCallback;
+    if (gMessageStream != NULL) {
 
+        addr = layer_intercept_instance_proc(funcName);
+        if (addr)
+            return addr;
+
+        if (instData->LunargDebugReportEnabled)
+        {
+            if (!strcmp("vkDbgCreateMsgCallback", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDbgCreateMsgCallback;
+            if (!strcmp("vkDbgDestroyMsgCallback", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDbgDestroyMsgCallback;
+
+        }
+        if (instData->KHRSwapchainEnabled)
+        {
+            if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR;
+        }
     }
-    if (instData->KHRSwapchainEnabled)
-    {
-        if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
-            return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR;
-    }
+
     VkLayerInstanceDispatchTable* pTable = &instData->instTable;
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;
+
     return pTable->GetInstanceProcAddr(instance, funcName);
 }

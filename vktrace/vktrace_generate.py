@@ -154,7 +154,8 @@ class Subcommand(object):
         init_tracer.append('    vktrace_trace_set_trace_file(vktrace_FileLike_create_msg(gMessageStream));')
         init_tracer.append('    vktrace_tracelog_set_tracer_id(VKTRACE_TID_VULKAN);')
         init_tracer.append('    vktrace_create_critical_section(&g_memInfoLock);')
-        init_tracer.append('    send_vk_api_version_packet();\n}\n')
+        init_tracer.append('    if (gMessageStream != NULL)')
+        init_tracer.append('        send_vk_api_version_packet();\n}\n')
         return "\n".join(init_tracer)
 
     # Take a list of params and return a list of dicts w/ ptr param details
@@ -247,7 +248,6 @@ class Subcommand(object):
         for p in params:
             pp_dict = {}
             if '*' in p.ty and p.name not in ['pTag', 'pUserData']:
-# LUGMAL        if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower() and p.name != 'pCreateInfos':
                 if 'const' in p.ty.lower() and 'count' in params[params.index(p)-1].name.lower():
                     pp_dict['add_txt'] = 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), %s*sizeof(%s), %s)' % (p.name, params[params.index(p)-1].name, p.ty.strip('*').replace('const ', ''), p.name)
                 elif 'pOffsets' == p.name: # TODO : This is a custom case for BindVertexBuffers last param, need to clean this up
