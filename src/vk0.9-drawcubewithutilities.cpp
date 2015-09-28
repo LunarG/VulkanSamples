@@ -159,11 +159,10 @@ int main(int argc, char **argv)
     vkCmdEndRenderPass(info.cmd);
 
     VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-    };
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.pNext = NULL;
+    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
@@ -1247,6 +1246,33 @@ void init_pipeline(struct sample_info &info)
 }
 
 #ifdef _WIN32
+static void run(struct sample_info *info)
+{
+ /* Placeholder for samples that want to show dynamic content */
+}
+
+// MS-Windows event handling function:
+LRESULT CALLBACK WndProc(HWND hWnd,
+                         UINT uMsg,
+                         WPARAM wParam,
+                         LPARAM lParam)
+{
+    struct sample_info *info = reinterpret_cast<struct sample_info*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+    switch(uMsg)
+    {
+    case WM_CLOSE:
+        PostQuitMessage(0);
+        break;
+    case WM_PAINT:
+        run(info);
+        return 0;
+    default:
+        break;
+    }
+    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
+}
+
 void init_window(struct sample_info &info)
 {
     WNDCLASSEX  win_class;
