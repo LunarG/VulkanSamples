@@ -1,5 +1,5 @@
 # Explicit GL (VK) Ecosystem Components
-*Version 0.8, 04 Feb 2015*
+*Version 0.9, 28 Sep 2015*
 
 This project provides *open source* tools for VK Developers.
 
@@ -21,11 +21,9 @@ demos for GDC.
 The following components are available:
 - VK Library and header files, which include:
     - [*ICD Loader*](loader) and [*Layer Manager*](layers/README.md)
-    - Snapshot of *VK* and *BIL* header files from [*Khronos*](www.khronos.org)
+    - Snapshot of *VK* and *SPIR-V* header files from [*Khronos*](www.khronos.org)
 
-- [*VKTRACE tools*](tools/vktrace)
-
-    ![ScreenShot](docs/images/Vktrace-Small.png)
+- [*VKTRACE tools*](vktrace)
 
 - Core [*Validation Layers*](layers/)
 
@@ -33,34 +31,19 @@ The following components are available:
 
 ## New
 
-- Updated loader, driver, demos, tests and many tools to use "alpha" vulkan.h (~ version 47).
-  Supports new resource binding model, memory allocation, pixel FORMATs and
-  other updates.
-  APIDump layer is working with these new API elements.
-  VkTrace can trace and replay the cube and tri demos.
-  Other layers in progress.
-- Warning: Recent versions of ubuntu 14.10 have **REMOVED** DRI 3.
+- Header matches provisional specification (v170) with two changes.
+ - DrawIndirect correction (bug #14715)
+ - DynamicState refactor (bug #14365)
+- Provisional specification document (PDF & HTML)
+- Loader now uses JSON manifest files for ICDs and layers. See BUILD.md for details on customizing loader behavior.
+- All validation errors now reported via DEBUG_REPORT extension. [*DEBUG_REPORT*, Extension Document](TODO: link to VulkanDbgExtensions.docx)
+- Warning: The sample driver requires DRI3 and recent versions of ubuntu 14.10 have **REMOVED** DRI 3.
   Version: 2:2.99.914-1~exp1ubuntu4.1 is known to work.
   Ubuntu 15.04 requires customization to add DRI3.
   See BUILD.md for details.
 
 ## Prior updates
 
-- VK API trace and capture tools. See tools/vktrace/README.md for details.
-- Sample driver now supports multiple render targets. Added TriangleMRT to test that functionality.
-- Added VK_SLOT_SHADER_TEXTURE_RESOURCE to vulkan.h as a descriptor slot type to work around confusion in GLSL
-  between textures and buffers as shader resources.
-- Misc. fixes for layers and Intel sample driver
-- Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
-- Fix support for {Fill,Copy}Memory
-- MemTracker can report issues to application via debug callback
-- Update test infrastructure to improve ease of writing new tests. Add image comparison feature for regression testing. Requires ImageMagick library.
-- Misc. fixes to demos, layers and Intel sample driver
-- Added mutex to APIDump, APIDumpFile and DrawState to prevent apparent threading issues using printf
-- Fix support for {Fill,Copy}Memory
-- MemTracker can report issues to application via debug callback
-- Update test infrastructure to improve ease of writing new tests. Add image comparison feature for regression testing. Requires ImageMagick library.
-- Misc. fixes to demos, layers and Intel sample driver
 
 ## How to Build and Run
 
@@ -72,8 +55,11 @@ Information on how to enable the various Debug and Validation layers is in
 
 ## References
 This version of the components are written based on the following preliminary specs and proposals:
-- [**VK Programers Reference**, 1 Jul 2014](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/AMD/Explicit%20GL%20Programming%20Guide%20and%20API%20Reference.pdf)
-- [**BIL**, revision 29](https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/proposals/BIL/Specification/BIL.html)
+- [**Core Vulkan Header**, vulkan.h](https://gitlab.khronos.org/vulkan/vulkan/blob/6e1463d85b747fcad43c48eb8abd94d0f58824de/src/include/vulkan.h)
+- [**SPIR-V**, revision 32](https://cvs.khronos.org/svn/repos/SPIRV/trunk/Promoter32)
+- [**WSI Device Swapchain**, Revision 53 for VK_EXT_KHR_device_swapchain](https://cvs.khronos.org/svn/repos/promoters/specs/candidates/oglc/extensions/20150910/vk_ext_khr_device_swapchain.txt)
+- [**WSI Swapchain**, Revision 17 for VK_EXT_KHR_swapchain](https://cvs.khronos.org/svn/repos/promoters/specs/candidates/oglc/extensions/20150910/vk_ext_khr_swapchain.txt)
+
 
 ## License
 This work is intended to be released as open source under a BSD-style

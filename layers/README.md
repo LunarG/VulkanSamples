@@ -17,6 +17,13 @@ Loader to initialize dispatch tables. Device Layers are activated at vkCreateDev
 Layers are activated at vkCreateInstance.  Layers can also be activated via environment variables
 (VK_INSTANCE_LAYERS or VK_DEVICE_LAYERS).
 
+All validation layers work with the DEBUG_REPORT extension to provide the application or user with
+validation feedback. When a validation layer is enabled, it will look at the vk_layer_settings.txt
+file to determine it's behavior. Such as outputing to a file, stdout or debug output (Windows). An
+application can also register callback functions via the DEBUG_REPORT extension to receive callbacks
+when the requested validation events happen. Application callbacks happen regardless of the
+settings in vk_layer_settings.txt
+
 ##Layer library example code
 
 Note that some layers are code-generated and will therefore exist in the directory (build_dir)/layers
@@ -31,25 +38,37 @@ layer/Basic.cpp (name=Basic) simple example wrapping a few entrypoints. Shows la
 
 layer/Multi.cpp (name=multi1:multi2) simple example showing multiple layers per library
     
-(build dir)/layer/generic_layer.c (name=Generic) - auto generated example wrapping all VK entrypoints.
+(build dir)/layer/generic_layer.cpp (name=Generic) - auto generated example wrapping all VK entrypoints.
 
 ### Print API Calls and Parameter Values
 (build dir)/layer/api_dump.cpp (name=APIDump) - print out API calls along with parameter values
 
 ### Print Object Stats
-(build dir>/layer/object_track.c (name=ObjectTracker) - Print object CREATE/USE/DESTROY stats. Individually track objects by category. VkObjectType enum defined in vulkan.h. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. Provides custom interface to query number about the total number of objects or of live objects of given type.  To get information on all objects, use  "VK\_UINT64 objTrackGetObjectsCount()" and the secondary call to return an array of those objects "VK\_RESULT objTrackGetObjects(VK\_UINT64 objCount, OBJTRACK\_NODE\* pObjNodeArray)". For objects of a specific type, use  "VK\_UINT64 objTrackGetObjectsOfTypeCount(VkObjectType type)" and the secondary call to return an array of those objects "VK\_RESULT objTrackGetObjectsOfType(VK\_OBJECT\_TYPE type, VK\_UINT64 objCount, OBJTRACK\_NODE\* pObjNodeArray)".
+(build dir)/layer/object_track.cpp (name=ObjectTracker) - Track object CREATE/USE/DESTROY stats. Individually track objects by category. VkObjectType enum defined in vulkan.h.
 
 ### Report Draw State
-layer/draw\_state.c (name=DrawState) - DrawState reports the Descriptor Set, Pipeline State, and dynamic state at each Draw call. DrawState layer performs a number of validation checks on this state. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout. 
+layer/draw\_state.cpp (name=DrawState) - DrawState reports the Descriptor Set, Pipeline State, and dynamic state at each Draw call. DrawState layer performs a number of validation checks on this state. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set.
 
 ### Track GPU Memory
-layer/mem\_tracker.c (name=MemTracker) - MemTracker functions mostly as a validation layer, attempting to ensure that memory objects are managed correctly by the application.  These memory objects are bound to pipelines, objects, and command buffers, and then submitted to the GPU for work.  As an example, the layer validates that the correct memory objects have been bound, and that they are specified correctly when the command buffers are submitted.  Also, that only existing memory objects are referenced, and that any destroyed memory objects are not referenced.  Another type of validation done is that before any memory objects are reused or destroyed, the layer ensures that the application has confirmed that they are no longer in use, and that they have been properly unbound before destruction. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layer/mem\_tracker.cpp (name=MemTracker) - MemTracker functions mostly as a validation layer, attempting to ensure that memory objects are managed correctly by the application.  These memory objects are bound to pipelines, objects, and command buffers, and then submitted to the GPU for work.  As an example, the layer validates that the correct memory objects have been bound, and that they are specified correctly when the command buffers are submitted.  Also, that only existing memory objects are referenced, and that any destroyed memory objects are not referenced.  Another type of validation done is that before any memory objects are reused or destroyed, the layer ensures that the application has confirmed that they are no longer in use, and that they have been properly unbound before destruction.
+
+### Device Limits
+<build dir>/layer/device_limits.cpp (name=DeviceLimits) - Check that parameters used do not exceed device limits.
 
 ### Check parameters
-<build dir>/layer/param_checker.c (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+<build dir>/layer/param_checker.cpp (name=ParamChecker) - Check the input parameters to API calls for validity. Currently this only checks ENUM params directly passed to API calls and ENUMs embedded in struct params.
+
+### Image Checker
+<build dir>/layer/image.cpp (name=Image) - Verify parameters on Vulkan calls that use VkImage.
 
 ### Check threading
-<build dir>/layer/threading.c (name=Threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+<build dir>/layer/threading.cpp (name=Threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls.
+
+### Swapchain
+<build dir>/layer/swapchain.cpp (name=Swapchain) - Check that WSI extensions are being used correctly.
+
+### Shader Checker
+<build dir>/layer/shader_checker.cpp (name=ShaderChecker) - Verify SPIR-V shader layout matches descriptor set.
 
 ## Using Layers
 
@@ -59,7 +78,7 @@ layer/mem\_tracker.c (name=MemTracker) - MemTracker functions mostly as a valida
     cp build/layer/libVKLayerBasic.so build/layer/libVKLayerGeneric.so build/tests
 
     This is required for the Loader to be able to scan and enumerate your library.
-    Alternatively, use the VK\_LAYER\_DIRS (VK\_LAYER\_FOLDERS Windows) environment variable to specify where the layer libraries reside.
+    Alternatively, use the VK\_LAYER\_PATH environment variable to specify where the layer libraries reside.
 
 3. Specify which Layers to activate by using 
 vkCreateDevice and/or vkCreateInstance or environment variables.
