@@ -1,16 +1,14 @@
 # Build Targets
 The build target (i.e. program name) for all samples is the base source
-filename of the sample without the .cpp suffix.  (If it will never be the
-case that we could have more than one version with same base file name, then
-would not need the prefix in the compiled program.)
+filename of the sample without the .cpp suffix.
 
 All sample programs are linked with the Vulkan loader and samples utility
-library.  Windows samples are linked with XX libraries as well.
+library.
 
 The Vulkan Samples Kit currently supports the following types of build targets:
   - single file sample, no shaders
   - single file sample, spirv shaders
-  - single file sample, glsl shaders (convert to spirv)
+  - single file sample, glsl shaders (with auto-convert to spirv)
 
 CMake functions are provided for each of the above types of build targets.
 Certain variables must be set before invoking the functions, one of which is
@@ -67,8 +65,6 @@ glslangValidator, with the resulting files named glslshader-frag.spv and
 glslshader-vert.spv, residing in the same directory as the originals.
 
 ## TODO
-
-- flesh out the build framework for Windows
-- samples with more than one source file?
-- other variations and types of shaders? (TBD)
+- samples with more than one source file
+- support other variations and types of shaders (TBD)
 
