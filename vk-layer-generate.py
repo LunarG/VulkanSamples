@@ -1625,10 +1625,11 @@ class ObjectTrackerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
-                     '    %sget_dispatch_table(ObjectTracker_%s_table_map, %s)->%s;\n'
-                     '%s%s'
                      '%s'
-                     '}' % (qual, decl, using_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, destroy_line, stmt))
+                     '    %sget_dispatch_table(ObjectTracker_%s_table_map, %s)->%s;\n'
+                     '%s'
+                     '%s'
+                     '}' % (qual, decl, using_line, destroy_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, stmt))
         return "\n\n".join(funcs)
 
     def generate_body(self):
