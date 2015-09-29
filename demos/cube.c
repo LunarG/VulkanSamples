@@ -2275,7 +2275,7 @@ static void demo_init_vk(struct demo *demo)
     assert(gfx_queue_idx < demo->queue_count);
     // Query fine-grained feature support for this device.
     //  If app has specific feature requirements it should check supported features based on this query
-    VkPhysicalDeviceFeatures physDevFeatures = {};
+    VkPhysicalDeviceFeatures physDevFeatures;
     err = vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
     assert(!err);
 
