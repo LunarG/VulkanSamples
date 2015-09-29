@@ -1146,7 +1146,7 @@ bool SetStdOutToNewConsole()
         return false;
     r.Left = r.Top = 0;
     r.Right = csbi.dwSize.X-1;
-    r.Bottom = 60;
+    r.Bottom = 50;
     if (!SetConsoleWindowInfo(consoleHandle, true, &r))
         return false;
 
