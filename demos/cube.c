@@ -561,20 +561,6 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     scissor.offset.y = 0;
     vkCmdSetScissor(cmd_buf, 1, &scissor);
 
-    vkCmdSetLineWidth(cmd_buf, 1.0);
-    vkCmdSetDepthBias(cmd_buf, 0.0f, 0.0f, 0.0f);
-
-    float blend[4];
-    blend[0] = 1.0f;
-    blend[1] = 1.0f;
-    blend[2] = 1.0f;
-    blend[3] = 1.0f;
-    vkCmdSetBlendConstants(cmd_buf, blend);
-    vkCmdSetDepthBounds(cmd_buf, 0.0f, 1.0f);
-    vkCmdSetStencilCompareMask(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilWriteMask(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilReference(cmd_buf, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
-
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(cmd_buf);
 
@@ -1499,7 +1485,14 @@ static void demo_prepare_pipeline(struct demo *demo)
     VkPipelineDepthStencilStateCreateInfo  ds;
     VkPipelineViewportStateCreateInfo      vp;
     VkPipelineMultisampleStateCreateInfo   ms;
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkPipelineDynamicStateCreateInfo       dynamicState;
     VkResult U_ASSERT_ONLY err;
+
+    memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
+    memset(&dynamicState, 0, sizeof dynamicState);
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pDynamicStates = dynamicStateEnables;
 
     memset(&pipeline, 0, sizeof(pipeline));
     pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1530,6 +1523,9 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&vp, 0, sizeof(vp));
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.viewportCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    vp.scissorCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     memset(&ds, 0, sizeof(ds));
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -1576,6 +1572,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     pipeline.pDepthStencilState  = &ds;
     pipeline.pStages             = shaderStages;
     pipeline.renderPass          = demo->render_pass;
+    pipeline.pDynamicState       = &dynamicState;
 
     pipeline.renderPass = demo->render_pass;
 
