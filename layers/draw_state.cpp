@@ -359,16 +359,17 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
 // Validate state stored as flags at time of draw call
 static VkBool32 validate_draw_state_flags(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result;
-    result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_SET, CBSTATUS_VIEWPORT_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Viewport object not bound to this command buffer");
-    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_LINE_WIDTH_SET,   CBSTATUS_LINE_WIDTH_SET,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_LINE_WIDTH_NOT_BOUND,   "Line width object not bound to this command buffer");
-    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_DEPTH_BIAS_SET,   CBSTATUS_DEPTH_BIAS_SET,   VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_DEPTH_BIAS_NOT_BOUND,   "Depth bias object not bound to this command buffer");
-    result |= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_BLEND_SET,   CBSTATUS_BLEND_SET,   VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_BLEND_NOT_BOUND,   "Blend object not bound to this command buffer");
-    result |= validate_status(pCB, CBSTATUS_DEPTH_WRITE_ENABLE, CBSTATUS_DEPTH_BOUNDS_SET, CBSTATUS_DEPTH_BOUNDS_SET, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Depth bounds object not bound to this command buffer");
-    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_READ_MASK_SET, CBSTATUS_STENCIL_READ_MASK_SET, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_STENCIL_NOT_BOUND, "Stencil read mask not set on this command buffer");
-    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_WRITE_MASK_SET, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_STENCIL_NOT_BOUND, "Stencil write mask not set on this command buffer");
-    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_REFERENCE_SET, CBSTATUS_STENCIL_REFERENCE_SET, VK_DBG_REPORT_ERROR_BIT,  DRAWSTATE_STENCIL_NOT_BOUND, "Stencil reference not set on this command buffer");
+    result = validate_status(pCB, CBSTATUS_NONE, CBSTATUS_VIEWPORT_SET, CBSTATUS_VIEWPORT_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_VIEWPORT_NOT_BOUND, "Dynamic viewport state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_SCISSOR_SET, CBSTATUS_SCISSOR_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic scissor state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_LINE_WIDTH_SET, CBSTATUS_LINE_WIDTH_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_LINE_WIDTH_NOT_BOUND, "Dynamic line width state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_DEPTH_BIAS_SET, CBSTATUS_DEPTH_BIAS_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_DEPTH_BIAS_NOT_BOUND, "Dynamic depth bias state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_COLOR_BLEND_WRITE_ENABLE, CBSTATUS_BLEND_SET, CBSTATUS_BLEND_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_BLEND_NOT_BOUND, "Dynamic blend object state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_DEPTH_WRITE_ENABLE, CBSTATUS_DEPTH_BOUNDS_SET, CBSTATUS_DEPTH_BOUNDS_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND, "Dynamic depth bounds state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_READ_MASK_SET, CBSTATUS_STENCIL_READ_MASK_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil read mask state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_WRITE_MASK_SET, CBSTATUS_STENCIL_WRITE_MASK_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil write mask state not set for this command buffer");
+    result |= validate_status(pCB, CBSTATUS_STENCIL_TEST_ENABLE, CBSTATUS_STENCIL_REFERENCE_SET, CBSTATUS_STENCIL_REFERENCE_SET, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_STENCIL_NOT_BOUND, "Dynamic stencil reference state not set for this command buffer");
     if (indexedDraw)
-        result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Index Draw attempted");
+        result |= validate_status(pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Indexed Draw attempted");
     return result;
 }
 // Validate overall state at the time of a draw call
@@ -469,7 +470,6 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
         memset((void*)pPipeline, 0, sizeof(PIPELINE_NODE));
     }
     // First init create info
-    // TODO : Validate that no create info is incorrectly replicated
     memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
 
     size_t bufferSize = 0;
@@ -509,7 +509,12 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
                 break;
         }
     }
-
+    // Copy over GraphicsPipelineCreateInfo structure embedded pointers
+    if (pCreateInfo->stageCount != 0) {
+        pPipeline->graphicsPipelineCI.pStages = new VkPipelineShaderStageCreateInfo[pCreateInfo->stageCount];
+        bufferSize =  pCreateInfo->stageCount * sizeof(VkPipelineShaderStageCreateInfo);
+        memcpy((void*)pPipeline->graphicsPipelineCI.pStages, pCreateInfo->pStages, bufferSize);
+    }
     if (pCreateInfo->pVertexInputState != NULL) {
         memcpy((void*)&pPipeline->vertexInputCI, pCreateInfo->pVertexInputState , sizeof(VkPipelineVertexInputStateCreateInfo));
         // Copy embedded ptrs
@@ -548,6 +553,10 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
         memcpy((void*)&pPipeline->msStateCI, pCreateInfo->pMultisampleState, sizeof(VkPipelineMultisampleStateCreateInfo));
         pPipeline->graphicsPipelineCI.pMultisampleState = &pPipeline->msStateCI;
     }
+    if (pCreateInfo->pDepthStencilState != NULL) {
+        memcpy((void*)&pPipeline->dsStateCI, pCreateInfo->pDepthStencilState, sizeof(VkPipelineDepthStencilStateCreateInfo));
+        pPipeline->graphicsPipelineCI.pDepthStencilState = &pPipeline->dsStateCI;
+    }
     if (pCreateInfo->pColorBlendState != NULL) {
         memcpy((void*)&pPipeline->cbStateCI, pCreateInfo->pColorBlendState, sizeof(VkPipelineColorBlendStateCreateInfo));
         // Copy embedded ptrs
@@ -560,16 +569,14 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
         }
         pPipeline->graphicsPipelineCI.pColorBlendState = &pPipeline->cbStateCI;
     }
-    if (pCreateInfo->pDepthStencilState != NULL) {
-        memcpy((void*)&pPipeline->dsStateCI, pCreateInfo->pDepthStencilState, sizeof(VkPipelineDepthStencilStateCreateInfo));
-        pPipeline->graphicsPipelineCI.pDepthStencilState = &pPipeline->dsStateCI;
-    }
-
-    // Copy over GraphicsPipelineCreateInfo structure embedded pointers
-    if (pCreateInfo->stageCount != 0) {
-        pPipeline->graphicsPipelineCI.pStages = new VkPipelineShaderStageCreateInfo[pCreateInfo->stageCount];
-        bufferSize =  pCreateInfo->stageCount * sizeof(VkPipelineShaderStageCreateInfo);
-        memcpy((void*)pPipeline->graphicsPipelineCI.pStages, pCreateInfo->pStages, bufferSize); 
+    if (pCreateInfo->pDynamicState != NULL) {
+        memcpy((void*)&pPipeline->dynStateCI, pCreateInfo->pDynamicState, sizeof(VkPipelineDynamicStateCreateInfo));
+        if (pPipeline->dynStateCI.dynamicStateCount) {
+            pPipeline->dynStateCI.pDynamicStates = new VkDynamicState[pPipeline->dynStateCI.dynamicStateCount];
+            bufferSize = pPipeline->dynStateCI.dynamicStateCount * sizeof(VkDynamicState);
+            memcpy((void*)pPipeline->dynStateCI.pDynamicStates, pCreateInfo->pDynamicState->pDynamicStates, bufferSize);
+        }
+        pPipeline->graphicsPipelineCI.pDynamicState = &pPipeline->dynStateCI;
     }
 
     return pPipeline;
@@ -592,6 +599,9 @@ static void deletePipelines()
         }
         if ((*ii).second->pAttachments) {
             delete[] (*ii).second->pAttachments;
+        }
+        if ((*ii).second->dynStateCI.dynamicStateCount != 0) {
+            delete[] (*ii).second->dynStateCI.pDynamicStates;
         }
         delete (*ii).second;
     }
@@ -1126,7 +1136,7 @@ static void resetCB(const VkCmdBuffer cb)
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
-// Set PSO-related status bits for CB
+// Set PSO-related status bits for CB, including dynamic state set via PSO
 static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
 {
     for (uint32_t i = 0; i < pPipe->cbStateCI.attachmentCount; i++) {
@@ -1137,9 +1147,45 @@ static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
     if (pPipe->dsStateCI.depthWriteEnable) {
         pCB->status |= CBSTATUS_DEPTH_WRITE_ENABLE;
     }
-
     if (pPipe->dsStateCI.stencilTestEnable) {
         pCB->status |= CBSTATUS_STENCIL_TEST_ENABLE;
+    }
+    if (pPipe->dynStateCI.dynamicStateCount) {
+        // Account for any dynamic state set via this PSO
+        for (uint32_t i=0; i < pPipe->dynStateCI.dynamicStateCount; i++) {
+            switch (pPipe->dynStateCI.pDynamicStates[i]) {
+                case VK_DYNAMIC_STATE_VIEWPORT:
+                    pCB->status |= CBSTATUS_VIEWPORT_SET;
+                    break;
+                case VK_DYNAMIC_STATE_SCISSOR:
+                    pCB->status |= CBSTATUS_SCISSOR_SET;
+                    break;
+                case VK_DYNAMIC_STATE_LINE_WIDTH:
+                    pCB->status |= CBSTATUS_LINE_WIDTH_SET;
+                    break;
+                case VK_DYNAMIC_STATE_DEPTH_BIAS:
+                    pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
+                    break;
+                case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
+                    pCB->status |= CBSTATUS_BLEND_SET;
+                    break;
+                case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
+                    pCB->status |= CBSTATUS_DEPTH_BOUNDS_SET;
+                    break;
+                case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
+                    pCB->status |= CBSTATUS_STENCIL_READ_MASK_SET;
+                    break;
+                case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
+                    pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
+                    break;
+                case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
+                    pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
+                    break;
+                default:
+                    // TODO : Flag error here
+                    break;
+            }
+        }
     }
 }
 // Print the last bound Gfx Pipeline

@@ -52,13 +52,14 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
     DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
     DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER,     // vkCmdExecuteCommands() called with a primary cmdBuffer in pCmdBuffers array
-    DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state object bound
-    DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state object bound
-    DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state object bound
-    DRAWSTATE_BLEND_NOT_BOUND,                  // Draw submitted with no blend state object bound when color write enabled
-    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds state object bound when depth enabled
-    DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state object bound when stencil enabled
-    DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state object bound when depth write enabled
+    DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state bound
+    DRAWSTATE_SCISSOR_NOT_BOUND,                // Draw submitted with no scissor state bound
+    DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state bound
+    DRAWSTATE_DEPTH_BIAS_NOT_BOUND,             // Draw submitted with no depth bias state bound
+    DRAWSTATE_BLEND_NOT_BOUND,                  // Draw submitted with no blend state bound when color write enabled
+    DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds state bound when depth enabled
+    DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state bound when stencil enabled
+    DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state bound when depth write enabled
     DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
@@ -101,6 +102,7 @@ typedef struct _PIPELINE_NODE {
     VkPipelineMultisampleStateCreateInfo    msStateCI;
     VkPipelineColorBlendStateCreateInfo     cbStateCI;
     VkPipelineDepthStencilStateCreateInfo   dsStateCI;
+    VkPipelineDynamicStateCreateInfo        dynStateCI;
     VkPipelineShaderStageCreateInfo         vsCI;
     VkPipelineShaderStageCreateInfo         tcsCI;
     VkPipelineShaderStageCreateInfo         tesCI;
@@ -110,7 +112,6 @@ typedef struct _PIPELINE_NODE {
     VkComputePipelineCreateInfo          computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t                             active_shaders;
-    VkGraphicsPipelineCreateInfo*        pCreateTree;       // Ptr to shadow of data in create tree
     // Vtx input info (if any)
     uint32_t                             vtxBindingCount;   // number of bindings
     VkVertexInputBindingDescription*     pVertexBindingDescriptions;

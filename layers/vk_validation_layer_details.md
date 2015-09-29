@@ -34,6 +34,7 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | DS Update Type | Verifies that structs in DS Update tree are properly created, currenly valid, and of the right type | INVALID_UPDATE_STRUCT | vkUpdateDescriptorSets | InvalidDSUpdateStruct | NA |
 | MSAA Sample Count | Verifies that Pipeline, RenderPass, and Subpass sample counts are consistent | NUM_SAMPLES_MISMATCH | vkCmdBindPipeline vkCmdBeginRenderPass vkCmdNextSubpass | NumSamplesMismatch | NA |
 | Dynamic Viewport State Binding | Verify that viewport dynamic state bound to Cmd Buffer at Draw time | VIEWPORT_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | ViewportStateNotBound | NA |
+| Dynamic Scissor State Binding | Verify that scissor dynamic state bound to Cmd Buffer at Draw time | SCISSOR_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | ScissorStateNotBound | NA |
 | Dynamic Line Width State Binding | Verify that line width dynamic state bound to Cmd Buffer at when required (TODO : Verify when this is) | LINE_WIDTH_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | TODO | Verify this check and Write targeted test |
 | Dynamic Depth Bias State Binding | Verify that depth bias dynamic state bound when depth enabled | DEPTH_BIAS_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | TODO | Verify this check and Write targeted test |
 | Dynamic Blend State Binding | Verify that blend dynamic state bound when color blend enabled | BLEND_NOT_BOUND |vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect | TODO | Verify this check and Write targeted test |
@@ -75,6 +76,7 @@ Additional checks to be added to DrawState
  29. Flag an error if CmdBuffer has Begin called while it's being constructed - this is not a reset, this is a violation
  30. At PSO creation time, there is no case when NOT including a FS should flag an error since there exist dynamic state configurations that can be set to cause a FS to not be required. Instead, in the case when no FS is in the PSO, validation should detect at runtime if dynamic state will require a FS, and in those case issue a runtime warning about undefined behavior. (see bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14429)
  31. Error if a cmdbuffer is submitted on a queue whose family doesn't match the family of the pool from which it was created.
+ 32. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
 
 ## ParamChecker
 
@@ -222,6 +224,7 @@ The ObjectTracker layer maintains a record of all Vulkan objects. It flags error
  7. Verify cube array VkImageView objects use subresourceRange.arraySize (or effective arraySize when VK_REMAINING_ARRAY_SLICES is specified) that is a multiple of 6. 
  8. Make object maps specific to instance and device.  Objects may only be used with matching instance or device.
  9. Use reference counting for non-dispatchable objects.  Multiple object creation calls may return identical handles.
+ 10. Update codegen for destroy_obj & validate_obj to generate all of the correct signatures and use the generated code
 
 ## Threading
 
