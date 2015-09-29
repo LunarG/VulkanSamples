@@ -127,6 +127,32 @@ static void init_device_limits(layer_data *my_data)
         globalLockInitialized = 1;
     }
 }
+/* DeviceLimits does not have any global extensions */
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
+{
+    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+}
+
+static const VkLayerProperties dl_global_layers[] = {
+    {
+        "DeviceLimits",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: Device Limits",
+    }
+};
+
+VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
+{
+    return util_GetLayerProperties(ARRAY_SIZE(dl_global_layers),
+                                   dl_global_layers,
+                                   pCount, pProperties);
+}
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
@@ -522,7 +548,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     return result;
 }
 
-
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
@@ -618,6 +643,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceMemoryProperties;
     if (!strcmp(funcName, "vkGetPhysicalDeviceSparseImageFormatProperties"))
         return (PFN_vkVoidFunction) vkGetPhysicalDeviceSparseImageFormatProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
 
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
