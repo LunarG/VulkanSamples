@@ -60,7 +60,6 @@ endif()
 
 if(NOT WIN32)
     include(GNUInstallDirs)
-    add_definitions(-DLIBDIR="${CMAKE_INSTALL_LIBDIR}")
     add_definitions(-DSYSCONFDIR="${CMAKE_INSTALL_SYSCONFDIR}")
     add_definitions(-DDATADIR="${CMAKE_INSTALL_DATADIR}")
     if (CMAKE_INSTALL_PREFIX STREQUAL "/usr")
