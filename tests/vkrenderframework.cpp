@@ -1146,12 +1146,20 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.cullMode = VK_CULL_MODE_BACK;
     m_rs_state.frontFace = VK_FRONT_FACE_CW;
     m_rs_state.depthBiasEnable = VK_FALSE;
+    m_rs_state.lineWidth = 1.0f;
+    m_rs_state.depthBias = 0.0f;
+    m_rs_state.depthBiasClamp = 0.0f;
+    m_rs_state.slopeScaledDepthBias = 0.0f;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     m_cb_state.pNext = VK_NULL_HANDLE;
     m_cb_state.alphaToCoverageEnable = VK_FALSE;
     m_cb_state.logicOp = VK_LOGIC_OP_COPY;
+    m_cb_state.blendConst[0] = 1.0f;
+    m_cb_state.blendConst[1] = 1.0f;
+    m_cb_state.blendConst[2] = 1.0f;
+    m_cb_state.blendConst[3] = 1.0f;
 
     m_ms_state.pNext = VK_NULL_HANDLE;
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -1163,6 +1171,9 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_vp_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     m_vp_state.pNext = VK_NULL_HANDLE;
     m_vp_state.viewportCount = 1;
+    m_vp_state.scissorCount = 1;
+    MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+    MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE,
@@ -1175,6 +1186,12 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
     m_ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
     m_ds_state.stencilTestEnable = VK_FALSE;
+    m_ds_state.back.stencilCompareMask = 0xff;
+    m_ds_state.back.stencilWriteMask = 0xff;
+    m_ds_state.back.stencilReference = 0;
+    m_ds_state.minDepthBounds = 0.f;
+    m_ds_state.maxDepthBounds = 1.f;
+
     m_ds_state.front = m_ds_state.back;
 };
 
@@ -1215,6 +1232,15 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_st
     m_ds_state.front = ds_state->front;
 }
 
+void VkPipelineObj::MakeDynamic(VkDynamicState state)
+{
+    /* Only add a state once */
+    for (auto it = m_dynamic_state_enables.begin(); it != m_dynamic_state_enables.end(); it++) {
+        if ((*it) == state) return;
+    }
+    m_dynamic_state_enables.push_back(state);
+}
+
 void VkPipelineObj::SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state)
 {
     memcpy(&m_ms_state, ms_state, sizeof(VkPipelineMultisampleStateCreateInfo));
@@ -1223,6 +1249,7 @@ void VkPipelineObj::SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state)
 VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass)
 {
     VkGraphicsPipelineCreateInfo info = {};
+    VkPipelineDynamicStateCreateInfo dsci = {};
 
     VkPipelineShaderStageCreateInfo* shaderCreateInfo;
 
@@ -1249,6 +1276,27 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
 
     m_cb_state.attachmentCount = m_colorAttachments.size();
     m_cb_state.pAttachments = m_colorAttachments.data();
+
+    if (m_viewports.size() > 0) {
+        m_vp_state.viewportCount = m_viewports.size();
+        m_vp_state.pViewports = m_viewports.data();
+    } else {
+        MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+    }
+
+    if (m_scissors.size() > 0) {
+        m_vp_state.scissorCount = m_scissors.size();
+        m_vp_state.pScissors = m_scissors.data();
+    } else {
+        MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
+    }
+
+    if (m_dynamic_state_enables.size() > 0) {
+        dsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dsci.dynamicStateCount = m_dynamic_state_enables.size();
+        dsci.pDynamicStates = m_dynamic_state_enables.data();
+        info.pDynamicState = &dsci;
+    }
 
     info.renderPass        = render_pass;
     info.subpass           = 0;

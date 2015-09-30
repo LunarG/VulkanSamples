@@ -295,6 +295,33 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     pipelineobj.AddColorAttachment();
     pipelineobj.AddShader(&vs);
     pipelineobj.AddShader(&ps);
+    if (failMask & BsoFailLineWidth) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_LINE_WIDTH);
+    }
+    if (failMask & BsoFailDepthBias) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    }
+    if (failMask & BsoFailViewport) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+    }
+    if (failMask & BsoFailScissor) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
+    }
+    if (failMask & BsoFailBlend) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+    }
+    if (failMask & BsoFailDepthBounds) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+    }
+    if (failMask & BsoFailStencilReadMask) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
+    }
+    if (failMask & BsoFailStencilWriteMask) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
+    }
+    if (failMask & BsoFailStencilReference) {
+        pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
+    }
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendBuffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, constantBuffer);
@@ -322,52 +349,24 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     }
 
     cmdBuffer->PrepareAttachments();
-    if ((failMask & BsoFailLineWidth) != BsoFailLineWidth) {
-        cmdBuffer->SetLineWidth(m_lineWidth);
-    }
-    if ((failMask & BsoFailDepthBias) != BsoFailDepthBias) {
-        cmdBuffer->SetDepthBias(m_depthBias, m_depthBiasClamp, m_slopeScaledDepthBias);
-    }
-    /* TODO: Need test for mismatched viewport and scissor count */
-    if ((failMask & BsoFailViewport) != BsoFailViewport) {
-        cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data());
-    }
-    if ((failMask & BsoFailScissor) != BsoFailScissor) {
-        cmdBuffer->SetScissor(m_scissors.size(), m_scissors.data());
-    }
-    if ((failMask & BsoFailBlend) != BsoFailBlend) {
-        cmdBuffer->SetBlendConstants(m_blendConst);
-    }
-    if ((failMask & BsoFailDepthBounds) != BsoFailDepthBounds) {
-        cmdBuffer->SetDepthBounds(m_minDepthBounds, m_maxDepthBounds);
-    }
-    if ((failMask & BsoFailStencilReadMask) != BsoFailStencilReadMask) {
-        cmdBuffer->SetStencilReadMask(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilCompareMask);
-    }
-    if ((failMask & BsoFailStencilWriteMask) != BsoFailStencilWriteMask) {
-        cmdBuffer->SetStencilWriteMask(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilWriteMask);
-    }
-    if ((failMask & BsoFailStencilReference) != BsoFailStencilReference) {
-        cmdBuffer->SetStencilReference(VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, m_stencilReference);
-    }
     // Make sure depthWriteEnable is set so that Depth fail test will work correctly
     // Make sure stencilTestEnable is set so that Stencil fail test will work correctly
     VkStencilOpState stencil = {};
     stencil.stencilFailOp = VK_STENCIL_OP_KEEP;
-        stencil.stencilPassOp = VK_STENCIL_OP_KEEP;
-        stencil.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
-        stencil.stencilCompareOp = VK_COMPARE_OP_NEVER;
+    stencil.stencilPassOp = VK_STENCIL_OP_KEEP;
+    stencil.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
+    stencil.stencilCompareOp = VK_COMPARE_OP_NEVER;
 
     VkPipelineDepthStencilStateCreateInfo ds_ci = {};
     ds_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        ds_ci.pNext = NULL;
-        ds_ci.depthTestEnable = VK_FALSE;
-        ds_ci.depthWriteEnable = VK_TRUE;
-        ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
-        ds_ci.depthBoundsTestEnable = VK_FALSE;
-        ds_ci.stencilTestEnable = VK_TRUE;
-        ds_ci.front = stencil;
-        ds_ci.back = stencil;
+    ds_ci.pNext = NULL;
+    ds_ci.depthTestEnable = VK_FALSE;
+    ds_ci.depthWriteEnable = VK_TRUE;
+    ds_ci.depthCompareOp = VK_COMPARE_OP_NEVER;
+    ds_ci.depthBoundsTestEnable = VK_FALSE;
+    ds_ci.stencilTestEnable = VK_TRUE;
+    ds_ci.front = stencil;
+    ds_ci.back = stencil;
 
     pipelineobj.SetDepthStencil(&ds_ci);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);

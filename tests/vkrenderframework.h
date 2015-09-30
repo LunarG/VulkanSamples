@@ -420,6 +420,7 @@ public:
     void AddVertexInputAttribs(VkVertexInputAttributeDescription* vi_attrib, int count);
     void AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count);
     void AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att);
+    void MakeDynamic(VkDynamicState state);
 
     void AddColorAttachment()
     {
@@ -441,6 +442,9 @@ protected:
     VkPipelineDepthStencilStateCreateInfo         m_ds_state;
     VkPipelineViewportStateCreateInfo             m_vp_state;
     VkPipelineMultisampleStateCreateInfo          m_ms_state;
+    vector<VkDynamicState>                        m_dynamic_state_enables;
+    vector<VkViewport>                            m_viewports;
+    vector<VkRect2D>                              m_scissors;
     VkDeviceObj                                  *m_device;
     vector<VkShaderObj*>                          m_shaderObjs;
     vector<int>                                   m_vertexBufferBindings;

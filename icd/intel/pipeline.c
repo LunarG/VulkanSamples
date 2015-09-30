@@ -1249,35 +1249,46 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
         memcpy(&info->vp, vkinfo->pViewportState, sizeof (info->vp));
     }
 
+    /* by default, take all dynamic state from the pipeline */
+    info->use_pipeline_dynamic_state = INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT |
+                                       INTEL_USE_PIPELINE_DYNAMIC_SCISSOR |
+                                       INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS |
+                                       INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS |
+                                       INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS |
+                                       INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH |
+                                       INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK |
+                                       INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE |
+                                       INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK;
     if (vkinfo->pDynamicState != NULL) {
         for (uint32_t i = 0; i < vkinfo->pDynamicState->dynamicStateCount; i++) {
+            /* Mark dynamic state indicated by app as not using pipeline state */
             switch (vkinfo->pDynamicState->pDynamicStates[i]) {
             case VK_DYNAMIC_STATE_VIEWPORT:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT;
                 break;
             case VK_DYNAMIC_STATE_SCISSOR:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_SCISSOR;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_SCISSOR;
                 break;
             case VK_DYNAMIC_STATE_LINE_WIDTH:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH;
                 break;
             case VK_DYNAMIC_STATE_DEPTH_BIAS:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS;
                 break;
             case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS;
                 break;
             case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS;
                 break;
             case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK;
                 break;
             case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK;
                 break;
             case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
-                info->use_pipeline_dynamic_state |= INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE;
+                info->use_pipeline_dynamic_state &= ~INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE;
                 break;
             default:
                 assert(!"Invalid dynamic state");
