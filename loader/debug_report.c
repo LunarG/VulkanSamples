@@ -78,7 +78,7 @@ static VkResult debug_report_DbgCreateMsgCallback(
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    struct loader_instance *inst = loader_instance(instance);
+    struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
     VkResult result = inst->disp->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     if (result == VK_SUCCESS) {
@@ -99,7 +99,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msg_callback)
 {
-    struct loader_instance *inst = loader_instance(instance);
+    struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;

@@ -890,7 +890,8 @@ struct loader_icd *loader_get_icd_and_device(const VkDevice device,
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (struct loader_device *dev = icd->logical_device_list; dev; dev = dev->next)
-                if (dev->device == device) {
+                /* Value comparison of device prevents object wrapping by layers */
+                if (loader_get_dispatch(dev->device) == loader_get_dispatch(device)) {
                     *found_dev = dev;
                     return icd;
                 }
@@ -1984,6 +1985,24 @@ static PFN_vkVoidFunction VKAPI loader_gpa_instance_internal(VkInstance inst, co
     return disp_table->GetInstanceProcAddr(inst, pName);
 }
 
+struct loader_instance *loader_get_instance(const VkInstance instance)
+{
+    /* look up the loader_instance in our list by comparing dispatch tables, as
+     * there is no guarantee the instance is still a loader_instance* after any
+     * layers which wrap the instance object.
+     */
+    const VkLayerInstanceDispatchTable *disp;
+    struct loader_instance *ptr_instance = NULL;
+    disp = loader_get_instance_dispatch(instance);
+    for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
+        if (inst->disp == disp) {
+            ptr_instance = inst;
+            break;
+        }
+    }
+    return ptr_instance;
+}
+
 struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_index)
 {
 
@@ -1991,7 +2010,11 @@ struct loader_icd * loader_get_icd(const VkPhysicalDevice gpu, uint32_t *gpu_ind
     for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
         for (struct loader_icd *icd = inst->icds; icd; icd = icd->next) {
             for (uint32_t i = 0; i < icd->gpu_count; i++)
-                if (icd->gpus[i] == gpu) {
+                /* Value comparison of VkPhysicalDevice prevents wrapping, use
+                 * instance device table instead (TODO this aliases GPUs within
+                 * an instance, since they have identical dispatch tables)
+                 */
+                if (loader_get_instance_dispatch(icd->gpus[i]) == loader_get_instance_dispatch(gpu)) {
                     *gpu_index = i;
                     return icd;
                 }
@@ -2973,7 +2996,9 @@ VkResult VKAPI loader_CreateDevice(
         }
     }
 
-    res = icd->CreateDevice(gpu, pCreateInfo, pDevice);
+    // since gpu object maybe wrapped by a layer need to get unwrapped version
+    // we haven't yet called down the chain for the layer to unwrap the object
+    res = icd->CreateDevice(icd->gpus[gpu_index], pCreateInfo, pDevice);
     if (res != VK_SUCCESS) {
         return res;
     }
@@ -3022,6 +3047,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
     if (instance == VK_NULL_HANDLE) {
         /* get entrypoint addresses that are global (in the loader),
            doesn't include any instance extensions since they may not be enabled yet*/
+
         addr = globalGetProcAddr(pName);
 
         return addr;
@@ -3037,7 +3063,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
     /* debug_report is a special case; need to return loader trampoline entrypoints
      * unless the extension is not enabled; also need to handle debug_report
      * utility functions */
-    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     if (debug_report_instance_gpa(ptr_instance, pName, &addr)) {
         return addr;
     }

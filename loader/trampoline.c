@@ -178,13 +178,14 @@ LOADER_EXPORT void VKAPI vkDestroyInstance(
                                             VkInstance instance)
 {
     const VkLayerInstanceDispatchTable *disp;
+    struct loader_instance *ptr_instance = NULL;
     disp = loader_get_instance_dispatch(instance);
 
     loader_platform_thread_lock_mutex(&loader_lock);
 
+    ptr_instance = loader_get_instance(instance);
     disp->DestroyInstance(instance);
 
-    struct loader_instance *ptr_instance = loader_instance(instance);
     loader_deactivate_instance_layers(ptr_instance);
     loader_heap_free(ptr_instance, ptr_instance->disp);
     loader_heap_free(ptr_instance, ptr_instance);

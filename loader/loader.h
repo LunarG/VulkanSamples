@@ -373,6 +373,8 @@ void loader_get_icd_loader_instance_extensions(
 struct loader_icd *loader_get_icd_and_device(
         const VkDevice device,
         struct loader_device **found_dev);
+struct loader_instance *loader_get_instance(
+        const VkInstance instance);
 struct loader_icd * loader_get_icd(
         const VkPhysicalDevice gpu,
         uint32_t *gpu_index);
