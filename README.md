@@ -26,7 +26,7 @@
         Vulkan-version-specific files will reside in directories named by the
         version (i.e. vk0.9)
       - ext/ - external third party components outside of the Vulkan SDK and
-        samples framework (TBD)
+        samples framework (glm, glslang)
       - src/ - samples source code, where sample file name is prefixed by Vulkan
         version (i.e. vk0.9-instance.cpp)
       - utils/ - source code for common utilities used by the sample programs
