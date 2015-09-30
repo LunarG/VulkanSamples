@@ -392,6 +392,14 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_pack
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState->pAttachments));
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pColorBlendState));
             }
+
+            // DynamicState
+            if (pParam[i].pDynamicState) {
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDynamicState), sizeof(VkPipelineDynamicStateCreateInfo), pParam[i].pDynamicState);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDynamicState->pDynamicStates), pParam[i].pDynamicState->dynamicStateCount * sizeof(VkDynamicState), pParam[i].pDynamicState->pDynamicStates);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDynamicState->pDynamicStates));
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDynamicState));
+            }
         }
     }
     return;
