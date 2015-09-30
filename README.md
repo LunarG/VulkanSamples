@@ -17,7 +17,7 @@
       release 
   - Windows dependencies include:
     - Vulkan SDK required components
-    - other - cmake
+    - other - cmake, cygwin
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
