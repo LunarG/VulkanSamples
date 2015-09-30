@@ -116,6 +116,13 @@ static inline bool loader_platform_is_path_absolute(const char *path)
         return false;
 }
 
+// returns true if the given string appears to be a relative or absolute
+// path, as opposed to a bare filename.
+static inline bool loader_platform_is_path(const char *path)
+{
+    return strchr(path, DIRECTORY_SYMBOL) != NULL;
+}
+
 static inline char *loader_platform_dirname(char *path)
 {
     return dirname(path);

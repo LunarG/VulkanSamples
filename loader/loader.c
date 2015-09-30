@@ -65,6 +65,8 @@ static bool loader_init_ext_list(
         const struct loader_instance *inst,
         struct loader_extension_list *ext_info);
 
+static int loader_platform_combine_path(char *dest, int len, ...);
+
 enum loader_debug {
     LOADER_INFO_BIT       = 0x01,
     LOADER_WARN_BIT       = 0x02,
@@ -270,6 +272,56 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
 }
 
 #endif // WIN32
+
+/**
+ * Combine path elements, separating each element with the platform-specific
+ * directory separator, and save the combined string to a destination buffer,
+ * not exceeding the given length. Path elements are given as variadic args,
+ * with a NULL element terminating the list.
+ *
+ * \returns the total length of the combined string, not including an ASCII
+ * NUL termination character. This length may exceed the available storage:
+ * in this case, the written string will be truncated to avoid a buffer
+ * overrun, and the return value will greater than or equal to the storage
+ * size. A NULL argument may be provided as the destination buffer in order
+ * to determine the required string length without actually writing a string.
+ */
+
+static int loader_platform_combine_path(char *dest, int len, ...)
+{
+    int required_len = 0;
+    va_list ap;
+    const char *component;
+
+    va_start(ap, len);
+
+    while((component = va_arg(ap, const char *))) {
+        if (required_len > 0) {
+            // This path element is not the first non-empty element; prepend
+            // a directory separator if space allows
+            if (dest && required_len + 1 < len) {
+                snprintf(dest + required_len, len - required_len, "%c",
+                         DIRECTORY_SYMBOL);
+            }
+            required_len++;
+        }
+
+        if (dest && required_len < len) {
+            strncpy(dest + required_len, component, len - required_len);
+        }
+        required_len += strlen(component);
+    }
+
+    va_end(ap);
+
+    // strncpy(3) won't add a NUL terminating byte in the event of truncation.
+    if (dest && required_len >= len) {
+        dest[len - 1] = '\0';
+    }
+
+    return required_len;
+}
+
 
 /**
  * Given string of three part form "maj.min.pat" convert to a vulkan version
@@ -1216,13 +1268,12 @@ static char *loader_get_next_path(char *path)
 }
 
 /**
- * Given a path which is absolute or relative. Expand the path if relative otherwise
- * leave the path unmodified if absolute. The path which is relative from is
- * given in rel_base and should include trailing directory seperator '/'
+ * Given a path which is absolute or relative, expand the path if relative or
+ * leave the path unmodified if absolute. The base path to prepend to relative
+ * paths is given in rel_base.
  *
  * \returns
  * A string in out_fullpath of the full absolute path
- * Side effect is that dir string maybe modified.
  */
 static void loader_expand_path(const char *path,
                                const char *rel_base,
@@ -1230,17 +1281,11 @@ static void loader_expand_path(const char *path,
                                char *out_fullpath)
 {
     if (loader_platform_is_path_absolute(path)) {
-        strncpy(out_fullpath, path, out_size);
-        out_fullpath[out_size - 1] = '\0';
+        // do not prepend a base to an absolute path
+        rel_base = "";
     }
-    else {
-        // convert relative to absolute path based on rel_base
-        size_t len = strlen(path);
-        strncpy(out_fullpath, rel_base, out_size);
-        out_fullpath[out_size - 1] = '\0';
-        assert(out_size >= strlen(out_fullpath) + len + 1);
-        strncat(out_fullpath, path, len);
-    }
+
+    loader_platform_combine_path(out_fullpath, out_size, rel_base, path, NULL);
 }
 
 /**
@@ -1250,26 +1295,29 @@ static void loader_expand_path(const char *path,
  *
  * \returns
  * A string in out_fullpath of either the full path or file.
- * Side effect is that dir string maybe modified.
  */
 static void loader_get_fullpath(const char *file,
-                                char *dir,
+                                const char *dirs,
                                 size_t out_size,
                                 char *out_fullpath)
 {
-    char *next_dir;
-    if (strchr(file,DIRECTORY_SYMBOL) == NULL) {
-        //find file exists with prepending given path
-        while (*dir) {
-            next_dir = loader_get_next_path(dir);
-            snprintf(out_fullpath, out_size, "%s%c%s",
-                     dir, DIRECTORY_SYMBOL, file);
+    if (!loader_platform_is_path(file) && *dirs) {
+        char *dirs_copy, *dir, *next_dir;
+
+        dirs_copy = loader_stack_alloc(strlen(dirs) + 1);
+        strcpy(dirs_copy, dirs);
+
+        //find if file exists after prepending paths in given list
+        for (dir = dirs_copy;
+             *dir && (next_dir = loader_get_next_path(dir));
+             dir = next_dir) {
+            loader_platform_combine_path(out_fullpath, out_size, dir, file, NULL);
             if (loader_platform_file_exists(out_fullpath)) {
                 return;
             }
-            dir = next_dir;
         }
     }
+
     snprintf(out_fullpath, out_size, "%s", file);
 }
 
@@ -1473,21 +1521,15 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
 
         char *fullpath = props->lib_name;
         char *rel_base;
-        if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
-            // a filename which is assumed in the system directory
-            char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_LAYERS_PATH) + 1);
-            strcpy(def_path, DEFAULT_VK_LAYERS_PATH);
-            loader_get_fullpath(library_path, def_path, MAX_STRING_SIZE, fullpath);
-        } else {
+        if (loader_platform_is_path(filename)) {
             // a relative or absolute path
-            char *name_copy = loader_stack_alloc(strlen(filename) + 2);
-            size_t len;
+            char *name_copy = loader_stack_alloc(strlen(filename) + 1);
             strcpy(name_copy, filename);
             rel_base = loader_platform_dirname(name_copy);
-            len = strlen(rel_base);
-            rel_base[len] = DIRECTORY_SYMBOL;
-            rel_base[len + 1] = '\0';
             loader_expand_path(library_path, rel_base, MAX_STRING_SIZE, fullpath);
+        } else {
+            // a filename which is assumed in a system directory
+            loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH, MAX_STRING_SIZE, fullpath);
         }
         props->info.specVersion = loader_make_version(abi_versions);
         props->info.implVersion = loader_make_version(implementation_version);
@@ -1841,39 +1883,22 @@ void loader_icd_scan(
                     cJSON_Delete(json);
                     continue;
                 }
-                char *fullpath;
-                size_t path_len;
-                char *rel_base;
+                char fullpath[MAX_STRING_SIZE];
                 // Print out the paths being searched if debugging is enabled
                 loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s default dir %s\n", library_path, DEFAULT_VK_DRIVERS_PATH);
-                if (strchr(library_path, DIRECTORY_SYMBOL) == NULL) {
-                    // a filename which is assumed in the system directory
-                    char *def_path = loader_stack_alloc(strlen(DEFAULT_VK_DRIVERS_PATH) + 1);
-                    strcpy(def_path, DEFAULT_VK_DRIVERS_PATH);
-                    path_len = strlen(DEFAULT_VK_DRIVERS_PATH) + strlen(library_path) + 2;
-                    fullpath = loader_stack_alloc(path_len);
-#if defined(_WIN32)
-                    strncpy(fullpath, library_path, path_len);
-                    fullpath[path_len - 1] = '\0';
-#else
-                    loader_get_fullpath(library_path, def_path, path_len, fullpath);
-#endif
-                } else {
+                if (loader_platform_is_path(library_path)) {
                     // a relative or absolute path
-                    char *name_copy = loader_stack_alloc(strlen(file_str) + 2);
-                    size_t len;
+                    char *name_copy = loader_stack_alloc(strlen(file_str) + 1);
+                    char *rel_base;
                     strcpy(name_copy, file_str);
                     rel_base = loader_platform_dirname(name_copy);
-                    len = strlen(rel_base);
-                    rel_base[len] = DIRECTORY_SYMBOL;
-                    rel_base[len + 1] = '\0';
-                    path_len = strlen(rel_base) + strlen(library_path) + 2;
-                    fullpath = loader_stack_alloc(path_len);
-                    loader_expand_path(library_path, rel_base, path_len, fullpath);
+                    loader_expand_path(library_path, rel_base, sizeof(fullpath), fullpath);
+                } else {
+                    // a filename which is assumed in a system directory
+                    loader_get_fullpath(library_path, DEFAULT_VK_DRIVERS_PATH, sizeof(fullpath), fullpath);
                 }
                 loader_scanned_icd_add(inst, icds, fullpath);
             }
-
         }
         else
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"ICD\" object in ICD JSON file %s, skipping", file_str);
