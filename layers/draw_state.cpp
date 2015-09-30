@@ -836,8 +836,11 @@ static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLa
     skipCall |= getUpdateEndIndex(device, pLayout, pUpdateStruct, &endIndex);
     if (VK_FALSE == skipCall) {
         for (i = startIndex; i <= endIndex; i++) {
-            if (pLayout->pTypes[i] != actualType)
-                return VK_TRUE;
+            if (pLayout->pTypes[i] != actualType) {
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
+                        "Descriptor update type of %s has descriptor type %s that does not match overlapping binding descriptor type of %s!",
+                        string_VkStructureType(pUpdateStruct->sType), string_VkDescriptorType(actualType), string_VkDescriptorType(pLayout->pTypes[i]));
+            }
         }
     }
     return skipCall;
@@ -923,10 +926,7 @@ static VkBool32 dsUpdate(VkDevice device, VkStructureType type, uint32_t updateC
                         "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
-                if ((skipCall = validateUpdateType(device, pLayout, pUpdate)) == VK_TRUE) {
-                    skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
-                            "Descriptor update type of %s does not match overlapping binding type!", string_VkStructureType(pUpdate->sType));
-                } else {
+                if ((skipCall = validateUpdateType(device, pLayout, pUpdate)) == VK_FALSE) {
                     // Save the update info
                     // TODO : Info message that update successful
                     // Create new update struct for this set's shadow copy
