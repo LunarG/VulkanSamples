@@ -1799,8 +1799,8 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
-    if (!strstr(msgString.c_str(),"Cannot call vkCmdBeginRenderPass() during an active RenderPass ")) {
-        FAIL() << "Error received was not 'Cannot call vkCmdBeginRenderPass() during an active RenderPass...'";
+    if (!strstr(msgString.c_str(),"It is invalid to issue this call inside an active render pass")) {
+        FAIL() << "Error received was not 'It is invalid to issue this call inside an active render pass...'";
     }
 }
 
@@ -1826,8 +1826,8 @@ TEST_F(VkLayerTest, FillBufferWithinRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
                 "Did not receive error after calling CmdFillBuffer w/i an active RenderPass.";
-    if (!strstr(msgString.c_str(),"CmdFillBuffer cmd issued within an active RenderPass")) {
-        FAIL() << "Error received was not 'CmdFillBuffer cmd issued within an active RenderPass'";
+    if (!strstr(msgString.c_str(),"It is invalid to issue this call inside an active render pass")) {
+        FAIL() << "Error received was not 'It is invalid to issue this call inside an active render pass...'";
     }
 }
 
@@ -1857,8 +1857,8 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
                 "Did not receive error after calling CmdUpdateBuffer w/i an active RenderPass.";
-    if (!strstr(msgString.c_str(),"CmdUpdateBuffer cmd issued within an active RenderPass")) {
-        FAIL() << "Error received was not 'CmdUpdateBuffer cmd issued within an active RenderPass'";
+    if (!strstr(msgString.c_str(),"It is invalid to issue this call inside an active render pass")) {
+        FAIL() << "Error received was not 'It is invalid to issue this call inside an active render pass...'";
     }
 }
 
@@ -1910,8 +1910,8 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
                 "Did not receive error after calling CmdClearColorImage w/i an active RenderPass.";
-    if (!strstr(msgString.c_str(),"CmdClearColorImage cmd issued within an active RenderPass")) {
-        FAIL() << "Error received was not 'CmdClearColorImage cmd issued within an active RenderPass'";
+    if (!strstr(msgString.c_str(),"It is invalid to issue this call inside an active render pass")) {
+        FAIL() << "Error received was not 'It is invalid to issue this call inside an active render pass...'";
     }
 }
 
@@ -1954,8 +1954,8 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
                 "Did not receive error after calling CmdClearDepthStencilImage w/i an active RenderPass.";
-    if (!strstr(msgString.c_str(),"CmdClearDepthStencilImage cmd issued within an active RenderPass")) {
-        FAIL() << "Error received was not 'CmdClearDepthStencilImage cmd issued within an active RenderPass'";
+    if (!strstr(msgString.c_str(),"It is invalid to issue this call inside an active render pass")) {
+        FAIL() << "Error received was not 'It is invalid to issue this call inside an active render pass...'";
     }
 }
 
@@ -1984,8 +1984,8 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
                 "Did not receive error after calling CmdClearColorAttachment outside of an active RenderPass.";
-    if (!strstr(msgString.c_str(),"CmdClearColorAttachment cmd issued outside of an active RenderPass")) {
-        FAIL() << "Error received was not 'CmdClearColorAttachment cmd issued outside of an active RenderPass'";
+    if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment: This call must be issued inside an active render pass")) {
+        FAIL() << "Error received was not 'vkCmdClearColorAttachment: This call must be issued inside an active render pass.'";
     }
 }
 
@@ -1995,89 +1995,6 @@ TEST_F(VkLayerTest, InvalidDynamicStateObject)
     // call vkCmdBindDynamicStateObject w/ false DS Obj
     // TODO : Simple check for bad object should be added to ObjectTracker to catch this case
     //   The DS check for this is after driver has been called to validate DS internal data struct
-}
-
-TEST_F(VkLayerTest, VtxBufferNoRenderPass)
-{
-    // Bind VBO out-of-bounds for given PSO
-    VkFlags         msgFlags;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    m_errorMonitor->ClearState();
-
-    VkDescriptorTypeCount ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ds_type_count.count = 1;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.count = 1;
-        ds_pool_ci.pTypeCount = &ds_type_count;
-
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.count = 1;
-        ds_layout_ci.pBinding = &dsl_binding;
-
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.pNext = NULL;
-        pipeline_layout_ci.descriptorSetCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
-                                                                                       // but add it to be able to run on more devices
-    VkPipelineObj pipe(m_device);
-    pipe.AddShader(&vs);
-    pipe.AddShader(&fs);
-    pipe.CreateVKPipeline(pipeline_layout, renderPass());
-
-    BeginCommandBuffer();
-    ASSERT_VK_SUCCESS(err);
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    // Should error before calling to driver so don't care about actual data
-    vkCmdBindVertexBuffers(m_cmdBuffer->GetBufferHandle(), 0, 1, NULL, NULL);
-
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
-    if (!strstr(msgString.c_str(),"Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.")) {
-        FAIL() << "Error received was not 'Incorrect call to vkCmdBindVertexBuffers() without an active RenderPass.'";
-    }
-
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
 TEST_F(VkLayerTest, IdxBufferAlignmentError)
@@ -2840,7 +2757,12 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     m_errorMonitor->ClearState();
-    BeginCommandBuffer();
+
+    // Calls CreateCommandBuffer
+    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+
+    // Avoid creating RenderPass
+    cmdBuffer.BeginCommandBuffer();
 
     VkEventCreateInfo event_info;
     VkEvent event;
@@ -2856,7 +2778,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_VK_SUCCESS(err);
 
     struct thread_data_struct data;
-    data.cmdBuffer = m_cmdBuffer->handle();
+    data.cmdBuffer = cmdBuffer.GetBufferHandle();
     data.event = event;
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);
@@ -2864,8 +2786,9 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     test_platform_thread_create(&thread, AddToCommandBuffer, (void *)&data);
     // Add many entries to command buffer from this thread at the same time.
     AddToCommandBuffer(&data);
+
     test_platform_thread_join(thread, NULL);
-    EndCommandBuffer();
+    cmdBuffer.EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err from using one VkCommandBufferObj in two threads";
