@@ -2,6 +2,7 @@
  * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1888,7 +1889,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
         if (fence_item != fenceMap.end()) {
             // Validate fences in SIGNALED state
             if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
-                skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, pFences[i].handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                skipCall = log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, pFences[i].handle, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                         "Fence %#" PRIxLEAST64 " submitted to VkResetFences in UNSIGNALED STATE", pFences[i].handle);
             }
             else {
