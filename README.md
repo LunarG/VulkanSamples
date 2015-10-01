@@ -39,7 +39,7 @@
 
 - Windows:
   ```
-  $ cmake -G "Visual Studio 12 Win64" -H. -Bbuild
+  $ cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
   ```
   Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
 ## Contributing
