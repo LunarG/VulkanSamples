@@ -67,6 +67,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
     DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CmdBuffer, should use RenderPass Ops instead
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
+    DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 

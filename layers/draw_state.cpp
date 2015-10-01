@@ -420,13 +420,13 @@ static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_
     VkBool32 skipCall = VK_FALSE;
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: Vtx Shader required");
     }
     // Either both or neither TC/TE shaders should be defined
     if (((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT) == 0) !=
          ((pPipeline->active_shaders & VK_SHADER_STAGE_TESS_EVALUATION_BIT) == 0) ) {
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: TE and TC shaders must be included or excluded as a pair");
     }
     // Compute shaders should be specified independent of Gfx shaders
@@ -434,26 +434,69 @@ static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_
         (pPipeline->active_shaders & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESS_CONTROL_BIT |
                                      VK_SHADER_STAGE_TESS_EVALUATION_BIT | VK_SHADER_STAGE_GEOMETRY_BIT |
                                      VK_SHADER_STAGE_FRAGMENT_BIT))) {
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: Do not specify Compute Shader for Gfx Pipeline");
     }
     // VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines.
     // Mismatching primitive topology and tessellation fails graphics pipeline creation.
     if (pPipeline->active_shaders & (VK_SHADER_STAGE_TESS_CONTROL_BIT | VK_SHADER_STAGE_TESS_EVALUATION_BIT) &&
         (pPipeline->iaStateCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH)) {
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH must be set as IA topology for tessellation pipelines");
     }
     if (pPipeline->iaStateCI.topology == VK_PRIMITIVE_TOPOLOGY_PATCH) {
         if (~pPipeline->active_shaders & VK_SHADER_STAGE_TESS_CONTROL_BIT) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                 "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology is only valid for tessellation pipelines");
         }
         if (!pPipeline->tessStateCI.patchControlPoints || (pPipeline->tessStateCI.patchControlPoints > 32)) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
                     "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive topology used with patchControlPoints value %u."
                     " patchControlPoints should be >0 and <=32.", pPipeline->tessStateCI.patchControlPoints);
         }
+    }
+    // viewport and scissor counts should always match
+    // NOTE : Even if these are flagged as dynamic, counts need to be set correctly for shader compiler
+    //  TODO : Verify spec agrees with this check
+    if (pPipeline->vpStateCI.scissorCount != pPipeline->vpStateCI.viewportCount) {
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Gfx Pipeline viewport count (%u) must match scissor count (%u).", pPipeline->vpStateCI.viewportCount, pPipeline->vpStateCI.scissorCount);
+    }
+    // If viewport or scissor are not dynamic, then verify that data is appropriate for count
+    VkBool32 dynViewport = VK_FALSE;
+    VkBool32 dynScissor = VK_FALSE;
+    if (pPipeline->graphicsPipelineCI.pDynamicState) {
+        for (uint32_t i=0; i<pPipeline->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
+            switch(pPipeline->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
+                case VK_DYNAMIC_STATE_VIEWPORT:
+                    dynViewport = VK_TRUE;
+                    break;
+                case VK_DYNAMIC_STATE_SCISSOR:
+                    dynScissor = VK_TRUE;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    if (!dynViewport) {
+        if (!pPipeline->graphicsPipelineCI.pViewportState) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Gfx Pipeline viewport is not set as dynamic state and pViewportState is null. Must either set viewport as dynamic, or include viewport state in PSO.");
+        } else if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+        }
+    }
+    if (!dynScissor) {
+        if (!pPipeline->graphicsPipelineCI.pViewportState) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Gfx Pipeline scissor is not set as dynamic state and pViewportState is null. Must either set scissor as dynamic, or include viewport state in PSO.");
+        } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
+            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+        }
+
     }
     return skipCall;
 }
@@ -2067,7 +2110,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_VIEWPORT_SET;
             pCB->viewports.resize(viewportCount);
-            memcpy(pCB->viewports.data(), pViewports, viewportCount);
+            memcpy(pCB->viewports.data(), pViewports, viewportCount * sizeof(VkViewport));
             loader_platform_thread_unlock_mutex(&globalLock);
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdSetViewport()");
@@ -2091,7 +2134,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->status |= CBSTATUS_SCISSOR_SET;
             pCB->scissors.resize(scissorCount);
-            memcpy(pCB->scissors.data(), pScissors, scissorCount);
+            memcpy(pCB->scissors.data(), pScissors, scissorCount * sizeof(VkRect2D));
             loader_platform_thread_unlock_mutex(&globalLock);
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdSetScissor()");

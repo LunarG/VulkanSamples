@@ -1577,7 +1577,6 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
         pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.pNext = NULL;
         pipeline_layout_ci.descriptorSetCount = 1;
         pipeline_layout_ci.pSetLayouts = &ds_layout;
 
@@ -1585,26 +1584,25 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
+    VkViewport vp = {}; // Just need dummy vp to point to
+    VkRect2D sc = {}; // dummy scissor to point to
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+        vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        vp_state_ci.scissorCount = 1;
+        vp_state_ci.pScissors = &sc;
+        vp_state_ci.viewportCount = 1;
+        vp_state_ci.pViewports = &vp;
+
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.pNext = NULL;
-        gp_ci.stageCount = 0;
-        gp_ci.pStages = NULL;
-        gp_ci.pVertexInputState = NULL;
-        gp_ci.pInputAssemblyState = NULL;
-        gp_ci.pTessellationState = NULL;
-        gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
-        gp_ci.pMultisampleState = NULL;
-        gp_ci.pDepthStencilState = NULL;
-        gp_ci.pColorBlendState = NULL;
+        gp_ci.pViewportState = &vp_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
         gp_ci.layout = pipeline_layout;
         gp_ci.renderPass = renderPass();
 
     VkPipelineCacheCreateInfo pc_ci = {};
         pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.pNext = NULL;
         pc_ci.initialSize = 0;
         pc_ci.initialData = 0;
         pc_ci.maxSize = 0;
@@ -1756,6 +1754,528 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 */
+// Set scissor and viewport counts to different numbers
+TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
+{
+    // Attempt to Create Gfx Pipeline w/o a VS
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkViewport vp = {}; // Just need dummy vp to point to
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+        vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        vp_state_ci.scissorCount = 0;
+        vp_state_ci.viewportCount = 1; // Count mismatch should cause error
+        vp_state_ci.pViewports = &vp;
+
+    VkPipelineShaderStageCreateInfo shaderStages = {};
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+
+    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages.shader = vs.handle();
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &shaderStages;
+        gp_ci.pViewportState = &vp_state_ci;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/ viewport and scissor count mismatch.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline viewport count (1) must match scissor count (0).")) {
+        FAIL() << "Error received was not 'Gfx Pipeline viewport count (1) must match scissor count (0).' but instead it was '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+// Don't set viewport in PSO and also don't set it as dynamic
+TEST_F(VkLayerTest, PSOViewportNotSetNotDynamic)
+{
+    // Attempt to Create Gfx Pipeline w/o a VS
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDynamicState sc_state = VK_DYNAMIC_STATE_SCISSOR;
+    // Set scissor as dynamic to avoid second error
+    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+        dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dyn_state_ci.dynamicStateCount = 1;
+        dyn_state_ci.pDynamicStates = &sc_state;
+
+    VkPipelineShaderStageCreateInfo shaderStages = {};
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+
+    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages.shader = vs.handle();
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &shaderStages;
+        gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state should cause validation error
+        gp_ci.pDynamicState = &dyn_state_ci;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o viewport set.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline viewport is not set as dynamic state and pViewportState is null. ")) {
+        FAIL() << "Error received was not 'Gfx Pipeline viewport is not set as dynamic state and pViewportState is null...' but instead it was '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+// Create PSO w/o static Scissor data and don't set Scissor as dynamic state
+TEST_F(VkLayerTest, PSOScissorNotSetNotDynamic)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDynamicState vp_state = VK_DYNAMIC_STATE_VIEWPORT;
+    // Set viewport as dynamic to avoid that error
+    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+        dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dyn_state_ci.dynamicStateCount = 1;
+        dyn_state_ci.pDynamicStates = &vp_state;
+
+    VkPipelineShaderStageCreateInfo shaderStages = {};
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+
+    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages.shader = vs.handle();
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &shaderStages;
+        gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state should cause validation error
+        gp_ci.pDynamicState = &dyn_state_ci;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o scissor set.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline scissor is not set as dynamic state and pViewportState is null. ")) {
+        FAIL() << "Error received was not 'Gfx Pipeline scissor is not set as dynamic state and pViewportState is null...' but instead it was '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+// Create PSO w/o non-zero viewportCount but no viewport data
+TEST_F(VkLayerTest, PSOViewportCountWithoutData)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+        vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        vp_state_ci.viewportCount = 1;
+        vp_state_ci.pViewports = NULL; // Null vp w/ count of 1 should cause error
+        vp_state_ci.scissorCount = 1;
+        vp_state_ci.pScissors = NULL; // Scissor is dynamic (below) so this won't cause error
+
+    VkDynamicState sc_state = VK_DYNAMIC_STATE_SCISSOR;
+    // Set scissor as dynamic to avoid that error
+    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+        dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dyn_state_ci.dynamicStateCount = 1;
+        dyn_state_ci.pDynamicStates = &sc_state;
+
+    VkPipelineShaderStageCreateInfo shaderStages = {};
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+
+    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages.shader = vs.handle();
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &shaderStages;
+        gp_ci.pViewportState = &vp_state_ci;
+        gp_ci.pDynamicState = &dyn_state_ci;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o scissor set.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline viewportCount is 1, but pViewports is NULL. ")) {
+        FAIL() << "Error received was not 'Gfx Pipeline viewportCount is 1, but pViewports is NULL...' but instead it was '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+// Create PSO w/o non-zero scissorCount but no scissor data
+TEST_F(VkLayerTest, PSOScissorCountWithoutData)
+{
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.descriptorSetCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineViewportStateCreateInfo vp_state_ci = {};
+        vp_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        vp_state_ci.scissorCount = 1;
+        vp_state_ci.pScissors = NULL; // Null scissor w/ count of 1 should cause error
+        vp_state_ci.viewportCount = 1;
+        vp_state_ci.pViewports = NULL; // vp is dynamic (below) so this won't cause error
+
+    VkDynamicState vp_state = VK_DYNAMIC_STATE_VIEWPORT;
+    // Set scissor as dynamic to avoid that error
+    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
+        dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dyn_state_ci.dynamicStateCount = 1;
+        dyn_state_ci.pDynamicStates = &vp_state;
+
+    VkPipelineShaderStageCreateInfo shaderStages = {};
+
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+
+    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages.shader = vs.handle();
+
+    VkGraphicsPipelineCreateInfo gp_ci = {};
+        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gp_ci.stageCount = 1;
+        gp_ci.pStages = &shaderStages;
+        gp_ci.pViewportState = &vp_state_ci;
+        gp_ci.pDynamicState = &dyn_state_ci;
+        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+        gp_ci.layout = pipeline_layout;
+        gp_ci.renderPass = renderPass();
+
+    VkPipelineCacheCreateInfo pc_ci = {};
+        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+    VkPipeline pipeline;
+    VkPipelineCache pipelineCache;
+
+    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
+    ASSERT_VK_SUCCESS(err);
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o scissor set.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline scissorCount is 1, but pScissors is NULL. ")) {
+        FAIL() << "Error received was not 'Gfx Pipeline scissorCount is 1, but pScissors is NULL...' but instead it was '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyPipelineCache(m_device->device(), pipelineCache);
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
 TEST_F(VkLayerTest, NullRenderPass)
 {
     // Bind a NULL RenderPass
