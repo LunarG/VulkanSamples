@@ -138,6 +138,7 @@ void loader_heap_free(
     const struct loader_instance   *instance,
     void                           *pMem)
 {
+    if (pMem == NULL) return;
     if (instance && instance->alloc_callbacks.pfnFree) {
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
         return;
@@ -3111,11 +3112,11 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
 
     tls_instance = NULL;
     memset(&icd_extensions, 0, sizeof(icd_extensions));
+    memset(&instance_layers, 0, sizeof(instance_layers));
     loader_platform_thread_once(&once_init, loader_initialize);
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
-        memset(&instance_layers, 0, sizeof(instance_layers));
         loader_layer_scan(NULL, &instance_layers, NULL);
         for (uint32_t i = 0; i < instance_layers.count; i++) {
             struct loader_layer_properties *props = &instance_layers.list[i];
@@ -3123,7 +3124,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
                global_ext_list = &props->instance_extension_list;
             }
         }
-        loader_destroy_layer_list(NULL, &instance_layers);
     }
     else {
         /* Scan/discover all ICD libraries */
@@ -3136,11 +3136,13 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     }
 
     if (global_ext_list == NULL) {
+	loader_destroy_layer_list(NULL, &instance_layers);
         return VK_ERROR_LAYER_NOT_PRESENT;
     }
 
     if (pProperties == NULL) {
-        *pCount = global_ext_list->count;
+	*pCount = global_ext_list->count;
+	loader_destroy_layer_list(NULL, &instance_layers);
         loader_destroy_ext_list(NULL, &icd_extensions);
         return VK_SUCCESS;
     }
@@ -3155,9 +3157,11 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     loader_destroy_ext_list(NULL, &icd_extensions);
 
     if (copy_size < global_ext_list->count) {
+	loader_destroy_layer_list(NULL, &instance_layers);
         return VK_INCOMPLETE;
     }
 
+    loader_destroy_layer_list(NULL, &instance_layers);
     return VK_SUCCESS;
 }
 
