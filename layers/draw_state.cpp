@@ -1307,7 +1307,7 @@ static VkBool32 outsideRenderPass(GLOBAL_CB_NODE *pCB, const char *apiName)
     VkBool32 outside = VK_FALSE;
     if (!pCB->activeRenderPass) {
         outside = log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                          (uint64_t)pCB->cmdBuffer, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                          (uint64_t)pCB->cmdBuffer, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                           "%s: This call must be issued inside an active render pass.", apiName);
     }
     return outside;
