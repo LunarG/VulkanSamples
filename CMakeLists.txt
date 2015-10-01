@@ -36,7 +36,7 @@ add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utils)
 if(WIN32)
-    include_directories(C:\\VulkanSDK\\0.9.0\\Include)
+    include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
 endif()
 
 add_subdirectory(utils)
