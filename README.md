@@ -9,15 +9,14 @@
 
 ## Requirements/Dependencies
   - A recent version of the LunarG Vulkan SDK must be installed on the system.
+    In addtion to the Vulkan headers and libraries, the SDK also includes the
+    glslang components necessary to build the sample progams.
   - Linux package dependencies:
     - Vulkan SDK required packages
     - other - cmake
-    - NOTE:  the Linux samples currently require a glslang build directory in
-      the samples' parent directory to build; this will be addressed in the ISV
-      release 
   - Windows dependencies include:
     - Vulkan SDK required components
-    - other - cmake
+    - other - cmake, cygwin
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
@@ -26,7 +25,7 @@
         Vulkan-version-specific files will reside in directories named by the
         version (i.e. vk0.9)
       - ext/ - external third party components outside of the Vulkan SDK and
-        samples framework (glm, glslang)
+        samples framework (glm)
       - src/ - samples source code, where sample file name is prefixed by Vulkan
         version (i.e. vk0.9-instance.cpp)
       - utils/ - source code for common utilities used by the sample programs
