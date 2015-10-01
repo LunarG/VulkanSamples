@@ -17,7 +17,7 @@
       release 
   - Windows dependencies include:
     - Vulkan SDK required components
-    - other - cmake, cygwin
+    - other - cmake
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
@@ -32,11 +32,17 @@
       - utils/ - source code for common utilities used by the sample programs
 
 ## Building the Vulkan Samples Kit
+- Linux:
   ```
   $ cmake -H. -Bbuild
   $ make -C build 
   ```
 
+- Windows:
+  ```
+  $ cmake -G "Visual Studio 12 Win64" -H. -Bbuild
+  ```
+  Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
 ## Contributing
   Refer to the README.contrib file for specific info regarding contributing to
   the Vulkan samples creation effort.
