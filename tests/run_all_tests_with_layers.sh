@@ -3,8 +3,8 @@
 # Run all the regression tests with validation layers enabled
 
 # enable layers
-export VK_INSTANCE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker
-export VK_DEVICE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker
+export VK_INSTANCE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker:Swapchain
+export VK_DEVICE_LAYERS=Threading:MemTracker:ObjectTracker:DrawState:ParamChecker:ShaderChecker:Swapchain
 
 set -e
 
