@@ -739,7 +739,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     VkFence fences[1] = {testFence.handle()};
     vkResetFences(m_device->device(), 1, fences);
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_WARN_BIT)) << "Did not receive an error from submitting fence with UNSIGNALED state to vkResetFences";
     if (!strstr(msgString.c_str(),"submitted to VkResetFences in UNSIGNALED STATE")) {
         FAIL() << "Error received was not 'VkResetFences with fence in UNSIGNALED_STATE'";
     }
