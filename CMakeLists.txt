@@ -22,14 +22,23 @@ endif()
 set (EXTDIR "${CMAKE_SOURCE_DIR}/ext")
 set (GLMINCLUDES "${EXTDIR}")
 
+# to run with source glslang libs/headers
+if(UNIX)
+    set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../source/glslang")
+endif()
+
 get_filename_component(GLMINC_PREFIX "${GLMINCLUDES}" ABSOLUTE)
 if(NOT EXISTS ${GLMINC_PREFIX})
     message(FATAL_ERROR "Necessary glm headers do not exist: " ${GLMINC_PREFIX})
 endif()
 
-get_filename_component(GLSLANG_PREFIX "../glslang" ABSOLUTE)
+get_filename_component(GLSLANG_PREFIX "${GLSLANGDIR}" ABSOLUTE)
 if(NOT EXISTS ${GLSLANG_PREFIX})
     message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
+endif()
+
+if(UNIX)
+    set (GLSLANGLIBS "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang")
 endif()
 
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
