@@ -100,6 +100,14 @@ int main(int argc, char **argv)
     res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
     assert(!res);
 
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkPipelineDynamicStateCreateInfo       dynamicState;
+    memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pNext = NULL;
+    dynamicState.pDynamicStates = dynamicStateEnables;
+    dynamicState.dynamicStateCount = 0;
+
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
@@ -150,6 +158,9 @@ int main(int argc, char **argv)
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.viewportCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    vp.scissorCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -185,7 +196,7 @@ int main(int argc, char **argv)
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;
-    pipeline.pDynamicState       = NULL;
+    pipeline.pDynamicState       = &dynamicState;
     pipeline.pViewportState      = &vp;
     pipeline.pDepthStencilState  = &ds;
     pipeline.pStages             = info.shaderStages;

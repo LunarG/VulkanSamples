@@ -138,20 +138,6 @@ int main(int argc, char **argv)
     scissor.offset.y = 0;
     vkCmdSetScissor(info.cmd, 1, &scissor);
 
-    vkCmdSetLineWidth(info.cmd, 1.0);
-    vkCmdSetDepthBias(info.cmd, 0.0f, 0.0f, 0.0f);
-
-    float blend[4];
-    blend[0] = 1.0f;
-    blend[1] = 1.0f;
-    blend[2] = 1.0f;
-    blend[3] = 1.0f;
-    vkCmdSetBlendConstants(info.cmd, blend);
-    vkCmdSetDepthBounds(info.cmd, 0.0f, 1.0f);
-    vkCmdSetStencilCompareMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilWriteMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilReference(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
-
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
 

@@ -133,27 +133,12 @@ int main(int argc, char **argv)
     viewport.originY = 0;
     vkCmdSetViewport(info.cmd, 1, &viewport);
 
-
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
     vkCmdSetScissor(info.cmd, 1, &scissor);
-
-    vkCmdSetLineWidth(info.cmd, 1.0);
-    vkCmdSetDepthBias(info.cmd, 0.0f, 0.0f, 0.0f);
-
-    float blend[4];
-    blend[0] = 1.0f;
-    blend[1] = 1.0f;
-    blend[2] = 1.0f;
-    blend[3] = 1.0f;
-    vkCmdSetBlendConstants(info.cmd, blend);
-    vkCmdSetDepthBounds(info.cmd, 0.0f, 1.0f);
-    vkCmdSetStencilCompareMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilWriteMask(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0xff);
-    vkCmdSetStencilReference(info.cmd, VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT, 0);
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
@@ -1159,6 +1144,13 @@ void init_pipeline(struct sample_info &info)
     res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
     assert(!res);
 
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkPipelineDynamicStateCreateInfo       dynamicState;
+    memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pDynamicStates = dynamicStateEnables;
+    dynamicState.dynamicStateCount = 0;
+
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
@@ -1209,6 +1201,9 @@ void init_pipeline(struct sample_info &info)
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.viewportCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    vp.scissorCount = 1;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -1245,7 +1240,7 @@ void init_pipeline(struct sample_info &info)
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;
-    pipeline.pDynamicState       = NULL;
+    pipeline.pDynamicState       = &dynamicState;
     pipeline.pViewportState      = &vp;
     pipeline.pDepthStencilState  = &ds;
     pipeline.pStages             = info.shaderStages;
