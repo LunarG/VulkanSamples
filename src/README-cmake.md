@@ -5,10 +5,11 @@ filename of the sample without the .cpp suffix.
 All sample programs are linked with the Vulkan loader and samples utility
 library.
 
-The Vulkan Samples Kit currently supports the following types of build targets:
-  - single file sample, no shaders
-  - single file sample, spirv shaders
-  - single file sample, glsl shaders (with auto-convert to spirv)
+The Vulkan Samples Kit currently supports the following types of build targets:  
+  - single file sample, no shaders  
+  - single file sample, inline glsl shaders  
+  - single file sample, external spirv shaders  
+  - single file sample, external glsl shaders (with auto-convert to spirv)  
 
 CMake functions are provided for each of the above types of build targets.
 Certain variables must be set before invoking the functions, one of which is
@@ -28,7 +29,7 @@ set (S_TARGETS instance device)
 sampleWithSingleFile()
 ```
 
-## Single File, SPIRV Shaders
+## Single File, External SPIRV Shaders
 Samples with dependencies on SPIRV shaders are built with the
 `sampleWithSPIRVShaders` function.
 
@@ -42,11 +43,11 @@ set(SAMPLE_SPIRV_SHADERS spirvshader-vert spirvshader-frag)
 sampleWithSPIRVShaders(usespirvshader)
 ```
 
-## Single File, GLSL Shaders
-Samples with dependencies on GLSL shaders that must be converted to SPIRV are
-built with the `sampleWithGLSLShaders` function.  This function will convert
-the GLSL vertex and fragment shaders to the SPIRV equivalents that are used
-in the sample program.
+## Single File, External GLSL Shaders
+Samples with dependencies on external GLSL shaders that must be converted to
+SPIRV are built with the `sampleWithGLSLShaders` function.  This function will
+convert the GLSL vertex and fragment shaders to the SPIRV equivalents that are
+used in the sample program.
 
 To add a sample with GLSL shader dependencies to the build, identify the list
 of GLSL shader file names (no suffixes) of the specific type to the
