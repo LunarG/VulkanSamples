@@ -128,11 +128,23 @@ int main(int argc, char **argv)
     cb.pNext = NULL;
     VkPipelineColorBlendAttachmentState att_state[1];
     att_state[0].channelWriteMask = 0xf;
-    att_state[0].blendEnable = VK_FALSE; /* All the other fields in att_state should be ignored if this is false */
+    att_state[0].blendEnable = VK_FALSE;
+    att_state[0].blendOpAlpha = VK_BLEND_OP_ADD;
+    att_state[0].blendOpColor = VK_BLEND_OP_ADD;
+    att_state[0].srcBlendColor = VK_BLEND_ZERO;
+    att_state[0].destBlendColor = VK_BLEND_ZERO;
+    att_state[0].srcBlendAlpha = VK_BLEND_ZERO;
+    att_state[0].destBlendAlpha = VK_BLEND_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
-    cb.logicOpEnable = VK_FALSE;         /* All logic op parameters should be ignored if this is false */
+    cb.logicOpEnable = VK_FALSE;
+    cb.logicOp = VK_LOGIC_OP_NOOP;
     cb.alphaToCoverageEnable = VK_FALSE;
+    cb.alphaToOneEnable = VK_FALSE;
+    cb.blendConst[0] = 1.0f;
+    cb.blendConst[1] = 1.0f;
+    cb.blendConst[2] = 1.0f;
+    cb.blendConst[3] = 1.0f;
 
     VkPipelineViewportStateCreateInfo vp;
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
