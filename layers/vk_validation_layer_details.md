@@ -130,7 +130,7 @@ Additional work to be done
 
 ### MemTracker Overview
 
-The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes.. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping.
+The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping.
 
 ### MemTracker Details Table
 
