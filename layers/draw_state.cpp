@@ -1151,41 +1151,46 @@ static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
         pCB->status |= CBSTATUS_STENCIL_TEST_ENABLE;
     }
     if (pPipe->dynStateCI.dynamicStateCount) {
-        // Account for any dynamic state set via this PSO
+        // Account for any dynamic state not set via this PSO
+        // First consider all state on
+        // Then unset any state that's noted as dynamic in PSO
+        // Finally OR that into CB statemask
+        CBStatusFlags psoDynStateMask = CBSTATUS_ALL;
         for (uint32_t i=0; i < pPipe->dynStateCI.dynamicStateCount; i++) {
             switch (pPipe->dynStateCI.pDynamicStates[i]) {
                 case VK_DYNAMIC_STATE_VIEWPORT:
-                    pCB->status |= CBSTATUS_VIEWPORT_SET;
+                    psoDynStateMask &= ~CBSTATUS_VIEWPORT_SET;
                     break;
                 case VK_DYNAMIC_STATE_SCISSOR:
-                    pCB->status |= CBSTATUS_SCISSOR_SET;
+                    psoDynStateMask &= ~CBSTATUS_SCISSOR_SET;
                     break;
                 case VK_DYNAMIC_STATE_LINE_WIDTH:
-                    pCB->status |= CBSTATUS_LINE_WIDTH_SET;
+                    psoDynStateMask &= ~CBSTATUS_LINE_WIDTH_SET;
                     break;
                 case VK_DYNAMIC_STATE_DEPTH_BIAS:
-                    pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
+                    psoDynStateMask &= ~CBSTATUS_DEPTH_BIAS_SET;
                     break;
                 case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
-                    pCB->status |= CBSTATUS_BLEND_SET;
+                    psoDynStateMask &= ~CBSTATUS_BLEND_SET;
                     break;
                 case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
-                    pCB->status |= CBSTATUS_DEPTH_BOUNDS_SET;
+                    psoDynStateMask &= ~CBSTATUS_DEPTH_BOUNDS_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
-                    pCB->status |= CBSTATUS_STENCIL_READ_MASK_SET;
+                    psoDynStateMask &= ~CBSTATUS_STENCIL_READ_MASK_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
-                    pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
+                    psoDynStateMask &= ~CBSTATUS_STENCIL_WRITE_MASK_SET;
                     break;
                 case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
-                    pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
+                    psoDynStateMask &= ~CBSTATUS_STENCIL_REFERENCE_SET;
                     break;
                 default:
                     // TODO : Flag error here
                     break;
             }
         }
+        pCB->status |= psoDynStateMask;
     }
 }
 // Print the last bound Gfx Pipeline

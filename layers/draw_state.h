@@ -246,6 +246,7 @@ typedef enum _CBStatusFlagBits
     CBSTATUS_STENCIL_REFERENCE_SET             = 0x00000400, // Stencil reference has been set
     CBSTATUS_INDEX_BUFFER_BOUND                = 0x00000800, // Index buffer has been set
     CBSTATUS_SCISSOR_SET                       = 0x00001000, // Scissor has been set
+    CBSTATUS_ALL                               = 0x00001FFF, // All dynamic state set
 } CBStatusFlagBits;
 
 typedef struct stencil_data {
