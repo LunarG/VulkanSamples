@@ -3019,22 +3019,13 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
     void *addr;
 
     if (instance == VK_NULL_HANDLE) {
-        struct loader_instance *ptr_instance = (struct loader_instance *) instance;
-        /* get entrypoint addresses that are global (in the loader)*/
+        /* get entrypoint addresses that are global (in the loader),
+           doesn't include any instance extensions since they may not be enabled yet*/
         addr = globalGetProcAddr(pName);
-        if (addr)
-            return addr;
-
-        /* return any extension global entrypoints */
-        addr = debug_report_instance_gpa(ptr_instance, pName);
-        if (addr) {
-            return addr;
-        }
-
-        addr = wsi_swapchain_GetInstanceProcAddr(ptr_instance, pName);
 
         return addr;
     }
+
 
     /* return any instance entrypoints that must resolve to loader code */
     addr = loader_non_passthrough_gipa(pName);
@@ -3042,7 +3033,15 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
         return addr;
     }
 
-    /* return the instance dispatch table entrypoint for extensions */
+    /* debug_report is a special case; need to return loader trampoline entrypoints
+     * unless the extension is not enabled; also need to handle debug_report
+     * utility functions */
+    struct loader_instance *ptr_instance = (struct loader_instance *) instance;
+    if (debug_report_instance_gpa(ptr_instance, pName, &addr)) {
+        return addr;
+    }
+
+    /* return the instance dispatch table entrypoint for core and extensions */
     const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
     if (disp_table == NULL)
         return NULL;

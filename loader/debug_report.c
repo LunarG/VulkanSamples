@@ -320,23 +320,34 @@ static void VKAPI BreakCallback(
 #endif
 }
 
-void *debug_report_instance_gpa(
+bool debug_report_instance_gpa(
         struct loader_instance *ptr_instance,
-        const char* name)
+        const char* name,
+        void **addr)
 {
-    if (ptr_instance == VK_NULL_HANDLE || !ptr_instance->debug_report_enabled)
-        return NULL;
+    *addr = NULL;
+    if (ptr_instance == VK_NULL_HANDLE)
+        return false;
 
-    if (!strcmp("vkDbgCreateMsgCallback", name))
-        return (void *) debug_report_DbgCreateMsgCallback;
-    else if (!strcmp("vkDbgDestroyMsgCallback", name))
-        return (void *) debug_report_DbgDestroyMsgCallback;
-    else if (!strcmp("vkDbgStringCallback", name))
-        return (void *) StringCallback;
-    else if (!strcmp("vkDbgStdioCallback", name))
-        return (void *) StdioCallback;
-    else if (!strcmp("vkDbgBreakCallback", name))
-        return (void *) BreakCallback;
-
-    return NULL;
+    if (!strcmp("vkDbgCreateMsgCallback", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgCreateMsgCallback : NULL;
+        return true;
+    }
+    if (!strcmp("vkDbgDestroyMsgCallback", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgDestroyMsgCallback : NULL;
+        return true;
+    }
+    if (!strcmp("vkDbgStringCallback", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) StringCallback : NULL;
+        return true;
+    }
+    if (!strcmp("vkDbgStdioCallback", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) StdioCallback : NULL;
+        return true;
+    }
+    if (!strcmp("vkDbgBreakCallback", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) BreakCallback : NULL;
+        return true;
+    }
+    return false;
 }

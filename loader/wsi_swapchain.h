@@ -39,9 +39,6 @@ void wsi_swapchain_create_instance(
         struct loader_instance *ptr_instance,
         const VkInstanceCreateInfo *pCreateInfo);
 
-void *wsi_swapchain_GetInstanceProcAddr(
-        struct loader_instance                  *ptr_instance,
-        const char*                             pName);
 
 VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,

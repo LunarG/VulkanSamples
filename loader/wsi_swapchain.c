@@ -109,17 +109,4 @@ VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
 }
 
 
-void *wsi_swapchain_GetInstanceProcAddr(
-        struct loader_instance *ptr_instance,
-        const char*                             pName)
-{
-    if (ptr_instance == VK_NULL_HANDLE || !ptr_instance->wsi_swapchain_enabled) {
-        return NULL;
-    }
 
-    if (!strcmp(pName, "vkGetPhysicalDeviceSurfaceSupportKHR")) {
-        return (void*) wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR;
-    }
-
-    return NULL;
-}

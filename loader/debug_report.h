@@ -98,9 +98,10 @@ void debug_report_create_instance(
         struct loader_instance *ptr_instance,
         const VkInstanceCreateInfo *pCreateInfo);
 
-void *debug_report_instance_gpa(
+bool debug_report_instance_gpa(
         struct loader_instance *ptr_instance,
-        const char* name);
+        const char* name,
+        void **addr);
 
 VkResult VKAPI loader_DbgCreateMsgCallback(
     VkInstance                          instance,
