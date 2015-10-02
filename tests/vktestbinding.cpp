@@ -373,8 +373,10 @@ void Device::init_formats()
 VkFormatProperties Device::format_properties(VkFormat format)
 {
     VkFormatProperties data;
-    if (!EXPECT(vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data) == VK_SUCCESS))
+    VkResult res = vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data);
+    if (res != VK_SUCCESS)
         memset(&data, 0, sizeof(data));
+    EXPECT(res == VK_SUCCESS || res == VK_UNSUPPORTED);
 
     return data;
 }
