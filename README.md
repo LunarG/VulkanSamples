@@ -43,7 +43,7 @@ From a PowerShell window:
   PS > cd C:\VulkanSDK\<version>\VkSamples
   PS > mkdir build
   PS > cd build
-  PS > cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
+  PS > cmake -G "Visual Studio 12 Win64" ..
   ```
   Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
 ## Contributing
