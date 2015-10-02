@@ -5,7 +5,7 @@ Vktrace is a Vulkan API tracer for graphics applications.
 
 ##Using Vktrace on Linux###
 Vktrace builds two binaries with associated Vulkan libraries: a tracer with Vulkan
-tracing library and a replayer.
+tracing library and a replayer. The tracing library is a Vulkan layer library.
 
 ###Running Vktrace tracer as standalone server on Linux###
 The Vktrace tracer program can run as a server.  Then the app/game to be traced
@@ -25,7 +25,7 @@ In a separate terminal run your app, the cube demo in this example:
 cd /home/jon/LoaderAndTools/dbuild/demos
 export VK_ICD_FILENAMES=/home/jon/LoaderAndTools/dbuild/icd/intel/intel_icd.json
 export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild/loader
-LD_PRELOAD=/home/jon/LoaderAndTools/dbuild/vktrace/libvulkan_trace.so ./cube
+VK_INSTANCE_LAYERS=Vktrace VK_DEVICE_LAYERS=Vktrace ./cube
 ```
 
 Trace file is written into "vktrace_cube<number>.vktrace".
@@ -33,14 +33,13 @@ As the app is rerun, the Vktrace tracer server will increment the output file
 number for each succesive run of the app.
 
 One can also set VKTRACE_LIB_IPADDR to a remote system IP address. Then
-the tracer inserted into an app will send the tarce packets to the remote
+the tracer inserted into an app will send the trace packets to the remote
 system rather than local system. In this case, the remote system should be
 running the trace server.
 
 ###Running Vktrace tracer and launch app/game from tracer on Linux###
 The Vktrace tracer program launches the app/game you desire and then traces it.
-To launch app/game from Vktrace tracer one must use the "-p" option. Also the
--l<number> option should be given for specifying the tracing library.
+To launch app/game from Vktrace tracer one must use the "-p" option.
 ```
 cd <vktrace build dir>
 ./vktrace -p <path to app to launch>  <more options>
@@ -58,7 +57,7 @@ The Vktrace replayer takes  a trace file  and will launch an Vulkan session base
 on trace file.
 ```
 cd <vktrace build dir>
-export LD_LIBRARY_PATH=<vktrace build dir>:<loader dir>
+export LD_LIBRARY_PATH=<path to libvulkan.so>
 ./vkreplay <options> -t trace_filename
 ```
 Example to replay trace file captured above
@@ -70,13 +69,12 @@ export LD_LIBRARY_PATH=/home/jon/LoaderAndTools/dbuild:/home/jon/LoaderAndTools/
 
 ##Using Vktrace on Windows##
 Vktrace builds two binaries with associated Vulkan libraries: a tracer with Vulkan
-tracing library and a replayer.
+tracing library and a replayer. The tracing library is a Vulkan layer library.
 
 
 ###Running Vktrace tracer and launch app/game from tracer on Windows###
 The Vktrace tracer program launches the app/game you desire and then traces it.
-To launch app/game from Vktrace tracer one must use the "-p" option. Also the
--l<number> option should be given for specifying the tracing library (zero for Vulkan).
+To launch app/game from Vktrace tracer one must use the "-p" option.
 Also, you may need to copy the Vulkan.dll library into the directory of Vktrace,
 and of the app/game (while we continue to put Windows support into place).
 ```
@@ -106,12 +104,12 @@ cd C:\\Users\developer\\Vktrace\\_out64\\Debug
 vkreplay -t vktrace_cube.vktrace
 ```
 ##Building Vktrace##
+Vktrace is built as part of top level Vulkan Cmake for project. Follow the
+build directions for the top level Vulkan project build. Vktrace binaries and
+libraries will be place in <build_dir>.
 
 ###External dependencies###
-* Python 3.4
-  - Ubuntu package: python3.4-dev
-  - For Windows, download from: https://www.python.org/downloads.
-    You must select to install the optional sub-package to add Python to the system PATH environment variable.
+cmake
 
 ###Building on Linux (make)###
 Vktrace is built as part of top level Vulkan Cmake for project. Follow the
@@ -137,15 +135,3 @@ cmake -G "Visual Studio 12 2013 Win64" ..
 ```
 // then open the solution file with Visual Studio 2013
 
-
-
-###Building on Linux (QtCreator)###
-open vktrace/CMakeLists.txt with QtCreator
-
-For Debug Builds:
-Cmake options: -DCMAKE_BUILD_TYPE=Debug -DBUILD_X64=On
-Change build directory from the suggested 'LoaderAndTools/vktrace-build/' to 'LoaderAndTools/dbuild/vktrace'
-
-For Release Builds:
-Cmake Options: -DCMAKE_BUILD_TYPE=Release -DBUILD_X64=On
-Change build directory from the suggested 'LoaderAndTools/vktrace-build/' to 'LoaderAndTools/dbuild/vktrace'
