@@ -256,7 +256,9 @@ REM // ======== Functions ======== //
    echo Creating local glslang repository %GLSLANG_DIR%)
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   git clone https://github.com/KhronosGroup/glslang.git .
+   git clone git@gitlab.khronos.org:GLSL/glslang.git .
+   git branch --track Rev32 origin/Rev32
+   git checkout Rev32
    git checkout %GLSLANG_REVISION%
    if not exist %GLSLANG_DIR%\SPIRV (
       echo glslang source download failed!
@@ -268,9 +270,8 @@ goto:eof
    echo.
    echo Updating %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   svn.exe checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
-   svn.exe update -r %GLSLANG_REVISION_R32%
-   svn.exe revert -R .
+   git checkout Rev32
+   git checkout %GLSLANG_REVISION%
 goto:eof
 
 :create_LunarGLASS
