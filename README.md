@@ -40,6 +40,10 @@
 - Windows:  
 From a PowerShell window:
   ```
+  PS > cd C:\VulkanSDK\<version>\glslang
+  PS > mkdir build
+  PS > cd build
+  PS > cmake -G "Visual Studio 12 Win64" ..
   PS > cd C:\VulkanSDK\<version>\VkSamples
   PS > mkdir build
   PS > cd build
