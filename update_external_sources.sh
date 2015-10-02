@@ -21,24 +21,19 @@ function create_glslang () {
    echo "Creating local glslang repository ($BASEDIR/glslang)."
    mkdir -p $BASEDIR/glslang
    cd $BASEDIR/glslang
-   git clone https://github.com/KhronosGroup/glslang.git .
-   git checkout $GLSLANG_REVISION
-   svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
-   svn update -r $GLSLANG_REVISION_R32
-   svn revert -R .
+   git clone git@gitlab.khronos.org:GLSL/glslang.git .
+   git branch --track Rev32 origin/Rev32
+   git checkout Rev32
+   # git checkout $GLSLANG_REVISION
 }
 
 function update_glslang () {
    echo "Updating $BASEDIR/glslang"
    cd $BASEDIR/glslang
    git fetch --all
+   git checkout Rev32
    git checkout -f .
-   git checkout $GLSLANG_REVISION
-   if [ ! -d "$BASEDIR/glslang/.svn" ]; then
-      svn checkout --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/glslang/ .
-   fi
-   svn update -r $GLSLANG_REVISION_R32
-   svn revert -R .
+   # git checkout $GLSLANG_REVISION
 }
 
 function create_LunarGLASS () {
@@ -106,7 +101,7 @@ function build_LunarGLASS () {
    make install
 }
 
-if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" ]; then
+if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
    create_glslang
 fi
 if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
