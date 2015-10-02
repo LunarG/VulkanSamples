@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     assert(!res);
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
-    VkPipelineDynamicStateCreateInfo       dynamicState;
+    VkPipelineDynamicStateCreateInfo       dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.pNext = NULL;
@@ -130,6 +130,11 @@ int main(int argc, char **argv)
     rs.frontFace = VK_FRONT_FACE_CCW;
     rs.depthClipEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
+    rs.depthBiasEnable = VK_FALSE;
+    rs.depthBias = 0;
+    rs.depthBiasClamp = 0;
+    rs.slopeScaledDepthBias = 0;
+    rs.lineWidth = 0;
 
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -154,7 +159,7 @@ int main(int argc, char **argv)
     cb.blendConst[2] = 1.0f;
     cb.blendConst[3] = 1.0f;
 
-    VkPipelineViewportStateCreateInfo vp;
+    VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
     vp.viewportCount = 1;
@@ -169,6 +174,8 @@ int main(int argc, char **argv)
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
+    ds.minDepthBounds = 0;
+    ds.maxDepthBounds = 0;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
