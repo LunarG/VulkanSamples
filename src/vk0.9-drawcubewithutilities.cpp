@@ -102,6 +102,26 @@ int main(int argc, char **argv)
     clear_values[1].depthStencil.depth     = 1.0f;
     clear_values[1].depthStencil.stencil   = 0;
 
+    VkSemaphore presentCompleteSemaphore;
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.pNext = NULL;
+    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    res = vkCreateSemaphore(info.device,
+                            &presentCompleteSemaphoreCreateInfo,
+                            &presentCompleteSemaphore);
+    assert(!res);
+
+    // Get the index of the next available swapchain image:
+    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+                                      UINT64_MAX,
+                                      presentCompleteSemaphore,
+                                      &info.current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(!res);
+
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -143,27 +163,21 @@ int main(int argc, char **argv)
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
 
-    VkSemaphore presentCompleteSemaphore;
-    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
-    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
-                            &presentCompleteSemaphore);
+    res = vkEndCommandBuffer(info.cmd);
     assert(!res);
 
-    // Get the index of the next available swapchain image:
-    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
-                                      UINT64_MAX,
-                                      presentCompleteSemaphore,
-                                      &info.current_buffer);
-    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
-    // return codes
+    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    VkFence nullFence = { VK_NULL_HANDLE };
+
+    /* Make sure buffer is ready for rendering */
+    vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(!res);
 
-    end_and_submit_command_buffer(info);
+    res = vkQueueWaitIdle(info.queue);
+    assert(!res);
 
     /* Now present the image in the window */
 
@@ -1516,22 +1530,6 @@ void init_wsi(struct sample_info &info)
         assert(formatCount >= 1);
         info.format = surfFormats[0].format;
     }
-}
-
-void end_and_submit_command_buffer(struct sample_info &info)
-{
-    VkResult U_ASSERT_ONLY res;
-
-    res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
-
-    /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
-    assert(!res);
 }
 
 void init_resources(TBuiltInResource &Resources)
