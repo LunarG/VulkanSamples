@@ -1172,6 +1172,8 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_vp_state.pNext = VK_NULL_HANDLE;
     m_vp_state.viewportCount = 1;
     m_vp_state.scissorCount = 1;
+    m_vp_state.pViewports = NULL;
+    m_vp_state.pScissors = NULL;
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE,
