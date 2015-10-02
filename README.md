@@ -13,10 +13,10 @@
     glslang components necessary to build the sample progams.
   - Linux package dependencies:
     - Vulkan SDK required packages
-    - other - cmake
+    - cmake
   - Windows dependencies include:
     - Vulkan SDK required components
-    - other - cmake, cygwin
+    - cmake
 
 ## Kit Structure
   - The Vulkan Samples Kit is a set of source and data files in a specific
@@ -37,9 +37,13 @@
   $ make -C build 
   ```
 
-- Windows:
+- Windows:  
+From a PowerShell window:
   ```
-  $ cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
+  PS > cd C:\VulkanSDK\<version>\VkSamples
+  PS > mkdir build
+  PS > cd build
+  PS > cmake -G "Visual Studio 12 Win64" -DCMAKE_BUILD_TYPE=Debug ..
   ```
   Open the VULKAN_SAMPLES.sln file in the build folder with Microsoft Visual Studio and build the solution.
 ## Contributing

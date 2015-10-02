@@ -25,6 +25,8 @@ set (GLMINCLUDES "${EXTDIR}")
 # to run with source glslang libs/headers
 if(UNIX)
     set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../source/glslang")
+else()
+    set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
 endif()
 
 get_filename_component(GLMINC_PREFIX "${GLMINCLUDES}" ABSOLUTE)
