@@ -868,6 +868,7 @@ void init_renderpass(struct sample_info &info)
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].flags = 0;
 
     attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[1].pNext = NULL;
@@ -879,6 +880,7 @@ void init_renderpass(struct sample_info &info)
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
 
     VkAttachmentReference color_reference = {};
     color_reference.attachment = 0;
@@ -1145,9 +1147,10 @@ void init_pipeline(struct sample_info &info)
     assert(!res);
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
-    VkPipelineDynamicStateCreateInfo       dynamicState;
+    VkPipelineDynamicStateCreateInfo       dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pNext = NULL;
     dynamicState.pDynamicStates = dynamicStateEnables;
     dynamicState.dynamicStateCount = 0;
 
@@ -1173,6 +1176,11 @@ void init_pipeline(struct sample_info &info)
     rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClipEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
+    rs.depthBiasEnable = VK_FALSE;
+    rs.depthBias = 0;
+    rs.depthBiasClamp = 0;
+    rs.slopeScaledDepthBias = 0;
+    rs.lineWidth = 0;
 
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1212,6 +1220,8 @@ void init_pipeline(struct sample_info &info)
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
+    ds.minDepthBounds = 0;
+    ds.maxDepthBounds = 0;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;

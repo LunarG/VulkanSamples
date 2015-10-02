@@ -65,6 +65,7 @@ int main(int argc, char **argv)
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachments[0].flags = 0;
 
     attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[1].pNext = NULL;
@@ -76,6 +77,7 @@ int main(int argc, char **argv)
     attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
 
     VkAttachmentReference color_reference = {};
     color_reference.attachment = 0;
