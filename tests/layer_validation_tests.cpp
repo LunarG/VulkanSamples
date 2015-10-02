@@ -301,11 +301,16 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     if (failMask & BsoFailDepthBias) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_DEPTH_BIAS);
     }
+    // Viewport and scissors must stay in synch or other errors will occur than the ones we want
     if (failMask & BsoFailViewport) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
+        m_viewports.clear();
+        m_scissors.clear();
     }
     if (failMask & BsoFailScissor) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
+        m_scissors.clear();
+        m_viewports.clear();
     }
     if (failMask & BsoFailBlend) {
         pipelineobj.MakeDynamic(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
@@ -369,6 +374,8 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     ds_ci.back = stencil;
 
     pipelineobj.SetDepthStencil(&ds_ci);
+    pipelineobj.SetViewport(m_viewports);
+    pipelineobj.SetScissor(m_scissors);
     descriptorSet.CreateVKDescriptorSet(cmdBuffer);
     VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     ASSERT_VK_SUCCESS(err);
@@ -1087,7 +1094,6 @@ TEST_F(VkLayerTest, ScissorStateNotBound)
         FAIL() << "Received: '" << msgString.c_str() << "' Expected: 'Dynamic scissor state not set for this command buffer'";
     }
 }
-
 
 TEST_F(VkLayerTest, BlendStateNotBound)
 {
@@ -1856,8 +1862,9 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
-// Don't set viewport in PSO and also don't set it as dynamic
-TEST_F(VkLayerTest, PSOViewportNotSetNotDynamic)
+// Don't set viewport state in PSO. This is an error b/c we always need this state
+//  for the counts even if the data is going to be set dynamically.
+TEST_F(VkLayerTest, PSOViewportStateNotSet)
 {
     // Attempt to Create Gfx Pipeline w/o a VS
     VkFlags         msgFlags;
@@ -1946,110 +1953,9 @@ TEST_F(VkLayerTest, PSOViewportNotSetNotDynamic)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o viewport set.";
-    if (!strstr(msgString.c_str(),"Gfx Pipeline viewport is not set as dynamic state and pViewportState is null. ")) {
-        FAIL() << "Error received was not 'Gfx Pipeline viewport is not set as dynamic state and pViewportState is null...' but instead it was '" << msgString.c_str() << "'";
-    }
-
-    vkDestroyPipelineCache(m_device->device(), pipelineCache);
-    vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool);
-}
-// Create PSO w/o static Scissor data and don't set Scissor as dynamic state
-TEST_F(VkLayerTest, PSOScissorNotSetNotDynamic)
-{
-    VkFlags         msgFlags;
-    std::string     msgString;
-    VkResult        err;
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
-    m_errorMonitor->ClearState();
-
-    VkDescriptorTypeCount ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ds_type_count.count = 1;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.count = 1;
-        ds_pool_ci.pTypeCount = &ds_type_count;
-
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.count = 1;
-        ds_layout_ci.pBinding = &dsl_binding;
-
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
-        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_ci.descriptorSetCount = 1;
-        pipeline_layout_ci.pSetLayouts = &ds_layout;
-
-    VkPipelineLayout pipeline_layout;
-    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDynamicState vp_state = VK_DYNAMIC_STATE_VIEWPORT;
-    // Set viewport as dynamic to avoid that error
-    VkPipelineDynamicStateCreateInfo dyn_state_ci = {};
-        dyn_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dyn_state_ci.dynamicStateCount = 1;
-        dyn_state_ci.pDynamicStates = &vp_state;
-
-    VkPipelineShaderStageCreateInfo shaderStages = {};
-
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
-
-    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
-    shaderStages.shader = vs.handle();
-
-    VkGraphicsPipelineCreateInfo gp_ci = {};
-        gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &shaderStages;
-        gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state should cause validation error
-        gp_ci.pDynamicState = &dyn_state_ci;
-        gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-        gp_ci.layout = pipeline_layout;
-        gp_ci.renderPass = renderPass();
-
-    VkPipelineCacheCreateInfo pc_ci = {};
-        pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-
-    VkPipeline pipeline;
-    VkPipelineCache pipelineCache;
-
-    err = vkCreatePipelineCache(m_device->device(), &pc_ci, &pipelineCache);
-    ASSERT_VK_SUCCESS(err);
-    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
-
-    msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o scissor set.";
-    if (!strstr(msgString.c_str(),"Gfx Pipeline scissor is not set as dynamic state and pViewportState is null. ")) {
-        FAIL() << "Error received was not 'Gfx Pipeline scissor is not set as dynamic state and pViewportState is null...' but instead it was '" << msgString.c_str() << "'";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o viewport state set.";
+    if (!strstr(msgString.c_str(),"Gfx Pipeline pViewportState is null. Even if ")) {
+        FAIL() << "Error received was not 'Gfx Pipeline pViewportState is null. Even if...' but instead it was '" << msgString.c_str() << "'";
     }
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
@@ -2060,7 +1966,8 @@ TEST_F(VkLayerTest, PSOScissorNotSetNotDynamic)
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 // Create PSO w/o non-zero viewportCount but no viewport data
-TEST_F(VkLayerTest, PSOViewportCountWithoutData)
+// Then run second test where dynamic scissor count doesn't match PSO scissor count
+TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 {
     VkFlags         msgFlags;
     std::string     msgString;
@@ -2159,6 +2066,25 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutData)
     if (!strstr(msgString.c_str(),"Gfx Pipeline viewportCount is 1, but pViewports is NULL. ")) {
         FAIL() << "Error received was not 'Gfx Pipeline viewportCount is 1, but pViewports is NULL...' but instead it was '" << msgString.c_str() << "'";
     }
+    m_errorMonitor->ClearState();
+    // Now hit second fail case where we set scissor w/ different count than PSO
+    // First need to successfully create the PSO from above by setting pViewports
+    VkViewport vp = {}; // Just need dummy vp to point to
+    vp_state_ci.pViewports = &vp;
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    VkRect2D scissors[2] = {}; // don't care about data
+    // Count of 2 doesn't match PSO count of 1
+    vkCmdSetScissor(m_cmdBuffer->GetBufferHandle(), 2, scissors);
+    Draw(1, 0, 0, 0);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after setting dynamic scissorCount different from PSO scissorCount.";
+    if (!strstr(msgString.c_str(),"Dynamic scissorCount from vkCmdSetScissor() is 2, but PSO scissorCount is 1. These counts must match.")) {
+        FAIL() << "Error received was not 'Dynamic scissorCount from vkCmdSetScissor() is 2, but PSO scissorCount is 1...' but instead it was '" << msgString.c_str() << "'";
+    }
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
@@ -2168,7 +2094,8 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutData)
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 // Create PSO w/o non-zero scissorCount but no scissor data
-TEST_F(VkLayerTest, PSOScissorCountWithoutData)
+// Then run second test where dynamic viewportCount doesn't match PSO viewportCount
+TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 {
     VkFlags         msgFlags;
     std::string     msgString;
@@ -2266,6 +2193,25 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutData)
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating Gfx Pipeline w/o scissor set.";
     if (!strstr(msgString.c_str(),"Gfx Pipeline scissorCount is 1, but pScissors is NULL. ")) {
         FAIL() << "Error received was not 'Gfx Pipeline scissorCount is 1, but pScissors is NULL...' but instead it was '" << msgString.c_str() << "'";
+    }
+    m_errorMonitor->ClearState();
+    // Now hit second fail case where we set scissor w/ different count than PSO
+    // First need to successfully create the PSO from above by setting pViewports
+    VkRect2D sc = {}; // Just need dummy vp to point to
+    vp_state_ci.pScissors = &sc;
+    err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, &pipeline);
+    ASSERT_VK_SUCCESS(err);
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    VkViewport viewports[2] = {}; // don't care about data
+    // Count of 2 doesn't match PSO count of 1
+    vkCmdSetViewport(m_cmdBuffer->GetBufferHandle(), 2, viewports);
+    Draw(1, 0, 0, 0);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after setting dynamic viewportCount different from PSO viewportCount.";
+    if (!strstr(msgString.c_str(),"Dynamic viewportCount from vkCmdSetViewport() is 2, but PSO viewportCount is 1. These counts must match.")) {
+        FAIL() << "Error received was not 'Dynamic viewportCount from vkCmdSetViewport() is 2, but PSO viewportCount is 1...' but instead it was '" << msgString.c_str() << "'";
     }
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
@@ -3156,6 +3102,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkResult        err;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
@@ -3220,6 +3167,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
     pipe.SetMSAA(&pipe_ms_state_ci);
+    pipe.SetViewport(m_viewports);
+    pipe.SetScissor(m_scissors);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
@@ -3233,7 +3182,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding Vtx Buffer w/o VBO attached to PSO.";
     if (!strstr(msgString.c_str(),"Vtx Buffer Index 1 was bound, but no vtx buffers are attached to PSO.")) {
-        FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.'";
+        FAIL() << "Error received was not 'Vtx Buffer Index 0 was bound, but no vtx buffers are attached to PSO.' but instead was '" << msgString.c_str() << "'";
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);

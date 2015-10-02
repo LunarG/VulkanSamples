@@ -358,6 +358,17 @@ static PIPELINE_NODE* getPipeline(VkPipeline pipeline)
     loader_platform_thread_unlock_mutex(&globalLock);
     return pipelineMap[pipeline.handle];
 }
+// Return VK_TRUE if for a given PSO, the given state enum is dynamic, else return VK_FALSE
+static VkBool32 isDynamic(const PIPELINE_NODE* pPipeline, const VkDynamicState state)
+{
+    if (pPipeline && pPipeline->graphicsPipelineCI.pDynamicState) {
+        for (uint32_t i=0; i<pPipeline->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
+            if (state == pPipeline->graphicsPipelineCI.pDynamicState->pDynamicStates[i])
+                return VK_TRUE;
+        }
+    }
+    return VK_FALSE;
+}
 // Validate state stored as flags at time of draw call
 static VkBool32 validate_draw_state_flags(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result;
@@ -399,6 +410,21 @@ static VkBool32 validate_draw_state(GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
                 result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                         "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipe->vtxBindingCount - 1));
             }
+        }
+    }
+    // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
+    VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
+    VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
+    if (dynViewport) {
+        if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
+            result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Dynamic viewportCount from vkCmdSetViewport() is %u, but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+        }
+    }
+    if (dynScissor) {
+        if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
+            result |= log_msg(mdd(pCB->cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                "Dynamic scissorCount from vkCmdSetScissor() is %u, but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
         }
     }
     return result;
@@ -455,48 +481,30 @@ static VkBool32 verifyPipelineCreateState(const VkDevice device, const PIPELINE_
                     " patchControlPoints should be >0 and <=32.", pPipeline->tessStateCI.patchControlPoints);
         }
     }
-    // viewport and scissor counts should always match
+    // Viewport state must be included and viewport and scissor counts should always match
     // NOTE : Even if these are flagged as dynamic, counts need to be set correctly for shader compiler
-    //  TODO : Verify spec agrees with this check
-    if (pPipeline->vpStateCI.scissorCount != pPipeline->vpStateCI.viewportCount) {
+    if (!pPipeline->graphicsPipelineCI.pViewportState) {
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+            "Gfx Pipeline pViewportState is null. Even if viewport and scissors are dynamic PSO must include viewportCount and scissorCount in pViewportState.");
+    } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount != pPipeline->graphicsPipelineCI.pViewportState->viewportCount) {
         skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
                 "Gfx Pipeline viewport count (%u) must match scissor count (%u).", pPipeline->vpStateCI.viewportCount, pPipeline->vpStateCI.scissorCount);
-    }
-    // If viewport or scissor are not dynamic, then verify that data is appropriate for count
-    VkBool32 dynViewport = VK_FALSE;
-    VkBool32 dynScissor = VK_FALSE;
-    if (pPipeline->graphicsPipelineCI.pDynamicState) {
-        for (uint32_t i=0; i<pPipeline->graphicsPipelineCI.pDynamicState->dynamicStateCount; i++) {
-            switch(pPipeline->graphicsPipelineCI.pDynamicState->pDynamicStates[i]) {
-                case VK_DYNAMIC_STATE_VIEWPORT:
-                    dynViewport = VK_TRUE;
-                    break;
-                case VK_DYNAMIC_STATE_SCISSOR:
-                    dynScissor = VK_TRUE;
-                    break;
-                default:
-                    break;
+    } else {
+        // If viewport or scissor are not dynamic, then verify that data is appropriate for count
+        VkBool32 dynViewport = isDynamic(pPipeline, VK_DYNAMIC_STATE_VIEWPORT);
+        VkBool32 dynScissor = isDynamic(pPipeline, VK_DYNAMIC_STATE_SCISSOR);
+        if (!dynViewport) {
+            if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                    "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
             }
         }
-    }
-    if (!dynViewport) {
-        if (!pPipeline->graphicsPipelineCI.pViewportState) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Gfx Pipeline viewport is not set as dynamic state and pViewportState is null. Must either set viewport as dynamic, or include viewport state in PSO.");
-        } else if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+        if (!dynScissor) {
+            if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
+                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                    "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+            }
         }
-    }
-    if (!dynScissor) {
-        if (!pPipeline->graphicsPipelineCI.pViewportState) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Gfx Pipeline scissor is not set as dynamic state and pViewportState is null. Must either set scissor as dynamic, or include viewport state in PSO.");
-        } else if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
-        }
-
     }
     return skipCall;
 }
@@ -1192,8 +1200,10 @@ static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
     if (pPipe->dsStateCI.stencilTestEnable) {
         pCB->status |= CBSTATUS_STENCIL_TEST_ENABLE;
     }
-    if (pPipe->dynStateCI.dynamicStateCount) {
-        // Account for any dynamic state not set via this PSO
+    // Account for any dynamic state not set via this PSO
+    if (!pPipe->dynStateCI.dynamicStateCount) { // All state is static
+        pCB->status = CBSTATUS_ALL;
+    } else {
         // First consider all state on
         // Then unset any state that's noted as dynamic in PSO
         // Finally OR that into CB statemask
@@ -2416,12 +2426,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t vertexCount
         if (pCB->state == CB_UPDATE_ACTIVE) {
             pCB->drawCount[DRAW]++;
             skipCall |= validate_draw_state(pCB, VK_FALSE);
-            /* TODOVV: Check that scissor and viewport counts are the same */
-            /* TODOVV: Do we need to check that viewportCount given in pipeline's
-             * VkPipelineViewportStateCreateInfo matches scissor & viewport counts
-             * given as dynamic state? Or is the count given in VkPipelineViewportStateCreateInfo
-             * simply indicate the number of viewport / scissor to use at this time?
-             */
             // TODO : Need to pass cmdBuffer as srcObj here
             skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
                     "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);

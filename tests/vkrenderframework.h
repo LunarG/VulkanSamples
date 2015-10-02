@@ -432,6 +432,8 @@ public:
 
     void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *);
     void SetMSAA(VkPipelineMultisampleStateCreateInfo *ms_state);
+    void SetViewport(vector<VkViewport> viewports);
+    void SetScissor(vector<VkRect2D> scissors);
     VkResult CreateVKPipeline(VkPipelineLayout layout, VkRenderPass render_pass);
 
 protected:

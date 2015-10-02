@@ -1172,8 +1172,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_vp_state.pNext = VK_NULL_HANDLE;
     m_vp_state.viewportCount = 1;
     m_vp_state.scissorCount = 1;
-    MakeDynamic(VK_DYNAMIC_STATE_VIEWPORT);
-    MakeDynamic(VK_DYNAMIC_STATE_SCISSOR);
 
     m_ds_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     m_ds_state.pNext = VK_NULL_HANDLE,
@@ -1230,6 +1228,26 @@ void VkPipelineObj::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo *ds_st
     m_ds_state.stencilTestEnable = ds_state->stencilTestEnable;
     m_ds_state.back = ds_state->back;
     m_ds_state.front = ds_state->front;
+}
+
+void VkPipelineObj::SetViewport(vector<VkViewport> viewports)
+{
+    m_viewports = viewports;
+    // If we explicitly set a null viewport, pass it through to create info
+    if (!m_viewports.size()) {
+        m_vp_state.viewportCount = m_viewports.size();
+        m_vp_state.pViewports = m_viewports.data();
+    }
+}
+
+void VkPipelineObj::SetScissor(vector<VkRect2D> scissors)
+{
+    m_scissors = scissors;
+    // If we explicitly set a null scissors, pass it through to create info
+    if (!m_scissors.size()) {
+        m_vp_state.scissorCount = m_scissors.size();
+        m_vp_state.pScissors = m_scissors.data();
+    }
 }
 
 void VkPipelineObj::MakeDynamic(VkDynamicState state)
