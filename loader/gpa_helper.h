@@ -345,6 +345,8 @@ static inline void *loader_non_passthrough_gipa(const char *name)
         return (void*) vkEnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetInstanceProcAddr"))
         return (void*) vkGetInstanceProcAddr;
+    if (!strcmp(name, "CreateDevice"))
+        return (void*) vkCreateDevice;
 
     return NULL;
 }
