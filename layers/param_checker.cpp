@@ -48,11 +48,10 @@
 
 struct layer_data {
     debug_report_data *report_data;
-    VkDbgMsgCallback logging_callback;
+    std::vector<VkDbgMsgCallback> logging_callback;
 
     layer_data() :
-        report_data(nullptr),
-        logging_callback(nullptr)
+        report_data(nullptr)
     {};
 };
 
@@ -87,6 +86,7 @@ debug_report_data *mdd(void* object)
 
 static void InitParamChecker(layer_data *data)
 {
+    VkDbgMsgCallback callback;
     uint32_t report_flags = getLayerOptionFlags("ParamCheckerReportFlags", 0);
 
     uint32_t debug_action = 0;
@@ -96,7 +96,13 @@ static void InitParamChecker(layer_data *data)
         FILE *log_output = NULL;
         const char* option_str = getLayerOption("ParamCheckerLogFilename");
         log_output = getLayerLogOutput(option_str, "ParamChecker");
-        layer_create_msg_callback(data->report_data, report_flags, log_callback, (void*)log_output, &data->logging_callback);
+        layer_create_msg_callback(data->report_data, report_flags, log_callback, (void *) log_output, &callback);
+        data->logging_callback.push_back(callback);
+    }
+
+    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
+        layer_create_msg_callback(data->report_data, report_flags, win32_debug_output_msg, NULL, &callback);
+        data->logging_callback.push_back(callback);
     }
 }
 
@@ -1907,10 +1913,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(
     pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *data = get_my_data_ptr(key, layer_data_map);
-    if(data->logging_callback)
-    {
-        layer_destroy_msg_callback(data->report_data, data->logging_callback);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    while (my_data->logging_callback.size() > 0) {
+        VkDbgMsgCallback callback = my_data->logging_callback.back();
+        layer_destroy_msg_callback(my_data->report_data, callback);
+        my_data->logging_callback.pop_back();
     }
 
     layer_debug_report_destroy_instance(mid(instance));
