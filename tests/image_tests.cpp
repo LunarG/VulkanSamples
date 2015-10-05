@@ -180,10 +180,14 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.samples = 1;
-    if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
+    if ((image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) &&
+        (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+    {
         imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
     }
-    else if (image_fmt.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) {
+    else if ((image_fmt.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) &&
+        (image_fmt.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+    {
         imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     }
     else {
