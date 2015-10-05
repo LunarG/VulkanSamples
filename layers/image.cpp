@@ -31,6 +31,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <memory>
+#include <vector>
 
 #include "image.h"
 #include "vk_loader_platform.h"
@@ -49,13 +50,12 @@ using namespace std;
 
 struct layer_data {
     debug_report_data *report_data;
-    VkDbgMsgCallback logging_callback;
+    std::vector<VkDbgMsgCallback> logging_callback;
     VkPhysicalDevice physicalDevice;
     unordered_map<uint64_t, unique_ptr<IMAGE_STATE>> imageMap;
 
     layer_data() :
         report_data(nullptr),
-        logging_callback(nullptr),
         physicalDevice(0)
     {};
 };
@@ -88,6 +88,7 @@ debug_report_data *mid(VkInstance object)
 
 static void InitImage(layer_data *data)
 {
+    VkDbgMsgCallback callback;
     uint32_t report_flags = getLayerOptionFlags("ImageReportFlags", 0);
 
     uint32_t debug_action = 0;
@@ -97,7 +98,13 @@ static void InitImage(layer_data *data)
         FILE *log_output = NULL;
         const char* option_str = getLayerOption("ImageLogFilename");
         log_output = getLayerLogOutput(option_str, "Image");
-        layer_create_msg_callback(data->report_data, report_flags, log_callback, (void*)log_output, &data->logging_callback);
+        layer_create_msg_callback(data->report_data, report_flags, log_callback, (void *) log_output, &callback);
+        data->logging_callback.push_back(callback);
+    }
+
+    if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
+        layer_create_msg_callback(data->report_data, report_flags, win32_debug_output_msg, NULL, &callback);
+        data->logging_callback.push_back(callback);
     }
 }
 
@@ -155,10 +162,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
     pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *data = get_my_data_ptr(key, layer_data_map);
-    if(data->logging_callback)
-    {
-        layer_destroy_msg_callback(data->report_data, data->logging_callback);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    while (my_data->logging_callback.size() > 0) {
+        VkDbgMsgCallback callback = my_data->logging_callback.back();
+        layer_destroy_msg_callback(my_data->report_data, callback);
+        my_data->logging_callback.pop_back();
     }
 
     layer_debug_report_destroy_instance(mid(instance));
