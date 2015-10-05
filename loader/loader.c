@@ -820,13 +820,18 @@ static void loader_find_layer_name_add_list(
         const struct loader_layer_list *search_list,
         struct loader_layer_list *found_list)
 {
+    bool found = false;
     for (uint32_t i = 0; i < search_list->count; i++) {
         struct loader_layer_properties *layer_prop = &search_list->list[i];
         if (0 == strcmp(layer_prop->info.layerName, name) &&
                 (layer_prop->type & type)) {
             /* Found a layer with the same name, add to found_list */
             loader_add_to_layer_list(inst, found_list, 1, layer_prop);
+            found = true;
         }
+    }
+    if (!found) {
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Warning, couldn't find layer name %s to activate", name);
     }
 }
 
