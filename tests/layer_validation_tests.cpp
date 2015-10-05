@@ -1822,18 +1822,24 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
         vp_state_ci.viewportCount = 1; // Count mismatch should cause error
         vp_state_ci.pViewports = &vp;
 
-    VkPipelineShaderStageCreateInfo shaderStages = {};
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+	                                                                                   // but add it to be able to run on more devices
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader = vs.handle();
 
-    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
-    shaderStages.shader = vs.handle();
+	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &shaderStages;
+        gp_ci.stageCount = 2;
+        gp_ci.pStages = shaderStages;
         gp_ci.pViewportState = &vp_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
         gp_ci.layout = pipeline_layout;
@@ -1924,18 +1930,24 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
         dyn_state_ci.dynamicStateCount = 1;
         dyn_state_ci.pDynamicStates = &sc_state;
 
-    VkPipelineShaderStageCreateInfo shaderStages = {};
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+	                                                                                   // but add it to be able to run on more devices
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader = vs.handle();
 
-    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
-    shaderStages.shader = vs.handle();
+	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &shaderStages;
+        gp_ci.stageCount = 2;
+        gp_ci.pStages = shaderStages;
         gp_ci.pViewportState = NULL; // Not setting VP state w/o dynamic vp state should cause validation error
         gp_ci.pDynamicState = &dyn_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
@@ -2033,18 +2045,24 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
         dyn_state_ci.dynamicStateCount = 1;
         dyn_state_ci.pDynamicStates = &sc_state;
 
-    VkPipelineShaderStageCreateInfo shaderStages = {};
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+	                                                                                   // but add it to be able to run on more devices
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader = vs.handle();
 
-    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
-    shaderStages.shader = vs.handle();
+	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &shaderStages;
+        gp_ci.stageCount = 2;
+        gp_ci.pStages = shaderStages;
         gp_ci.pViewportState = &vp_state_ci;
         gp_ci.pDynamicState = &dyn_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
@@ -2161,18 +2179,24 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
         dyn_state_ci.dynamicStateCount = 1;
         dyn_state_ci.pDynamicStates = &vp_state;
 
-    VkPipelineShaderStageCreateInfo shaderStages = {};
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+	                                                                                   // but add it to be able to run on more devices
+    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].shader = vs.handle();
 
-    shaderStages.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages.stage = VK_SHADER_STAGE_VERTEX;
-    shaderStages.shader = vs.handle();
+	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        gp_ci.stageCount = 1;
-        gp_ci.pStages = &shaderStages;
+        gp_ci.stageCount = 2;
+        gp_ci.pStages = shaderStages;
         gp_ci.pViewportState = &vp_state_ci;
         gp_ci.pDynamicState = &dyn_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
