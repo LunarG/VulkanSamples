@@ -414,10 +414,256 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
     }
+
+    // TODO: Image aspect mask must be only VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_DEPTH_BIT or VK_IMAGE_ASPECT_STENCIL_BIT
+    //       if the format is a color, depth-only or stencil-only format respectively. If using a depth/stencil format,
+    //       aspectMask must include at least one of VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT, and may include both.
+    //       Add after image/buffer state tracking is implemented.
+
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
+    return result;
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+    VkCmdBuffer                    cmdBuffer,
+    VkImage                        image,
+    VkImageLayout                  imageLayout,
+    const VkClearColorValue       *pColor,
+    uint32_t                       rangeCount,
+    const VkImageSubresourceRange *pRanges)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // For each range, image aspect must be color only
+    for (uint32_t i = 0; i < rangeCount; i++) {
+        if (pRanges[i].aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdClearColorImage aspectMasks for all subresource ranges must be set to VK_IMAGE_ASPECT_COLOR_BIT";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout,
+                                                                                  pColor, rangeCount, pRanges);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+    VkCmdBuffer                     cmdBuffer,
+    VkImage                         image,
+    VkImageLayout                   imageLayout,
+    const VkClearDepthStencilValue *pDepthStencil,
+    uint32_t                        rangeCount,
+    const VkImageSubresourceRange  *pRanges)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // For each range, Image aspect must be depth or stencil or both
+    for (uint32_t i = 0; i < rangeCount; i++) {
+        if (((pRanges[i].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)   != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+            ((pRanges[i].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT))
+        {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdClearDepthStencilImage aspectMasks for all subresource ranges must be "
+                               "set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer,
+            image, imageLayout, pDepthStencil, rangeCount, pRanges);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                     cmdBuffer,
+    VkImageAspectFlags              imageAspectMask,
+    VkImageLayout                   imageLayout,
+    const VkClearDepthStencilValue *pDepthStencil,
+    uint32_t                        rectCount,
+    const VkRect3D                 *pRects)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // Image aspect must be depth or stencil or both
+    if (((imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)   != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+        ((imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT))
+    {
+        layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        char const str[] = "vkCmdClearDepthStencilAttachment aspectMask must be set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
+        skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                            (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer,
+            imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
+    VkCmdBuffer        cmdBuffer,
+    VkImage            srcImage,
+    VkImageLayout      srcImageLayout,
+    VkImage            destImage,
+    VkImageLayout      destImageLayout,
+    uint32_t           regionCount,
+    const VkImageCopy *pRegions)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // For each region, src aspect mask must match dest aspect mask
+    // For each region, color aspects cannot be mixed with depth/stencil aspects
+    for (uint32_t i = 0; i < regionCount; i++) {
+        if (pRegions[i].srcSubresource.aspect != pRegions[i].destSubresource.aspect) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyImage: Src and dest aspectMasks for each region must match";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+        if ((pRegions[i].srcSubresource.aspect & VK_IMAGE_ASPECT_COLOR) &&
+            (pRegions[i].srcSubresource.aspect & (VK_IMAGE_ASPECT_DEPTH | VK_IMAGE_ASPECT_STENCIL))) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyImage aspectMask cannot specify both COLOR and DEPTH/STENCIL aspects";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage,
+            srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+    VkCmdBuffer              cmdBuffer,
+    VkImage                  srcImage,
+    VkImageLayout            srcImageLayout,
+    VkBuffer                 destBuffer,
+    uint32_t                 regionCount,
+    const VkBufferImageCopy *pRegions)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // Image aspect must be ONE OF color, depth, stencil
+    for (uint32_t i = 0; i < regionCount; i++) {
+        VkImageAspect aspect = pRegions[i].imageSubresource.aspect;
+        if ((aspect != VK_IMAGE_ASPECT_COLOR) &&
+            (aspect != VK_IMAGE_ASPECT_DEPTH) &&
+            (aspect != VK_IMAGE_ASPECT_STENCIL)) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer,
+            srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+    }
+}
+
+
+VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
+    VkCmdBuffer              cmdBuffer,
+    VkBuffer                 srcBuffer,
+    VkImage                  destImage,
+    VkImageLayout            destImageLayout,
+    uint32_t                 regionCount,
+    const VkBufferImageCopy *pRegions)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // Image aspect must be ONE OF color, depth, stencil
+    for (uint32_t i = 0; i < regionCount; i++) {
+        VkImageAspect aspect = pRegions[i].imageSubresource.aspect;
+        if ((aspect != VK_IMAGE_ASPECT_COLOR) &&
+            (aspect != VK_IMAGE_ASPECT_DEPTH) &&
+            (aspect != VK_IMAGE_ASPECT_STENCIL)) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer,
+            srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+    }
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
+    VkCmdBuffer        cmdBuffer,
+    VkImage            srcImage,
+    VkImageLayout      srcImageLayout,
+    VkImage            destImage,
+    VkImageLayout      destImageLayout,
+    uint32_t           regionCount,
+    const VkImageBlit *pRegions,
+    VkTexFilter        filter)
+{
+    // TODO: From the spec -- these validation items will require the image layer to maintain image/buffer state.
+    //       If one of srcImage and destImage images has signed integer format, the other one must also have be signed integer format.
+    //       If one of srcImage and destImage images has unsigned integer format, the other one must also have be an unsigned integer format.
+    //       If the format of srcImage is a depth, stencil, depth stencil or integer-based format then filter must be VK_TEX_FILTER_NEAREST.
+    //       If one of srcImage and destImage images has a format of depth, stencil or depth stencil, the other one must have exactly the same format.
+    //           Additionally the allowed aspect bits in srcSubresource and destSubresource are only VK_IMAGE_ASPECT_DEPTH_BIT and
+    //           VK_IMAGE_ASPECT_STENCIL_BIT and the given aspect must exist in the format of both srcImage and destImage images.
+
+    get_dispatch_table(image_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage,
+        srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+}
+
+VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
+    VkCmdBuffer           cmdBuffer,
+    VkImage               srcImage,
+    VkImageLayout         srcImageLayout,
+    VkImage               destImage,
+    VkImageLayout         destImageLayout,
+    uint32_t              regionCount,
+    const VkImageResolve *pRegions)
+{
+    VkBool32 skipCall = VK_FALSE;
+
+    // For each region, src and dest image aspect must be color only
+    for (uint32_t i = 0; i < regionCount; i++) {
+        if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR) ||
+            (pRegions[i].destSubresource.aspect != VK_IMAGE_ASPECT_COLOR)) {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage,
+            srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    }
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
+    VkDevice                  device,
+    VkImage                   image,
+    const VkImageSubresource *pSubresource,
+    VkSubresourceLayout      *pLayout)
+{
+    VkResult result = get_dispatch_table(image_device_table_map, device)->GetImageSubresourceLayout(device,
+         image, pSubresource, pLayout);
+
+    // TODO: After state tracking for images/buffers is implemented, validate that returned aspects match
+    //       the created formats -- color for color formats, depth|stencil for ds formats
+
     return result;
 }
 
@@ -443,7 +689,24 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "vkCreateRenderPass"))
         return (PFN_vkVoidFunction) vkCreateRenderPass;
-
+    if (!strcmp(funcName, "vkCmdClearColorImage"))
+        return (PFN_vkVoidFunction) vkCmdClearColorImage;
+    if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
+        return (PFN_vkVoidFunction) vkCmdClearDepthStencilImage;
+    if (!strcmp(funcName, "vkCmdClearDepthStencilAttachment"))
+        return (PFN_vkVoidFunction) vkCmdClearDepthStencilAttachment;
+    if (!strcmp(funcName, "vkCmdCopyImage"))
+        return (PFN_vkVoidFunction) vkCmdCopyImage;
+    if (!strcmp(funcName, "vkCmdCopyImageToBuffer"))
+        return (PFN_vkVoidFunction) vkCmdCopyImageToBuffer;
+    if (!strcmp(funcName, "vkCmdCopyBufferToImage"))
+        return (PFN_vkVoidFunction) vkCmdCopyBufferToImage;
+    if (!strcmp(funcName, "vkCmdBlitImage"))
+        return (PFN_vkVoidFunction) vkCmdBlitImage;
+    if (!strcmp(funcName, "vkCmdResolveImage"))
+        return (PFN_vkVoidFunction) vkCmdResolveImage;
+    if (!strcmp(funcName, "vkGetImageSubresourceLayout"))
+        return (PFN_vkVoidFunction) vkGetImageSubresourceLayout;
     {
         if (get_dispatch_table(image_device_table_map, device)->GetDeviceProcAddr == NULL)
             return NULL;

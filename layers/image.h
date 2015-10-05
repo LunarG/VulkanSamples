@@ -34,6 +34,8 @@ typedef enum _IMAGE_ERROR
     IMAGE_FORMAT_UNSUPPORTED,               // Request to create Image or RenderPass with a format that is not supported
     IMAGE_RENDERPASS_INVALID_ATTACHMENT,    // Invalid image layouts and/or load/storeOps for an attachment when creating RenderPass
     IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, // If no depth attachment for a RenderPass, verify that subpass DS attachment is set to UNUSED
+    IMAGE_INVALID_IMAGE_ASPECT,             // Image aspect mask bits are invalid for this API call
+    IMAGE_MISMATCHED_IMAGE_ASPECT,          // Image aspect masks for source and dest images do not match
     IMAGE_VIEW_CREATE_ERROR,                // Error occurred trying to create Image View
 } IMAGE_ERROR;
 
