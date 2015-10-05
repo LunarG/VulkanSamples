@@ -299,4 +299,29 @@ static inline VkBool32 VKAPI log_callback(
 
     return false;
 }
+
+static inline VkBool32 VKAPI win32_debug_output_msg(
+    VkFlags                             msgFlags,
+    VkDbgObjectType                     objType,
+    uint64_t                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    void*                               pUserData)
+{
+#ifdef WIN32
+    char msg_flags[30];
+    char buf[2048];
+
+    print_msg_flags(msgFlags, msg_flags);
+    _snprintf(buf, sizeof(buf)-1, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s\n",
+             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
+
+    OutputDebugString(buf);
+#endif
+
+    return false;
+}
+
 #endif // LAYER_LOGGING_H

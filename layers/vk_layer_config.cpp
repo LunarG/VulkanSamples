@@ -59,6 +59,10 @@ static VkLayerDbgAction stringToDbgAction(const char *_enum)
         return VK_DBG_LAYER_ACTION_IGNORE;
     else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_LOG_MSG"))
         return VK_DBG_LAYER_ACTION_LOG_MSG;
+#ifdef WIN32
+    else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_DEBUG_OUTPUT"))
+        return VK_DBG_LAYER_ACTION_DEBUG_OUTPUT;
+#endif
     else if (!strcmp(_enum, "VK_DBG_LAYER_ACTION_BREAK"))
         return VK_DBG_LAYER_ACTION_BREAK;
     return (VkLayerDbgAction) 0;
