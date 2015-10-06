@@ -4343,7 +4343,8 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pColorBlendState->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
+    if(pCreateInfos->pColorBlendState->logicOpEnable == VK_TRUE &&
+        pCreateInfos->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
