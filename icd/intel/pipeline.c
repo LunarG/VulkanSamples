@@ -1114,6 +1114,8 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
         pipeline->state.stencil.front.stencil_reference = info->db.front.stencilReference;
         pipeline->state.stencil.back.stencil_reference = info->db.back.stencilReference;
     }
+
+    pipeline->state.use_pipeline_dynamic_state = info->use_pipeline_dynamic_state;
 }
 
 
