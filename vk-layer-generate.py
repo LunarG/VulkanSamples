@@ -131,8 +131,8 @@ class Subcommand(object):
             return ("%lu", "%s.handle" % name)
         if "size" in vk_type:
             if '*' in vk_type:
-                return ("%zu", "*%s" % name)
-            return ("%zu", name)
+                return ("%lu", "(unsigned long)*%s" % name)
+            return ("%lu", "(unsigned long)%s" % name)
         if "float" in vk_type:
             if '[' in vk_type: # handle array, current hard-coded to 4 (TODO: Make this dynamic)
                 if cpp:
