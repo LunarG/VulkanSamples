@@ -179,8 +179,12 @@ class Subcommand(object):
             r_body.append('    }')
             r_body.append('    return result;')
         else:
-            # Old version of callbacks for compatibility
-            r_body.append('    return layer_create_msg_callback(instance, instance_dispatch_table(instance), msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('    VkResult result = instance_dispatch_table(instance)->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('    if (VK_SUCCESS == result) {')
+            r_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
+            r_body.append('        result = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('    }')
+            r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -197,8 +201,10 @@ class Subcommand(object):
             r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback);')
             r_body.append('    return result;')
         else:
-            # Old version of callbacks for compatibility
-            r_body.append('    return layer_destroy_msg_callback(instance, instance_dispatch_table(instance), msgCallback);')
+            r_body.append('    VkResult result = instance_dispatch_table(instance)->DbgDestroyMsgCallback(instance, msgCallback);')
+            r_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
+            r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback);')
+            r_body.append('    return result;')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -427,16 +433,25 @@ class Subcommand(object):
                              "}\n" % (self.layer_name, self.layer_name))
             return "\n".join(func_body)
         else:
-#
-# TODO::  Old-style GPA Functions -- no local storage, no new logging mechanism.  Left for compatibility.
-#
             func_body.append('%s' % self.lineinfo.get())
             func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
-                             "    }\n"
+                             "    }\n")
+            if self.layer_name == 'Generic':
+                func_body.append("\n"
+                             "    /* loader uses this to force layer initialization; device object is wrapped */\n"
+                             "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
+                             "        initDeviceTable((const VkBaseLayerObject *) device);\n"
+                             "        return (PFN_vkVoidFunction) vkGetDeviceProcAddr;\n"
+                             "    }\n\n"
+                             "    addr = layer_intercept_proc(funcName);\n"
+                             "    if (addr)\n"
+                             "        return addr;")
+            else:
+                func_body.append("\n"
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
                              "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
@@ -473,7 +488,19 @@ class Subcommand(object):
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
-                             "    }\n"
+                             "    }\n")
+            if self.layer_name == 'Generic':
+                func_body.append("\n"
+                             "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
+                             "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
+                             "        initInstanceTable((const VkBaseLayerObject *) instance);\n"
+                             "        return (PFN_vkVoidFunction) vkGetInstanceProcAddr;\n"
+                             "    }\n\n"
+                             "    addr = layer_intercept_instance_proc(funcName);\n"
+                             "    if (addr)\n"
+                             "        return addr;")
+            else:
+                func_body.append(
                              "    loader_platform_thread_once(&initOnce, init%s);\n\n"
                              "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
                              "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
@@ -489,14 +516,21 @@ class Subcommand(object):
                 extra_space = ""
                 for (ext_enable, ext_list) in instance_extensions:
                     if 0 != len(ext_enable):
-                        func_body.append('    if (instanceExtMap.size() != 0 && instanceExtMap[pTable].%s)' % ext_enable)
-                        func_body.append('    {')
-                        extra_space = "    "
-                    for ext_name in ext_list:
-                        func_body.append('    %sif (!strcmp("%s", funcName))\n'
+                        if ext_enable == 'msg_callback_get_proc_addr':
+                            func_body.append("    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);\n"
+                                     "    addr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);\n"
+                                     "    if (addr) {\n"
+                                     "        return addr;\n"
+                                     "    }\n")
+                        else:
+                            func_body.append('    if (instanceExtMap.size() != 0 && instanceExtMap[pTable].%s)' % ext_enable)
+                            func_body.append('    {')
+                            extra_space = "    "
+                            for ext_name in ext_list:
+                                func_body.append('    %sif (!strcmp("%s", funcName))\n'
                                          '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
-                    if 0 != len(ext_enable):
-                        func_body.append('    }\n')
+                            if 0 != len(ext_enable):
+                                func_body.append('    }\n')
 
             func_body.append("    if (pTable->GetInstanceProcAddr == NULL)\n"
                              "        return NULL;\n"
@@ -508,24 +542,25 @@ class Subcommand(object):
     def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static void init%s(void)\n'
+        func_body.append('static void init%s(layer_data *my_data)\n'
                          '{\n' % self.layer_name)
         if init_opts:
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append('    const char *strOpt;')
+            func_body.append('    uint32_t report_flags = 0;')
+            func_body.append('    uint32_t debug_action = 0;')
+            func_body.append('    FILE *log_output = NULL;')
+            func_body.append('    const char *option_str;\n')
             func_body.append('    // initialize %s options' % self.layer_name)
-            func_body.append('    getLayerOptionEnum("%sReportLevel", (uint32_t *) &g_reportFlags);' % self.layer_name)
-            func_body.append('    g_actionIsDefault = getLayerOptionEnum("%sDebugAction", (uint32_t *) &g_debugAction);' % self.layer_name)
+            func_body.append('    report_flags = getLayerOptionFlags("%sReportFlags", 0);' % self.layer_name)
+            func_body.append('    getLayerOptionEnum("%sDebugAction", (uint32_t *) &debug_action);' % self.layer_name)
             func_body.append('')
-            func_body.append('    if (g_debugAction & VK_DBG_LAYER_ACTION_LOG_MSG)')
+            func_body.append('    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)')
             func_body.append('    {')
-            func_body.append('        strOpt = getLayerOption("%sLogFilename");' % self.layer_name)
-            func_body.append('        if (strOpt)')
-            func_body.append('        {')
-            func_body.append('            g_logFile = fopen(strOpt, "w");')
-            func_body.append('        }')
-            func_body.append('        if (g_logFile == NULL)')
-            func_body.append('            g_logFile = stdout;')
+            func_body.append('        option_str = getLayerOption("%sLogFilename");' % self.layer_name)
+            func_body.append('        log_output = getLayerLogOutput(option_str,"%s");' % self.layer_name)
+            func_body.append('        layer_create_msg_callback(my_data->report_data, report_flags,')
+            func_body.append('                                  log_callback, (void *) log_output,')
+            func_body.append('                                  &my_data->logging_callback);')
             func_body.append('    }')
             func_body.append('')
         if lockname is not None:
@@ -595,11 +630,8 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include <unordered_map>')
         gen_header.append('#include "vk_loader_platform.h"')
         gen_header.append('#include "vk_layer.h"')
-        gen_header.append('//The following is #included again to catch certain OS-specific functions being used:')
-        gen_header.append('')
-        gen_header.append('#include "vk_loader_platform.h"')
         gen_header.append('#include "vk_layer_config.h"')
-        gen_header.append('#include "vk_layer_msg.h"')
+        gen_header.append('#include "vk_layer_logging.h"')
         gen_header.append('#include "vk_layer_table.h"')
         gen_header.append('#include "vk_layer_extension_utils.h"')
         gen_header.append('')
@@ -608,7 +640,11 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('%s' % self.lineinfo.get())
         gen_header.append('#define LAYER_EXT_ARRAY_SIZE 1')
         gen_header.append('#define LAYER_DEV_EXT_ARRAY_SIZE 1')
-        gen_header.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        gen_header.append('//static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        gen_header.append('static std::unordered_map<void *, layer_data *> layer_data_map;\n')
+        gen_header.append('template layer_data *get_my_data_ptr<layer_data>(')
+        gen_header.append('        void *data_key,')
+        gen_header.append('        std::unordered_map<void *, layer_data *> &data_map);\n')
         gen_header.append('')
         return "\n".join(gen_header)
 
@@ -632,16 +668,17 @@ class GenericLayerSubcommand(Subcommand):
             funcs.append('%s%s\n'
                      '{\n'
                      '    char str[1024];\n'
-                     '    sprintf(str, "At start of layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT,VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "GENERIC", (char *) str);\n'
+                     '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
+                     '    sprintf(str, "At start of Generic layered %s\\n");\n'
+                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,'
+                     '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
-                     '        enable_debug_report(pCreateInfo->extensionCount, pCreateInfo->ppEnabledExtensionNames);\n'
+                     '        my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
-                     '    sprintf(str, "Completed layered %s\\n");\n'
-                     '    layerCbMsg(VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "GENERIC", (char *) str);\n'
-                     '    fflush(stdout);\n'
+                     '    sprintf(str, "Completed Generic layered %s\\n");\n'
+                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", (char *) str);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
@@ -661,6 +698,13 @@ class GenericLayerSubcommand(Subcommand):
                          '    dispatch_key key = get_dispatch_key(instance);\n'
                          '    VkLayerInstanceDispatchTable *pDisp  =  instance_dispatch_table(instance);\n'
                          '    pDisp->DestroyInstance(instance);\n'
+                         '    // Clean up logging callback, if any\n'
+                         '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);\n'
+                         '    if (my_data->logging_callback) {\n'
+                         '        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);\n'
+                         '    }\n\n'
+                         '    layer_debug_report_destroy_instance(my_data->report_data);\n'
+                         '    layer_data_map.erase(key);\n'
                          '    instanceExtMap.erase(pDisp);\n'
                          '    destroy_instance_dispatch_table(key);\n'
                          '}\n' % (qual, decl))
@@ -669,12 +713,22 @@ class GenericLayerSubcommand(Subcommand):
             # CreateInstance needs to use the second parm instead of the first to set the correct dispatch table
             funcs.append('%s%s\n'
                          '{\n'
+                         '    char str[1024];\n'
                          '    %sinstance_dispatch_table(*pInstance)->%s;\n'
                          '    if (result == VK_SUCCESS) {\n'
                          '        createInstanceRegisterExtensions(pCreateInfo, *pInstance);\n'
+                         '        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'
+                         '        my_data->report_data = debug_report_create_instance(\n'
+                         '                                   instance_dispatch_table(*pInstance),\n'
+                         '                                   *pInstance,\n'
+                         '                                   pCreateInfo->extensionCount,\n'
+                         '                                   pCreateInfo->ppEnabledExtensionNames);\n'
+                         '        initGeneric(my_data);\n'
+                         '        sprintf(str, "Completed Generic layered %s\\n");\n'
+                         '        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", (char *) str);\n'
                          '    }\n'
                          '    return result;\n'
-                         '}\n' % (qual, decl, ret_val, proto.c_call()))
+                         '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
         else:
             funcs.append('%s' % self.lineinfo.get())
             dispatch_param = proto.params[0].name
@@ -693,7 +747,8 @@ class GenericLayerSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "Generic"
-        instance_extensions=[('wsi_enabled',
+        instance_extensions=[('msg_callback_get_proc_addr', []),
+                     ('wsi_enabled',
                      ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
         extensions=[('wsi_enabled', 
                      ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',

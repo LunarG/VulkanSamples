@@ -33,6 +33,17 @@
  * This file contains static functions for the generated layer Generic
  */
 
+// The following is for logging error messages:
+struct layer_data {
+    debug_report_data *report_data;
+    VkDbgMsgCallback logging_callback;
+
+    layer_data() :
+        report_data(nullptr),
+        logging_callback(nullptr)
+    {};
+};
+
 static const VkLayerProperties globalLayerProps[] = {
     {
         "Generic",
