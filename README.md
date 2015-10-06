@@ -38,17 +38,8 @@
   ```
 
 - Windows:  
-From a PowerShell window, first build glslang:
+From a PowerShell window:
   ```
-  PS > cd C:\VulkanSDK\<version>\glslang
-  PS > mkdir build
-  PS > cd build
-  PS > cmake -G "Visual Studio 12 Win64" ..
-  ```
-  Open the glslang.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.  
-  
-  Next build the Vulkan Samples:
-  ``` 
   PS > cd C:\VulkanSDK\<version>\VkSamples
   PS > mkdir build
   PS > cd build

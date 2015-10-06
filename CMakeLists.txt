@@ -41,6 +41,8 @@ endif()
 
 if(UNIX)
     set (GLSLANGLIBS "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang")
+else()
+    set (GLSLANGLIBS "${CMAKE_SOURCE_DIR}/../Bin")
 endif()
 
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
