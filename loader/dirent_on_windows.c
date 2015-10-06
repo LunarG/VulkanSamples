@@ -83,8 +83,8 @@ int closedir(DIR *dir)
             result = _findclose(dir->handle);
         }
 
-        free(dir->name);
-        free(dir);
+        loader_tls_heap_free(dir->name);
+        loader_tls_heap_free(dir);
     }
 
     if(result == -1) /* map all errors to EBADF */
