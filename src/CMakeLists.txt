@@ -87,7 +87,7 @@ if(WIN32)
         "${PROJECT_SOURCE_DIR}\\..\\Bin\\vulkan-0.lib"
         )
     set (GLSLANG_VALIDATOR
-        "${PROJECT_SOURCE_DIR}\\..\\glslang\\build\\StandAlone\\Release\\glslangValidator.exe"
+        "${PROJECT_SOURCE_DIR}\\..\\Bin\\glslangValidator.exe"
         )
     set (MOVE_CMD "move")
 else()
@@ -152,17 +152,17 @@ add_library(SPIRV       STATIC IMPORTED)
 # On Windows, we must pair Debug and Release appropriately
 if (WIN32)
    set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/Release/glslang.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/Debug/glslang.lib")
+                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/glslang.lib"
+                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/glslangD.lib")
    set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Release/OGLCompiler.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/OGLCompilersDLL/Debug/OGLCompiler.lib")
+                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OGLCompiler.lib"
+                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OGLCompilerD.lib")
    set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Release/OSDependent.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/glslang/OSDependent/Windows/Debug/OSDependent.lib")
+                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OSDependent.lib"
+                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OSDependentD.lib")
    set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_PREFIX}/build/SPIRV/Release/SPIRV.lib"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_PREFIX}/build/SPIRV/Debug/SPIRV.lib")
+                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/SPIRV.lib"
+                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/SPIRVD.lib")
 else ()
    set_target_properties(glslang PROPERTIES
                          IMPORTED_LOCATION       "${GLSLANGLIBS}/libglslang.a")
