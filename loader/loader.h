@@ -394,12 +394,6 @@ void* loader_heap_alloc(
         size_t                       size,
         VkSystemAllocType            allocType);
 
-void* loader_aligned_heap_alloc(
-        const struct loader_instance *instance,
-        size_t                       size,
-        size_t                       alignment,
-        VkSystemAllocType            allocType);
-
 void loader_heap_free(
         const struct loader_instance *instance,
         void                         *pMem);

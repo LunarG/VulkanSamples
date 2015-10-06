@@ -118,22 +118,6 @@ void* loader_heap_alloc(
     return malloc(size);
 }
 
-void* loader_aligned_heap_alloc(
-    const struct loader_instance *instance,
-    size_t                        size,
-    size_t                        alignment,
-    VkSystemAllocType             alloc_type)
-{
-    if (instance && instance->alloc_callbacks.pfnAlloc) {
-        return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, alignment, alloc_type);
-    }
-#if defined(_WIN32)
-    return _aligned_malloc(alignment, size);
-#else
-    return aligned_alloc(alignment, size);
-#endif
-}
-
 void loader_heap_free(
     const struct loader_instance   *instance,
     void                           *pMem)

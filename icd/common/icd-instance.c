@@ -58,7 +58,11 @@ static void * VKAPI default_alloc(void *user_data, size_t size,
 
 static void VKAPI default_free(void *user_data, void *ptr)
 {
+#if defined(_WIN32)
+    _aligned_free(ptr);
+#else
     free(ptr);
+#endif
 }
 
 struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
