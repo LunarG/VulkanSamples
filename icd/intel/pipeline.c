@@ -1081,6 +1081,7 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
         memcpy(pipeline->state.viewport.viewports, info->vp.pViewports, info->vp.viewportCount * sizeof(VkViewport));
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
+        pipeline->state.viewport.scissor_count = info->vp.scissorCount;
         memcpy(pipeline->state.viewport.scissors, info->vp.pScissors, info->vp.scissorCount * sizeof(VkRect2D));
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {

@@ -38,7 +38,7 @@ void intel_set_viewport(struct intel_cmd *cmd, uint32_t count, const VkViewport 
 
 void intel_set_scissor(struct intel_cmd *cmd, uint32_t count, const VkRect2D *scissors)
 {
-    cmd->bind.state.viewport.viewport_count = count;
+    cmd->bind.state.viewport.scissor_count = count;
     memcpy(cmd->bind.state.viewport.scissors, scissors, count * sizeof(VkRect2D));
 }
 

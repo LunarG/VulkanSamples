@@ -3341,9 +3341,9 @@ static void cmd_bind_dynamic_state(struct intel_cmd *cmd,
         const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
         intel_set_viewport(cmd, viewport->viewport_count, viewport->viewports);
     }
-    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
+    if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
         const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
-        intel_set_scissor(cmd, viewport->viewport_count, viewport->scissors);
+        intel_set_scissor(cmd, viewport->scissor_count, viewport->scissors);
     }
     if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
         intel_set_line_width(cmd, pipeline->state.line_width.line_width);
