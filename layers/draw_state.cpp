@@ -2,6 +2,7 @@
  * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,7 +26,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
+#include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -2980,8 +2984,162 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
     return result;
 }
 
+// Store the DAG.
+struct DAGNode {
+    uint32_t pass;
+    std::vector<uint32_t> prev;
+    std::vector<uint32_t> next;
+};
+
+bool FindDependency(const int index, const int dependent, const std::vector<DAGNode>& subpass_to_node, std::unordered_set<uint32_t>& processed_nodes) {
+    // If we have already checked this node we have not found a dependency path so return false.
+    if (processed_nodes.count(index))
+        return false;
+    processed_nodes.insert(index);
+    const DAGNode& node = subpass_to_node[index];
+    // Look for a dependency path. If one exists return true else recurse on the previous nodes.
+    if (std::find(node.prev.begin(), node.prev.end(), dependent) == node.prev.end()) {
+        for (auto elem : node.prev) {
+            if (FindDependency(elem, dependent, subpass_to_node, processed_nodes))
+                return true;
+        }
+    } else {
+        return true;
+    }
+    return false;
+}
+
+bool CheckDependencyExists(VkDevice device, const int subpass, const std::vector<uint32_t>& dependent_subpasses, const std::vector<DAGNode>& subpass_to_node, bool& skip_call) {
+    bool result = true;
+    // Loop through all subpasses that share the same attachment and make sure a dependency exists
+    for (uint32_t k = 0; k < dependent_subpasses.size(); ++k) {
+        if (subpass == dependent_subpasses[k])
+            continue;
+        const DAGNode& node = subpass_to_node[subpass];
+        // Check for a specified dependency between the two nodes. If one exists we are done.
+        auto prev_elem = std::find(node.prev.begin(), node.prev.end(), dependent_subpasses[k]);
+        auto next_elem = std::find(node.next.begin(), node.next.end(), dependent_subpasses[k]);
+        if (prev_elem == node.prev.end() && next_elem == node.next.end()) {
+            // If no dependency exits an implicit dependency still might. If so, warn and if not throw an error.
+            std::unordered_set<uint32_t> processed_nodes;
+            if (FindDependency(subpass, dependent_subpasses[k], subpass_to_node, processed_nodes) ||
+                FindDependency(dependent_subpasses[k], subpass, subpass_to_node, processed_nodes)) {
+                skip_call |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                     "A dependency between subpasses %d and %d must exist but only an implicit one is specified.",
+                                     subpass, dependent_subpasses[k]);
+            } else {
+                skip_call |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                     "A dependency between subpasses %d and %d must exist but one is not specified.",
+                                     subpass, dependent_subpasses[k]);
+                result = false;
+            }
+        }
+    }
+    return result;
+}
+
+bool CheckPreserved(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const int index, const int attachment, const std::vector<DAGNode>& subpass_to_node, int depth, bool& skip_call) {
+    const DAGNode& node = subpass_to_node[index];
+    // If this node writes to the attachment return true as next nodes need to preserve the attachment.
+    const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
+    for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+        if (attachment == subpass.pColorAttachments[j].attachment)
+            return true;
+    }
+    if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+        if (attachment == subpass.depthStencilAttachment.attachment)
+            return true;
+    }
+    bool result = false;
+    // Loop through previous nodes and see if any of them write to the attachment.
+    for (auto elem : node.prev) {
+        result |= CheckPreserved(device, pCreateInfo, elem, attachment, subpass_to_node, depth + 1, skip_call);
+    }
+    // If the attachment was written to by a previous node than this node needs to preserve it.
+    if (result && depth > 0) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
+        bool has_preserved = false;
+        for (uint32_t j = 0; j < subpass.preserveCount; ++j) {
+            if (subpass.pPreserveAttachments[j].attachment == attachment) {
+                has_preserved = true;
+                break;
+            }
+        }
+        if (!has_preserved) {
+            skip_call |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "Attachment %d is used by a later subpass and must be preserved in subpass %d.", attachment, index);
+        }
+    }
+    return result;
+}
+
+bool validateDependencies(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
+    bool skip_call = false;
+    std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
+    std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
+    std::vector<std::vector<uint32_t>> input_attachment_to_subpass(pCreateInfo->attachmentCount);
+    // Create DAG
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        DAGNode& subpass_node = subpass_to_node[i];
+        subpass_node.pass = i;
+    }
+    for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
+        const VkSubpassDependency& dependency = pCreateInfo->pDependencies[i];
+        if (dependency.srcSubpass > dependency.destSubpass) {
+            skip_call |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
+        }
+        subpass_to_node[dependency.destSubpass].prev.push_back(dependency.srcSubpass);
+        subpass_to_node[dependency.srcSubpass].next.push_back(dependency.destSubpass);
+    }
+    // Find for each attachment the subpasses that use them.
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
+        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+            input_attachment_to_subpass[subpass.pInputAttachments[j].attachment].push_back(i);
+        }
+        for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+            output_attachment_to_subpass[subpass.pColorAttachments[j].attachment].push_back(i);
+        }
+        if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+            output_attachment_to_subpass[subpass.depthStencilAttachment.attachment].push_back(i);
+        }
+    }
+    // If there is a dependency needed make sure one exists
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
+        // If the attachment is an input then all subpasses that output must have a dependency relationship
+        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+            const uint32_t& attachment = subpass.pInputAttachments[j].attachment;
+            CheckDependencyExists(device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+        }
+        // If the attachment is an output then all subpasses that use the attachment must have a dependency relationship
+        for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+            const uint32_t& attachment = subpass.pColorAttachments[j].attachment;
+            CheckDependencyExists(device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+        }
+        if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+            const uint32_t& attachment = subpass.depthStencilAttachment.attachment;
+            CheckDependencyExists(device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+            CheckDependencyExists(device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
+        }
+    }
+    // Loop through implicit dependencies, if this pass reads make sure the attachment is preserved for all passes after it was written.
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
+        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+            CheckPreserved(device, pCreateInfo, i, subpass.pInputAttachments[j].attachment, subpass_to_node, 0, skip_call);
+        }
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
+    if (validateDependencies(device, pCreateInfo)) {
+        return VK_ERROR_VALIDATION_FAILED;
+    }
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
     if (VK_SUCCESS == result) {
