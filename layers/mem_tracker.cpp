@@ -87,166 +87,6 @@ unordered_map<uint64_t,       MT_SWAP_CHAIN_INFO*>  swapchainMap;
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> bufferMap;
 
-// Maps for non-dispatchable objects that store createInfo based on handle
-unordered_map<uint64_t, VkImageViewCreateInfo>           attachmentViewMap;
-unordered_map<uint64_t, VkImageViewCreateInfo>           imageViewMap;
-// TODO : If we ever really care about Compute pipelines, split them into own map
-unordered_map<uint64_t, VkGraphicsPipelineCreateInfo>    pipelineMap;
-unordered_map<uint64_t, VkSamplerCreateInfo>             samplerMap;
-unordered_map<uint64_t, VkSemaphoreCreateInfo>           semaphoreMap;
-unordered_map<uint64_t, VkEventCreateInfo>               eventMap;
-unordered_map<uint64_t, VkQueryPoolCreateInfo>           queryPoolMap;
-unordered_map<uint64_t, VkBufferViewCreateInfo>          bufferViewMap;
-unordered_map<uint64_t, VkShaderModuleCreateInfo>        shaderModuleMap;
-unordered_map<uint64_t, VkShaderCreateInfo>              shaderMap;
-unordered_map<uint64_t, VkPipelineLayoutCreateInfo>      pipelineLayoutMap;
-unordered_map<uint64_t, VkDescriptorSetLayoutCreateInfo> descriptorSetLayoutMap;
-unordered_map<uint64_t, VkDescriptorPoolCreateInfo>      descriptorPoolMap;
-unordered_map<uint64_t, VkRenderPassCreateInfo>          renderPassMap;
-unordered_map<uint64_t, VkFramebufferCreateInfo>         framebufferMap;
-//unordered_map<uint64_t, VkDescriptorSetCreateInfo> descriptorSetMap;
-
-// For a given handle and object type, return a ptr to its CreateInfo struct, or NULL if not found
-static void* get_object_create_info(uint64_t handle, VkDbgObjectType type)
-{
-    void* retValue = NULL;
-    switch (type)
-    {
-        case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
-        {
-            auto it = attachmentViewMap.find(handle);
-            if (it != attachmentViewMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_IMAGE_VIEW:
-        {
-            auto it = imageViewMap.find(handle);
-            if (it != imageViewMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_IMAGE:
-        {
-            auto it = imageMap.find(handle);
-            if (it != imageMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_PIPELINE:
-        {
-            auto it = pipelineMap.find(handle);
-            if (it != pipelineMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_SAMPLER:
-        {
-            auto it = samplerMap.find(handle);
-            if (it != samplerMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_BUFFER:
-        {
-            auto it = bufferMap.find(handle);
-            if (it != bufferMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_SEMAPHORE:
-        {
-            auto it = semaphoreMap.find(handle);
-            if (it != semaphoreMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_EVENT:
-        {
-            auto it = eventMap.find(handle);
-            if (it != eventMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_QUERY_POOL:
-        {
-            auto it = queryPoolMap.find(handle);
-            if (it != queryPoolMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_BUFFER_VIEW:
-        {
-            auto it = bufferViewMap.find(handle);
-            if (it != bufferViewMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_SHADER_MODULE:
-        {
-            auto it = shaderModuleMap.find(handle);
-            if (it != shaderModuleMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_SHADER:
-        {
-            auto it = shaderMap.find(handle);
-            if (it != shaderMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
-        {
-            auto it = pipelineLayoutMap.find(handle);
-            if (it != pipelineLayoutMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
-        {
-            auto it = descriptorSetLayoutMap.find(handle);
-            if (it != descriptorSetLayoutMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-        {
-            auto it = descriptorPoolMap.find(handle);
-            if (it != descriptorPoolMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-//        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-//        {
-//            auto it = descriptorSetMap.find(handle);
-//            if (it != descriptorSetMap.end())
-//                return (void*)&(*it).second;
-//            break;
-//        }
-        case VK_OBJECT_TYPE_RENDER_PASS:
-        {
-            auto it = renderPassMap.find(handle);
-            if (it != renderPassMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        case VK_OBJECT_TYPE_FRAMEBUFFER:
-        {
-            auto it = framebufferMap.find(handle);
-            if (it != framebufferMap.end())
-                return (void*)&(*it).second;
-            break;
-        }
-        default:
-        {
-            // NULL will be returned below by default
-            break;
-        }
-    }
-    return retValue;
-}
-
 static MT_OBJ_BINDING_INFO* get_object_binding_info(uint64_t handle, VkDbgObjectType type)
 {
     MT_OBJ_BINDING_INFO* retValue = NULL;
@@ -388,108 +228,6 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
             pCI->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             pCI->create_info.image.usage =
                 const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsageFlags;
-            break;
-        }
-        // All other non-disp objects store their Create info struct as map value
-        case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
-        {
-            auto pCI = &attachmentViewMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkImageViewCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_IMAGE_VIEW:
-        {
-            auto pCI = &imageViewMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkImageViewCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_PIPELINE:
-        {
-            auto pCI = &pipelineMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_SAMPLER:
-        {
-            auto pCI = &samplerMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkSamplerCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_SEMAPHORE:
-        {
-            auto pCI = &semaphoreMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkSemaphoreCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_EVENT:
-        {
-            auto pCI = &eventMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkEventCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_QUERY_POOL:
-        {
-            auto pCI = &queryPoolMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkQueryPoolCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_BUFFER_VIEW:
-        {
-            auto pCI = &bufferViewMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkBufferViewCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_SHADER_MODULE:
-        {
-            auto pCI = &shaderModuleMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkShaderModuleCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_SHADER:
-        {
-            auto pCI = &shaderMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkShaderCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
-        {
-            auto pCI = &pipelineLayoutMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkPipelineLayoutCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
-        {
-            auto pCI = &descriptorSetLayoutMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-        {
-            auto pCI = &descriptorPoolMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkDescriptorPoolCreateInfo));
-            break;
-        }
-//        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-//        {
-//            auto pCI = &descriptorSetMap[handle];
-//            memcpy(pCI, pCreateInfo, sizeof(VkDescriptorSetCreateInfo));
-//            break;
-//        }
-        case VK_OBJECT_TYPE_RENDER_PASS:
-        {
-            auto pCI = &renderPassMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkRenderPassCreateInfo));
-            break;
-        }
-        case VK_OBJECT_TYPE_FRAMEBUFFER:
-        {
-            auto pCI = &framebufferMap[handle];
-            memcpy(pCI, pCreateInfo, sizeof(VkFramebufferCreateInfo));
-            break;
-        }
-        default:
-        {
-            // NULL will be returned below by default
             break;
         }
     }
@@ -1060,34 +798,6 @@ void print_object_map_members(
     }
 }
 
-// Print details of global Obj tracking list
-static void print_object_list(
-    void* dispObj)
-{
-    // Early out if info is not requested
-    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
-        return;
-    }
-
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "Details of Object lists:");
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "========================");
-
-    print_object_map_members(dispObj, imageViewMap,                VK_OBJECT_TYPE_IMAGE_VIEW,                  "ImageView");
-    print_object_map_members(dispObj, samplerMap,                  VK_OBJECT_TYPE_SAMPLER,                     "Sampler");
-    print_object_map_members(dispObj, semaphoreMap,                VK_OBJECT_TYPE_SEMAPHORE,                   "Semaphore");
-    print_object_map_members(dispObj, eventMap,                    VK_OBJECT_TYPE_EVENT,                       "Event");
-    print_object_map_members(dispObj, queryPoolMap,                VK_OBJECT_TYPE_QUERY_POOL,                  "QueryPool");
-    print_object_map_members(dispObj, bufferViewMap,               VK_OBJECT_TYPE_BUFFER_VIEW,                 "BufferView");
-    print_object_map_members(dispObj, shaderModuleMap,             VK_OBJECT_TYPE_SHADER_MODULE,               "ShaderModule");
-    print_object_map_members(dispObj, shaderMap,                   VK_OBJECT_TYPE_SHADER,                      "Shader");
-    print_object_map_members(dispObj, pipelineLayoutMap,           VK_OBJECT_TYPE_PIPELINE_LAYOUT,             "PipelineLayout");
-    print_object_map_members(dispObj, descriptorSetLayoutMap,      VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,       "DescriptorSetLayout");
-    print_object_map_members(dispObj, descriptorPoolMap,           VK_OBJECT_TYPE_DESCRIPTOR_POOL,             "DescriptorPool");
-    print_object_map_members(dispObj, renderPassMap,               VK_OBJECT_TYPE_RENDER_PASS,                 "RenderPass");
-    print_object_map_members(dispObj, framebufferMap,              VK_OBJECT_TYPE_FRAMEBUFFER,                 "Framebuffer");
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, 0, 0, MEMTRACK_NONE, "MEM", "*** End of Object lists ***");
-}
-
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
 static VkBool32 get_mem_binding_from_object(
     void* dispObj, const uint64_t handle, const VkDbgObjectType type, VkDeviceMemory *mem)
@@ -1101,13 +811,11 @@ static VkBool32 get_mem_binding_from_object(
         } else {
             skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                            "Trying to get mem binding for object %#" PRIxLEAST64 " but object has no mem binding", handle);
-            print_object_list(dispObj);
         }
     } else {
         skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                        "Trying to get mem binding for object %#" PRIxLEAST64 " but no such object in %s list",
                        handle, object_type_to_string(type));
-        print_object_list(dispObj);
     }
     return skipCall;
 }
@@ -1327,7 +1035,6 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
         "================================================");
     print_mem_list(device);
     printCBList(device);
-    print_object_list(device);
     skipCall = delete_cmd_buf_info_list();
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
@@ -1489,7 +1196,6 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     loader_platform_thread_lock_mutex(&globalLock);
     freeMemObjInfo(device, mem, false);
     print_mem_list(device);
-    print_object_list(device);
     printCBList(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     get_dispatch_table(mem_tracker_device_table_map, device)->FreeMemory(device, mem);
@@ -1571,172 +1277,6 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = imageViewMap.find(imageView.handle);
-    if (item != imageViewMap.end()) {
-        imageViewMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImageView(device, imageView);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = pipelineMap.find(pipeline.handle);
-    if (item != pipelineMap.end()) {
-        pipelineMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipeline(device, pipeline);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = samplerMap.find(sampler.handle);
-    if (item != samplerMap.end()) {
-        samplerMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySampler(device, sampler);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = semaphoreMap.find(semaphore.handle);
-    if (item != semaphoreMap.end()) {
-        semaphoreMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySemaphore(device, semaphore);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = eventMap.find(event.handle);
-    if (item != eventMap.end()) {
-        eventMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyEvent(device, event);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = queryPoolMap.find(queryPool.handle);
-    if (item != queryPoolMap.end()) {
-        queryPoolMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyQueryPool(device, queryPool);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = bufferViewMap.find(bufferView.handle);
-    if (item != bufferViewMap.end()) {
-        bufferViewMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBufferView(device, bufferView);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = shaderModuleMap.find(shaderModule.handle);
-    if (item != shaderModuleMap.end()) {
-        shaderModuleMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShaderModule(device, shaderModule);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = shaderMap.find(shader.handle);
-    if (item != shaderMap.end()) {
-        shaderMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyShader(device, shader);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = pipelineLayoutMap.find(pipelineLayout.handle);
-    if (item != pipelineLayoutMap.end()) {
-        pipelineLayoutMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = descriptorSetLayoutMap.find(descriptorSetLayout.handle);
-    if (item != descriptorSetLayoutMap.end()) {
-        descriptorSetLayoutMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = descriptorPoolMap.find(descriptorPool.handle);
-    if (item != descriptorPoolMap.end()) {
-        descriptorPoolMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
-}
-
-//VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSet(VkDevice device, VkDescriptorSet descriptorSet)
-//{
-//    loader_platform_thread_lock_mutex(&globalLock);
-//    auto item = descriptorSetMap.find(descriptorSet.handle);
-//    if (item != descriptorSetMap.end()) {
-//        descriptorSetMap.erase(item);
-//    }
-//    loader_platform_thread_unlock_mutex(&globalLock);
-//    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroyDescriptorSet(device, descriptorSet);
-//    return result;
-//}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = renderPassMap.find(renderPass.handle);
-    if (item != renderPassMap.end()) {
-        renderPassMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyRenderPass(device, renderPass);
-}
-
-VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto item = framebufferMap.find(framebuffer.handle);
-    if (item != framebufferMap.end()) {
-        framebufferMap.erase(item);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
-}
-
 VkResult VKAPI vkBindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    buffer,
@@ -1748,7 +1288,6 @@ VkResult VKAPI vkBindBufferMemory(
     // Track objects tied to memory
     VkBool32 skipCall = set_mem_binding(device, mem, buffer.handle, VK_OBJECT_TYPE_BUFFER, "vkBindBufferMemory");
     add_object_binding_info(buffer.handle, VK_OBJECT_TYPE_BUFFER, mem);
-    print_object_list(device);
     print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1768,7 +1307,6 @@ VkResult VKAPI vkBindImageMemory(
     // Track objects tied to memory
     VkBool32 skipCall = set_mem_binding(device, mem, image.handle, VK_OBJECT_TYPE_IMAGE, "vkBindImageMemory");
     add_object_binding_info(image.handle, VK_OBJECT_TYPE_IMAGE, mem);
-    print_object_list(device);
     print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1809,7 +1347,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, image.handle, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageOpaqeMemory");
-    print_object_list(queue);
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1828,7 +1365,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, image.handle, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageMemory");
-    print_object_list(queue);
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1848,7 +1384,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, buffer.handle, VK_OBJECT_TYPE_BUFFER, "VkQueueBindSparseBufferMemory");
-    print_object_list(queue);
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -2887,34 +2422,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkDestroyBuffer;
     if (!strcmp(funcName, "vkDestroyImage"))
         return (PFN_vkVoidFunction) vkDestroyImage;
-    if (!strcmp(funcName, "vkDestroyImageView"))
-        return (PFN_vkVoidFunction) vkDestroyImageView;
-    if (!strcmp(funcName, "vkDestroyPipeline"))
-        return (PFN_vkVoidFunction) vkDestroyPipeline;
-    if (!strcmp(funcName, "vkDestroySampler"))
-        return (PFN_vkVoidFunction) vkDestroySampler;
-    if (!strcmp(funcName, "vkDestroySemaphore"))
-        return (PFN_vkVoidFunction) vkDestroySemaphore;
-    if (!strcmp(funcName, "vkDestroyEvent"))
-        return (PFN_vkVoidFunction) vkDestroyEvent;
-    if (!strcmp(funcName, "vkDestroyQueryPool"))
-        return (PFN_vkVoidFunction) vkDestroyQueryPool;
-    if (!strcmp(funcName, "vkDestroyBufferView"))
-        return (PFN_vkVoidFunction) vkDestroyBufferView;
-    if (!strcmp(funcName, "vkDestroyShaderModule"))
-        return (PFN_vkVoidFunction) vkDestroyShaderModule;
-    if (!strcmp(funcName, "vkDestroyShader"))
-        return (PFN_vkVoidFunction) vkDestroyShader;
-    if (!strcmp(funcName, "vkDestroyPipelineLayout"))
-        return (PFN_vkVoidFunction) vkDestroyPipelineLayout;
-    if (!strcmp(funcName, "vkDestroyDescriptorSetLayout"))
-        return (PFN_vkVoidFunction) vkDestroyDescriptorSetLayout;
-    if (!strcmp(funcName, "vkDestroyDescriptorPool"))
-        return (PFN_vkVoidFunction) vkDestroyDescriptorPool;
-    if (!strcmp(funcName, "vkDestroyRenderPass"))
-        return (PFN_vkVoidFunction) vkDestroyRenderPass;
-    if (!strcmp(funcName, "vkDestroyFramebuffer"))
-        return (PFN_vkVoidFunction) vkDestroyFramebuffer;
     if (!strcmp(funcName, "vkBindBufferMemory"))
         return (PFN_vkVoidFunction) vkBindBufferMemory;
     if (!strcmp(funcName, "vkBindImageMemory"))
@@ -3037,10 +2544,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
             return (PFN_vkVoidFunction) vkDestroySwapchainKHR;
         if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
             return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
-//        if (!strcmp(funcName, "vkAcquireNextImageKHR"))
-//            return (PFN_vkVoidFunction) vkAcquireNextImageKHR;
-//        if (!strcmp(funcName, "vkQueuePresentKHR"))
-//            return (PFN_vkVoidFunction) vkQueuePresentKHR;
     }
 
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);
