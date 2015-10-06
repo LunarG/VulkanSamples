@@ -463,7 +463,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCm
     VkResult result = get_dispatch_table(device_limits_device_table_map, device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     return result;
 }
- 
+
 VK_LAYER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
 {
 
@@ -506,24 +506,24 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
 
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     if (!phy_dev_data->physicalDeviceProperties) {
-        skipCall = log_msg(phy_dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                       DEVLIMITS_MUST_QUERY_PROPERTIES, "DL",
-                       "CreateImage called before querying device properties ");
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        DEVLIMITS_MUST_QUERY_PROPERTIES, "DL",
+                        "CreateImage called before querying device properties ");
     }
-    
+
     uint32_t imageGranularity = phy_dev_data->physicalDeviceProperties->limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
     if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
         (pCreateInfo->extent.width  > ImageFormatProperties.maxExtent.width)  ||
         (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
-        skipCall = log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                       DEVLIMITS_LIMITS_VIOLATION, "DL",
-                       "CreateImage extents exceed allowable limits for format: "
-                       "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
-                       pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                       ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height, ImageFormatProperties.maxExtent.depth,
-                       string_VkFormat(pCreateInfo->format));
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        DEVLIMITS_LIMITS_VIOLATION, "DL",
+                        "CreateImage extents exceed allowable limits for format: "
+                        "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
+                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                        ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height, ImageFormatProperties.maxExtent.depth,
+                        string_VkFormat(pCreateInfo->format));
 
     }
 
@@ -536,11 +536,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
                           (uint64_t)imageGranularity ) & ~(uint64_t)imageGranularity;
 
     if (totalSize > ImageFormatProperties.maxResourceSize) {
-        skipCall = log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                       DEVLIMITS_LIMITS_VIOLATION, "DL",
-                       "CreateImage resource size exceeds allowable maximum "
-                       "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
-                       totalSize, ImageFormatProperties.maxResourceSize);
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        DEVLIMITS_LIMITS_VIOLATION, "DL",
+                        "CreateImage resource size exceeds allowable maximum "
+                        "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
+                        totalSize, ImageFormatProperties.maxResourceSize);
     }
     if (VK_FALSE == skipCall) {
         result = get_dispatch_table(device_limits_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
