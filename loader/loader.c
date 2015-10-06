@@ -2282,7 +2282,7 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
          * To do this requires a different behavior from Get*ProcAddr functions implemented
          * in layers.
          * The very first call to a layer will be it's Get*ProcAddr function requesting
-         * the layer's vkGet*ProcAddr. The layer should intialize it's internal dispatch table
+         * the layer's vkGet*ProcAddr. The layer should initialize its internal dispatch table
          * with the wrapped object given (either Instance or Device) and return the layer's
          * Get*ProcAddr function. The layer should also use this opportunity to record the
          * baseObject so that it can find the correct local dispatch table on future calls.
