@@ -34,7 +34,6 @@
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
 #include "vk_layer_config.h"
-#include "vk_layer_msg.h"
 #include "vk_layer_table.h"
 #include "vk_layer_logging.h"
 #include "vk_enum_string_helper.h"
