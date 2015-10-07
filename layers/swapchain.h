@@ -28,14 +28,24 @@
 #ifndef SWAPCHAIN_H
 #define SWAPCHAIN_H
 
-#include <stdio.h>
-#include <string.h>
-#include <unordered_map>
-#include "vk_loader_platform.h"
-#include "vk_layer.h"
-#include "vk_layer_config.h"
-#include "vk_layer_logging.h"
-#include "vk_layer_extension_utils.h"
+static const VkLayerProperties globalLayerProps[] = {
+    {
+        "Swapchain",
+        VK_API_VERSION,                 // specVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        "layer: Swapchain",
+    }
+};
+
+static const VkLayerProperties deviceLayerProps[] = {
+    {
+        "Swapchain",
+        VK_API_VERSION,                 // specVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        "layer: Swapchain",
+    }
+};
+
 
 using namespace std;
 

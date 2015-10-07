@@ -25,31 +25,21 @@
  *   Ian Elliott <ian@lunarg.com>
  */
 
+#include <stdio.h>
+#include <string.h>
+#include <unordered_map>
+#include "vk_loader_platform.h"
+#include "vk_layer.h"
+#include "vk_layer_config.h"
+#include "vk_layer_logging.h"
+#include "vk_layer_extension_utils.h"
+
 #include "swapchain.h"
 
 // FIXME/TODO: Make sure this layer is thread-safe!
 
 // The following is for logging error messages:
 static layer_data mydata;
-
-
-static const VkLayerProperties globalLayerProps[] = {
-    {
-        "Swapchain",
-        VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
-        "layer: Swapchain",
-    }
-};
-
-static const VkLayerProperties deviceLayerProps[] = {
-    {
-        "Swapchain",
-        VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
-        "layer: Swapchain",
-    }
-};
 
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);
