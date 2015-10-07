@@ -49,20 +49,30 @@
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
 
+struct devExts {
+    bool debug_marker_enabled;
+};
+
+//static std::unordered_map<void *, struct devExts> deviceExtMap;
+
 struct layer_data {
     debug_report_data *report_data;
     // TODO: put instance data here
     VkDbgMsgCallback logging_callback;
+    VkLayerDispatchTable* device_dispatch_table;
+    VkLayerInstanceDispatchTable* instance_dispatch_table;
+    devExts device_extensions;
 
     layer_data() :
         report_data(nullptr),
-        logging_callback(nullptr)
+        logging_callback(nullptr),
+        device_dispatch_table(nullptr),
+        instance_dispatch_table(nullptr),
+        device_extensions()
     {};
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
-static device_table_map draw_state_device_table_map;
-static instance_table_map draw_state_instance_table_map;
 
 static unordered_map<uint64_t, SAMPLER_NODE*> sampleMap;
 static unordered_map<uint64_t, VkImageViewCreateInfo> imageMap;
@@ -76,12 +86,6 @@ static unordered_map<uint64_t, LAYOUT_NODE*> layoutMap;
 static unordered_map<void*, GLOBAL_CB_NODE*> cmdBufferMap;
 static unordered_map<uint64_t, VkRenderPassCreateInfo*> renderPassMap;
 static unordered_map<uint64_t, VkFramebufferCreateInfo*> frameBufferMap;
-
-struct devExts {
-    bool debug_marker_enabled;
-};
-
-static std::unordered_map<void *, struct devExts> deviceExtMap;
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 
@@ -1392,7 +1396,8 @@ static void init_draw_state(layer_data *my_data)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map,*pInstance);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
@@ -1412,20 +1417,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     if (my_data->logging_callback) {
         layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);
     }
 
     layer_debug_report_destroy_instance(my_data->report_data);
-    layer_data_map.erase(pTable);
-
-    draw_state_instance_table_map.erase(key);
-    if (draw_state_instance_table_map.empty()) {
+    delete my_data->instance_dispatch_table;
+    layer_data_map.erase(key);
+    if (layer_data_map.empty()) {
         // Release mutex when destroying last instance.
         loader_platform_thread_delete_mutex(&globalLock);
         globalLockInitialized = 0;
@@ -1435,28 +1439,25 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i;
-    VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
-    deviceExtMap[pDisp].debug_marker_enabled = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_extensions.debug_marker_enabled = false;
 
     for (i = 0; i < pCreateInfo->extensionCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);
-            deviceExtMap[pDisp].debug_marker_enabled = true;
+            dev_data->device_extensions.debug_marker_enabled = true;
         }
-
     }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(draw_state_device_table_map, *pDevice);
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        VkLayerDispatchTable *pTable = get_dispatch_table(draw_state_device_table_map, *pDevice);
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        dev_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
     return result;
@@ -1476,11 +1477,12 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
     loader_platform_thread_unlock_mutex(&globalLock);
 
     dispatch_key key = get_dispatch_key(device);
-    VkLayerDispatchTable *pDisp =  get_dispatch_table(draw_state_device_table_map, device);
+    layer_data* dev_data = get_my_data_ptr(key, layer_data_map);
+    VkLayerDispatchTable *pDisp = dev_data->device_dispatch_table;
     pDisp->DestroyDevice(device);
-    deviceExtMap.erase(pDisp);
-    draw_state_device_table_map.erase(key);
     tableDebugMarkerMap.erase(pDisp);
+    delete dev_data->device_dispatch_table;
+    layer_data_map.erase(key);
 }
 
 static const VkLayerProperties ds_global_layers[] = {
@@ -1551,6 +1553,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     for (uint32_t i=0; i < cmdBufferCount; i++) {
         // Validate that cmd buffers have been updated
         pCB = getCBNode(pCmdBuffers[i]);
@@ -1571,121 +1574,122 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCo
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     if (VK_FALSE == skipCall)
-        return get_dispatch_table(draw_state_device_table_map, queue)->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+        return dev_data->device_dispatch_table->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
     return VK_ERROR_VALIDATION_FAILED;
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyFence(device, fence);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFence(device, fence);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroySemaphore(device, semaphore);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySemaphore(device, semaphore);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyEvent(device, event);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyEvent(device, event);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyQueryPool(device, queryPool);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyQueryPool(device, queryPool);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyBuffer(device, buffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyBuffer(device, buffer);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyBufferView(device, bufferView);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyBufferView(device, bufferView);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyImage(device, image);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImage(device, image);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyImageView(device, imageView);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImageView(device, imageView);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyShaderModule(device, shaderModule);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShaderModule(device, shaderModule);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyShader(device, shader);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShader(device, shader);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipeline(device, pipeline);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineLayout(device, pipelineLayout);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroySampler(device, sampler);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorSetLayout(device, descriptorSetLayout);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyCommandBuffer(device, commandBuffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyCommandBuffer(device, commandBuffer);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyFramebuffer(device, framebuffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyRenderPass(device, renderPass);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyRenderPass(device, renderPass);
     // TODO : Clean up any internal data structures using this obj.
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         BUFFER_NODE* pNewNode = new BUFFER_NODE;
@@ -1699,7 +1703,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         imageMap[pView->handle] = *pCreateInfo;
@@ -1714,7 +1719,8 @@ VkResult VKAPI vkCreatePipelineCache(
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     VkPipelineCache*                            pPipelineCache)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
     return result;
 }
 
@@ -1722,14 +1728,16 @@ void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)
 {
-    get_dispatch_table(draw_state_device_table_map, device)->DestroyPipelineCache(device, pipelineCache);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache);
 }
 
 size_t VKAPI vkGetPipelineCacheSize(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)
 {
-    size_t size = get_dispatch_table(draw_state_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    size_t size = dev_data->device_dispatch_table->GetPipelineCacheSize(device, pipelineCache);
     return size;
 }
 
@@ -1738,7 +1746,8 @@ VkResult VKAPI vkGetPipelineCacheData(
     VkPipelineCache                             pipelineCache,
     void*                                       pData)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pData);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, pData);
     return result;
 }
 
@@ -1748,7 +1757,8 @@ VkResult VKAPI vkMergePipelineCaches(
     uint32_t                                    srcCacheCount,
     const VkPipelineCache*                      pSrcCaches)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
     return result;
 }
 
@@ -1763,6 +1773,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     VkBool32 skipCall = VK_FALSE;
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
     vector<PIPELINE_NODE*> pPipeNode(count);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
     for (i=0; i<count; i++) {
@@ -1771,7 +1782,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(draw_state_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
         loader_platform_thread_lock_mutex(&globalLock);
         for (i=0; i<count; i++) {
             pPipeNode[i]->pipeline = pPipelines[i];
@@ -1795,7 +1806,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateSampler(device, pCreateInfo, pSampler);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateSampler(device, pCreateInfo, pSampler);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         SAMPLER_NODE* pNewNode = new SAMPLER_NODE;
@@ -1809,7 +1821,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
     if (VK_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
@@ -1855,7 +1868,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
 
 VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
         // TODO : Need to capture the pipeline layout
     }
@@ -1864,7 +1878,8 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         if (log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
@@ -1899,7 +1914,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkD
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->ResetDescriptorPool(device, descriptorPool);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->ResetDescriptorPool(device, descriptorPool);
     if (VK_SUCCESS == result) {
         clearDescriptorPool(device, descriptorPool);
     }
@@ -1908,7 +1924,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescript
 
 VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
     if (VK_SUCCESS == result) {
         POOL_NODE *pPoolNode = getPoolNode(descriptorPool);
         if (!pPoolNode) {
@@ -1959,7 +1976,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
 
 VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     // TODO : Clean up any internal data structures using this obj.
     return result;
 }
@@ -1969,13 +1987,15 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writ
     // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when both updates return VK_FALSE
     if (!dsUpdate(device, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, writeCount, pDescriptorWrites) &&
         !dsUpdate(device, VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET, copyCount, pDescriptorCopies)) {
-        get_dispatch_table(draw_state_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+        layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+        dev_data->device_dispatch_table->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
     }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
@@ -2019,7 +2039,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
     if (skipCall) {
         return VK_ERROR_VALIDATION_FAILED;
     }
-    VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     if (VK_SUCCESS == result) {
         if (CB_NEW != pCB->state)
             resetCB(cmdBuffer);
@@ -2041,7 +2062,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
         }
     }
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);
+        layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+        result = dev_data->device_dispatch_table->EndCommandBuffer(cmdBuffer);
         if (VK_SUCCESS == result) {
             updateCBTracking(cmdBuffer);
             pCB->state = CB_UPDATE_COMPLETE;
@@ -2057,7 +2079,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCmdBuffer cmdBuffer)
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(cmdBuffer, flags);
     if (VK_SUCCESS == result) {
         resetCB(cmdBuffer);
         updateCBTracking(cmdBuffer);
@@ -2068,6 +2091,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCmdBuffer cmdBuffer, VkCmd
 VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2102,7 +2126,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCmdBuffer cmdBuffer, VkPipelineBi
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+        dev_data->device_dispatch_table->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
@@ -2111,6 +2135,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     const VkViewport*                   pViewports)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2126,7 +2151,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+        dev_data->device_dispatch_table->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
@@ -2135,6 +2160,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     const VkRect2D*                     pScissors)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2150,12 +2176,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
+        dev_data->device_dispatch_table->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2171,7 +2198,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetLineWidth(cmdBuffer, lineWidth);
+        dev_data->device_dispatch_table->CmdSetLineWidth(cmdBuffer, lineWidth);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
@@ -2181,6 +2208,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     float                               slopeScaledDepthBias)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2195,12 +2223,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
+        dev_data->device_dispatch_table->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2213,7 +2242,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const f
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConst);
+        dev_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConst);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
@@ -2222,6 +2251,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     float                               maxDepthBounds)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2235,7 +2265,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
+        dev_data->device_dispatch_table->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
@@ -2244,6 +2274,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     uint32_t                            stencilCompareMask)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2263,7 +2294,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
+        dev_data->device_dispatch_table->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
@@ -2272,6 +2303,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     uint32_t                            stencilWriteMask)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2289,7 +2321,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
+        dev_data->device_dispatch_table->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
@@ -2298,6 +2330,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     uint32_t                            stencilReference)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2315,12 +2348,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
+        dev_data->device_dispatch_table->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2358,12 +2392,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+        dev_data->device_dispatch_table->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2391,7 +2426,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer 
         skipCall |= addCmd(pCB, CMD_BINDINDEXBUFFER);
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+        dev_data->device_dispatch_table->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
@@ -2402,6 +2437,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     const VkDeviceSize*                         pOffsets)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2414,12 +2450,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+        dev_data->device_dispatch_table->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2439,12 +2476,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCmdBuffer cmdBuffer, uint32_t vertexCount
         skipCall |= outsideRenderPass(pCB, "vkCmdDraw");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+        dev_data->device_dispatch_table->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2464,12 +2502,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t inde
         skipCall |= outsideRenderPass(pCB, "vkCmdDrawIndexed");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        dev_data->device_dispatch_table->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2489,12 +2528,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buf
         skipCall |= outsideRenderPass(pCB, "vkCmdDrawIndirect");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+        dev_data->device_dispatch_table->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2514,12 +2554,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuf
         skipCall |= outsideRenderPass(pCB, "vkCmdDrawIndexedIndirect");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+        dev_data->device_dispatch_table->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2531,12 +2572,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint
         skipCall |= insideRenderPass(pCB, "vkCmdDispatch");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatch(cmdBuffer, x, y, z);
+        dev_data->device_dispatch_table->CmdDispatch(cmdBuffer, x, y, z);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2548,12 +2590,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCmdBuffer cmdBuffer, VkBuffer
         skipCall |= insideRenderPass(pCB, "vkCmdDispatchIndirect");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
+        dev_data->device_dispatch_table->CmdDispatchIndirect(cmdBuffer, buffer, offset);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2565,7 +2608,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCmdBuffer cmdBuffer, VkBuffer srcBu
         skipCall |= insideRenderPass(pCB, "vkCmdCopyBuffer");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+        dev_data->device_dispatch_table->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
@@ -2576,6 +2619,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
                                              uint32_t regionCount, const VkImageCopy* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2587,7 +2631,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCmdBuffer cmdBuffer,
         skipCall |= insideRenderPass(pCB, "vkCmdCopyImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+        dev_data->device_dispatch_table->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
@@ -2597,6 +2641,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
                                              VkTexFilter filter)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2608,7 +2653,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
         skipCall |= insideRenderPass(pCB, "vkCmdBlitImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+        dev_data->device_dispatch_table->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
@@ -2617,6 +2662,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2628,7 +2674,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCmdBuffer cmdBuffer,
         skipCall |= insideRenderPass(pCB, "vkCmdCopyBufferToImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+        dev_data->device_dispatch_table->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
@@ -2637,6 +2683,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2648,12 +2695,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCmdBuffer cmdBuffer,
         skipCall |= insideRenderPass(pCB, "vkCmdCopyImageToBuffer");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+        dev_data->device_dispatch_table->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2665,12 +2713,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
         skipCall |= insideRenderPass(pCB, "vkCmdCopyUpdateBuffer");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+        dev_data->device_dispatch_table->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2682,7 +2731,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
         skipCall |= insideRenderPass(pCB, "vkCmdCopyFillBuffer");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+        dev_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
@@ -2694,6 +2743,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
     const VkRect3D*                             pRects)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2712,7 +2762,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
         skipCall |= outsideRenderPass(pCB, "vkCmdClearColorAttachment");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
+        dev_data->device_dispatch_table->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
@@ -2724,6 +2774,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
     const VkRect3D*                             pRects)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2742,7 +2793,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
         skipCall |= outsideRenderPass(pCB, "vkCmdClearDepthStencilAttachment");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
+        dev_data->device_dispatch_table->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -2752,6 +2803,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2763,7 +2815,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         skipCall |= insideRenderPass(pCB, "vkCmdClearColorImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+        dev_data->device_dispatch_table->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
@@ -2774,6 +2826,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
         const VkImageSubresourceRange* pRanges)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2785,7 +2838,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
         skipCall |= insideRenderPass(pCB, "vkCmdClearDepthStencilImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
+        dev_data->device_dispatch_table->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
@@ -2794,6 +2847,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
                                                 uint32_t regionCount, const VkImageResolve* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2805,12 +2859,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer,
         skipCall |= insideRenderPass(pCB, "vkCmdResolveImage");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+        dev_data->device_dispatch_table->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2822,12 +2877,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCmdBuffer cmdBuffer, VkEvent event, V
         skipCall |= insideRenderPass(pCB, "vkCmdSetEvent");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, stageMask);
+        dev_data->device_dispatch_table->CmdSetEvent(cmdBuffer, event, stageMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2839,12 +2895,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCmdBuffer cmdBuffer, VkEvent event,
         skipCall |= insideRenderPass(pCB, "vkCmdResetEvent");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, stageMask);
+        dev_data->device_dispatch_table->CmdResetEvent(cmdBuffer, event, stageMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2855,12 +2912,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCmdBuffer cmdBuffer, uint32_t event
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
+        dev_data->device_dispatch_table->CmdWaitEvents(cmdBuffer, eventCount, pEvents, sourceStageMask, destStageMask, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2871,12 +2929,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCmdBuffer cmdBuffer, VkPipelin
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+        dev_data->device_dispatch_table->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2887,12 +2946,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCmdBuffer cmdBuffer, VkQueryPool qu
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+        dev_data->device_dispatch_table->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2903,12 +2963,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCmdBuffer cmdBuffer, VkQueryPool quer
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
+        dev_data->device_dispatch_table->CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2920,7 +2981,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
         skipCall |= insideRenderPass(pCB, "vkCmdQueryPool");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+        dev_data->device_dispatch_table->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery,
@@ -2928,6 +2989,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQu
                                                      VkDeviceSize destStride, VkQueryResultFlags flags)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2939,13 +3001,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQu
         skipCall |= insideRenderPass(pCB, "vkCmdCopyQueryPoolResults");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool,
+        dev_data->device_dispatch_table->CmdCopyQueryPoolResults(cmdBuffer, queryPool,
                            startQuery, queryCount, destBuffer, destOffset, destStride, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
@@ -2956,12 +3019,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+        dev_data->device_dispatch_table->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
@@ -2976,7 +3040,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFram
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
 {
-    VkResult result = get_dispatch_table(draw_state_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
@@ -3029,6 +3094,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkRenderPassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
@@ -3047,12 +3113,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCmdBuffer cmdBuffer, const VkR
         }
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+        dev_data->device_dispatch_table->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCmdBuffer cmdBuffer, VkRenderPassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         updateCBTracking(cmdBuffer);
@@ -3064,12 +3131,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCmdBuffer cmdBuffer, VkRenderPassC
         skipCall |= outsideRenderPass(pCB, "vkCmdNextSubpass");
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
+        dev_data->device_dispatch_table->CmdNextSubpass(cmdBuffer, contents);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         skipCall |= outsideRenderPass(pCB, "vkEndRenderpass");
@@ -3079,12 +3147,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCmdBuffer cmdBuffer)
         pCB->activeSubpass = 0;
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
+        dev_data->device_dispatch_table->CmdEndRenderPass(cmdBuffer);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
     if (pCB) {
         GLOBAL_CB_NODE* pSubCB = NULL;
@@ -3102,7 +3171,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCmdBuffer cmdBuffer, uint32_t 
         skipCall |= addCmd(pCB, CMD_EXECUTECOMMANDS);
     }
     if (VK_FALSE == skipCall)
-        get_dispatch_table(draw_state_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
+        dev_data->device_dispatch_table->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -3112,10 +3181,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     void*                               pUserData,
     VkDbgMsgCallback*                   pMsgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
+    layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult res = pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     if (VK_SUCCESS == res) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+        //layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     }
     return res;
@@ -3125,9 +3195,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(draw_state_instance_table_map, instance);
+    layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult res = pTable->DbgDestroyMsgCallback(instance, msgCallback);
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     layer_destroy_msg_callback(my_data->report_data, msgCallback);
     return res;
 }
@@ -3136,10 +3206,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
-    if (!deviceExtMap[pDisp].debug_marker_enabled) {
-        // TODO : cmdBuffer should be srcObj
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    if (!dev_data->device_extensions.debug_marker_enabled) {
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerBegin but extension disabled!");
         return;
     } else if (pCB) {
@@ -3153,11 +3222,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCmdBuffer cmdBuffer, const char
 VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
 {
     VkBool32 skipCall = VK_FALSE;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(cmdBuffer);
-    VkLayerDispatchTable *pDisp =  *(VkLayerDispatchTable **) cmdBuffer;
-    if (!deviceExtMap[pDisp].debug_marker_enabled) {
-        // TODO : cmdBuffer should be srcObj
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
+    if (!dev_data->device_extensions.debug_marker_enabled) {
+        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
                 "Attempt to use CmdDbgMarkerEnd but extension disabled!");
         return;
     } else if (pCB) {
@@ -3168,38 +3236,23 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCmdBuffer cmdBuffer)
         debug_marker_dispatch_table(cmdBuffer)->CmdDbgMarkerEnd(cmdBuffer);
 }
 
-//VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectTag(VkDevice device, VkObjectType  objType, VkObject object, size_t tagSize, const void* pTag)
-//{
-//    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
-//    if (!deviceExtMap[pDisp].debug_marker_enabled) {
-//        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, objType, object, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
-//                "Attempt to use DbgSetObjectTag but extension disabled!");
-//        return VK_ERROR_UNAVAILABLE;
-//    }
-//    debug_marker_dispatch_table(device)->DbgSetObjectTag(device, objType, object, tagSize, pTag);
-//}
-//
-//VK_LAYER_EXPORT VkResult VKAPI vkDbgSetObjectName(VkDevice device, VkObjectType  objType, VkObject object, size_t nameSize, const char* pName)
-//{
-//    VkLayerDispatchTable *pDisp  =  *(VkLayerDispatchTable **) device;
-//    if (!deviceExtMap[pDisp].debug_marker_enabled) {
-//        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, objType, object, 0, DRAWSTATE_INVALID_EXTENSION, "DS",
-//                "Attempt to use DbgSetObjectName but extension disabled!");
-//        return VK_ERROR_UNAVAILABLE;
-//    }
-//    debug_marker_dispatch_table(device)->DbgSetObjectName(device, objType, object, nameSize, pName);
-//}
-
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
     if (dev == NULL)
         return NULL;
 
+    layer_data *dev_data;
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
-        initDeviceTable(draw_state_device_table_map, (const VkBaseLayerObject *) dev);
+        VkBaseLayerObject* wrapped_dev = (VkBaseLayerObject*) dev;
+        dev_data = get_my_data_ptr(get_dispatch_key(wrapped_dev->baseObject), layer_data_map);
+        if (!dev_data->device_dispatch_table) {
+            dev_data->device_dispatch_table = new VkLayerDispatchTable;
+            layer_initialize_dispatch_table(dev_data->device_dispatch_table, wrapped_dev);
+        }
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
+    dev_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     if (!strcmp(funcName, "vkCreateDevice"))
         return (PFN_vkVoidFunction) vkCreateDevice;
     if (!strcmp(funcName, "vkDestroyDevice"))
@@ -3373,17 +3426,13 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     if (!strcmp(funcName, "vkCmdExecuteCommands"))
         return (PFN_vkVoidFunction) vkCmdExecuteCommands;
 
-    VkLayerDispatchTable* pTable = get_dispatch_table(draw_state_device_table_map, dev);
-    if (deviceExtMap.size() == 0 || deviceExtMap[pTable].debug_marker_enabled)
+    VkLayerDispatchTable* pTable = dev_data->device_dispatch_table;
+    if (dev_data->device_extensions.debug_marker_enabled)
     {
         if (!strcmp(funcName, "vkCmdDbgMarkerBegin"))
             return (PFN_vkVoidFunction) vkCmdDbgMarkerBegin;
         if (!strcmp(funcName, "vkCmdDbgMarkerEnd"))
             return (PFN_vkVoidFunction) vkCmdDbgMarkerEnd;
-//        if (!strcmp(funcName, "vkDbgSetObjectTag"))
-//            return (void*) vkDbgSetObjectTag;
-//        if (!strcmp(funcName, "vkDbgSetObjectName"))
-//            return (void*) vkDbgSetObjectName;
     }
     {
         if (pTable->GetDeviceProcAddr == NULL)
@@ -3398,11 +3447,18 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     if (instance == NULL)
         return NULL;
 
+    layer_data* my_data;
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
-        initInstanceTable(draw_state_instance_table_map, (const VkBaseLayerObject *) instance);
+        VkBaseLayerObject* wrapped_inst = (VkBaseLayerObject*) instance;
+        my_data = get_my_data_ptr(get_dispatch_key(wrapped_inst->baseObject), layer_data_map);
+        if (!my_data->instance_dispatch_table) {
+            my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+            layer_init_instance_dispatch_table(my_data->instance_dispatch_table, wrapped_inst);
+        }
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
+    my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     if (!strcmp(funcName, "vkCreateInstance"))
         return (PFN_vkVoidFunction) vkCreateInstance;
     if (!strcmp(funcName, "vkDestroyInstance"))
@@ -3416,13 +3472,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if (fptr)
         return fptr;
 
     {
-        VkLayerInstanceDispatchTable* pTable = get_dispatch_table(draw_state_instance_table_map, instance);
+        VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
         if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
         return pTable->GetInstanceProcAddr(instance, funcName);

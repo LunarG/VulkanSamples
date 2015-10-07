@@ -190,6 +190,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
     layer_debug_report_destroy_instance(my_data->report_data);
     delete my_data->instance_dispatch_table;
     layer_data_map.erase(key);
+    if (layer_data_map.empty()) {
+        // Release mutex when destroying last instance.
+        loader_platform_thread_delete_mutex(&globalLock);
+        globalLockInitialized = 0;
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
