@@ -298,7 +298,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
             (*pPhysicalDeviceCount > 0)) {
             // Record the VkPhysicalDevices returned by the ICD:
             SwpInstance *pInstance = &instanceMap[instance];
-            for (int i = 0; i < *pPhysicalDeviceCount; i++) {
+            for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
                 physicalDeviceMap[pPhysicalDevices[i]].physicalDevice =
                     pPhysicalDevices[i];
                 physicalDeviceMap[pPhysicalDevices[i]].pInstance = pInstance;
@@ -508,7 +508,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfaceFormatsKHR(VkDevice device, const VkS
             pDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)
                 malloc(*pCount * sizeof(VkSurfaceFormatKHR));
             if (pDevice->pSurfaceFormats) {
-                for (int i = 0 ; i < *pCount ; i++) {
+                for (uint32_t i = 0 ; i < *pCount ; i++) {
                     pDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
                 }
             } else {
@@ -554,7 +554,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePresentModesKHR(VkDevice device, cons
             pDevice->pPresentModes = (VkPresentModeKHR *)
                 malloc(*pCount * sizeof(VkPresentModeKHR));
             if (pDevice->pSurfaceFormats) {
-                for (int i = 0 ; i < *pCount ; i++) {
+                for (uint32_t i = 0 ; i < *pCount ; i++) {
                     pDevice->pPresentModes[i] = pPresentModes[i];
                 }
             } else {
@@ -734,7 +734,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         bool foundFormat = false;
         bool foundColorSpace = false;
         bool foundMatch = false;
-        for (int i = 0 ; i < pDevice->surfaceFormatCount ; i++) {
+        for (uint32_t i = 0 ; i < pDevice->surfaceFormatCount ; i++) {
             if (pCreateInfo->imageFormat == pDevice->pSurfaceFormats[i].format) {
                 // Validate pCreateInfo->imageColorSpace against
                 // VkSurfaceFormatKHR::colorSpace:
@@ -790,7 +790,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         // Validate pCreateInfo->presentMode against
         // vkGetSurfacePresentModesKHR():
         bool foundMatch = false;
-        for (int i = 0 ; i < pDevice->presentModeCount ; i++) {
+        for (uint32_t i = 0 ; i < pDevice->presentModeCount ; i++) {
             if (pDevice->pPresentModes[i] == pCreateInfo->presentMode) {
                 foundMatch = true;
                 break;
@@ -936,7 +936,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
             // Record the images and their state:
             if (pSwapchain) {
                 pSwapchain->imageCount = *pCount;
-                for (int i = 0 ; i < *pCount ; i++) {
+                for (uint32_t i = 0 ; i < *pCount ; i++) {
                     pSwapchain->images[i].image = pSwapchainImages[i];
                     pSwapchain->images[i].pSwapchain = pSwapchain;
                     pSwapchain->images[i].ownedByApp = false;
@@ -981,8 +981,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
     } else {
         // Look to see if the application is trying to own too many images at
         // the same time (i.e. not leave any to display):
-        int imagesOwnedByApp = 0;
-        for (int i = 0 ; i < pSwapchain->imageCount ; i++) {
+        uint32_t imagesOwnedByApp = 0;
+        for (uint32_t i = 0 ; i < pSwapchain->imageCount ; i++) {
             if (pSwapchain->images[i].ownedByApp) {
                 imagesOwnedByApp++;
             }
@@ -1034,8 +1034,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    for (int i = 0; i < pPresentInfo->swapchainCount ; i++) {
-        int index = pPresentInfo->imageIndices[i];
+    for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
+        uint32_t index = pPresentInfo->imageIndices[i];
         SwpSwapchain *pSwapchain =
             &swapchainMap[pPresentInfo->swapchains[i].handle];
         if (pSwapchain) {
@@ -1084,7 +1084,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
                                                                pPresentInfo);
 
         if ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) {
-            for (int i = 0; i < pPresentInfo->swapchainCount ; i++) {
+            for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
                 int index = pPresentInfo->imageIndices[i];
                 SwpSwapchain *pSwapchain =
                     &swapchainMap[pPresentInfo->swapchains[i].handle];

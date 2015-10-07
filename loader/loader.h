@@ -192,7 +192,7 @@ struct loader_struct {
     struct loader_instance *instances;
 
     unsigned int loaded_layer_lib_count;
-    unsigned int loaded_layer_lib_capacity;
+    size_t loaded_layer_lib_capacity;
     struct loader_lib_info *loaded_layer_lib_list;
     // TODO add ref counting of ICD libraries
     // TODO use this struct loader_layer_library_list scanned_layer_libraries;

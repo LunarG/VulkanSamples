@@ -1841,7 +1841,7 @@ void loader_icd_scan(
                     continue;
                 }
                 char *fullpath;
-                uint32_t path_len;
+                size_t path_len;
                 char *rel_base;
                 // Print out the paths being searched if debugging is enabled
                 loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Searching for ICD drivers named %s default dir %s\n", library_path, DEFAULT_VK_DRIVERS_PATH);

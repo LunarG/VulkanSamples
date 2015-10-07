@@ -1644,7 +1644,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        for (int i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
             add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1662,7 +1662,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        for (int i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < count; i++) {
             add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
         }
         loader_platform_thread_unlock_mutex(&globalLock);
