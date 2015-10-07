@@ -87,16 +87,22 @@ struct layer_data {
 
 #define LAYER_NAME (char *) "Swapchain"
 #define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                     \
-    log_msg(mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
-            (uint64_t) (obj), 0, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME,  \
-            "%s() called with a non-valid %s.", __FUNCTION__, (obj))
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME, \
+                "%s() called with a non-valid %s.", __FUNCTION__, (obj)) \
+    : VK_FALSE
 
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
-    log_msg(mydata.report_data, VK_DBG_REPORT_ERROR_BIT, (objType),    \
-            (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (objType), \
+                (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
+    : VK_FALSE
 #define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)             \
-    log_msg(mydata.report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
-            (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__)
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DBG_REPORT_PERF_WARN_BIT, (objType), \
+                (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
+    : VK_FALSE
 
 
 // NOTE: The following struct's/typedef's are for keeping track of
