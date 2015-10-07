@@ -315,7 +315,7 @@ static inline VkBool32 VKAPI win32_debug_output_msg(
     char buf[2048];
 
     print_msg_flags(msgFlags, msg_flags);
-    _snprintf(buf, sizeof(buf)-1, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s\n",
+    _snprintf(buf, sizeof(buf) - 1, "%s (%s): object: 0x%" PRIxPTR " type: %d location: " PRINTF_SIZE_T_SPECIFIER " msgCode: %d: %s\n",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 
     OutputDebugString(buf);

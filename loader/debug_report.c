@@ -280,7 +280,7 @@ static void VKAPI StringCallback(
                50 /* other / whitespace */;
     buf = loader_stack_alloc(buf_size);
 
-    snprintf(buf, buf_size, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s",
+    snprintf(buf, buf_size, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: " PRINTF_SIZE_T_SPECIFIER " msgCode : %d : %s",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
     callback(buf);
 }
@@ -299,7 +299,7 @@ static void VKAPI StdioCallback(
 
     print_msg_flags(msgFlags, msg_flags);
 
-    fprintf((FILE *) pUserData, "%s(%s): object: 0x%" PRIxLEAST64 " type: %d location: %zu msgCode: %d: %s",
+    fprintf((FILE *)pUserData, "%s(%s): object: 0x%" PRIxLEAST64 " type: %d location: " PRINTF_SIZE_T_SPECIFIER " msgCode : %d : %s",
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 }
 

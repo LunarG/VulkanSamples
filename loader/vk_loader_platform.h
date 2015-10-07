@@ -232,6 +232,8 @@ using namespace std;
 #define DEFAULT_VK_LAYERS_PATH "C:\\Windows\\System32;C:\\Windows\\SysWow64"
 #define LAYERS_PATH_ENV "VK_LAYER_PATH"
 
+#define PRINTF_SIZE_T_SPECIFIER    "%Iu"
+
 // File IO
 static bool loader_platform_file_exists(const char *path)
 {
