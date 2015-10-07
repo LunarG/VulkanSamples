@@ -39,9 +39,6 @@ using namespace std;
 #include "mem_tracker.h"
 #include "vk_layer_config.h"
 #include "vk_layer_extension_utils.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
-#include "vk_loader_platform.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"

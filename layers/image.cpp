@@ -22,29 +22,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <iostream>
-#include <string>
-#include <sstream>
+#include <assert.h>
+#include <vector>
 #include <unordered_map>
 #include <memory>
-#include <vector>
+using namespace std;
 
-#include "image.h"
 #include "vk_loader_platform.h"
-#include "vk_layer.h"
+#include "vk_dispatch_table_helper.h"
+#include "vk_struct_string_helper_cpp.h"
 #include "vk_enum_validate_helper.h"
-#include "vk_struct_validate_helper.h"
-//The following is #included again to catch certain OS-specific functions being used:
-#include "vk_loader_platform.h"
-
+#include "image.h"
+#include "vk_layer_config.h"
+#include "vk_layer_extension_utils.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
+#include "vk_layer_logging.h"
 
 using namespace std;
 

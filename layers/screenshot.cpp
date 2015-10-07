@@ -41,9 +41,6 @@ using namespace std;
 #include "vk_dispatch_table_helper.h"
 #include "vk_struct_string_helper_cpp.h"
 #include "vk_layer_config.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
-#include "vk_loader_platform.h"
 #include "vk_layer_table.h"
 #include "vk_layer_extension_utils.h"
 

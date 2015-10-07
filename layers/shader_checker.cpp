@@ -38,9 +38,6 @@
 #include "vk_layer_logging.h"
 #include "vk_enum_string_helper.h"
 #include "shader_checker.h"
-// The following is #included again to catch certain OS-specific functions
-// being used:
-#include "vk_loader_platform.h"
 #include "vk_layer_extension_utils.h"
 
 #include "spirv/spirv.hpp"
@@ -91,7 +88,7 @@ static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
 
-std::unordered_map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
+std::unordered_map<uint64_t, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
@@ -114,7 +111,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 }
 
 
-std::unordered_map<uint32_t, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
+std::unordered_map<uint64_t, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
@@ -188,7 +185,7 @@ bool
 shader_is_spirv(VkShaderModuleCreateInfo const *pCreateInfo)
 {
     uint32_t *words = (uint32_t *)pCreateInfo->pCode;
-    uint32_t sizeInWords = pCreateInfo->codeSize / sizeof(uint32_t);
+    size_t sizeInWords = pCreateInfo->codeSize / sizeof(uint32_t);
 
     /* Just validate that the header makes sense. */
     return sizeInWords >= 5 && words[0] == spv::MagicNumber && words[1] == spv::Version;
