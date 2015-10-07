@@ -558,7 +558,7 @@ class Subcommand(object):
         pid_enum.append('    if (pInStruct->layerCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->layerCount; i++) {')
-        pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
+        pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
@@ -568,7 +568,7 @@ class Subcommand(object):
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++) {')
-        pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
+        pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
         pid_enum.append('        }')
@@ -588,7 +588,7 @@ class Subcommand(object):
         pid_enum.append('    if (pInStruct->layerCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->layerCount; i++) {')
-        pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
+        pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledLayerNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledLayerNames[i]), siz, pInStruct->ppEnabledLayerNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledLayerNames[i]);')
         pid_enum.append('        }')
@@ -598,7 +598,7 @@ class Subcommand(object):
         pid_enum.append('    if (pInStruct->extensionCount > 0) ')
         pid_enum.append('    {')
         pid_enum.append('        for (i = 0; i < pInStruct->extensionCount; i++) {')
-        pid_enum.append('            siz = (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
+        pid_enum.append('            siz = (uint32_t) (1 + strlen(pInStruct->ppEnabledExtensionNames[i]));')
         pid_enum.append('            vktrace_add_buffer_to_trace_packet(pHeader, (void**)(&(*ppStruct)->ppEnabledExtensionNames[i]), siz, pInStruct->ppEnabledExtensionNames[i]);')
         pid_enum.append('            vktrace_finalize_buffer_address(pHeader, (void **)&(*ppStruct)->ppEnabledExtensionNames[i]);')
         pid_enum.append('        }')
@@ -840,18 +840,6 @@ class Subcommand(object):
                              'AllocMemory' : {'param': 'pAllocInfo', 'txt': ['if (pPacket->pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {\n',
                                                                                          '    VkMemoryAllocInfo** ppNext = (VkMemoryAllocInfo**) &(pPacket->pAllocInfo->pNext);\n',
                                                                                          '    *ppNext = (VkMemoryAllocInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
-                                                                                         '    VkMemoryAllocInfo* pNext = (VkMemoryAllocInfo*) *ppNext;\n',
-                                                                                         '    while (NULL != pNext)\n', '    {\n',
-                                                                                         '        switch(pNext->sType)\n', '        {\n',
-                                                                                         '            default:\n',
-                                                                                         '            {\n',
-                                                                                         '               vktrace_LogError("Encountered an unexpected type alloc memory list.");\n',
-                                                                                         '               pPacket->header = NULL;\n',
-                                                                                         '               pNext->pNext = NULL;\n',
-                                                                                         '            }\n',
-                                                                                         '        }\n',
-                                                                                         '        pNext = (VkMemoryAllocInfo*)pNext->pNext;\n',
-                                                                                         '    }\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
                                                                                          '    vktrace_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',

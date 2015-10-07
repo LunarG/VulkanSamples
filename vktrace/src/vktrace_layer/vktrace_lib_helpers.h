@@ -256,17 +256,6 @@ static void rm_handle_from_mem_info(const VkDeviceMemory handle)
 
 static void add_alloc_memory_to_trace_packet(vktrace_trace_packet_header* pHeader, void** ppOut, const void* pIn)
 {
-    const VkMemoryAllocInfo* pInNow = (const VkMemoryAllocInfo*) pIn;
-    while (pInNow != NULL)
-    {
-
-        switch (pInNow->sType)
-        {
-        default:
-            assert(!"Encountered an unexpected type in memory_alloc_info list");
-        }
-        pInNow = (VkMemoryAllocInfo*)pInNow->pNext;
-    }
     return;
 }
 

@@ -272,7 +272,7 @@ char* vktrace_platform_get_settings_path()
     }
 #elif defined(WIN32)
     DWORD reqLength = GetEnvironmentVariable("localappdata", NULL, 0);
-    TCHAR* localAppData = VKTRACE_NEW_ARRAY(TCHAR*, reqLength);
+    TCHAR* localAppData = VKTRACE_NEW_ARRAY(TCHAR, reqLength);
     GetEnvironmentVariable("localappdata", localAppData, reqLength);
     TCHAR* localVktraceData = vktrace_copy_and_append(localAppData, VKTRACE_PATH_SEPARATOR, "vktrace");
     VKTRACE_DELETE(localAppData);
@@ -296,7 +296,7 @@ char* vktrace_platform_get_data_path()
     }
 #elif defined(WIN32)
     DWORD reqLength = GetEnvironmentVariable("localappdata", NULL, 0);
-    TCHAR* localAppData = VKTRACE_NEW_ARRAY(TCHAR*, reqLength);
+    TCHAR* localAppData = VKTRACE_NEW_ARRAY(TCHAR, reqLength);
     GetEnvironmentVariable("localappdata", localAppData, reqLength);
     TCHAR* localVktraceData = vktrace_copy_and_append(localAppData, VKTRACE_PATH_SEPARATOR, "vktrace");
     VKTRACE_DELETE(localAppData);

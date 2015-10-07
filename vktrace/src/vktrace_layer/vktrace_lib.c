@@ -66,7 +66,7 @@ void loggingCallback(VktraceLogLevel level, const char* pMessage)
 
     if (vktrace_trace_get_trace_file() != NULL)
     {
-        size_t requiredLength = strlen(pMessage) + 1;
+        uint32_t requiredLength = (uint32_t) strlen(pMessage) + 1;
         vktrace_trace_packet_header* pHeader = vktrace_create_trace_packet(VKTRACE_TID_VULKAN, VKTRACE_TPI_MESSAGE, sizeof(vktrace_trace_packet_message), requiredLength);
         vktrace_trace_packet_message* pPacket = vktrace_interpret_body_as_trace_packet_message(pHeader);
         pPacket->type = level;
