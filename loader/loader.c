@@ -164,7 +164,7 @@ void *loader_tls_heap_alloc(size_t size)
 
 void loader_tls_heap_free(void *pMem)
 {
-    return loader_heap_free(tls_instance, pMem);
+    loader_heap_free(tls_instance, pMem);
 }
 
 static void loader_log(VkFlags msg_type, int32_t msg_code,
