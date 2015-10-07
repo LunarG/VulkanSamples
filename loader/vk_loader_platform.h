@@ -413,40 +413,9 @@ char *loader_get_registry_string(const HKEY hive,
 #if defined(__linux__)
 /* Linux-specific common code: */
 
-// Dynamic Loading:
-#define dlopen PLEASE USE THE loader_platform_open_library() FUNCTION
-#define dlerror PLEASE DO NOT USE THE dlerror() FUNCTION DIRECTLY
-#define dlclose PLEASE USE THE loader_platform_close_library() FUNCTION
-#define dlsym PLEASE USE THE loader_platform_get_proc_address() FUNCTION
-
-// Threads:
-#define pthread_once PLEASE USE THE loader_platform_thread_once() FUNCTION
-#define pthread_self PLEASE USE THE loader_platform_get_thread_id() FUNCTION
-
-// Thread mutex:
-#define pthread_mutex_init PLEASE USE THE loader_platform_thread_create_mutex() FUNCTION
-#define pthread_mutex_lock PLEASE USE THE loader_platform_thread_lock_mutex() FUNCTION
-#define pthread_mutex_unlock PLEASE USE THE loader_platform_thread_unlock_mutex() FUNCTION
-#define pthread_mutex_destroy PLEASE USE THE loader_platform_thread_delete_mutex() FUNCTION
-
 
 #elif defined(_WIN32) // defined(__linux__)
 /* Windows-specific common code: */
-
-// Dynamic Loading:
-//#define LoadLibrary PLEASE USE THE loader_platform_open_library() FUNCTION
-#define FreeLibrary PLEASE USE THE loader_platform_close_library() FUNCTION
-#define GetProcAddress PLEASE USE THE loader_platform_get_proc_address() FUNCTION
-
-// Threads:
-#define InitOnceExecuteOnce PLEASE USE THE loader_platform_thread_once() FUNCTION
-#define GetCurrentThreadId PLEASE USE THE loader_platform_get_thread_id() FUNCTION
-
-// Thread mutex:
-#define InitializeCriticalSection PLEASE USE THE loader_platform_thread_create_mutex() FUNCTION
-#define EnterCriticalSection PLEASE USE THE loader_platform_thread_lock_mutex() FUNCTION
-#define LeaveCriticalSection PLEASE USE THE loader_platform_thread_unlock_mutex() FUNCTION
-#define DeleteCriticalSection PLEASE USE THE loader_platform_thread_delete_mutex() FUNCTION
 
 #define loader_stack_alloc(size) _alloca(size)
 
