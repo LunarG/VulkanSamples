@@ -23,6 +23,7 @@
  */
 #include "vk_layer.h"
 #include <vector>
+#include <memory>
 #include "vk_debug_report_lunarg.h"
 
 using namespace std;
@@ -125,12 +126,15 @@ typedef struct _PIPELINE_NODE {
 typedef struct _SAMPLER_NODE {
     VkSampler           sampler;
     VkSamplerCreateInfo createInfo;
+
+    _SAMPLER_NODE(const VkSampler* ps, const VkSamplerCreateInfo* pci) : sampler(*ps), createInfo(*pci) {};
 } SAMPLER_NODE;
 
 typedef struct _BUFFER_NODE {
     VkBufferView           buffer;
     VkBufferViewCreateInfo createInfo;
-    VkDescriptorInfo       descriptorInfo;
+
+    _BUFFER_NODE(const VkBufferView* pbv, const VkBufferViewCreateInfo* pci) : buffer(*pbv), createInfo(*pci) {};
 } BUFFER_NODE;
 
 // Descriptor Data structures
