@@ -70,7 +70,7 @@ using namespace std;
 #ifdef DEBUG_CALLBACK
 #include <vk_debug_report_lunarg.h>
 #endif
-#include "gtest-1.7.0/include/gtest/gtest.h"
+#include "test_common.h"
 
 #include "icd-spv.h"
 

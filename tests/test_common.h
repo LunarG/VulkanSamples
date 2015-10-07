@@ -10,8 +10,22 @@
 #include <vulkan.h>
 #include <vk_sdk_platform.h>
 
+#ifdef WIN32
+#pragma warning( push )
+/*
+    warnings 4251 and 4275 have to do with potential dll-interface mismatch
+    between library (gtest) and users. Since we build the gtest library
+    as part of the test build we know that the dll-interface will match and
+    can disable these warnings.
+ */
+#pragma warning(disable: 4251)
+#pragma warning(disable: 4275)
+#endif
 #include "gtest/gtest.h"
 #include "gtest-1.7.0/include/gtest/gtest.h"
+#ifdef WIN32
+#pragma warning( pop )
+#endif
 #include "vktestbinding.h"
 
 #define ASSERT_VK_SUCCESS(err) ASSERT_EQ(VK_SUCCESS, err) << vk_result_string(err)

@@ -111,7 +111,7 @@ void VkRenderFramework::InitFramework(
     ASSERT_VK_SUCCESS(err);
     err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, objs);
     ASSERT_VK_SUCCESS(err);
-    ASSERT_GE(this->gpu_count, 1) << "No GPU available";
+    ASSERT_GE(this->gpu_count, (uint32_t) 1) << "No GPU available";
     if (dbgFunction) {
         m_dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(this->inst, "vkDbgCreateMsgCallback");
         ASSERT_NE(m_dbgCreateMsgCallback, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";

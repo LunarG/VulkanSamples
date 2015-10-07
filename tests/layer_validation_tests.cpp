@@ -1,6 +1,6 @@
 #include <vulkan.h>
 #include "vk_debug_report_lunarg.h"
-#include "gtest-1.7.0/include/gtest/gtest.h"
+#include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"
 #include "../icd/common/icd-spv.h"
@@ -4043,7 +4043,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
      * provide a uniform buffer in 0.0
      */
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(msgFlags & VK_DBG_REPORT_ERROR_BIT);
+    ASSERT_TRUE((msgFlags & VK_DBG_REPORT_ERROR_BIT) == VK_DBG_REPORT_ERROR_BIT);
     if (!strstr(msgString.c_str(),"not declared in pipeline layout")) {
         FAIL() << "Incorrect error: " << msgString;
     }

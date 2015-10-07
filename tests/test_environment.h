@@ -20,7 +20,7 @@ public:
 
 private:
     VkApplicationInfo app_;
-    int default_dev_;
+    uint32_t default_dev_;
     VkInstance inst;
 
     std::vector<Device *> devs_;

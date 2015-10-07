@@ -59,7 +59,6 @@
 #include <string.h>
 
 #include <vulkan.h>
-#include "gtest-1.7.0/include/gtest/gtest.h"
 #include "vktestbinding.h"
 #include "test_common.h"
 
@@ -110,7 +109,7 @@ protected:
         ASSERT_LE(this->gpu_count, ARRAY_SIZE(objs)) << "Too many GPUs";
         err = vkEnumeratePhysicalDevices(this->inst, &this->gpu_count, objs);
         ASSERT_VK_SUCCESS(err);
-        ASSERT_GE(this->gpu_count, 1) << "No GPU available";
+        ASSERT_GE(this->gpu_count, (uint32_t) 1) << "No GPU available";
 
         this->m_device = new vk_testing::Device(objs[0]);
         this->m_device->init();

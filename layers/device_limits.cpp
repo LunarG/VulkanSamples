@@ -240,6 +240,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
         log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_INSTANCE, 0, 0, DEVLIMITS_INVALID_INSTANCE, "DL",
             "Invalid instance (%#" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().", instance);
     }
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures)
@@ -311,6 +312,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(VkPhysic
         log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_PHYSICAL_DEVICE, "DL",
             "Invalid physicalDevice (%#" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties().", physicalDevice);
     }
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties)
@@ -504,7 +506,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
 {
     VkBool32                skipCall       = VK_FALSE;
     VkResult                result         = VK_ERROR_VALIDATION_FAILED;
-    VkImageType             type;
     VkImageFormatProperties ImageFormatProperties = {0};
 
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -520,7 +521,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
                         "CreateImage called before querying device properties ");
     }
 
-    uint32_t imageGranularity = phy_dev_data->physicalDeviceProperties->limits.bufferImageGranularity;
+    VkDeviceSize imageGranularity = phy_dev_data->physicalDeviceProperties->limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
     if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
