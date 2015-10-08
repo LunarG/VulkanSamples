@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-build sample for config when spirv shaders used
+build sample for config when external spirv shaders used
 */
 
 #include <iostream>

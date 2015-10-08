@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-build sample for config when glsl shaders used
+build sample for config when external glsl shaders used
 */
 
 /*
