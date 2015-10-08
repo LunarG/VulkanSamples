@@ -336,6 +336,8 @@ static inline void *loader_non_passthrough_gipa(const char *name)
         return (void*) vkCreateInstance;
     if (!strcmp(name, "DestroyInstance"))
         return (void*) vkDestroyInstance;
+    if (!strcmp(name, "GetDeviceProcAddr"))
+        return (void*) vkGetDeviceProcAddr;
      // remove once no longer locks
     if (!strcmp(name, "EnumeratePhysicalDevices"))
         return (void*) vkEnumeratePhysicalDevices;
