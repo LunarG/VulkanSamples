@@ -78,6 +78,7 @@ unordered_map<uint64_t,       MT_MEM_OBJ_INFO>      memObjMap;
 unordered_map<uint64_t,       MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
 unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
 unordered_map<uint64_t,       MT_SWAP_CHAIN_INFO*>  swapchainMap;
+unordered_map<uint64_t,       MtSemaphoreState>     semaphoreMap;
 
 // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
 unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
@@ -2394,9 +2395,116 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
+    VkDevice        device,
+    VkSwapchainKHR  swapchain,
+    uint64_t        timeout,
+    VkSemaphore     semaphore,
+    uint32_t       *pImageIndex)
+{
+    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+    VkBool32 skipCall = VK_FALSE;
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (semaphoreMap.find(semaphore.handle) != semaphoreMap.end()) {
+        if (semaphoreMap[semaphore.handle] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+            skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, semaphore.handle,
+                               0, MEMTRACK_NONE, "SEMAPHORE",
+                               "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
+        }
+        semaphoreMap[semaphore.handle] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        result = get_dispatch_table(mem_tracker_device_table_map, device)->AcquireNextImageKHR(device,
+                                    swapchain, timeout, semaphore, pImageIndex);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
+    VkDevice                     device,
+    const VkSemaphoreCreateInfo *pCreateInfo,
+    VkSemaphore                 *pSemaphore)
+{
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pSemaphore);
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (pSemaphore->handle != 0) {
+        semaphoreMap[pSemaphore->handle] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
+VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
+    VkDevice    device,
+    VkSemaphore semaphore)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto item = semaphoreMap.find(semaphore.handle);
+    if (item != semaphoreMap.end()) {
+        semaphoreMap.erase(item);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySemaphore(device, semaphore);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
+    VkQueue     queue,
+    VkSemaphore semaphore)
+{
+    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+    VkBool32 skipCall = VK_FALSE;
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (semaphoreMap.find(semaphore.handle) != semaphoreMap.end()) {
+        if (semaphoreMap[semaphore.handle] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+            skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, semaphore.handle,
+                               0, MEMTRACK_NONE, "SEMAPHORE",
+                               "vkQueueSignalSemaphore: Semaphore must not be currently signaled or in a wait state");
+        }
+        semaphoreMap[semaphore.handle] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        VkResult result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueSignalSemaphore(queue, semaphore);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
+    VkQueue     queue,
+    VkSemaphore semaphore)
+{
+    VkBool32 skipCall = VK_FALSE;
+    VkBool32 found    = VK_FALSE;
+    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (semaphoreMap.find(semaphore.handle) != semaphoreMap.end()) {
+        found = VK_TRUE;
+        if (semaphoreMap[semaphore.handle] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
+            skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, semaphore.handle,
+                               0, MEMTRACK_NONE, "SEMAPHORE",
+                               "vkQueueWaitSemaphore: Semaphore must be in signaled state before passing to vkQueueWaitSemaphore");
+        }
+        semaphoreMap[semaphore.handle] = MEMTRACK_SEMAPHORE_STATE_WAIT;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueWaitSemaphore(queue, semaphore);
+    }
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (found) {
+        semaphoreMap[semaphore.handle] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
+}
+
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
-    const char       *funcName)
+    const char      *funcName)
 {
     if (dev == NULL) {
         return NULL;
@@ -2449,6 +2557,14 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkResetFences;
     if (!strcmp(funcName, "vkWaitForFences"))
         return (PFN_vkVoidFunction) vkWaitForFences;
+    if (!strcmp(funcName, "vkCreateSemaphore"))
+        return (PFN_vkVoidFunction) vkCreateSemaphore;
+    if (!strcmp(funcName, "vkDestroySemaphore"))
+        return (PFN_vkVoidFunction) vkDestroySemaphore;
+    if (!strcmp(funcName, "vkQueueSignalSemaphore"))
+        return (PFN_vkVoidFunction) vkQueueSignalSemaphore;
+    if (!strcmp(funcName, "vkQueueWaitSemaphore"))
+        return (PFN_vkVoidFunction) vkQueueWaitSemaphore;
     if (!strcmp(funcName, "vkQueueWaitIdle"))
         return (PFN_vkVoidFunction) vkQueueWaitIdle;
     if (!strcmp(funcName, "vkDeviceWaitIdle"))
@@ -2549,6 +2665,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
             return (PFN_vkVoidFunction) vkDestroySwapchainKHR;
         if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
             return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
+        if (!strcmp(funcName, "vkAcquireNextImageKHR"))
+            return (PFN_vkVoidFunction)vkAcquireNextImageKHR;
     }
 
     VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);

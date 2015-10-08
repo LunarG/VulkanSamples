@@ -38,6 +38,24 @@
 struct intel_dev;
 struct intel_fence;
 
+struct intel_semaphore {
+    struct intel_obj obj;
+
+    int references;
+};
+
+static inline struct intel_semaphore *intel_semaphore(VkSemaphore semaphore)
+{
+    return *(struct intel_semaphore **) &semaphore;
+}
+
+static inline struct intel_semaphore *intel_semaphore_from_obj(struct intel_obj *obj)
+{
+    return (struct intel_semaphore *) obj;
+}
+
+void intel_semaphore_destroy(struct intel_semaphore *semaphore);
+
 struct intel_queue {
     struct intel_base base;
 
@@ -64,5 +82,9 @@ VkResult intel_queue_create(struct intel_dev *dev,
 void intel_queue_destroy(struct intel_queue *queue);
 
 VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout);
+
+VkResult intel_semaphore_create(struct intel_dev *dev,
+                                const VkSemaphoreCreateInfo *info,
+                                struct intel_semaphore **semaphore_ret);
 
 #endif /* QUEUE_H */

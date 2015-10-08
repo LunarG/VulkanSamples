@@ -32,6 +32,36 @@
 #include "fence.h"
 #include "queue.h"
 
+static void semaphore_destroy(struct intel_obj *obj)
+{
+    struct intel_semaphore *semaphore = intel_semaphore_from_obj(obj);
+
+    intel_semaphore_destroy(semaphore);
+}
+
+VkResult intel_semaphore_create(struct intel_dev *dev,
+                                const VkSemaphoreCreateInfo *info,
+                                struct intel_semaphore **semaphore_ret)
+{
+    struct intel_semaphore *semaphore;
+    semaphore = (struct intel_semaphore *) intel_base_create(&dev->base.handle,
+            sizeof(*semaphore), dev->base.dbg, VK_OBJECT_TYPE_SEMAPHORE, info, 0);
+
+    if (!semaphore)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    semaphore->references = 0;
+    *semaphore_ret = semaphore;
+    semaphore->obj.destroy = semaphore_destroy;
+
+    return VK_SUCCESS;
+}
+
+void intel_semaphore_destroy(struct intel_semaphore *semaphore)
+{
+    intel_base_destroy(&semaphore->obj.base);
+}
+
 static void queue_submit_hang(struct intel_queue *queue,
                               struct intel_cmd *cmd,
                               uint32_t active_lost,
@@ -381,13 +411,10 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
-    VkDevice                                  device,
-    const VkSemaphoreCreateInfo*            pCreateInfo,
-    VkSemaphore*                              pSemaphore)
+    VkDevice                                device,
+    const VkSemaphoreCreateInfo            *pCreateInfo,
+    VkSemaphore                            *pSemaphore)
 {
-    // TODO: fully support semaphores (mean time, simply fake it):
-    pSemaphore->handle = 1;
-
     /*
      * We want to find an unused semaphore register and initialize it.  Signal
      * will increment the register.  Wait will atomically decrement it and
@@ -396,20 +423,28 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
      *
      * XXX However, MI_SEMAPHORE_MBOX does not seem to have the flexibility.
      */
-    return VK_SUCCESS;
+
+    // TODO: fully support semaphores (mean time, simulate it):
+    struct intel_dev *dev = intel_dev(device);
+
+    return intel_semaphore_create(dev, pCreateInfo,
+           (struct intel_semaphore **) pSemaphore);
 }
 
 ICD_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore)
-
- {
- }
+{
+    struct intel_obj *obj = intel_obj(semaphore.handle);
+    obj->destroy(obj);
+}
 
 ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
     VkQueue                                   queue,
     VkSemaphore                               semaphore)
 {
+    struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
+    pSemaphore->references++;
     return VK_SUCCESS;
 }
 
@@ -417,7 +452,9 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
     VkQueue                                   queue,
     VkSemaphore                               semaphore)
 {
+    struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
     vkQueueWaitIdle(queue);
+    pSemaphore->references--;
 
     return VK_SUCCESS;
 }

@@ -50,6 +50,14 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_INVALID_USAGE_FLAG,            // Usage flags specified at image/buffer create conflict w/ use of object
 } MEM_TRACK_ERROR;
 
+// MemTracker Semaphore states
+typedef enum _MtSemaphoreState
+{
+    MEMTRACK_SEMAPHORE_STATE_UNSET,         // Semaphore is in an undefined state
+    MEMTRACK_SEMAPHORE_STATE_SIGNALLED,     // Semaphore has is in signalled state
+    MEMTRACK_SEMAPHORE_STATE_WAIT,          // Semaphore is in wait state
+} MtSemaphoreState;
+
 /*
  * Data Structure overview
  *  There are 4 global STL(' maps
@@ -133,9 +141,10 @@ struct MT_QUEUE_INFO {
     list<VkDeviceMemory>        pMemRefList;
 };
 
+// Track Swapchain Information
 struct MT_SWAP_CHAIN_INFO {
-    VkSwapchainCreateInfoKHR             createInfo;
-    std::vector<VkImage> images;
+    VkSwapchainCreateInfoKHR    createInfo;
+    std::vector<VkImage>        images;
 };
 
 #ifdef __cplusplus

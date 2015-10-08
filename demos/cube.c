@@ -600,7 +600,7 @@ static void demo_draw(struct demo *demo)
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = NULL,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+        .flags = 0,
     };
     VkFence nullFence = { VK_NULL_HANDLE };
 
