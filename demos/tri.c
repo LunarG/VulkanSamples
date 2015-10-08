@@ -1719,14 +1719,14 @@ static void demo_init_vk(struct demo *demo)
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!err);
 
-    VkBool32 WSIextFound = 0;
+    VkBool32 swapchainExtFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         if (!strcmp("VK_EXT_KHR_swapchain", instance_extensions[i].extName)) {
-            WSIextFound = 1;
+            swapchainExtFound = 1;
             extension_names[enabled_extension_count++] = "VK_EXT_KHR_swapchain";
         }
         if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
@@ -1736,7 +1736,7 @@ static void demo_init_vk(struct demo *demo)
         }
         assert(enabled_extension_count < 64);
     }
-    if (!WSIextFound) {
+    if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
                  "\"VK_EXT_KHR_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
@@ -1836,7 +1836,7 @@ static void demo_init_vk(struct demo *demo)
               demo->gpu, NULL, &device_extension_count, NULL);
     assert(!err);
 
-    WSIextFound = 0;
+    swapchainExtFound = 0;
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
     device_extensions = malloc(sizeof(VkExtensionProperties) * device_extension_count);
@@ -1846,12 +1846,12 @@ static void demo_init_vk(struct demo *demo)
 
     for (uint32_t i = 0; i < device_extension_count; i++) {
         if (!strcmp("VK_EXT_KHR_device_swapchain", device_extensions[i].extName)) {
-            WSIextFound = 1;
+            swapchainExtFound = 1;
             extension_names[enabled_extension_count++] = "VK_EXT_KHR_device_swapchain";
         }
         assert(enabled_extension_count < 64);
     }
-    if (!WSIextFound) {
+    if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the "
                  "\"VK_EXT_KHR_device_swapchain\" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
@@ -1927,12 +1927,12 @@ static void demo_init_vk(struct demo *demo)
     //       and appropriate tracking for QueueSubmit
 }
 
-static void demo_init_vk_wsi(struct demo *demo)
+static void demo_init_vk_swapchain(struct demo *demo)
 {
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    // Construct the WSI surface description:
+    // Construct the surface description:
     demo->surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     demo->surface_description.pNext = NULL;
 #ifdef _WIN32
@@ -1947,7 +1947,7 @@ static void demo_init_vk_wsi(struct demo *demo)
     demo->surface_description.pPlatformWindow = &demo->window;
 #endif // _WIN32
 
-    // Iterate over each queue to learn whether it supports presenting to WSI:
+    // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(demo->queue_count * sizeof(VkBool32));
     for (i = 0; i < demo->queue_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportKHR(demo->gpu, i,
@@ -1987,7 +1987,7 @@ static void demo_init_vk_wsi(struct demo *demo)
     // Generate error if could not find both a graphics and a present queue
     if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX) {
         ERR_EXIT("Could not find a graphics and a present queue\n",
-                 "WSI Initialization Failure");
+                 "Swapchain Initialization Failure");
     }
 
     // TODO: Add support for separate queues, including presentation,
@@ -1996,7 +1996,7 @@ static void demo_init_vk_wsi(struct demo *demo)
     // present queues, this demo program assumes it is only using one:
     if (graphicsQueueNodeIndex != presentQueueNodeIndex) {
         ERR_EXIT("Could not find a common graphics and a present queue\n",
-                 "WSI Initialization Failure");
+                 "Swapchain Initialization Failure");
     }
 
     demo->graphics_queue_node_index = graphicsQueueNodeIndex;
@@ -2171,7 +2171,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
     demo_init(&demo, hInstance, pCmdLine);
     demo_create_window(&demo);
-    demo_init_vk_wsi(&demo);
+    demo_init_vk_swapchain(&demo);
 
     demo_prepare(&demo);
 
@@ -2203,7 +2203,7 @@ int main(const int argc, const char *argv[])
 
     demo_init(&demo, argc, argv);
     demo_create_window(&demo);
-    demo_init_vk_wsi(&demo);
+    demo_init_vk_swapchain(&demo);
 
     demo_prepare(&demo);
     demo_run(&demo);
