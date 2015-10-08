@@ -2104,7 +2104,6 @@ static void demo_cleanup(struct demo *demo)
     for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
     }
-    vkFreeDescriptorSets(demo->device, demo->desc_pool, 1, &demo->desc_set);
     vkDestroyDescriptorPool(demo->device, demo->desc_pool);
 
     if (demo->setup_cmd) {

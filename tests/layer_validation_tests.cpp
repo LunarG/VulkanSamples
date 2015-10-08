@@ -876,8 +876,6 @@ TEST_F(VkLayerTest, PipelineNotBound)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1306,8 +1304,6 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1441,8 +1437,6 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1628,8 +1622,6 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1754,8 +1746,6 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1863,8 +1853,6 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -1972,8 +1960,6 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2130,8 +2116,6 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2288,8 +2272,6 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 
     vkDestroyPipelineCache(m_device->device(), pipelineCache);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2683,8 +2665,6 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     }
 
     vkDestroySampler(m_device->device(), sampler);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2780,8 +2760,6 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     }
 
     vkDestroySampler(m_device->device(), sampler);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2876,8 +2854,6 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     }
 
     vkDestroySampler(m_device->device(), sampler);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -2972,8 +2948,6 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     }
 
     vkDestroySampler(m_device->device(), sampler);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -3061,8 +3035,6 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -3160,8 +3132,6 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
@@ -3258,8 +3228,6 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
-    err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
