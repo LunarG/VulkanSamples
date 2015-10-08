@@ -24,8 +24,8 @@ echo "Device"
 & $dPath\vk0.9-device
 echo "Enable Validation and Debug Message Callback"
 & $dPath\vk0.9-enable_validation_with_callback
-echo "Init WSI"
-& $dPath\vk0.9-initwsi
+echo "Init Swapchain"
+& $dPath\vk0.9-initswapchain
 echo "Init Command Buffer"
 & $dPath\vk0.9-initcommandbuffer
 echo "Depth Buffer"

@@ -210,7 +210,7 @@ set(VULKAN_VERSION vk0.9)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
-    depthbuffer initwsi inittexture uniformbuffer
+    depthbuffer initswapchain inittexture uniformbuffer
     descriptor_pipeline_layouts initcommandbuffer
     initrenderpass initframebuffers vertexbuffer
     allocdescriptorsets initshaders initpipeline

@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
-    init_wsi(info);
+    init_swapchain_extension(info);
     init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
@@ -1411,7 +1411,7 @@ void destroy_window(struct sample_info &info)
 }
 #endif // _WIN32
 
-void init_wsi(struct sample_info &info)
+void init_swapchain_extension(struct sample_info &info)
 {
     /* DEPENDS on init_connection() and init_window() */
 

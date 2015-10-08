@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
-    init_wsi(info);
+    init_swapchain_extension(info);
 
     /* VULKAN_KEY_START */
 
