@@ -20,7 +20,7 @@
   - Note that if you have a LoaderAndTools repository, and/or a glslang
     repository that are file system peers to VulkanSamplesKit, cmake will
     look in those repositories for headers and libraries before looking in
-    SDK or system locations.  Build directories in those repositories should 
+    SDK or system locations.  Build directories in those repositories should
     be named "build".
 
 ## Kit Structure
@@ -51,9 +51,9 @@ From a PowerShell window, first build glslang:
   PS > cmake -G "Visual Studio 12 Win64" ..
   ```
   Open the glslang.sln file in the build folder with Microsoft Visual Studio and build the solution in both Debug and Release mode.  
-  
+
   Next build the Vulkan Samples:
-  ``` 
+  ```
   PS > cd C:\VulkanSDK\<version>\VkSamples
   PS > mkdir build
   PS > cd build
