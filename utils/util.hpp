@@ -44,10 +44,10 @@
 #else  // _WIN32
 #include <xcb/xcb.h>
 #include <unistd.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
-#include <vulkan/vk_debug_report_lunarg.h>
+#include <vulkan.h>
+#include <vk_ext_khr_swapchain.h>
+#include <vk_ext_khr_device_swapchain.h>
+#include <vk_debug_report_lunarg.h>
 #endif // _WIN32
 
 #define SAMPLE_BUFFER_COUNT 2
