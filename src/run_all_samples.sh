@@ -19,10 +19,8 @@ do
    echo "RUNNING SAMPLE:  $BNAME"
    echo "  ** $DESCRIPT"
 
-   # run the built sample; need to add build to path and remove .cpp from name
-   SNAME=$(echo $f | sed -e "s/src/build\/src/g")
-   #RNAME=$(echo $SNAME | sed -e "s/.cpp//g")
-   RNAME=${SNAME%.cpp}
+   # run the built sample; need to remove .cpp from name
+   RNAME=./${BNAME%.cpp}
    $RNAME
    echo ""
 done
