@@ -28,6 +28,8 @@
 #ifndef SWAPCHAIN_H
 #define SWAPCHAIN_H
 
+#include <vector>
+
 static const VkLayerProperties globalLayerProps[] = {
     {
         "Swapchain",
@@ -77,11 +79,10 @@ typedef enum _SWAPCHAIN_ERROR
 // The following is for logging error messages:
 struct layer_data {
     debug_report_data *report_data;
-    VkDbgMsgCallback logging_callback;
+    std::vector<VkDbgMsgCallback> logging_callback;
 
     layer_data() :
-        report_data(nullptr),
-        logging_callback(nullptr)
+        report_data(nullptr)
     {};
 };
 
