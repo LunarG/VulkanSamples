@@ -50,8 +50,6 @@
 #include <vk_debug_report_lunarg.h>
 #endif // _WIN32
 
-#define SAMPLE_BUFFER_COUNT 2
-
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
     info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
@@ -148,7 +146,7 @@ struct sample_info {
     std::vector<VkQueueFamilyProperties> queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
-    VkFramebuffer framebuffers[SAMPLE_BUFFER_COUNT];
+    VkFramebuffer *framebuffers;
     int width, height;
     VkFormat format;
 

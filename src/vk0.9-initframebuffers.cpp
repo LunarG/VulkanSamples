@@ -68,7 +68,10 @@ int main(int argc, char **argv)
     fb_info.layers = 1;
 
     uint32_t i;
-    for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+    info.framebuffers = (VkFramebuffer *) malloc(info.swapchainImageCount * sizeof(VkFramebuffer));
+    assert(info.framebuffers);
+
+    for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
         assert(!res);
@@ -80,9 +83,10 @@ int main(int argc, char **argv)
     vkDestroyImage(info.device, info.depth.image);
     vkFreeMemory(info.device, info.depth.mem);
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);
-    for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+    for (int i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
+    free(info.framebuffers);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);

@@ -835,21 +835,16 @@ void init_swap_chain(struct sample_info &info)
         }
     }
 
-#define WORK_AROUND_CODE
-#ifdef WORK_AROUND_CODE
-    uint32_t desiredNumberOfSwapChainImages = 2;
-#else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
-    uint32_t desiredNumberOfSwapChainImages = surfProperties->minImageCount + 1;
-    if ((surfProperties->maxImageCount > 0) &&
-        (desiredNumberOfSwapChainImages > surfProperties->maxImageCount))
+    uint32_t desiredNumberOfSwapChainImages = surfProperties.minImageCount + 1;
+    if ((surfProperties.maxImageCount > 0) &&
+        (desiredNumberOfSwapChainImages > surfProperties.maxImageCount))
     {
         // Application must settle for fewer images than desired:
-        desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
+        desiredNumberOfSwapChainImages = surfProperties.maxImageCount;
     }
-#endif // WORK_AROUND_CODE
 
     VkSurfaceTransformKHR preTransform;
     if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
@@ -889,15 +884,6 @@ void init_swap_chain(struct sample_info &info)
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
     assert(!res);
-
-#ifdef WORK_AROUND_CODE
-    // After the proper code was created, other parts of this demo were
-    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
-    // images, etc.  Live with that for now.
-    // TODO: Rework this demo code to live with the number of buffers returned
-    // by vkCreateSwapchainKHR().
-    info.swapchainImageCount = 2;
-#endif // WORK_AROUND_CODE
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         swap_chain_buffer sc_buffer;
@@ -1126,7 +1112,9 @@ void init_framebuffers(struct sample_info &info)
 
     uint32_t i;
 
-    for (i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+    info.framebuffers = (VkFramebuffer *) malloc(info.swapchainImageCount * sizeof(VkFramebuffer));
+
+    for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
         assert(!res);
