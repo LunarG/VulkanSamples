@@ -745,6 +745,8 @@ NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyDescriptorPool)
 
 void DescriptorPool::init(const Device &dev, const VkDescriptorPoolCreateInfo &info)
 {
+    setDynamicUsage(info.poolUsage == VK_DESCRIPTOR_POOL_USAGE_DYNAMIC);
+
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorPool, dev, &info);
 }
 
@@ -766,7 +768,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDes
     std::vector<DescriptorSet *> sets;
     for (std::vector<VkDescriptorSet>::const_iterator it = set_handles.begin(); it != set_handles.end(); it++) {
         // do descriptor sets need memories bound?
-        DescriptorSet *descriptorSet = new DescriptorSet(dev, handle(), *it);
+        DescriptorSet *descriptorSet = new DescriptorSet(dev, this, *it);
         sets.push_back(descriptorSet);
     }
     return sets;
@@ -786,8 +788,11 @@ DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsag
 DescriptorSet::~DescriptorSet()
 {
     if (initialized()) {
-        VkDescriptorSet sets[1] = { handle() };
-        EXPECT(vkFreeDescriptorSets(device(), pool_, 1, sets) == VK_SUCCESS);
+        // Only call vkFree* on sets allocated from pool with usage *_DYNAMIC
+        if (containing_pool_->getDynamicUsage()) {
+            VkDescriptorSet sets[1] = { handle() };
+            EXPECT(vkFreeDescriptorSets(device(), containing_pool_->GetObj(), 1, sets) == VK_SUCCESS);
+        }
     }
 }
 

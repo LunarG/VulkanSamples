@@ -521,16 +521,29 @@ class DescriptorPool : public internal::NonDispHandle<VkDescriptorPool> {
 public:
     ~DescriptorPool();
 
+    // Descriptor sets allocated from this pool will need access to the original object
+    VkDescriptorPool GetObj() { return pool_; }
+
     // vkCreateDescriptorPool()
     void init(const Device &dev, const VkDescriptorPoolCreateInfo &info);
 
     // vkResetDescriptorPool()
     void reset();
 
+    // vkFreeDescriptorSet()
+    void setDynamicUsage(bool isDynamic) { dynamic_usage_ = isDynamic; }
+    bool getDynamicUsage() { return dynamic_usage_; }
+
     // vkAllocDescriptorSets()
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
     DescriptorSet *alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
+
+private:
+    VkDescriptorPool pool_;
+
+    // Track whether this pool's usage is VK_DESCRIPTOR_POOL_USAGE_DYNAMIC
+    bool dynamic_usage_;
 };
 
 class DescriptorSet : public internal::NonDispHandle<VkDescriptorSet> {
@@ -538,10 +551,10 @@ public:
     ~DescriptorSet();
 
     explicit DescriptorSet() : NonDispHandle() {}
-    explicit DescriptorSet(const Device &dev, VkDescriptorPool pool, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) { pool_ = pool;}
+    explicit DescriptorSet(const Device &dev, DescriptorPool* pool, VkDescriptorSet set) : NonDispHandle(dev.handle(), set) { containing_pool_ = pool;}
 
 private:
-    VkDescriptorPool pool_;
+    DescriptorPool* containing_pool_;
 };
 
 class CmdPool : public internal::NonDispHandle<VkCmdPool> {
