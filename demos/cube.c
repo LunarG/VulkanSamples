@@ -84,9 +84,13 @@
     }                                                                   \
 }
 
+static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
+
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
 {                                                                       \
-    demo->fp##entrypoint = (PFN_vk##entrypoint) vkGetDeviceProcAddr(dev, "vk"#entrypoint);   \
+    if(!g_gdpa)                                                         \
+       g_gdpa = (PFN_vkGetDeviceProcAddr) vkGetInstanceProcAddr(demo->inst, "vkGetDeviceProcAddr"); \
+    demo->fp##entrypoint = (PFN_vk##entrypoint) g_gdpa(dev, "vk"#entrypoint);   \
     if (demo->fp##entrypoint == NULL) {                                 \
         ERR_EXIT("vkGetDeviceProcAddr failed to find vk"#entrypoint,    \
                  "vkGetDeviceProcAddr Failure");                        \
