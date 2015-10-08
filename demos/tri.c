@@ -240,6 +240,9 @@ struct demo {
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
     VkDbgMsgCallback msg_callback;
 
+    float depthStencil;
+    float depthIncrement;
+
     bool quit;
     uint32_t current_buffer;
     uint32_t queue_count;
@@ -360,7 +363,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.float32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
-        [1] = { .depthStencil = { 0.9f, 0 } },
+        [1] = { .depthStencil = { demo->depthStencil, 0 } },
     };
     const VkRenderPassBeginInfo rp_begin = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -507,21 +510,7 @@ static void demo_prepare_buffers(struct demo *demo)
         swapchainExtent = surfProperties.currentExtent;
     }
 
-    // If mailbox mode is available, use it, as is the lowest-latency non-
-    // tearing mode.  If not, try IMMEDIATE which will usually be available,
-    // and is fastest (though it tears).  If not, fall back to FIFO which is
-    // always available.
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-    for (size_t i = 0; i < presentModeCount; i++) {
-        if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-        if ((swapchainPresentMode != VK_PRESENT_MODE_MAILBOX_KHR) &&
-            (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)) {
-            swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-        }
-    }
 
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
@@ -1090,7 +1079,7 @@ static VkShader demo_prepare_shader(struct demo *demo,
     VkShaderModuleCreateInfo moduleCreateInfo;
     VkShaderCreateInfo shaderCreateInfo;
     VkShader shader;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1466,6 +1455,13 @@ static void demo_run(struct demo *demo)
     if (!demo->prepared)
         return;
     demo_draw(demo);
+
+    if (demo->depthStencil > 0.99f)
+        demo->depthIncrement = -0.001f;
+    if (demo->depthStencil < 0.8f)
+        demo->depthIncrement = 0.001f;
+
+    demo->depthStencil += demo->depthIncrement;
 }
 
 // On MS-Windows, make this a global, so it's available to WndProc()
@@ -1583,11 +1579,23 @@ static void demo_run(struct demo *demo)
     while (!demo->quit) {
         xcb_generic_event_t *event;
 
-        event = xcb_wait_for_event(demo->connection);
+        event = xcb_poll_for_event(demo->connection);
         if (event) {
             demo_handle_event(demo, event);
             free(event);
         }
+
+        demo_draw(demo);
+
+        if (demo->depthStencil > 0.99f)
+            demo->depthIncrement = -0.001f;
+        if (demo->depthStencil < 0.8f)
+            demo->depthIncrement = 0.001f;
+
+        demo->depthStencil += demo->depthIncrement;
+
+        // Wait for work to finish before updating MVP.
+        vkDeviceWaitIdle(demo->device);
     }
 }
 
@@ -1921,7 +1929,7 @@ static void demo_init_vk(struct demo *demo)
 
 static void demo_init_vk_wsi(struct demo *demo)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
     // Construct the WSI surface description:
@@ -2093,6 +2101,8 @@ static void demo_init(struct demo *demo, const int argc, const char *argv[])
 
     demo->width = 300;
     demo->height = 300;
+    demo->depthStencil = 1.0;
+    demo->depthIncrement = -0.01f;
 }
 
 static void demo_cleanup(struct demo *demo)
