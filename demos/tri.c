@@ -48,7 +48,6 @@
 
 #include "icd-spv.h"
 
-#define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0
 #define APP_SHORT_NAME "tri"
@@ -231,7 +230,7 @@ struct demo {
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
 
-    VkFramebuffer framebuffers[DEMO_BUFFER_COUNT];
+    VkFramebuffer *framebuffers;
 
     VkPhysicalDeviceMemoryProperties memory_properties;
 
@@ -1403,7 +1402,10 @@ static void demo_prepare_framebuffers(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    demo->framebuffers = (VkFramebuffer *) malloc(demo->swapchainImageCount * sizeof(VkFramebuffer));
+    assert(demo->framebuffers);
+
+    for (i = 0; i < demo->swapchainImageCount; i++) {
         attachments[0]= demo->buffers[i].view;
         err = vkCreateFramebuffer(demo->device, &fb_info, &demo->framebuffers[i]);
         assert(!err);
@@ -2111,9 +2113,10 @@ static void demo_cleanup(struct demo *demo)
 
     demo->prepared = false;
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
     }
+    free(demo->framebuffers);
     vkDestroyDescriptorPool(demo->device, demo->desc_pool);
 
     if (demo->setup_cmd) {

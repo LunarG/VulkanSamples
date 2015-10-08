@@ -46,7 +46,6 @@
 #include "vk_sdk_platform.h"
 #include "linmath.h"
 
-#define DEMO_BUFFER_COUNT 2
 #define DEMO_TEXTURE_COUNT 1
 #define APP_SHORT_NAME "cube"
 #define APP_LONG_NAME "The Vulkan Cube Demo Program"
@@ -329,7 +328,6 @@ struct demo {
     VkQueueFamilyProperties *queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
-    VkFramebuffer framebuffer;
     int width, height;
     VkFormat format;
     VkColorSpaceKHR color_space;
@@ -389,7 +387,7 @@ struct demo {
     VkDescriptorPool desc_pool;
     VkDescriptorSet desc_set;
 
-    VkFramebuffer framebuffers[DEMO_BUFFER_COUNT];
+    VkFramebuffer *framebuffers;
 
     bool quit;
     int32_t curFrame;
@@ -702,15 +700,6 @@ static void demo_prepare_buffers(struct demo *demo)
         }
     }
 
-#define WORK_AROUND_CODE
-#ifdef WORK_AROUND_CODE
-    // After the proper code was created, other parts of this demo were
-    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
-    // images, etc.  Live with that for now.
-    // TODO: Rework this demo code to live with the number of buffers returned
-    // by vkCreateSwapchainKHR().
-    uint32_t desiredNumberOfSwapchainImages = DEMO_BUFFER_COUNT;
-#else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
@@ -721,7 +710,6 @@ static void demo_prepare_buffers(struct demo *demo)
         // Application must settle for fewer images than desired:
         desiredNumberOfSwapchainImages = surfProperties.maxImageCount;
     }
-#endif // WORK_AROUND_CODE
 
     VkSurfaceTransformFlagsKHR preTransform;
     if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
@@ -767,14 +755,6 @@ static void demo_prepare_buffers(struct demo *demo)
                                         &demo->swapchainImageCount,
                                         swapchainImages);
     assert(!err);
-#ifdef WORK_AROUND_CODE
-    // After the proper code was created, other parts of this demo were
-    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
-    // images, etc.  Live with that for now.
-    // TODO: Rework this demo code to live with the number of buffers returned
-    // by vkCreateSwapchainKHR().
-    demo->swapchainImageCount = DEMO_BUFFER_COUNT;
-#endif // WORK_AROUND_CODE
 
     demo->buffers = (SwapchainBuffers*)malloc(sizeof(SwapchainBuffers)*demo->swapchainImageCount);
     assert(demo->buffers);
@@ -1669,7 +1649,10 @@ static void demo_prepare_framebuffers(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    demo->framebuffers = (VkFramebuffer *)malloc(demo->swapchainImageCount * sizeof(VkFramebuffer));
+    assert(demo->framebuffers);
+
+    for (i = 0; i < demo->swapchainImageCount; i++) {
         attachments[0] = demo->buffers[i].view;
         err = vkCreateFramebuffer(demo->device, &fb_info, &demo->framebuffers[i]);
         assert(!err);
@@ -1737,9 +1720,10 @@ static void demo_cleanup(struct demo *demo)
 
     demo->prepared = false;
 
-    for (i = 0; i < DEMO_BUFFER_COUNT; i++) {
+    for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
     }
+    free(demo->framebuffers);
     vkDestroyDescriptorPool(demo->device, demo->desc_pool);
 
     vkDestroyPipeline(demo->device, demo->pipeline);
