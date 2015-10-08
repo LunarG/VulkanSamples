@@ -1829,7 +1829,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkD
                 memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
             }
             pNewNode->poolUsage  = pCreateInfo->poolUsage;
-            pNewNode->maxSets      = pCreateInfo->maxSets;
+            pNewNode->maxSets    = pCreateInfo->maxSets;
             pNewNode->pool       = *pDescriptorPool;
             dev_data->poolMap[pDescriptorPool->handle] = pNewNode;
         }
@@ -1904,7 +1904,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
 
 VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
+    VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
+    if (pPoolNode && (VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT == pPoolNode->poolUsage)) {
+        // Can't Free from a ONE_SHOT pool
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL, "DS",
+                    "It is invalid to call vkFreeDescriptorSets() with a pool created with usage type VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT.");
+    }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     // TODO : Clean up any internal data structures using this obj.
     return result;
@@ -3283,6 +3292,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkResetDescriptorPool;
     if (!strcmp(funcName, "vkAllocDescriptorSets"))
         return (PFN_vkVoidFunction) vkAllocDescriptorSets;
+    if (!strcmp(funcName, "vkFreeDescriptorSets"))
+        return (PFN_vkVoidFunction) vkFreeDescriptorSets;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
     if (!strcmp(funcName, "vkCreateCommandBuffer"))
