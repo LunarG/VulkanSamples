@@ -136,7 +136,7 @@ endif()
 
 
 if (WIN32)
-    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Release" 
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Release"
                              "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Release" )
@@ -195,7 +195,7 @@ if (WIN32)
     set_target_properties(Loader PROPERTIES
                          IMPORTED_LOCATION       "${VULKAN_LOADER}"
                          IMPORTED_LOCATION_DEBUG "${LOADER_DLIB}")
-						 
+
     set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV Loader)
 else ()
     set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
