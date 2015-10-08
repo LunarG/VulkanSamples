@@ -24,7 +24,11 @@ set (GLMINCLUDES "${EXTDIR}")
 
 # to run with source glslang libs/headers
 if(UNIX)
-    set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../source/glslang")
+    if (EXISTS "${CMAKE_SOURCE_DIR}/../glslang")
+         set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
+    else()
+         set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../source/glslang")
+    endif()
 else()
     set (GLSLANGDIR "${CMAKE_SOURCE_DIR}/../glslang")
 endif()
@@ -39,17 +43,17 @@ if(NOT EXISTS ${GLSLANG_PREFIX})
     message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
 endif()
 
-if(UNIX)
-    set (GLSLANGLIBS "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang")
-else()
-    set (GLSLANGLIBS "${CMAKE_SOURCE_DIR}/../Bin")
-endif()
-
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools")
+    include_directories("${CMAKE_SOURCE_DIR}/../LoaderAndTools/include")
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/utils)
 if(WIN32)
     include_directories(${CMAKE_SOURCE_DIR}\\..\\Include)
+else()
+    include_directories("/usr/include/vulkan")
 endif()
 
 add_subdirectory(utils)

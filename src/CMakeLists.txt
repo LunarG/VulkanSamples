@@ -82,21 +82,18 @@ if(NOT WIN32)
     find_package(XCB REQUIRED)
 endif()
 
+find_library(VULKAN_LOADER NAMES vulkan-0 vulkan
+             HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Release"
+                   "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
+
+find_program(GLSLANG_VALIDATOR NAMES glslangValidator
+             HINTS "${CMAKE_SOURCE_DIR}/../glslang/build/install/bin"
+                   "${PROJECT_SOURCE_DIR}\\..\\Bin" )
+
 if(WIN32)
-    set (VULKAN_LOADER
-        "${PROJECT_SOURCE_DIR}\\..\\Bin\\vulkan-0.lib"
-        )
-    set (GLSLANG_VALIDATOR
-        "${PROJECT_SOURCE_DIR}\\..\\Bin\\glslangValidator.exe"
-        )
     set (MOVE_CMD "move")
 else()
-    set (VULKAN_LOADER
-        "vulkan"
-        )
-    set (GLSLANG_VALIDATOR
-        "/usr/bin/glslangValidator"
-        )
     set (MOVE_CMD "mv")
     set (PTHREAD "pthread")
 endif()
@@ -137,41 +134,71 @@ else()
     endif()
 endif()
 
-set(GLSLANG_LIBRARIES
-    glslang
-    OGLCompiler
-    OSDependent
-    SPIRV
-    )
 
-add_library(glslang     STATIC IMPORTED)
-add_library(OGLCompiler STATIC IMPORTED)
-add_library(OSDependent STATIC IMPORTED)
-add_library(SPIRV       STATIC IMPORTED)
+if (WIN32)
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Release" 
+                             "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Release"
+                             "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Release" )
+else()
+    set (GLSLANG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
+endif()
+
+find_library(GLSLANG_LIB NAMES glslang
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(OGLCompiler_LIB NAMES OGLCompiler
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(OSDependent_LIB NAMES OSDependent
+             HINTS ${GLSLANG_SEARCH_PATH} )
+
+find_library(SPIRV_LIB NAMES SPIRV
+             HINTS ${GLSLANG_SEARCH_PATH} )
 
 # On Windows, we must pair Debug and Release appropriately
 if (WIN32)
-   set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/glslang.lib"
-                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/glslangD.lib")
-   set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OGLCompiler.lib"
-                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OGLCompilerD.lib")
-   set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OSDependent.lib"
-                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/OSDependentD.lib")
-   set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/SPIRV.lib"
-                         IMPORTED_LOCATION_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/../../Bin/SPIRVD.lib")
+    set (GLSLANG_DEBUG_SEARCH_PATH "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/build/glslang/OSDependent/Windows/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/build/OGLCompilersDLL/Debug"
+                                   "${CMAKE_SOURCE_DIR}/../glslang/build/SPIRV/Debug")
+    add_library(glslang     STATIC IMPORTED)
+    add_library(OGLCompiler STATIC IMPORTED)
+    add_library(OSDependent STATIC IMPORTED)
+    add_library(SPIRV       STATIC IMPORTED)
+    add_library(Loader      STATIC IMPORTED)
+
+    find_library(GLSLANG_DLIB NAMES glslang
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(OGLCompiler_DLIB NAMES OGLCompiler
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(OSDependent_DLIB NAMES OSDependent
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(SPIRV_DLIB NAMES SPIRV
+                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
+    find_library(LOADER_DLIB NAMES vulkan-0
+                 HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
+                       "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
+
+    set_target_properties(glslang PROPERTIES
+                         IMPORTED_LOCATION       "${GLSLANG_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
+    set_target_properties(OGLCompiler PROPERTIES
+                         IMPORTED_LOCATION       "${OGLCompiler_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
+    set_target_properties(OSDependent PROPERTIES
+                         IMPORTED_LOCATION       "${OSDependent_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
+    set_target_properties(SPIRV PROPERTIES
+                         IMPORTED_LOCATION       "${SPIRV_LIB}"
+                         IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
+    set_target_properties(Loader PROPERTIES
+                         IMPORTED_LOCATION       "${VULKAN_LOADER}"
+                         IMPORTED_LOCATION_DEBUG "${LOADER_DLIB}")
+						 
+    set (GLSLANG_LIBRARIES glslang OGLCompiler OSDependent SPIRV Loader)
 else ()
-   set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANGLIBS}/libglslang.a")
-   set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANGLIBS}/libOGLCompiler.a")
-   set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANGLIBS}/libOSDependent.a")
-   set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANGLIBS}/libSPIRV.a")
+    set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
 endif()
 
 #
