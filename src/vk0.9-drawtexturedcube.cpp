@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
-    init_wsi(info);
+    init_swapchain_extension(info);
     init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
@@ -188,8 +188,6 @@ int main(int argc, char **argv)
     present.imageIndices = &info.current_buffer;
 
     res = info.fpQueuePresentKHR(info.queue, &present);
-    // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
-    // return codes
     assert(!res);
 
     res = vkQueueWaitIdle(info.queue);

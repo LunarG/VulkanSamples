@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Inititalize WSI
+Inititalize Swapchain
 */
 
 #include <util_init.hpp>
@@ -35,12 +35,12 @@ int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
-    char sample_title[] = "WSI Initialization Sample";
+    char sample_title[] = "Swapchain Initialization Sample";
 
     /*
-     * Set up WSI:
+     * Set up swapchain:
      * - Get supported uses for all queues
-     * - Try to find a queue that supports both graphics and WSI present
+     * - Try to find a queue that supports both graphics and present
      * - If no queue supports both, find a present queue and make sure we have a graphics queue
      * - Get a list of supported formats and use the first one
      * - Get surface properties and present modes and use them to create a swap chain
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     assert(!res);
     assert(info.queue_count >= 1);
 
-    // Construct the WSI surface description:
+    // Construct the surface description:
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     info.surface_description.pPlatformWindow = &info.window;
 #endif // _WIN32
 
-    // Iterate over each queue to learn whether it supports presenting to WSI:
+    // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
         info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,

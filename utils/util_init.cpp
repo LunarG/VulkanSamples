@@ -606,7 +606,7 @@ void init_depth_buffer(struct sample_info &info)
    assert(!res);
 }
 
-void init_wsi(struct sample_info &info)
+void init_swapchain_extension(struct sample_info &info)
 {
     /* DEPENDS on init_connection() and init_window() */
 
@@ -632,7 +632,7 @@ void init_wsi(struct sample_info &info)
     assert(!res);
     assert(info.queue_count >= 1);
 
-    // Construct the WSI surface description:
+    // Construct the surface description:
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
 #ifdef _WIN32
@@ -647,7 +647,7 @@ void init_wsi(struct sample_info &info)
     info.surface_description.pPlatformWindow = &info.window;
 #endif // _WIN32
 
-    // Iterate over each queue to learn whether it supports presenting to WSI:
+    // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
         info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
@@ -1094,7 +1094,7 @@ void init_renderpass(struct sample_info &info)
 
 void init_framebuffers(struct sample_info &info)
 {
-    /* DEPENDS on init_depth_buffer(), init_renderpass() and init_wsi() */
+    /* DEPENDS on init_depth_buffer(), init_renderpass() and init_swapchain_extension() */
 
     VkResult U_ASSERT_ONLY res;
     VkImageView attachments[2];
@@ -1123,7 +1123,7 @@ void init_framebuffers(struct sample_info &info)
 
 void init_and_begin_command_buffer(struct sample_info &info)
 {
-    /* DEPENDS on init_wsi() */
+    /* DEPENDS on init_swapchain_extension() */
 
     VkResult U_ASSERT_ONLY res;
 
@@ -1176,7 +1176,7 @@ void end_and_submit_command_buffer(struct sample_info &info)
 
 void init_device_queue(struct sample_info &info)
 {
-    /* DEPENDS on init_wsi() */
+    /* DEPENDS on init_swapchain_extension() */
 
     VkResult U_ASSERT_ONLY res;
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,

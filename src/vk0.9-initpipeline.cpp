@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
-    init_wsi(info);
+    init_swapchain_extension(info);
     init_and_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
