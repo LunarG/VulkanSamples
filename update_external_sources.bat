@@ -257,8 +257,6 @@ REM // ======== Functions ======== //
    mkdir %GLSLANG_DIR%
    cd %GLSLANG_DIR%
    git clone git@gitlab.khronos.org:GLSL/glslang.git .
-   git branch --track Rev32 origin/Rev32
-   git checkout Rev32
    git checkout %GLSLANG_REVISION%
    if not exist %GLSLANG_DIR%\SPIRV (
       echo glslang source download failed!
@@ -270,7 +268,7 @@ goto:eof
    echo.
    echo Updating %GLSLANG_DIR%
    cd %GLSLANG_DIR%
-   git checkout Rev32
+   git fetch --all
    git checkout %GLSLANG_REVISION%
 goto:eof
 
