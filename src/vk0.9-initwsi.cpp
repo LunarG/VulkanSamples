@@ -213,21 +213,16 @@ int main(int argc, char **argv)
         }
     }
 
-#define WORK_AROUND_CODE
-#ifdef WORK_AROUND_CODE
-    uint32_t desiredNumberOfSwapChainImages = 2;
-#else  // WORK_AROUND_CODE
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
-    uint32_t desiredNumberOfSwapChainImages = surfProperties->minImageCount + 1;
-    if ((surfProperties->maxImageCount > 0) &&
-        (desiredNumberOfSwapChainImages > surfProperties->maxImageCount))
+    uint32_t desiredNumberOfSwapChainImages = surfProperties.minImageCount + 1;
+    if ((surfProperties.maxImageCount > 0) &&
+        (desiredNumberOfSwapChainImages > surfProperties.maxImageCount))
     {
         // Application must settle for fewer images than desired:
-        desiredNumberOfSwapChainImages = surfProperties->maxImageCount;
+        desiredNumberOfSwapChainImages = surfProperties.maxImageCount;
     }
-#endif // WORK_AROUND_CODE
 
     VkSurfaceTransformKHR preTransform;
     if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
@@ -267,15 +262,6 @@ int main(int argc, char **argv)
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
     assert(!res);
-
-#ifdef WORK_AROUND_CODE
-    // After the proper code was created, other parts of this demo were
-    // modified to only support DEMO_BUFFER_COUNT number of command buffers,
-    // images, etc.  Live with that for now.
-    // TODO: Rework this demo code to live with the number of buffers returned
-    // by vkCreateSwapchainKHR().
-    info.swapchainImageCount = 2;
-#endif // WORK_AROUND_CODE
 
     info.buffers.resize(info.swapchainImageCount);
 

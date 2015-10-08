@@ -163,9 +163,10 @@ int main(int argc, char **argv)
     vkDestroyImage(info.device, info.depth.image);
     vkFreeMemory(info.device, info.depth.mem);
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);
-    for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+    for (int i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
+    free(info.framebuffers);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);

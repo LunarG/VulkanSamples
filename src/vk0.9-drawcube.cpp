@@ -219,9 +219,10 @@ int main(int argc, char **argv)
         vkDestroyImageView(info.device, info.buffers[i].view);
     }
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);
-    for (int i = 0; i < SAMPLE_BUFFER_COUNT; i++) {
+    for (int i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
+    free(info.framebuffers);
     vkDestroyRenderPass(info.device, info.render_pass);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
