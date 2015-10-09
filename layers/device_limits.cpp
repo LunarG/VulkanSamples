@@ -64,7 +64,7 @@ struct layer_data {
     unique_ptr<PHYSICAL_DEVICE_STATE> physicalDeviceState;
     VkPhysicalDeviceFeatures actualPhysicalDeviceFeatures;
     VkPhysicalDeviceFeatures requestedPhysicalDeviceFeatures;
-    unique_ptr<VkPhysicalDeviceProperties> physicalDeviceProperties;
+    VkPhysicalDeviceProperties physicalDeviceProperties;
     // Track physical device per logical device
     VkPhysicalDevice physicalDevice;
     // Vector indices correspond to queueFamilyIndex
@@ -77,7 +77,7 @@ struct layer_data {
         device_extensions(),
         instanceState(nullptr),
         physicalDeviceState(nullptr),
-        physicalDeviceProperties(nullptr),
+        physicalDeviceProperties(),
         actualPhysicalDeviceFeatures(),
         requestedPhysicalDeviceFeatures(),
         physicalDevice()
@@ -233,6 +233,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
                 phy_dev_data->physicalDeviceState = unique_ptr<PHYSICAL_DEVICE_STATE>(new PHYSICAL_DEVICE_STATE());
                 // Init actual features for each physical device
                 my_data->instance_dispatch_table->GetPhysicalDeviceFeatures(pPhysicalDevices[i], &(phy_dev_data->actualPhysicalDeviceFeatures));
+                my_data->instance_dispatch_table->GetPhysicalDeviceProperties(pPhysicalDevices[i], &(phy_dev_data->physicalDeviceProperties));
             }
         }
         return result;
@@ -268,11 +269,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(VkPhysicalDevice ph
 {
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     VkResult result = phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, pProperties);
-    if (VK_SUCCESS == result) {
-        // Save Properties
-        phy_dev_data->physicalDeviceProperties =
-            unique_ptr<VkPhysicalDeviceProperties>(new VkPhysicalDeviceProperties(*pProperties));
-    }
+
     return result;
 }
 
@@ -515,13 +512,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     phy_dev_data->instance_dispatch_table->GetPhysicalDeviceImageFormatProperties(
                        physicalDevice, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling,
                        pCreateInfo->usage, pCreateInfo->flags, &ImageFormatProperties);
-    if (!phy_dev_data->physicalDeviceProperties) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                        DEVLIMITS_MUST_QUERY_PROPERTIES, "DL",
-                        "CreateImage called before querying device properties ");
-    }
 
-    VkDeviceSize imageGranularity = phy_dev_data->physicalDeviceProperties->limits.bufferImageGranularity;
+    VkDeviceSize imageGranularity = phy_dev_data->physicalDeviceProperties.limits.bufferImageGranularity;
     imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
 
     if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
