@@ -164,7 +164,7 @@ int main(int argc, char **argv)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
-    res = vkCreateDevice(info.gpu, &device_info, &info.device);
+    res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
     assert(!res);
 
     VkDbgMsgCallback msg_callback;

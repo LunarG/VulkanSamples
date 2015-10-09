@@ -138,7 +138,7 @@ struct sample_info {
     std::vector<const char *> device_extension_names;
     std::vector<layer_properties> device_layer_properties;
     std::vector<VkExtensionProperties> device_extension_properties;
-    VkPhysicalDevice gpu;
+    std::vector<VkPhysicalDevice> gpus;
     VkDevice device;
     VkQueue queue;
     uint32_t graphics_queue_family_index;

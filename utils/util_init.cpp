@@ -132,7 +132,7 @@ VkResult init_device_extension_properties(
 
     do {
         res = vkEnumerateDeviceExtensionProperties(
-                  info.gpu,
+                  info.gpus[0],
                   layer_name, &device_extension_count, NULL);
         if (res)
             return res;
@@ -144,7 +144,7 @@ VkResult init_device_extension_properties(
         layer_props.extensions.resize(device_extension_count);
         device_extensions = layer_props.extensions.data();
         res = vkEnumerateDeviceExtensionProperties(
-                  info.gpu,
+                  info.gpus[0],
                   layer_name,
                   &device_extension_count,
                   device_extensions);
@@ -175,7 +175,7 @@ VkResult init_device_layer_properties(struct sample_info &info)
      * of layers went down or is smaller than the size given.
      */
     do {
-        res = vkEnumerateDeviceLayerProperties(info.gpu, &device_layer_count, NULL);
+        res = vkEnumerateDeviceLayerProperties(info.gpus[0], &device_layer_count, NULL);
         if (res)
             return res;
 
@@ -185,7 +185,7 @@ VkResult init_device_layer_properties(struct sample_info &info)
 
         vk_props = (VkLayerProperties *) realloc(vk_props, device_layer_count * sizeof(VkLayerProperties));
 
-        res = vkEnumerateDeviceLayerProperties(info.gpu, &device_layer_count, vk_props);
+        res = vkEnumerateDeviceLayerProperties(info.gpus[0], &device_layer_count, vk_props);
     } while (res == VK_INCOMPLETE);
 
     /*
@@ -260,7 +260,7 @@ VkResult init_device(struct sample_info &info)
     VkResult res;
 
     /* This is as good a place as any to do this */
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     assert(!res);
 
     VkDeviceQueueCreateInfo queue_info = {};
@@ -282,7 +282,7 @@ VkResult init_device(struct sample_info &info)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
-    res = vkCreateDevice(info.gpu, &device_info, &info.device);
+    res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
     assert(!res);
 
     return res;
@@ -291,7 +291,10 @@ VkResult init_device(struct sample_info &info)
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
     uint32_t const U_ASSERT_ONLY req_count = gpu_count;
-    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    assert(gpu_count);
+    info.gpus.resize(gpu_count);
+    res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
     assert(!res && gpu_count >= req_count);
 
     return res;
@@ -518,7 +521,7 @@ void init_depth_buffer(struct sample_info &info)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     assert(!res);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
@@ -623,12 +626,12 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, NULL);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
     assert(!res);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, info.queue_props.data());
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
 
@@ -650,7 +653,7 @@ void init_swapchain_extension(struct sample_info &info)
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
+        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
                                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
                                                    &supportsPresent[i]);
     }
@@ -1517,7 +1520,7 @@ void init_texture(struct sample_info &info)
     }
 
     VkFormatProperties formatProps;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
     assert(!res);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */

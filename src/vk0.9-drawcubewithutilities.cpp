@@ -340,7 +340,10 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
 {
     uint32_t const U_ASSERT_ONLY req_count = gpu_count;
-    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, &info.gpu);
+    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+    assert(gpu_count);
+    info.gpus.resize(gpu_count);
+    res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
     assert(!res && gpu_count >= req_count);
 
     return res;
@@ -351,7 +354,7 @@ VkResult init_device(struct sample_info &info)
     VkResult res;
 
     /* This is as good a place as any to do this */
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpu, &info.memory_properties);
+    res = vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     assert(!res);
 
     VkDeviceQueueCreateInfo queue_info = {};
@@ -373,7 +376,7 @@ VkResult init_device(struct sample_info &info)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
-    res = vkCreateDevice(info.gpu, &device_info, &info.device);
+    res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
     assert(!res);
 
     return res;
@@ -658,7 +661,7 @@ void init_depth_buffer(struct sample_info &info)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     assert(!res);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
@@ -1428,12 +1431,12 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, NULL);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
     assert(!res);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, info.queue_props.data());
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
 
@@ -1455,7 +1458,7 @@ void init_swapchain_extension(struct sample_info &info)
     // Iterate over each queue to learn whether it supports presenting to WSI:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
+        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
                                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
                                                    &supportsPresent[i]);
     }

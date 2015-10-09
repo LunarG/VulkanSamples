@@ -69,12 +69,12 @@ int main(int argc, char **argv)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, NULL);
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
     assert(!res);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpu, &info.queue_count, info.queue_props.data());
+    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
     assert(!res);
     assert(info.queue_count >= 1);
 
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(info.queue_count * sizeof(VkBool32));
     for (uint32_t i = 0; i < info.queue_count; i++) {
-        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpu, i,
+        info.fpGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i,
                                                    (VkSurfaceDescriptionKHR *) &info.surface_description,
                                                    &supportsPresent[i]);
     }
