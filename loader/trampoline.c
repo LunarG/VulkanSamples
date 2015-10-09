@@ -85,6 +85,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
+            loader_platform_thread_unlock_mutex(&loader_lock);
             return res;
         }
     }

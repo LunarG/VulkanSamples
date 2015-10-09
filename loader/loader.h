@@ -174,8 +174,6 @@ struct loader_instance {
     struct loader_layer_list instance_layer_list;
     struct loader_layer_list device_layer_list;
 
-    /* TODO: Should keep track of application provided allocation functions */
-
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
     struct loader_layer_list activated_layer_list;
