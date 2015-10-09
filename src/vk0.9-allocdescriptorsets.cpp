@@ -63,17 +63,18 @@ int main(int argc, char **argv)
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
+    info.desc_set.resize(NUM_DESCRIPTOR_SETS);
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
-            1, &info.desc_layout,
-            &info.desc_set);
+            NUM_DESCRIPTOR_SETS, info.desc_layout.data(),
+            info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
-    writes[0].destSet = info.desc_set;
+    writes[0].destSet = info.desc_set[0];
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pDescriptors = &info.uniform_data.desc;
@@ -85,7 +86,8 @@ int main(int argc, char **argv)
 
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
+    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyDevice(info.device);

@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, 1, &info.desc_set, 0, NULL);
+            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -197,7 +197,8 @@ int main(int argc, char **argv)
     vkDestroyPipelineCache(info.device, info.pipelineCache);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
+    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyShader(info.device,info.shaderStages[0].shader);
@@ -829,8 +830,9 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
 
     VkResult U_ASSERT_ONLY err;
 
+    info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     err = vkCreateDescriptorSetLayout(info.device,
-            &descriptor_layout, &info.desc_layout);
+            &descriptor_layout, info.desc_layout.data());
     assert(!err);
 
     /* Now use the descriptor layout to create a pipeline layout */
@@ -839,8 +841,8 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     pPipelineLayoutCreateInfo.pNext                  = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount     = 1;
-    pPipelineLayoutCreateInfo.pSetLayouts            = &info.desc_layout;
+    pPipelineLayoutCreateInfo.descriptorSetCount     = NUM_DESCRIPTOR_SETS;
+    pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     err = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,
@@ -1095,17 +1097,18 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
+    info.desc_set.resize(NUM_DESCRIPTOR_SETS);
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
-            1, &info.desc_layout,
-            &info.desc_set);
+            NUM_DESCRIPTOR_SETS, info.desc_layout.data(),
+            info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
-    writes[0].destSet = info.desc_set;
+    writes[0].destSet = info.desc_set[0];
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pDescriptors = &info.uniform_data.desc;
@@ -1121,7 +1124,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         tex_desc.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].destSet = info.desc_set;
+        writes[1].destSet = info.desc_set[0];
         writes[1].destBinding = 1;
         writes[1].count = 1;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

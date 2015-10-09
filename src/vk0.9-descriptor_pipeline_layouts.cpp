@@ -59,8 +59,9 @@ int main(int argc, char **argv)
     descriptor_layout.count = 1;
     descriptor_layout.pBinding = &layout_binding;
 
+    info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     res = vkCreateDescriptorSetLayout(info.device,
-            &descriptor_layout, &info.desc_layout);
+            &descriptor_layout, info.desc_layout.data());
     assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
@@ -69,8 +70,8 @@ int main(int argc, char **argv)
     pPipelineLayoutCreateInfo.pNext                  = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount     = 1;
-    pPipelineLayoutCreateInfo.pSetLayouts            = &info.desc_layout;
+    pPipelineLayoutCreateInfo.descriptorSetCount     = NUM_DESCRIPTOR_SETS;
+    pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     res = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,
@@ -78,7 +79,8 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
     /* VULKAN_KEY_END */
 
-    vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
+    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
