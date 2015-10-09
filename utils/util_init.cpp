@@ -717,6 +717,68 @@ void init_wsi(struct sample_info &info)
     }
 }
 
+void init_presentable_image(struct sample_info &info)
+{
+    /* DEPENDS on init_swap_chain() */
+
+    VkResult U_ASSERT_ONLY res;
+    VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
+    presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    presentCompleteSemaphoreCreateInfo.pNext = NULL;
+    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    res = vkCreateSemaphore(info.device,
+                            &presentCompleteSemaphoreCreateInfo,
+                            &info.presentCompleteSemaphore);
+    assert(!res);
+
+    // Get the index of the next available swapchain image:
+    res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
+                                      UINT64_MAX,
+                                      info.presentCompleteSemaphore,
+                                      &info.current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(!res);
+
+    /* Make sure buffer is ready for rendering */
+    vkQueueWaitSemaphore(info.queue, info.presentCompleteSemaphore);
+}
+
+void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
+{
+    VkResult U_ASSERT_ONLY res;
+    VkFence nullFence = { VK_NULL_HANDLE };
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    assert(!res);
+
+    res = vkQueueWaitIdle(info.queue);
+    assert(!res);
+
+
+
+}
+
+void execute_present_image(struct sample_info &info)
+{
+    /* DEPENDS on init_presentable_image() and init_swap_chain()*/
+    /* Present the image in the window */
+
+    VkResult U_ASSERT_ONLY res;
+    VkPresentInfoKHR present;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = NULL;
+    present.swapchainCount = 1;
+    present.swapchains = &info.swap_chain;
+    present.imageIndices = &info.current_buffer;
+
+    res = info.fpQueuePresentKHR(info.queue, &present);
+    // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
+    // return codes
+    assert(!res);
+}
+
 void init_swap_chain(struct sample_info &info)
 {
     /* DEPENDS on info.cmd and info.queue initialized */
