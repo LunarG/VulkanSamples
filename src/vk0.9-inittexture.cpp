@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     }
 
     VkFormatProperties formatProps;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpu, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
     assert(!res);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */

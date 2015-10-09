@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     device_info.pEnabledFeatures = NULL;
 
     VkDevice device;
-    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpu, &device_info, &device);
+    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, &device);
     assert(!res);
 
     vkDestroyDevice(device);

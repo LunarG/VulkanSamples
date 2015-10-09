@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpu, depth_format, &props);
+    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     assert(!res);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
