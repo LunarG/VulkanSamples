@@ -76,11 +76,11 @@ int main(int argc, char **argv)
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
     res = vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -92,14 +92,14 @@ int main(int argc, char **argv)
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint8_t *pData;
     res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, 0, 0, (void **) &pData);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));
 
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     res = vkBindBufferMemory(info.device,
             info.vertex_buffer.buf,
             info.vertex_buffer.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* We won't use these here, but we will need this info when creating the pipeline */
     info.vi_binding.binding = 0;

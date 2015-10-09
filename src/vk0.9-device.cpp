@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
     VkDevice device;
     VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, &device);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     vkDestroyDevice(device);
 

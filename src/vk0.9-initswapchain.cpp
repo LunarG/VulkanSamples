@@ -70,12 +70,12 @@ int main(int argc, char **argv)
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
     res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
     res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(!res);
+    assert(res == VK_SUCCESS);
     assert(info.queue_count >= 1);
 
     // Construct the surface description:
@@ -143,12 +143,12 @@ int main(int argc, char **argv)
     res = info.fpGetSurfaceFormatsKHR(info.device,
                                     (VkSurfaceDescriptionKHR *) &info.surface_description,
                                      &formatCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     res = info.fpGetSurfaceFormatsKHR(info.device,
                                     (VkSurfaceDescriptionKHR *) &info.surface_description,
                                      &formatCount, surfFormats);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
@@ -167,20 +167,20 @@ int main(int argc, char **argv)
     res = info.fpGetSurfacePropertiesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &surfProperties);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
     res = info.fpGetSurfacePresentModesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &presentModeCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
 
     res = info.fpGetSurfacePresentModesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &presentModeCount, presentModes);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
@@ -251,17 +251,17 @@ int main(int argc, char **argv)
     swap_chain.pQueueFamilyIndices = NULL;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.buffers.resize(info.swapchainImageCount);
 
@@ -271,7 +271,7 @@ int main(int argc, char **argv)
     init_and_begin_command_buffer(info);
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {};
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
 
         res = vkCreateImageView(info.device,
                 &color_image_view, &info.buffers[i].view);
-        assert(!res);
+        assert(res == VK_SUCCESS);
     }
     end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */

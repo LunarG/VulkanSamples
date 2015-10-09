@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
                             &presentCompleteSemaphore);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
     res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
     vkCmdEndRenderPass(info.cmd);
 
     res = vkEndCommandBuffer(info.cmd);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Make sure buffer is ready for rendering */
     vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
@@ -173,10 +173,10 @@ int main(int argc, char **argv)
 
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkQueueWaitIdle(info.queue);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Now present the image in the window */
 
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     present.imageIndices = &info.current_buffer;
 
     res = info.fpQueuePresentKHR(info.queue, &present);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkQueueWaitIdle(info.queue);
     assert(res == VK_SUCCESS);

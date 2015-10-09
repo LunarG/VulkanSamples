@@ -61,13 +61,13 @@ int main(int argc, char **argv)
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, &info.desc_pool);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &info.desc_layout,
             &info.desc_set);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
 

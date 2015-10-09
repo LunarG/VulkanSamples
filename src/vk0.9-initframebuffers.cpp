@@ -74,7 +74,7 @@ int main(int argc, char **argv)
     for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
-        assert(!res);
+        assert(res == VK_SUCCESS);
     }
     end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */

@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.vert_shader_module);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkShaderCreateInfo shaderCreateInfo;
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.frag_shader_module);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     finalize_glslang();
     /* VULKAN_KEY_END */

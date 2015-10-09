@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     cmd_pool_info.flags = 0;
 
     res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Create the command buffer from the command pool */
     VkCmdBufferCreateInfo cmd = {};
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     cmd.flags = 0;
 
     res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */
 
