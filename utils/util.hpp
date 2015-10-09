@@ -165,6 +165,7 @@ struct sample_info {
     uint32_t swapchainImageCount;
     VkSwapchainKHR swap_chain;
     std::vector<swap_chain_buffer> buffers;
+    VkSemaphore presentCompleteSemaphore;
 
     VkCmdPool cmd_pool;
 
