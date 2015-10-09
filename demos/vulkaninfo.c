@@ -1140,12 +1140,12 @@ bool SetStdOutToNewConsole()
     COORD bufferSize;
     if (!GetConsoleScreenBufferInfo(consoleHandle, &csbi))
         return false;
-    bufferSize.X = csbi.dwSize.X;
+    bufferSize.X = csbi.dwSize.X+30;
     bufferSize.Y = 20000;
     if (!SetConsoleScreenBufferSize(consoleHandle, bufferSize))
         return false;
     r.Left = r.Top = 0;
-    r.Right = csbi.dwSize.X-1;
+    r.Right = csbi.dwSize.X-1+30;
     r.Bottom = 50;
     if (!SetConsoleWindowInfo(consoleHandle, true, &r))
         return false;
