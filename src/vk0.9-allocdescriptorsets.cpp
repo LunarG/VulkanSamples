@@ -87,7 +87,6 @@ int main(int argc, char **argv)
     vkFreeMemory(info.device, info.uniform_data.mem);
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
-    vkFreeDescriptorSets(info.device, info.desc_pool, 1, &info.desc_set);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyDevice(info.device);
     vkDestroyInstance(info.inst);
