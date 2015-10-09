@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 
     res = vkCreateDescriptorSetLayout(info.device,
             &descriptor_layout, &info.desc_layout);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     res = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo,
                                  &info.pipeline_layout);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     /* VULKAN_KEY_END */
 
     vkDestroyDescriptorSetLayout(info.device, info.desc_layout);

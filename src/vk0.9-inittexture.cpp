@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 
     VkFormatProperties formatProps;
     res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
     bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
@@ -113,26 +113,26 @@ int main(int argc, char **argv)
     /* or it will be the staging image if they are not.                                        */
     res = vkCreateImage(info.device, &image_create_info,
             &mappableImage);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
     res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc,
                 &(mappableMemory));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* bind memory */
     res = vkBindImageMemory(info.device, mappableImage,
             mappableMemory, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
     subres.aspect = VK_IMAGE_ASPECT_COLOR;
@@ -144,10 +144,10 @@ int main(int argc, char **argv)
 
     /* Get the subresource layout so we know what the row pitch is */
     res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
     if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
@@ -173,26 +173,26 @@ int main(int argc, char **argv)
 
         res = vkCreateImage(info.device, &image_create_info,
                 &texObj.image);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type with DEVICE_ONLY property */
         res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* allocate memory */
         res = vkAllocMemory(info.device, &mem_alloc,
                     &texObj.mem);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* bind memory */
         res = vkBindImageMemory(info.device, texObj.image,
                 texObj.mem, 0);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd                                       */
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
     /* create sampler */
     res = vkCreateSampler(info.device, &samplerCreateInfo,
             &texObj.sampler);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -283,7 +283,7 @@ int main(int argc, char **argv)
     view_info.image = texObj.image;
     res = vkCreateImageView(info.device, &view_info,
             &texObj.view);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.textures.push_back(texObj);
     /* VULKAN_KEY_END */

@@ -64,11 +64,11 @@ int main(int argc, char **argv)
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
     res = vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -80,14 +80,14 @@ int main(int argc, char **argv)
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint8_t *pData;
     res = vkMapMemory(info.device, info.uniform_data.mem, 0, 0, 0, (void **) &pData);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
     res = vkBindBufferMemory(info.device,
             info.uniform_data.buf,
             info.uniform_data.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
     info.uniform_data.desc.bufferInfo.offset = 0;

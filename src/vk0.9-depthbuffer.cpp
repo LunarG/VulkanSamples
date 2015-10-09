@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
     res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     /* Create image */
     res = vkCreateImage(info.device, &image_info,
                         &info.depth.image);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkGetImageMemoryRequirements(info.device,
                                        info.depth.image, &mem_reqs);
@@ -128,16 +128,16 @@ int main(int argc, char **argv)
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_DEVICE_ONLY,
                                       &mem_alloc.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Bind memory */
     res = vkBindImageMemory(info.device, info.depth.image,
                             info.depth.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     /* Create image view */
     view_info.image = info.depth.image;
     res = vkCreateImageView(info.device, &view_info, &info.depth.view);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     end_and_submit_command_buffer(info);
 
     /* VULKAN_KEY_END */

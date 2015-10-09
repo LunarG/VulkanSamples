@@ -48,13 +48,13 @@ int main(int argc, char **argv)
     // Query the gpu info.
     VkPhysicalDevice* gpu = new VkPhysicalDevice[gpu_count];
     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, gpu);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     for(uint32_t i = 0; i < gpu_count; ++i)
     {
         VkPhysicalDeviceProperties properties;
         res = vkGetPhysicalDeviceProperties(gpu[i], &properties);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         std::cout << "apiVersion: ";
         std::cout << ((properties.apiVersion >> 22) & 0xfff) << '.'; // Major.

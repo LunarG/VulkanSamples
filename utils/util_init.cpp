@@ -250,7 +250,7 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     return res;
 }
@@ -261,7 +261,7 @@ VkResult init_device(struct sample_info &info)
 
     /* This is as good a place as any to do this */
     res = vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -283,7 +283,7 @@ VkResult init_device(struct sample_info &info)
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     return res;
 }
@@ -522,7 +522,7 @@ void init_depth_buffer(struct sample_info &info)
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
     res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -575,7 +575,7 @@ void init_depth_buffer(struct sample_info &info)
     /* Create image */
     res = vkCreateImage(info.device, &image_info,
                         &info.depth.image);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkGetImageMemoryRequirements(info.device,
                                        info.depth.image, &mem_reqs);
@@ -586,16 +586,16 @@ void init_depth_buffer(struct sample_info &info)
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_DEVICE_ONLY,
                                       &mem_alloc.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Bind memory */
     res = vkBindImageMemory(info.device, info.depth.image,
                             info.depth.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
@@ -606,7 +606,7 @@ void init_depth_buffer(struct sample_info &info)
     /* Create image view */
    view_info.image = info.depth.image;
    res = vkCreateImageView(info.device, &view_info, &info.depth.view);
-   assert(!res);
+   assert(res == VK_SUCCESS);
 }
 
 void init_swapchain_extension(struct sample_info &info)
@@ -627,12 +627,12 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
     res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
     res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(!res);
+    assert(res == VK_SUCCESS);
     assert(info.queue_count >= 1);
 
     // Construct the surface description:
@@ -700,12 +700,12 @@ void init_swapchain_extension(struct sample_info &info)
     res = info.fpGetSurfaceFormatsKHR(info.device,
                                     (VkSurfaceDescriptionKHR *) &info.surface_description,
                                      &formatCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     res = info.fpGetSurfaceFormatsKHR(info.device,
                                     (VkSurfaceDescriptionKHR *) &info.surface_description,
                                      &formatCount, surfFormats);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
@@ -792,20 +792,20 @@ void init_swap_chain(struct sample_info &info)
     res = info.fpGetSurfacePropertiesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &surfProperties);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint32_t presentModeCount;
     res = info.fpGetSurfacePresentModesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &presentModeCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
 
     res = info.fpGetSurfacePresentModesKHR(info.device,
         (const VkSurfaceDescriptionKHR *)&info.surface_description,
         &presentModeCount, presentModes);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkExtent2D swapChainExtent;
     // width and height are either both -1, or both not -1.
@@ -876,17 +876,17 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.pQueueFamilyIndices = NULL;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, NULL);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImage* swapchainImages = (VkImage*)malloc(info.swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
     res = info.fpGetSwapchainImagesKHR(info.device, info.swap_chain,
                                       &info.swapchainImageCount, swapchainImages);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         swap_chain_buffer sc_buffer;
@@ -920,7 +920,7 @@ void init_swap_chain(struct sample_info &info)
         res = vkCreateImageView(info.device,
                 &color_image_view, &sc_buffer.view);
         info.buffers.push_back(sc_buffer);
-        assert(!res);
+        assert(res == VK_SUCCESS);
     }
     info.current_buffer = 0;
 }
@@ -948,11 +948,11 @@ void init_uniform_buffer(struct sample_info &info)
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
     res = vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -964,14 +964,14 @@ void init_uniform_buffer(struct sample_info &info)
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint8_t *pData;
     res = vkMapMemory(info.device, info.uniform_data.mem, 0, 0, 0, (void **) &pData);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
@@ -980,7 +980,7 @@ void init_uniform_buffer(struct sample_info &info)
     res = vkBindBufferMemory(info.device,
             info.uniform_data.buf,
             info.uniform_data.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
     info.uniform_data.desc.bufferInfo.offset = 0;
@@ -1092,7 +1092,7 @@ void init_renderpass(struct sample_info &info)
     rp_info.pDependencies = NULL;
 
     res = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 }
 
 void init_framebuffers(struct sample_info &info)
@@ -1120,7 +1120,7 @@ void init_framebuffers(struct sample_info &info)
     for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
         res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
-        assert(!res);
+        assert(res == VK_SUCCESS);
     }
 }
 
@@ -1137,7 +1137,7 @@ void init_and_begin_command_buffer(struct sample_info &info)
     cmd_pool_info.flags = 0;
 
     res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkCmdBufferCreateInfo cmd = {};
     cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
@@ -1147,7 +1147,7 @@ void init_and_begin_command_buffer(struct sample_info &info)
     cmd.flags = 0;
 
     res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
@@ -1158,7 +1158,7 @@ void init_and_begin_command_buffer(struct sample_info &info)
                          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
 
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 }
 
 void end_and_submit_command_buffer(struct sample_info &info)
@@ -1171,10 +1171,10 @@ void end_and_submit_command_buffer(struct sample_info &info)
 
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkQueueWaitIdle(info.queue);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 }
 
 void init_device_queue(struct sample_info &info)
@@ -1184,7 +1184,7 @@ void init_device_queue(struct sample_info &info)
     VkResult U_ASSERT_ONLY res;
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 }
 
 void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture)
@@ -1201,11 +1201,11 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
     res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
     res = vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -1217,14 +1217,14 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     uint8_t *pData;
     res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, 0, 0, (void **) &pData);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     memcpy(pData, vertexData, dataSize);
 
@@ -1233,7 +1233,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     res = vkBindBufferMemory(info.device,
             info.vertex_buffer.buf,
             info.vertex_buffer.mem, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.vi_binding.binding = 0;
     info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
@@ -1275,13 +1275,13 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, &info.desc_pool);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
             VK_DESCRIPTOR_SET_USAGE_STATIC,
             1, &info.desc_layout,
             &info.desc_set);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
 
@@ -1336,7 +1336,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.vert_shader_module);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkShaderCreateInfo shaderCreateInfo;
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
@@ -1346,7 +1346,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.pName = "main";
     shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1363,7 +1363,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
     res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.frag_shader_module);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
@@ -1372,7 +1372,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.pName = "main";
     shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     finalize_glslang();
 }
@@ -1389,7 +1389,7 @@ void init_pipeline(struct sample_info &info)
     pipelineCache.maxSize = 0;
 
     res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
     VkPipelineDynamicStateCreateInfo       dynamicState = {};
@@ -1504,7 +1504,7 @@ void init_pipeline(struct sample_info &info)
     pipeline.subpass             = 0;
 
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 }
 
 void init_texture(struct sample_info &info)
@@ -1521,7 +1521,7 @@ void init_texture(struct sample_info &info)
 
     VkFormatProperties formatProps;
     res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
     bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
@@ -1561,26 +1561,26 @@ void init_texture(struct sample_info &info)
     /* or it will be the staging image if they are not.                                        */
     res = vkCreateImage(info.device, &image_create_info,
             &mappableImage);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
     res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc,
                 &(mappableMemory));
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* bind memory */
     res = vkBindImageMemory(info.device, mappableImage,
             mappableMemory, 0);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
     subres.aspect = VK_IMAGE_ASPECT_COLOR;
@@ -1592,10 +1592,10 @@ void init_texture(struct sample_info &info)
 
     /* Get the subresource layout so we know what the row pitch is */
     res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
     if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
@@ -1621,26 +1621,26 @@ void init_texture(struct sample_info &info)
 
         res = vkCreateImage(info.device, &image_create_info,
                 &texObj.image);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type with DEVICE_ONLY property */
         res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* allocate memory */
         res = vkAllocMemory(info.device, &mem_alloc,
                     &texObj.mem);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* bind memory */
         res = vkBindImageMemory(info.device, texObj.image,
                 texObj.mem, 0);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* Since we're going to blit from the mappable image, set its layout to SOURCE_OPTIMAL */
         /* Side effect is that this will create info.cmd                                       */
@@ -1678,7 +1678,7 @@ void init_texture(struct sample_info &info)
                              VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         /* Put the copy command into the command buffer */
         vkCmdCopyImage(info.cmd,
@@ -1687,16 +1687,16 @@ void init_texture(struct sample_info &info)
                         1, &copy_region);
 
         res = vkEndCommandBuffer(info.cmd);
-        assert(!res);
+        assert(res == VK_SUCCESS);
         const VkCmdBuffer cmd_bufs[] = { info.cmd };
         VkFence nullFence = { VK_NULL_HANDLE };
 
         /* Queue the command buffer for execution */
         res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
-        assert(!res);
+        assert(res == VK_SUCCESS);
 
         res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
-        assert(!res);                      /* using command buffers                             */
+        assert(res == VK_SUCCESS);                      /* using command buffers                             */
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1729,7 +1729,7 @@ void init_texture(struct sample_info &info)
     /* create sampler */
     res = vkCreateSampler(info.device, &samplerCreateInfo,
             &texObj.sampler);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1751,7 +1751,7 @@ void init_texture(struct sample_info &info)
     view_info.image = texObj.image;
     res = vkCreateImageView(info.device, &view_info,
             &texObj.view);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     info.textures.push_back(texObj);
 }

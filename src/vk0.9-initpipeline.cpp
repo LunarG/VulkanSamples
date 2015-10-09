@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     pipelineCache.maxSize = 0;
 
     res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
     VkPipelineDynamicStateCreateInfo       dynamicState = {};
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
     pipeline.subpass             = 0;
 
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 

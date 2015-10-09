@@ -120,7 +120,7 @@ int main(int argc, char **argv)
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     init_enumerate_device(info);
 
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     VkDbgMsgCallback msg_callback;
 
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
     cmd_pool_info.flags = 0;
 
     res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
-    assert(!res);
+    assert(res == VK_SUCCESS);
 
     /*
      * Destroying the device before destroying the command pool above

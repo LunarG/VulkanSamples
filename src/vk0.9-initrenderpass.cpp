@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     rp_info.pDependencies = NULL;
 
     res = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
-    assert(!res);
+    assert(res == VK_SUCCESS);
     end_and_submit_command_buffer(info);
     /* VULKAN_KEY_END */
 
