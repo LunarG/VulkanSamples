@@ -139,7 +139,7 @@ int main(int argc, char **argv)
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, 1, &info.desc_set, 0, NULL);
+            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
@@ -199,7 +199,8 @@ int main(int argc, char **argv)
     vkFreeMemory(info.device, info.textures[0].mem);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
+    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyShader(info.device,info.shaderStages[0].shader);

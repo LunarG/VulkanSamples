@@ -220,7 +220,8 @@ int main(int argc, char **argv)
     vkDestroyPipelineCache(info.device, info.pipelineCache);
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyDescriptorSetLayout(info.device, info.desc_layout);
+    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
     vkDestroyShader(info.device,info.shaderStages[0].shader);

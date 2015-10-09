@@ -50,6 +50,8 @@
 #include <vk_debug_report_lunarg.h>
 #endif // _WIN32
 
+#define NUM_DESCRIPTOR_SETS 1
+
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
     info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \
@@ -198,7 +200,7 @@ struct sample_info {
 
     VkCmdBuffer cmd;  // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;
-    VkDescriptorSetLayout desc_layout;
+    std::vector<VkDescriptorSetLayout> desc_layout;
     VkPipelineCache pipelineCache;
     VkRenderPass render_pass;
     VkPipeline pipeline;
@@ -208,7 +210,7 @@ struct sample_info {
     VkPipelineShaderStageCreateInfo shaderStages[2];
 
     VkDescriptorPool desc_pool;
-    VkDescriptorSet desc_set;
+    std::vector<VkDescriptorSet> desc_set;
 
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
