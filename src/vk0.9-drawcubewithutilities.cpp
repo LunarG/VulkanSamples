@@ -176,9 +176,6 @@ int main(int argc, char **argv)
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(res == VK_SUCCESS);
 
-    res = vkQueueWaitIdle(info.queue);
-    assert(res == VK_SUCCESS);
-
     /* Now present the image in the window */
 
     VkPresentInfoKHR present;
@@ -191,9 +188,6 @@ int main(int argc, char **argv)
     res = info.fpQueuePresentKHR(info.queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI
     // return codes
-    assert(res == VK_SUCCESS);
-
-    res = vkQueueWaitIdle(info.queue);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */

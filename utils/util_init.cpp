@@ -1172,9 +1172,6 @@ void end_and_submit_command_buffer(struct sample_info &info)
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(res == VK_SUCCESS);
-
-    res = vkQueueWaitIdle(info.queue);
-    assert(res == VK_SUCCESS);
 }
 
 void init_device_queue(struct sample_info &info)
@@ -1694,9 +1691,6 @@ void init_texture(struct sample_info &info)
         /* Queue the command buffer for execution */
         res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
         assert(res == VK_SUCCESS);
-
-        res = vkQueueWaitIdle(info.queue); /* TODO: We need to figure out a better strategy for */
-        assert(res == VK_SUCCESS);                      /* using command buffers                             */
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
