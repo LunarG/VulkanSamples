@@ -172,9 +172,6 @@ int main(int argc, char **argv)
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(res == VK_SUCCESS);
 
-    res = vkQueueWaitIdle(info.queue);
-    assert(res == VK_SUCCESS);
-
     /* Now present the image in the window */
 
     VkPresentInfoKHR present;
@@ -185,9 +182,6 @@ int main(int argc, char **argv)
     present.imageIndices = &info.current_buffer;
 
     res = info.fpQueuePresentKHR(info.queue, &present);
-    assert(res == VK_SUCCESS);
-
-    res = vkQueueWaitIdle(info.queue);
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
