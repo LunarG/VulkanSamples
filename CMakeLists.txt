@@ -29,12 +29,25 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-# Hard code our LunarGLASS and glslang paths for now
-get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
-get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
+option(BUILD_LOADER "Build loader" ON)
+option(BUILD_ICD "Build LunarG intel icd" ON)
+option(BUILD_TESTS "Build tests" ON)
+option(BUILD_LAYERS "Build layers" ON)
+option(BUILD_DEMOS "Build demos" ON)
+option(BUILD_VKTRACE "Build VkTrace" ON)
 
-if(NOT EXISTS ${GLSLANG_PREFIX})
-    message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
+if (BUILD_ICD)
+    # Hard code our LunarGLASS and glslang paths for now
+    get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
+    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
+
+    if(NOT EXISTS ${GLSLANG_PREFIX})
+        message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
+    endif()
+
+    if(NOT EXISTS ${LUNARGLASS_PREFIX})
+        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
+    endif()
 endif()
 
 if(NOT WIN32)
@@ -47,9 +60,6 @@ if(NOT WIN32)
     else()
         add_definitions(-DLOCALPREFIX="${CMAKE_INSTALL_PREFIX}")
     endif()
-    if(NOT EXISTS ${LUNARGLASS_PREFIX})
-        message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
-    endif()
     if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(PYTHON_CMD "python3")
     endif()
@@ -57,16 +67,29 @@ else()
     set(PYTHON_CMD "py")
 endif()
 
-option(BUILD_TESTS "Build tests" ON)
-
 # loader: Generic VULKAN ICD loader
 # icd: Device dependent (DD) VULKAN components
 # tests: VULKAN tests
-add_subdirectory(loader)
-add_subdirectory(icd)
+if(BUILD_LOADER)
+    add_subdirectory(loader)
+endif()
+
+if(BUILD_ICD)
+    add_subdirectory(icd)
+endif()
+
 if(BUILD_TESTS)
     add_subdirectory(tests)
 endif()
-add_subdirectory(layers)
-add_subdirectory(demos)
-add_subdirectory(vktrace)
+
+if(BUILD_LAYERS)
+    add_subdirectory(layers)
+endif()
+
+if(BUILD_DEMOS)
+    add_subdirectory(demos)
+endif()
+
+if(BUILD_VKTRACE)
+    add_subdirectory(vktrace)
+endif()
