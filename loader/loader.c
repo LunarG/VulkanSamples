@@ -1694,12 +1694,12 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
             // only Linux has relative paths
             char *dir;
             // make a copy of location so it isn't modified
-            dir = loader_stack_alloc(strlen(location) + 1);
+            dir = loader_stack_alloc(strlen(loc) + 1);
             if (dir == NULL) {
                 loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
                 return;
             }
-            strcpy(dir, location);
+            strcpy(dir, loc);
 
             loader_get_fullpath(file, dir, sizeof(full_path), full_path);
 
