@@ -217,6 +217,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     drawcube drawtexturedcube
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
+    occlusion_query
     enable_validation_with_callback)
 sampleWithSingleFile()
 
