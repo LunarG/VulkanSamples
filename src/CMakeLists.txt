@@ -220,6 +220,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback multiple_sets
     copyblitimage template separate_image_sampler
+    occlusion_query
     immutable_sampler push_constants drawsubpasses secondarycmd)
 
 sampleWithSingleFile()
