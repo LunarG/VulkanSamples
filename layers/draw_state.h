@@ -37,6 +37,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_POOL,                     // Invalid DS pool
     DRAWSTATE_INVALID_SET,                      // Invalid DS
     DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
+    DRAWSTATE_INVALID_IMAGE_LAYOUT,             // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
     DRAWSTATE_INVALID_COMMAND_BUFFER,               // Invalid CommandBuffer referenced
@@ -139,6 +140,16 @@ typedef struct _SAMPLER_NODE {
 
     _SAMPLER_NODE(const VkSampler* ps, const VkSamplerCreateInfo* pci) : sampler(*ps), createInfo(*pci) {};
 } SAMPLER_NODE;
+
+typedef struct _IMAGE_NODE {
+    VkImageLayout layout;
+} IMAGE_NODE;
+
+typedef struct _IMAGE_CMD_BUF_NODE {
+    VkImageLayout layout;
+    VkImageLayout initialLayout;
+} IMAGE_CMD_BUF_NODE;
+
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
@@ -304,9 +315,9 @@ typedef struct stencil_data {
 
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
-    VkCommandBuffer                  commandBuffer;
-    VkCommandBufferAllocateInfo        createInfo;
-    VkCommandBufferBeginInfo         beginInfo;
+    VkCommandBuffer              commandBuffer;
+    VkCommandBufferAllocateInfo  createInfo;
+    VkCommandBufferBeginInfo     beginInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB
     uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
@@ -332,9 +343,15 @@ typedef struct _GLOBAL_CB_NODE {
     CBStencilData                back;
     VkDescriptorSet              lastBoundDescriptorSet;
     VkPipelineLayout             lastBoundPipelineLayout;
+    VkRenderPassBeginInfo        activeRenderPassBeginInfo;
     VkRenderPass                 activeRenderPass;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
-    VkCommandBufferLevel             level;
+    VkCommandBufferLevel         level;
     vector<VkDescriptorSet>      boundDescriptorSets;
+    unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
 } GLOBAL_CB_NODE;
+
+typedef struct _SWAPCHAIN_NODE {
+    std::vector<VkImage>        images;
+} SWAPCHAIN_NODE;

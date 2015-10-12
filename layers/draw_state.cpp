@@ -53,6 +53,8 @@
 
 struct devExts {
     VkBool32 debug_marker_enabled;
+    VkBool32 wsi_enabled;
+    unordered_map<VkSwapchainKHR, SWAPCHAIN_NODE*> swapchainMap;
 };
 
 struct layer_data {
@@ -77,6 +79,10 @@ struct layer_data {
     unordered_map<void*, GLOBAL_CB_NODE*> commandBufferMap;
     unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
     unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
+    unordered_map<VkImage, IMAGE_NODE*> imageLayoutMap;
+    // Current render pass
+    VkRenderPassBeginInfo renderPassBeginInfo;
+    uint32_t currentSubpass;
 
     layer_data() :
         report_data(nullptr),
@@ -1346,9 +1352,36 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->pCmds.clear();
         // Reset CB state (need to save createInfo)
         VkCommandBufferAllocateInfo saveCBCI = pCB->createInfo;
-        memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->commandBuffer = cb;
         pCB->createInfo = saveCBCI;
+        memset(&pCB->beginInfo, 0, sizeof(VkCommandBufferBeginInfo));
+        pCB->fence = 0;
+        pCB->numCmds = 0;
+        memset(pCB->drawCount, 0, NUM_DRAW_TYPES * sizeof(uint64_t));
+        pCB->state = CB_NEW;
+        pCB->submitCount = 0;
+        pCB->status = 0;
+        pCB->pCmds.clear();
+        pCB->lastBoundPipeline = 0;
+        pCB->viewports.clear();
+        pCB->scissors.clear();
+        pCB->lineWidth = 0;
+        pCB->depthBiasConstantFactor = 0;
+        pCB->depthBiasClamp = 0;
+        pCB->depthBiasSlopeFactor = 0;
+        memset(pCB->blendConstants, 0, 4 * sizeof(float));
+        pCB->minDepthBounds = 0;
+        pCB->maxDepthBounds = 0;
+        memset(&pCB->front, 0, sizeof(stencil_data));
+        memset(&pCB->back, 0, sizeof(stencil_data));
+        pCB->lastBoundDescriptorSet = 0;
+        pCB->lastBoundPipelineLayout = 0;
+        pCB->activeRenderPass = 0;
+        pCB->activeSubpass = 0;
+        pCB->framebuffer = 0;
+        pCB->level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        pCB->boundDescriptorSets.clear();
+        pCB->imageLayoutMap.clear();
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
@@ -1614,8 +1647,25 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     uint32_t i;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_extensions.debug_marker_enabled = false;
+    dev_data->device_extensions.wsi_enabled = false;
+
+
+    VkLayerDispatchTable    *pDisp = dev_data->device_dispatch_table;
+    PFN_vkGetDeviceProcAddr  gpa   = pDisp->GetDeviceProcAddr;
+
+    pDisp->GetSurfacePropertiesKHR   = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
+    pDisp->GetSurfaceFormatsKHR      = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
+    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
+    pDisp->CreateSwapchainKHR        = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
+    pDisp->DestroySwapchainKHR       = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
+    pDisp->GetSwapchainImagesKHR     = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
+    pDisp->AcquireNextImageKHR       = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
+    pDisp->QueuePresentKHR           = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");    
 
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            dev_data->device_extensions.wsi_enabled = true;
+        }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);
@@ -1735,6 +1785,26 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
+bool ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    for (auto cb_image_data : pCB->imageLayoutMap) {
+        auto image_data = dev_data->imageLayoutMap.find(cb_image_data.first);
+        if (image_data == dev_data->imageLayoutMap.end()) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Cannot submit cmd buffer using deleted image %d.", cb_image_data.first);
+        } else {
+            if (dev_data->imageLayoutMap[cb_image_data.first]->layout != cb_image_data.second.initialLayout) {
+                skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                     "Cannot submit cmd buffer using image with layout %d when first use is %d.", dev_data->imageLayoutMap[cb_image_data.first]->layout, cb_image_data.second.initialLayout);
+            }
+            dev_data->imageLayoutMap[cb_image_data.first]->layout = cb_image_data.second.layout;
+        }
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -1743,13 +1813,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
+            skipCall |= ValidateCmdBufImageLayouts(submit->pCommandBuffers[i]);
             // Validate that cmd buffers have been updated
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
             loader_platform_thread_lock_mutex(&globalLock);
             pCB->submitCount++; // increment submit count
             if ((pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                        "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<uint64_t>(pCB->commandBuffer), pCB->submitCount);
+                        "CB %#" PRIxLEAST64 " was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.",
+                        reinterpret_cast<uint64_t>(pCB->commandBuffer), pCB->submitCount);
             }
             if (CB_UPDATE_COMPLETE != pCB->state) {
                 // Flag error for using CB w/o vkEndCommandBuffer() called
@@ -1902,8 +1974,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     if (VK_SUCCESS == result) {
+        IMAGE_NODE* image_node = new IMAGE_NODE;
+        image_node->layout = pCreateInfo->initialLayout;
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
+        dev_data->imageLayoutMap[*pImage] = image_node;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2238,13 +2313,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(VkDevice device, const V
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
-        memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
-        pCB->commandBuffer = *pCommandBuffer;
-        pCB->createInfo = *pCreateInfo;
-        pCB->lastVtxBinding = MAX_BINDING;
-        pCB->level = pCreateInfo->level;
         dev_data->commandBufferMap[*pCommandBuffer] = pCB;
         loader_platform_thread_unlock_mutex(&globalLock);
+        resetCB(dev_data, *pCommandBuffer);
+        pCB->commandBuffer = *pCommandBuffer;
+        pCB->createInfo    = *pCreateInfo;
+        pCB->level         = pCreateInfo->level;
         updateCBTracking(pCB);
     }
     return result;
@@ -2855,6 +2929,58 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuff
         dev_data->device_dispatch_table->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
+bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    auto src_image_element = pCB->imageLayoutMap.find(srcImage);
+    if (src_image_element == pCB->imageLayoutMap.end()) {
+        pCB->imageLayoutMap[srcImage].initialLayout = srcImageLayout;
+        pCB->imageLayoutMap[srcImage].layout = srcImageLayout;
+        return false;
+    }
+    if (src_image_element->second.layout != srcImageLayout) {
+        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                             "Cannot copy from an image whose source layout is %d and doesn't match the current layout %d.", srcImageLayout, src_image_element->second.layout);
+    }
+    if (srcImageLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        if (srcImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Layout for input image should be TRANSFER_SOURCE_OPTIMAL instead of GENERAL.");
+        } else {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Layout for input image is %d but can only be TRANSFER_SOURCE_OPTIMAL or GENERAL.", srcImageLayout);
+        }
+    }
+    return skip_call;
+}
+
+bool VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkImageLayout destImageLayout) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    auto dest_image_element = pCB->imageLayoutMap.find(destImage);
+    if (dest_image_element == pCB->imageLayoutMap.end()) {
+        pCB->imageLayoutMap[destImage].initialLayout = destImageLayout;
+        pCB->imageLayoutMap[destImage].layout = destImageLayout;
+        return false;
+    }
+    if (dest_image_element->second.layout != destImageLayout) {
+        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                             "Cannot copy from an image whose dest layout is %d and doesn't match the current layout %d.", destImageLayout, dest_image_element->second.layout);
+    }
+    if (destImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        if (destImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Layout for output image should be TRANSFER_DST_OPTIMAL instead of GENERAL.");
+        } else {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                 "Layout for output image is %d but can only be TRANSFER_DST_OPTIMAL or GENERAL.", destImageLayout);
+        }
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer,
                                              VkImage srcImage,
                                              VkImageLayout srcImageLayout,
@@ -2873,6 +2999,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer,
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyImage()");
         }
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdCopyImage");
+        skipCall |= VerifySourceImageLayout(commandBuffer, srcImage, srcImageLayout);
+        skipCall |= VerifyDestImageLayout(commandBuffer, dstImage, dstImageLayout);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
@@ -2916,6 +3044,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer,
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyBufferToImage()");
         }
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdCopyBufferToImage");
+        skipCall |= VerifyDestImageLayout(commandBuffer, dstImage, dstImageLayout);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
@@ -2937,6 +3066,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer,
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyImageToBuffer()");
         }
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdCopyImageToBuffer");
+        skipCall |= VerifySourceImageLayout(commandBuffer, srcImage, srcImageLayout);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
@@ -3145,6 +3275,30 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEven
         dev_data->device_dispatch_table->CmdResetEvent(commandBuffer, event, stageMask);
 }
 
+bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    bool skip = false;
+    for (uint32_t i = 0; i < memBarrierCount; ++i) {
+        auto mem_barrier = reinterpret_cast<const VkMemoryBarrier*>(ppMemBarriers[i]);
+        if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
+            auto image_mem_barrier = reinterpret_cast<const VkImageMemoryBarrier*>(mem_barrier);
+            auto image_data = pCB->imageLayoutMap.find(image_mem_barrier->image);
+            if (image_data == pCB->imageLayoutMap.end()) {
+                pCB->imageLayoutMap[image_mem_barrier->image].initialLayout = image_mem_barrier->oldLayout;
+                pCB->imageLayoutMap[image_mem_barrier->image].layout = image_mem_barrier->newLayout;
+            } else {
+                if (image_data->second.layout != image_mem_barrier->oldLayout) {
+                    skip |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "You cannot transition the layout from %d when current layout is %d.", image_mem_barrier->oldLayout, image_data->second.layout);
+                }
+                image_data->second.layout = image_mem_barrier->newLayout;
+            }
+        }
+    }
+    return skip;
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -3157,6 +3311,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
+        skipCall |= TransitionImageLayouts(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
@@ -3174,6 +3329,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, V
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdPipelineBarrier()");
         }
+        skipCall |= TransitionImageLayouts(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
@@ -3375,11 +3531,11 @@ VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRend
     return result;
 }
 
-VkBool32 validateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
-    VkBool32 skip_call = false;
-    std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
+VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node) {
+   VkBool32 skip_call = false;
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
     std::vector<std::vector<uint32_t>> input_attachment_to_subpass(pCreateInfo->attachmentCount);
+
     // Create DAG
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         DAGNode& subpass_node = subpass_to_node[i];
@@ -3394,6 +3550,7 @@ VkBool32 validateDependencies(const layer_data* my_data, VkDevice device, const 
         subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
         subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
     }
+
     // Find for each attachment the subpasses that use them.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
@@ -3437,10 +3594,77 @@ VkBool32 validateDependencies(const layer_data* my_data, VkDevice device, const 
     return skip_call;
 }
 
+bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
+    bool skip = false;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            if (subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL &&
+                subpass.pInputAttachments[j].layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+                if (subpass.pInputAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is GENERAL but should be READ_ONLY_OPTIMAL.");
+                } else {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for input attachment is %d but can only be READ_ONLY_OPTIMAL or GENERAL.", subpass.pInputAttachments[j].attachment);
+                }
+            }
+        }
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+            if (subpass.pColorAttachments[j].layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+                if (subpass.pColorAttachments[j].layout == VK_IMAGE_LAYOUT_GENERAL) {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for color attachment is GENERAL but should be COLOR_ATTACHMENT_OPTIMAL.");
+                } else {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for color attachment is %d but can only be COLOR_ATTACHMENT_OPTIMAL or GENERAL.", subpass.pColorAttachments[j].attachment);
+                }
+            }
+        }
+        if (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            if (subpass.pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+                if (subpass.pDepthStencilAttachment->layout == VK_IMAGE_LAYOUT_GENERAL) {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for depth attachment is GENERAL but should be DEPTH_STENCIL_ATTACHMENT_OPTIMAL.");
+                } else {
+                    skip |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                    "Layout for depth attachment is %d but can only be DEPTH_STENCIL_ATTACHMENT_OPTIMAL or GENERAL.", subpass.pDepthStencilAttachment->attachment);
+                }
+            }
+        }
+    }
+    return skip;
+}
+
+bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node) {
+    bool skip_call = false;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        DAGNode& subpass_node = subpass_to_node[i];
+        subpass_node.pass = i;
+    }
+    for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
+        const VkSubpassDependency& dependency = pCreateInfo->pDependencies[i];
+        if (dependency.srcSubpass > dependency.dstSubpass) {
+            skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
+        }
+        subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
+        subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
+    bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    if (validateDependencies(dev_data, device, pCreateInfo)) {
+    // Create DAG
+    std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
+    skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node);
+    // Validate using DAG
+    skip_call |= ValidateDependencies(dev_data, device, pCreateInfo, subpass_to_node);
+    skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
+    if (skip_call) {
         return VK_ERROR_VALIDATION_FAILED;
     }
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
@@ -3530,9 +3754,107 @@ static void deleteRenderPasses(layer_data* my_data)
     }
     my_data->renderPassMap.clear();
 }
+
+bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass];
+    const VkFramebufferCreateInfo* pFramebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer];
+    if (pRenderPassInfo->attachmentCount != pFramebufferInfo->attachmentCount) {
+        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                             "You cannot start a render pass using a framebuffer with a different number of attachments.");
+    }
+    for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
+        const VkImageView& image_view = pFramebufferInfo->pAttachments[i];
+        const VkImage& image = dev_data->imageViewMap[image_view]->image;
+        auto image_data = pCB->imageLayoutMap.find(image);
+        if (image_data == pCB->imageLayoutMap.end()) {
+            pCB->imageLayoutMap[image].initialLayout = pRenderPassInfo->pAttachments[i].initialLayout;
+            pCB->imageLayoutMap[image].layout = pRenderPassInfo->pAttachments[i].initialLayout;
+        } else if (pRenderPassInfo->pAttachments[i].initialLayout != image_data->second.layout) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
+                                 "You cannot start a render pass using attachment %i where the intial layout differs from the starting layout.", i);
+        }
+    }
+    return skip_call;
+}
+
+void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, const int subpass_index) {
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    auto render_pass_data = dev_data->renderPassMap.find(pRenderPassBegin->renderPass);
+    if (render_pass_data == dev_data->renderPassMap.end()) {
+        return;
+    }
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second;
+    auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
+    if (framebuffer_data == dev_data->frameBufferMap.end()) {
+        return;
+    }
+    const VkFramebufferCreateInfo* pFramebufferInfo = framebuffer_data->second;
+    const VkSubpassDescription& subpass = pRenderPassInfo->pSubpasses[subpass_index];
+    for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pInputAttachments[j].attachment];
+        auto image_view_data = dev_data->imageViewMap.find(image_view);
+        if (image_view_data !=  dev_data->imageViewMap.end()) {
+            auto image_layout = pCB->imageLayoutMap.find(image_view_data->second->image);
+            if (image_layout != pCB->imageLayoutMap.end()) {
+                image_layout->second.layout = subpass.pInputAttachments[j].layout;
+            }
+        }
+    }
+    for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pColorAttachments[j].attachment];
+        auto image_view_data = dev_data->imageViewMap.find(image_view);
+        if (image_view_data !=  dev_data->imageViewMap.end()) {
+            auto image_layout = pCB->imageLayoutMap.find(image_view_data->second->image);
+            if (image_layout != pCB->imageLayoutMap.end()) {
+                image_layout->second.layout = subpass.pColorAttachments[j].layout;
+            }
+        }
+    }
+    if (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+        const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pDepthStencilAttachment->attachment];
+        auto image_view_data = dev_data->imageViewMap.find(image_view);
+        if (image_view_data !=  dev_data->imageViewMap.end()) {
+            auto image_layout = pCB->imageLayoutMap.find(image_view_data->second->image);
+            if (image_layout != pCB->imageLayoutMap.end()) {
+                image_layout->second.layout = subpass.pDepthStencilAttachment->layout;
+            }
+        }
+    }
+}
+
+void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin) {
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    auto render_pass_data = dev_data->renderPassMap.find(pRenderPassBegin->renderPass);
+    if (render_pass_data == dev_data->renderPassMap.end()) {
+        return;
+    }
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second;
+    auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
+    if (framebuffer_data == dev_data->frameBufferMap.end()) {
+        return;
+    }
+    const VkFramebufferCreateInfo* pFramebufferInfo = framebuffer_data->second;
+    for (uint32_t i = 0; i < pRenderPassInfo->attachmentCount; ++i) {
+        const VkImageView& image_view = pFramebufferInfo->pAttachments[i];
+        auto image_view_data = dev_data->imageViewMap.find(image_view);
+        if (image_view_data !=  dev_data->imageViewMap.end()) {
+            auto image_layout = pCB->imageLayoutMap.find(image_view_data->second->image);
+            if (image_layout != pCB->imageLayoutMap.end()) {
+                image_layout->second.layout = pRenderPassInfo->pAttachments[i].finalLayout;
+            }
+        }
+    }
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
+    skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
@@ -3541,6 +3863,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS);
             pCB->activeRenderPass = pRenderPassBegin->renderPass;
+            // This is a shallow copy as that is all that is needed for now
+            pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
             pCB->framebuffer = pRenderPassBegin->framebuffer;
             if (pCB->lastBoundPipeline) {
@@ -3553,6 +3877,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
+
+    // This is a shallow copy as that is all that is needed for now
+    dev_data->renderPassBeginInfo = *pRenderPassBegin;
+    dev_data->currentSubpass = 0;
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
@@ -3560,10 +3888,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSub
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
+    TransitionSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo, ++dev_data->currentSubpass);
     if (pCB) {
         updateCBTracking(pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS);
         pCB->activeSubpass++;
+        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, ++pCB->activeSubpass);
         if (pCB->lastBoundPipeline) {
             skipCall |= validatePipelineState(dev_data, pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
         }
@@ -3578,10 +3908,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
+    TransitionFinalSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo);
     if (pCB) {
         skipCall |= outsideRenderPass(dev_data, pCB, "vkEndRenderpass");
         updateCBTracking(pCB);
         skipCall |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS);
+        TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = 0;
         pCB->activeSubpass = 0;
     }
@@ -3611,6 +3943,98 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCommandBuffer commandBuffer, u
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
+    VkDevice                        device,
+    const VkSwapchainCreateInfoKHR *pCreateInfo,
+    VkSwapchainKHR                 *pSwapchain)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+
+    if (VK_SUCCESS == result) {
+        SWAPCHAIN_NODE *swapchain_data = new SWAPCHAIN_NODE;
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->device_extensions.swapchainMap[*pSwapchain] = swapchain_data;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
+    VkDevice                        device,
+    VkSwapchainKHR swapchain)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    auto swapchain_data = dev_data->device_extensions.swapchainMap.find(swapchain);
+    if (swapchain_data != dev_data->device_extensions.swapchainMap.end()) {
+        if (swapchain_data->second->images.size() > 0) {
+            for (auto swapchain_image : swapchain_data->second->images) {
+                auto image_item = dev_data->imageLayoutMap.find(swapchain_image);
+                if (image_item != dev_data->imageLayoutMap.end())
+                    dev_data->imageLayoutMap.erase(image_item);
+            }
+        }
+        delete swapchain_data->second;
+        dev_data->device_extensions.swapchainMap.erase(swapchain);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
+    VkDevice                device,
+    VkSwapchainKHR          swapchain,
+    uint32_t*               pCount,
+    VkImage*                pSwapchainImages)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+
+    if (result == VK_SUCCESS && pSwapchainImages != NULL) {
+        // This should never happen and is checked by param checker.
+        if (!pCount) return result;
+        for (uint32_t i = 0; i < *pCount; ++i) {
+            IMAGE_NODE* image_node = new IMAGE_NODE;
+            image_node->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+            loader_platform_thread_lock_mutex(&globalLock);
+            dev_data->device_extensions.swapchainMap[swapchain]->images.push_back(pSwapchainImages[i]);
+            dev_data->imageLayoutMap[pSwapchainImages[i]] = image_node;
+            loader_platform_thread_unlock_mutex(&globalLock);
+        }
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    bool skip_call = false;
+
+    if (pPresentInfo) {
+        for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
+            auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->swapchains[i]);
+            if (swapchain_data != dev_data->device_extensions.swapchainMap.end() && pPresentInfo->imageIndices[i] < swapchain_data->second->images.size()) {
+                VkImage image = swapchain_data->second->images[pPresentInfo->imageIndices[i]];
+                auto image_data = dev_data->imageLayoutMap.find(image);
+                if (image_data != dev_data->imageLayoutMap.end()) {
+                    if (image_data->second->layout != VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR) {
+                        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, (uint64_t)queue, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                                             "Images passed to present must be in layout PRESENT_SOURCE_KHR but is in %d", image_data->second->layout);
+                    }
+                }
+            }
+        }
+    }
+
+    if (VK_FALSE == skip_call)
+        return dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    return VK_ERROR_VALIDATION_FAILED;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -3862,6 +4286,18 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdEndRenderPass;
     if (!strcmp(funcName, "vkCmdExecuteCommands"))
         return (PFN_vkVoidFunction) vkCmdExecuteCommands;
+
+    if (dev_data->device_extensions.wsi_enabled)
+    {
+        if (!strcmp(funcName, "vkCreateSwapchainKHR"))
+            return (PFN_vkVoidFunction) vkCreateSwapchainKHR;
+        if (!strcmp(funcName, "vkDestroySwapchainKHR"))
+            return (PFN_vkVoidFunction) vkDestroySwapchainKHR;
+        if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
+            return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
+        if (!strcmp(funcName, "vkQueuePresentKHR"))
+            return (PFN_vkVoidFunction) vkQueuePresentKHR;
+    }
 
     VkLayerDispatchTable* pTable = dev_data->device_dispatch_table;
     if (dev_data->device_extensions.debug_marker_enabled)
