@@ -788,7 +788,7 @@ static void demo_prepare_buffers(struct demo *demo)
         demo->buffers[i].image = swapchainImages[i];
 
         demo_set_image_layout(demo, demo->buffers[i].image,
-                               VK_IMAGE_ASPECT_COLOR,
+                               VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -1007,7 +1007,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     demo_set_image_layout(demo, tex_obj->image,
-                           VK_IMAGE_ASPECT_COLOR,
+                           VK_IMAGE_ASPECT_COLOR_BIT,
                            VK_IMAGE_LAYOUT_UNDEFINED,
                            tex_obj->imageLayout);
     /* setting the image layout does not reference the actual memory so no need to add a mem ref */
@@ -1050,12 +1050,12 @@ static void demo_prepare_textures(struct demo *demo)
                                        VK_MEMORY_PROPERTY_DEVICE_ONLY);
 
             demo_set_image_layout(demo, staging_texture.image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    staging_texture.imageLayout,
                                    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
             demo_set_image_layout(demo, demo->textures[i].image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    demo->textures[i].imageLayout,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
@@ -1072,7 +1072,7 @@ static void demo_prepare_textures(struct demo *demo)
                             1, &copy_region);
 
             demo_set_image_layout(demo, demo->textures[i].image,
-                                   VK_IMAGE_ASPECT_COLOR,
+                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
                                    demo->textures[i].imageLayout);
 
