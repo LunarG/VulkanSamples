@@ -1257,6 +1257,10 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<uint64_t>(object));' % o)
             else:
+                if o == "VkPipelineCache":
+                    procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
+                    procs_txt.append('    if (object == VK_NULL_HANDLE) return VK_TRUE;')
+                    procs_txt.append('')
                 procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object %%p", object.handle);' % o)
