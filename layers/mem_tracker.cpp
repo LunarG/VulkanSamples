@@ -1531,34 +1531,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
-    VkDevice                 device,
-    const VkEventCreateInfo *pCreateInfo,
-    VkEvent                 *pEvent)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateEvent(device, pCreateInfo, pEvent);
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pEvent->handle, VK_OBJECT_TYPE_EVENT, pCreateInfo);
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
-    VkDevice                     device,
-    const VkQueryPoolCreateInfo *pCreateInfo,
-    VkQueryPool                 *pQueryPool)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateQueryPool(device, pCreateInfo, pQueryPool);
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pQueryPool->handle, VK_OBJECT_TYPE_QUERY_POOL, pCreateInfo);
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     VkDevice                  device,
     const VkBufferCreateInfo *pCreateInfo,
@@ -1568,20 +1540,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info(pBuffer->handle, VK_OBJECT_TYPE_BUFFER, pCreateInfo);
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
-    VkDevice                      device,
-    const VkBufferViewCreateInfo *pCreateInfo,
-    VkBufferView                 *pView)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pView->handle, VK_OBJECT_TYPE_BUFFER_VIEW, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1609,77 +1567,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pView->handle, VK_OBJECT_TYPE_IMAGE_VIEW, pCreateInfo);
         // Validate that img has correct usage flags set
         validate_image_usage_flags(
                     device, pCreateInfo->image,
                     VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
-    VkDevice                  device,
-    const VkShaderCreateInfo *pCreateInfo,
-    VkShader                 *pShader)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateShader(device, pCreateInfo, pShader);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pShader->handle, VK_OBJECT_TYPE_SHADER, pCreateInfo);
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-//TODO do we need to intercept pipelineCache functions to track objects?
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
-    VkDevice                            device,
-    VkPipelineCache                     pipelineCache,
-    uint32_t                            count,
-    const VkGraphicsPipelineCreateInfo *pCreateInfos,
-    VkPipeline                         *pPipelines)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        for (uint32_t i = 0; i < count; i++) {
-            add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
-    VkDevice                           device,
-    VkPipelineCache                    pipelineCache,
-    uint32_t                           count,
-    const VkComputePipelineCreateInfo *pCreateInfos,
-    VkPipeline                        *pPipelines)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        for (uint32_t i = 0; i < count; i++) {
-            add_object_create_info(pPipelines[i].handle, VK_OBJECT_TYPE_PIPELINE, &pCreateInfos[i]);
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
-    VkDevice                   device,
-    const VkSamplerCreateInfo *pCreateInfo,
-    VkSampler                 *pSampler)
-{
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSampler(device, pCreateInfo, pSampler);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info(pSampler->handle, VK_OBJECT_TYPE_SAMPLER, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2569,26 +2461,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkQueueWaitIdle;
     if (!strcmp(funcName, "vkDeviceWaitIdle"))
         return (PFN_vkVoidFunction) vkDeviceWaitIdle;
-    if (!strcmp(funcName, "vkCreateEvent"))
-        return (PFN_vkVoidFunction) vkCreateEvent;
-    if (!strcmp(funcName, "vkCreateQueryPool"))
-        return (PFN_vkVoidFunction) vkCreateQueryPool;
     if (!strcmp(funcName, "vkCreateBuffer"))
         return (PFN_vkVoidFunction) vkCreateBuffer;
-    if (!strcmp(funcName, "vkCreateBufferView"))
-        return (PFN_vkVoidFunction) vkCreateBufferView;
     if (!strcmp(funcName, "vkCreateImage"))
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateShader"))
-        return (PFN_vkVoidFunction) vkCreateShader;
-    if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
-        return (PFN_vkVoidFunction) vkCreateGraphicsPipelines;
-    if (!strcmp(funcName, "vkCreateComputePipelines"))
-        return (PFN_vkVoidFunction) vkCreateComputePipelines;
-    if (!strcmp(funcName, "vkCreateSampler"))
-        return (PFN_vkVoidFunction) vkCreateSampler;
     if (!strcmp(funcName, "vkCreateCommandBuffer"))
         return (PFN_vkVoidFunction) vkCreateCommandBuffer;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
