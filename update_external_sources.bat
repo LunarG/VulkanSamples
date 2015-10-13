@@ -36,8 +36,8 @@ REM // ======== Parameter parsing ======== //
 
       if "%1" == "--sync-glslang" (
          set sync-glslang=1
-		   shift
-		   goto:parameterLoop
+         shift
+         goto:parameterLoop
       )
 
       if "%1" == "--sync-LunarGLASS" (
@@ -85,12 +85,13 @@ REM // ======== end Parameter parsing ======== //
 
 
 REM // ======== Dependency checking ======== //
+   REM git is required for all paths
    for %%X in (git.exe) do (set FOUND=%%~$PATH:X)
    if not defined FOUND (
       echo Dependency check failed:
       echo   git.exe not found
+      echo   Git for Windows can be downloaded here:  https://git-scm.com/download/win
       echo   Install and ensure git.exe makes it into your PATH
-
       set errorCode=1
    )
 
@@ -195,9 +196,7 @@ echo LUNARGLASS_REVISION=%LUNARGLASS_REVISION%
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
 
 set /p LUNARGLASS_REVISION_R32= < LunarGLASS_revision_R32
-set /p GLSLANG_REVISION_R32= < glslang_revision_R32
 echo LUNARGLASS_REVISION_R32=%LUNARGLASS_REVISION_R32%
-echo GLSLANG_REVISION_R32=%GLSLANG_REVISION_R32%
 
 echo Creating and/or updating glslang and LunarGLASS in %BASE_DIR%
 
@@ -212,6 +211,7 @@ if %sync-glslang% equ 1 (
 )
 
 if %sync-LunarGLASS% equ 1 (
+   rd /S /Q %LUNARGLASS_DIR%
    if not exist %LUNARGLASS_DIR% (
       call:create_LunarGLASS
    )
@@ -250,8 +250,6 @@ goto:eof
 REM // ======== Functions ======== //
 
 :create_glslang
-   REM Windows complains if it can't find the directory below, no need to call
-   REM rd /S /Q %GLSLANG_DIR%
    echo.
    echo Creating local glslang repository %GLSLANG_DIR%)
    mkdir %GLSLANG_DIR%
@@ -277,8 +275,11 @@ goto:eof
    REM rd /S /Q %LUNARGLASS_DIR%
    echo.
    echo Creating local LunarGLASS repository %LUNARGLASS_DIR%)
-   mkdir %LUNARGLASS_DIR%\Core\LLVM
-   cd %LUNARGLASS_DIR%\Core\LLVM
+   mkdir %LUNARGLASS_DIR%
+   cd %LUNARGLASS_DIR%
+   git clone https://github.com/LunarG/LunarGLASS.git .
+   git checkout %LUNARGLASS_REVISION%
+   cd Core\LLVM
    echo.
    echo Downloading LLVM archive...
    wget http://llvm.org/releases/3.4/llvm-3.4.src.tar.gz
@@ -302,8 +303,11 @@ goto:eof
    echo.
    echo Syncing LunarGLASS source...
    cd %LUNARGLASS_DIR%
-   svn checkout --force https://lunarglass.googlecode.com/svn/trunk/ .
-   svn revert --depth=infinity .
+   REM put back the LunarGLASS github versions of some LLVM files
+   git checkout -f .
+   REM overwrite with private gitlab versions of some files
+   svn checkout -r %LUNARGLASS_REVISION_R32% --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/LunarGLASS/ .
+   svn revert -R .
    if not exist %LUNARGLASS_DIR%\Frontends\SPIRV (
       echo.
       echo LunarGLASS source download failed!
@@ -315,8 +319,12 @@ goto:eof
    echo.
    echo Updating %LUNARGLASS_DIR%
    cd %LUNARGLASS_DIR%
-   svn update -r %LUNARGLASS_REVISION%
-   REM Just in case we are moving backward, do a revert
+   git fetch --all
+   git checkout -f %LUNARGLASS_REVISION% .
+   if not exist %LUNARGLASS_DIR%\.svn (
+      svn checkout -r %LUNARGLASS_REVISION_R32% --force https://cvs.khronos.org/svn/repos/SPIRV/trunk/LunarGLASS/ .
+   )
+   svn update -r %LUNARGLASS_REVISION_R325
    svn revert -R .
 goto:eof
 
@@ -328,18 +336,18 @@ goto:eof
    set GLSLANG_BUILD_DIR=%GLSLANG_DIR%\build
    cd %GLSLANG_BUILD_DIR%
    cmake -G"Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
-   REM Check for existence of one lib, even though we should check for all results
-   if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
-      echo.
-      echo glslang Release build failed!
-      set errorCode=1
-   )
    msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
    if not exist %GLSLANG_BUILD_DIR%\glslang\Debug\glslang.lib (
       echo.
       echo glslang Debug build failed!
+      set errorCode=1
+   )
+   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %GLSLANG_BUILD_DIR%\glslang\Release\glslang.lib (
+      echo.
+      echo glslang Release build failed!
       set errorCode=1
    )
 goto:eof
@@ -361,14 +369,17 @@ goto:eof
       set errorCode=1
       goto:eof
    )
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM disable Debug build of LLVM until LunarGLASS cmake files are updated to
+   REM handle Debug and Release builds of glslang simultaneously, instead of
+   REM whatever last lands in "./build/install"
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
-      echo.
-      echo LLVM Debug build failed!
-      set errorCode=1
-      goto:eof
-   )
+   REM   if not exist %LLVM_BUILD_DIR%\lib\Debug\LLVMCore.lib (
+   REM      echo.
+   REM      echo LLVM Debug build failed!
+   REM      set errorCode=1
+   REM      goto:eof
+   REM   )
    cd %LUNARGLASS_DIR%
    mkdir build
    set LUNARGLASS_BUILD_DIR=%LUNARGLASS_DIR%\build
@@ -382,12 +393,15 @@ goto:eof
       set errorCode=1
       goto:eof
    )
-   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM disable Debug build of LunarGLASS until its cmake file can be updated to
+   REM handle Debug and Release builds of glslang simultaneously, instead of
+   REM whatever last lands in "./build/install"
+   REM   msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Debug
    REM Check for existence of one lib, even though we should check for all results
-   if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
-      echo.
-      echo LunarGLASS build failed!
-      set errorCode=1
-      goto:eof
-   )
+   REM  if not exist %LUNARGLASS_BUILD_DIR%\Core\Debug\core.lib (
+   REM     echo.
+   REM     echo LunarGLASS build failed!
+   REM     set errorCode=1
+   REM     goto:eof
+   REM  )
 goto:eof
