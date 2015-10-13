@@ -972,7 +972,7 @@ static void demo_prepare_vertices(struct demo *demo)
 {
     const float vb[3][5] = {
         /*      position             texcoord */
-        { -1.0f, -1.0f,  0.2f,      0.0f, 0.0f },
+        { -1.0f, -1.0f,  0.25f,     0.0f, 0.0f },
         {  1.0f, -1.0f,  0.25f,     1.0f, 0.0f },
         {  0.0f,  1.0f,  1.0f,      0.5f, 1.0f },
     };
