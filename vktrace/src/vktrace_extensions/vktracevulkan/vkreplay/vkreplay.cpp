@@ -176,3 +176,20 @@ int VKTRACER_CDECL VkReplayDump()
     }
     return -1;
 }
+
+int VKTRACER_CDECL VkReplayGetFrameNumber()
+{
+    if (g_pReplayer != NULL)
+    {
+        return g_pReplayer->get_frame_number();
+    }
+    return -1;
+}
+
+void VKTRACER_CDECL VkReplayResetFrameNumber()
+{
+    if (g_pReplayer != NULL)
+    {
+        g_pReplayer->reset_frame_number();
+    }
+}

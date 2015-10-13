@@ -34,12 +34,14 @@
 #include "vkreplay_seq.h"
 #include "vkreplay_window.h"
 
-vkreplayer_settings replaySettings = { NULL, 1, NULL };
+vkreplayer_settings replaySettings = { NULL, 1, -1, -1, NULL };
 
 vktrace_SettingInfo g_settings_info[] =
 {
     { "t", "TraceFile", VKTRACE_SETTING_STRING, &replaySettings.pTraceFilePath, &replaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
-    { "l", "NumLoops", VKTRACE_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file."},
+    { "l", "NumLoops", VKTRACE_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file or loop range." },
+    { "lsf", "LoopStartFrame", VKTRACE_SETTING_UINT, &replaySettings.loopStartFrame, &replaySettings.loopStartFrame, TRUE, "The start frame number of the loop range." },
+    { "lef", "LoopEndFrame", VKTRACE_SETTING_UINT, &replaySettings.loopEndFrame, &replaySettings.loopEndFrame, TRUE, "The end frame number of the loop range." },
     { "s", "Screenshot", VKTRACE_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma separated list of frames to take a take snapshots of"},
 };
 
@@ -51,7 +53,7 @@ vktrace_SettingGroup g_replaySettingGroup =
 };
 
 namespace vktrace_replay {
-int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray[], unsigned int numLoops)
+    int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray[], vkreplayer_settings settings)
 {
     int err = 0;
     vktrace_trace_packet_header *packet;
@@ -60,13 +62,12 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
     vktrace_trace_packet_message* msgPacket;
     struct seqBookmark startingPacket;
 
-    // record the location of starting trace packet
-    seq.record_bookmark();
-    seq.get_bookmark(startingPacket);
+    bool trace_running = true;
+    int prevFrameNumber = -1;
 
-    while (numLoops > 0)
+    while (settings.numLoops > 0)
     {
-        while ((packet = seq.get_next_packet()) != NULL)
+        while ((packet = seq.get_next_packet()) != NULL && trace_running)
         {
             switch (packet->packet_id) {
                 case VKTRACE_TPI_MESSAGE:
@@ -104,6 +105,28 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
                            vktrace_LogError("Failed to replay packet_id %d.",packet->packet_id);
                            return -1;
                         }
+
+                        // frame control logic
+                        int frameNumber = replayer->GetFrameNumber();
+                        printf("frame: %d\n", frameNumber);
+
+                        if (prevFrameNumber != frameNumber)
+                        {
+                            prevFrameNumber = frameNumber;
+
+                            if (settings.loopStartFrame == -1 || frameNumber == settings.loopStartFrame)
+                            {
+                                // record the location of looping start packet
+                                seq.record_bookmark();
+                                seq.get_bookmark(startingPacket);
+                            }
+
+                            if (frameNumber == settings.loopEndFrame)
+                            {
+                                trace_running = false;
+                            }
+                        }
+
                     } else {
                         vktrace_LogError("Bad packet type id=%d, index=%d.", packet->packet_id, packet->global_packet_index);
                         return -1;
@@ -111,8 +134,13 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
                 }
             }
         }
-        numLoops--;
+        settings.numLoops--;
         seq.set_bookmark(startingPacket);
+        trace_running = true;
+        if (replayer != NULL)
+        {
+            replayer->ResetFrameNumber();
+        }
     }
     return err;
 }
@@ -290,7 +318,7 @@ int main(int argc, char **argv)
  
     // main loop
     Sequencer sequencer(traceFile);
-    err = vktrace_replay::main_loop(sequencer, replayer, replaySettings.numLoops);
+    err = vktrace_replay::main_loop(sequencer, replayer, replaySettings);
 
     for (int i = 0; i < VKTRACE_MAX_TRACER_ID_ARRAY_SIZE; i++)
     {

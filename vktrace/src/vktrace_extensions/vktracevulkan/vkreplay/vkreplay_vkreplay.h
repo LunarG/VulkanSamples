@@ -67,6 +67,8 @@ public:
     void push_validation_msg(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
     vktrace_replay::VKTRACE_REPLAY_RESULT pop_validation_msgs();
     int dump_validation_data();
+    int get_frame_number() { return m_frameNumber; }
+    void reset_frame_number() { m_frameNumber = 0; }
 private:
     struct vkFuncs m_vkFuncs;
     vkReplayObjMapper m_objMapper;
@@ -74,6 +76,8 @@ private:
     void (*m_pCBDump)(char*);
     //VKTRACESNAPSHOT_PRINT_OBJECTS m_pVktraceSnapshotPrint;
     vkDisplay *m_display;
+
+    int m_frameNumber;
 
     struct shaderPair {
         VkShader *addr;

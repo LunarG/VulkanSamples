@@ -44,6 +44,8 @@ vkReplay::vkReplay(vkreplayer_settings *pReplaySettings)
     m_pCBDump = NULL;
 //    m_pVktraceSnapshotPrint = NULL;
     m_objMapper.m_adjustForGPU = false;
+
+    m_frameNumber = 0;
 }
 
 vkReplay::~vkReplay()
@@ -1851,6 +1853,8 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     present.imageIndices = pPacket->pPresentInfo->imageIndices;
 
     replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedqueue, &present);
+
+    m_frameNumber++;
 
     return replayResult;
 }

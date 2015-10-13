@@ -39,5 +39,7 @@ extern void VKTRACER_CDECL VkReplayDeinitialize();
 extern vktrace_trace_packet_header* VKTRACER_CDECL VkReplayInterpret(vktrace_trace_packet_header* pPacket);
 extern vktrace_replay::VKTRACE_REPLAY_RESULT VKTRACER_CDECL VkReplayReplay(vktrace_trace_packet_header* pPacket);
 extern int VKTRACER_CDECL VkReplayDump();
+extern int VKTRACER_CDECL VkReplayGetFrameNumber();
+extern void VKTRACER_CDECL VkReplayResetFrameNumber();
 
 extern PFN_vkDbgMsgCallback g_fpDbgMsgCallback;

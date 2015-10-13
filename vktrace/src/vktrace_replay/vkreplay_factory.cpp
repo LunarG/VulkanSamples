@@ -65,6 +65,8 @@ vktrace_trace_packet_replay_library* ReplayFactory::Create(uint8_t tracerId)
             pReplayer->Interpret = VkReplayInterpret;
             pReplayer->Replay = VkReplayReplay;
             pReplayer->Dump = VkReplayDump;
+            pReplayer->GetFrameNumber = VkReplayGetFrameNumber;
+            pReplayer->ResetFrameNumber = VkReplayResetFrameNumber;
         }
 
     } else if (pReplayerInfo->needsReplayer == TRUE)
