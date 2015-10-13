@@ -883,7 +883,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
     // TODO : If pCIList is NULL, flag error
     // Perform all updates
     for (uint32_t i = 0; i < updateCount; i++) {
-        VkDescriptorSet ds = (pWDS) ? pWDS->destSet : pCDS->destSet;
+        VkDescriptorSet ds = (pWDS) ? pWDS[i].destSet : pCDS[i].destSet;
         SET_NODE* pSet = my_data->setMap[ds.handle]; // getSetNode() without locking
         g_lastBoundDescriptorSet = pSet->set;
         GENERIC_HEADER* pUpdate = (pWDS) ? (GENERIC_HEADER*) &pWDS[i] : (GENERIC_HEADER*) &pCDS[i];
