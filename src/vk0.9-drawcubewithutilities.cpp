@@ -34,6 +34,7 @@ Draw Cube With Utilities
 #include <cstdlib>
 #include "cube_data.h"
 
+void init_and_begin_command_buffer(struct sample_info &info);
 
 static const char *vertShaderText =
     "#version 140\n"

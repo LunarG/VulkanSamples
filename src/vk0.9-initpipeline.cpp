@@ -76,7 +76,9 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
-    init_and_begin_command_buffer(info);
+    init_command_pool(info);
+    init_command_buffer(info);
+    execute_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
@@ -213,7 +215,8 @@ int main(int argc, char **argv)
 
     res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
     assert(res == VK_SUCCESS);
-    end_and_submit_command_buffer(info);
+    execute_end_command_buffer(info);
+    execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
     vkDestroyPipeline(info.device, info.pipeline);

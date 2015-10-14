@@ -77,7 +77,9 @@ int main(int argc, char **argv)
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
-    init_and_begin_command_buffer(info);
+    init_command_pool(info);
+    init_command_buffer(info);
+    execute_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);

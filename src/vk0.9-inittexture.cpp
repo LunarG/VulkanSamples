@@ -47,7 +47,9 @@ int main(int argc, char **argv)
     info.width = info.height = 50;
     init_window(info);
     init_swapchain_extension(info);
-    init_and_begin_command_buffer(info);
+    init_command_pool(info);
+    init_command_buffer(info);
+    execute_begin_command_buffer(info);
     init_device_queue(info);
 
     /* VULKAN_KEY_START */
@@ -240,7 +242,8 @@ int main(int argc, char **argv)
         vkFreeMemory(info.device, mappableMemory);
         vkDestroyImage(info.device, mappableImage);
     }
-    end_and_submit_command_buffer(info);
+    execute_end_command_buffer(info);
+    execute_queue_command_buffer(info);
 
     VkSamplerCreateInfo samplerCreateInfo = {};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

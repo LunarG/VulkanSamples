@@ -268,7 +268,9 @@ int main(int argc, char **argv)
     /* Going to need a command buffer to send the memory barriers in set_image_layout       */
     /* but we couldn't have created one before we knew what our graphics_queue_family_index */
     /* is, but now that we have it, create the command buffer                               */
-    init_and_begin_command_buffer(info);
+    init_command_pool(info);
+    init_command_buffer(info);
+    execute_begin_command_buffer(info);
     res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
     assert(res == VK_SUCCESS);
@@ -304,7 +306,8 @@ int main(int argc, char **argv)
                 &color_image_view, &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
-    end_and_submit_command_buffer(info);
+    execute_end_command_buffer(info);
+    execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
     /* Clean Up */

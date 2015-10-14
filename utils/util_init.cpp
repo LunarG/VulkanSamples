@@ -1124,11 +1124,9 @@ void init_framebuffers(struct sample_info &info)
         assert(res == VK_SUCCESS);
     }
 }
-
-void init_and_begin_command_buffer(struct sample_info &info)
+void init_command_pool(struct sample_info &info)
 {
     /* DEPENDS on init_swapchain_extension() */
-
     VkResult U_ASSERT_ONLY res;
 
     VkCmdPoolCreateInfo cmd_pool_info = {};
@@ -1139,6 +1137,12 @@ void init_and_begin_command_buffer(struct sample_info &info)
 
     res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
     assert(res == VK_SUCCESS);
+}
+
+void init_command_buffer(struct sample_info &info)
+{
+    /* DEPENDS on init_swapchain_extension() and init_command_pool() */
+    VkResult U_ASSERT_ONLY res;
 
     VkCmdBufferCreateInfo cmd = {};
     cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
@@ -1149,7 +1153,11 @@ void init_and_begin_command_buffer(struct sample_info &info)
 
     res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
-
+}
+void execute_begin_command_buffer(struct sample_info &info)
+{
+    /* DEPENDS on init_command_buffer() */
+    VkResult U_ASSERT_ONLY res;
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
@@ -1157,20 +1165,26 @@ void init_and_begin_command_buffer(struct sample_info &info)
     cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
     cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
                          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
-
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
 }
 
-void end_and_submit_command_buffer(struct sample_info &info)
+void execute_end_command_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
 
     res = vkEndCommandBuffer(info.cmd);
+    assert(res == VK_SUCCESS);
+}
+
+void execute_queue_command_buffer(struct sample_info &info)
+{
+    VkResult U_ASSERT_ONLY res;
+
+    /* Queue the command buffer for execution */
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = { VK_NULL_HANDLE };
 
-    /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(res == VK_SUCCESS);
 }
