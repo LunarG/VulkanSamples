@@ -189,7 +189,7 @@ VkResult init_device_layer_properties(struct sample_info &info)
     } while (res == VK_INCOMPLETE);
 
     /*
-     * Now gather the extension list for each instance layer.
+     * Now gather the extension list for each device layer.
      */
     for (uint32_t i = 0; i < device_layer_count; i++) {
         layer_properties layer_props;
@@ -1261,13 +1261,11 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     info.vi_attribs[1].offsetInBytes = 16;
 }
 
-void init_descriptor_set(struct sample_info &info, bool use_texture)
+void init_descriptor_pool(struct sample_info &info, bool use_texture)
 {
     /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
 
     VkResult U_ASSERT_ONLY res;
-    VkDescriptorInfo tex_desc;
-
     VkDescriptorTypeCount type_count[use_texture?2:1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].count = 1;
@@ -1288,6 +1286,14 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
+}
+
+void init_descriptor_set(struct sample_info &info, bool use_texture)
+{
+    /* DEPENDS on init_descriptor_pool() */
+
+    VkResult U_ASSERT_ONLY res;
+    VkDescriptorInfo tex_desc;
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
