@@ -35,6 +35,16 @@
         version (i.e. vk0.9-instance.cpp)
       - utils/ - source code for common utilities used by the sample programs
 
+## Sample progression
+  - In general, the samples are not interrelated, but there is a progression
+      among some of the samples that lead to drawing a cube.  Start with the
+      instance sample, then device, initcommandbuffer, initswapchain, initdepthbuffer,
+      inituniformbuffer, descriptor_pipeline_layouts, initrenderpass, initshaders,
+      initframebuffers, vertexbuffer, allocdescriptorsets, initpipeline, and they
+      culminate in the drawcube sample.  Each sample uses utility routines from
+      the code from previous samples to get to the point to show something new.
+      The drawtexturedcube sample takes all of the drawcube code and adds texturing.
+
 ## Building the Vulkan Samples Kit
 - Linux:
   ```
