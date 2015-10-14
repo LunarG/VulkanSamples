@@ -192,35 +192,20 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore);
-    vkDestroyPipeline(info.device, info.pipeline);
-    vkDestroyPipelineCache(info.device, info.pipelineCache);
-    vkDestroyBuffer(info.device, info.uniform_data.buf);
-    vkFreeMemory(info.device, info.uniform_data.mem);
-    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
-        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
-    vkDestroyPipelineLayout(info.device, info.pipeline_layout);
-    vkDestroyDescriptorPool(info.device, info.desc_pool);
-    vkDestroyShader(info.device,info.shaderStages[0].shader);
-    vkDestroyShader(info.device,info.shaderStages[1].shader);
-    vkDestroyShaderModule(info.device, info.vert_shader_module);
-    vkDestroyShaderModule(info.device, info.frag_shader_module);
-    vkDestroyCommandBuffer(info.device, info.cmd);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
-    vkDestroyImageView(info.device, info.depth.view);
-    vkDestroyImage(info.device, info.depth.image);
-    vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    vkFreeMemory(info.device, info.vertex_buffer.mem);
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(info.device, info.buffers[i].view);
-    }
-    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyFramebuffer(info.device, info.framebuffers[i]);
-    }
-    free(info.framebuffers);
-    vkDestroyRenderPass(info.device, info.render_pass);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_pipeline(info);
+    destroy_pipeline_cache(info);
+    destroy_descriptor_pool(info);
+    destroy_vertex_buffer(info);
+    destroy_framebuffers(info);
+    destroy_shaders(info);
+    destroy_renderpass(info);
+    destroy_descriptor_and_pipeline_layouts(info);
+    destroy_uniform_buffer(info);
+    destroy_depth_buffer(info);
+    destroy_swap_chain(info);
+    destroy_command_buffer(info);
+    destroy_command_pool(info);
     destroy_window(info);
+    destroy_device(info);
+    destroy_instance(info);
 }

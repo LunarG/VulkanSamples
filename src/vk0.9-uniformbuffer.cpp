@@ -105,6 +105,6 @@ int main(int argc, char **argv)
 
     vkDestroyBuffer(info.device, info.uniform_data.buf);
     vkFreeMemory(info.device, info.uniform_data.mem);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_device(info);
+    destroy_instance(info);
 }

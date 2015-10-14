@@ -316,8 +316,8 @@ int main(int argc, char **argv)
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyImageView(info.device, info.buffers[i].view);
     }
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_device(info);
+    destroy_instance(info);
     destroy_window(info);
 
     return 0;

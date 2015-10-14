@@ -1776,3 +1776,102 @@ void init_texture(struct sample_info &info)
 
     info.textures.push_back(texObj);
 }
+
+void destroy_pipeline(struct sample_info &info)
+{
+    vkDestroyPipeline(info.device, info.pipeline);
+}
+
+void destroy_pipeline_cache(struct sample_info &info)
+{
+    vkDestroyPipelineCache(info.device, info.pipelineCache);
+}
+
+void destroy_uniform_buffer(struct sample_info &info)
+{
+    vkDestroyBuffer(info.device, info.uniform_data.buf);
+    vkFreeMemory(info.device, info.uniform_data.mem);
+}
+
+void destroy_descriptor_and_pipeline_layouts(struct sample_info &info)
+{
+    for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
+    vkDestroyPipelineLayout(info.device, info.pipeline_layout);
+}
+
+void destroy_descriptor_pool(struct sample_info &info)
+{
+   vkDestroyDescriptorPool(info.device, info.desc_pool);
+}
+
+void destroy_shaders(struct sample_info &info)
+{
+    vkDestroyShader(info.device,info.shaderStages[0].shader);
+    vkDestroyShader(info.device,info.shaderStages[1].shader);
+    vkDestroyShaderModule(info.device, info.vert_shader_module);
+    vkDestroyShaderModule(info.device, info.frag_shader_module);
+}
+
+void destroy_command_buffer(struct sample_info &info)
+{
+    vkDestroyCommandBuffer(info.device, info.cmd);
+}
+
+void destroy_command_pool(struct sample_info &info)
+{
+    vkDestroyCommandPool(info.device, info.cmd_pool);
+}
+
+void destroy_depth_buffer(struct sample_info &info)
+{
+    vkDestroyImageView(info.device, info.depth.view);
+    vkDestroyImage(info.device, info.depth.image);
+    vkFreeMemory(info.device, info.depth.mem);
+}
+
+void destroy_vertex_buffer(struct sample_info &info)
+{
+    vkDestroyBuffer(info.device, info.vertex_buffer.buf);
+    vkFreeMemory(info.device, info.vertex_buffer.mem);
+}
+
+void destroy_swap_chain(struct sample_info &info)
+{
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyImageView(info.device, info.buffers[i].view);
+    }
+    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
+}
+
+void destroy_framebuffers(struct sample_info &info)
+{
+    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
+        vkDestroyFramebuffer(info.device, info.framebuffers[i]);
+    }
+    free(info.framebuffers);
+
+}
+
+void destroy_renderpass(struct sample_info &info)
+{
+    vkDestroyRenderPass(info.device, info.render_pass);
+}
+
+void destroy_device(struct sample_info &info)
+{
+    vkDestroyDevice(info.device);
+}
+
+void destroy_instance(struct sample_info &info)
+{
+    vkDestroyInstance(info.inst);
+}
+
+void destroy_texture(struct sample_info &info)
+{
+    vkDestroySampler(info.device, info.textures[0].sampler);
+    vkDestroyImageView(info.device, info.textures[0].view);
+    vkDestroyImage(info.device, info.textures[0].image);
+    vkFreeMemory(info.device, info.textures[0].mem);
+}
