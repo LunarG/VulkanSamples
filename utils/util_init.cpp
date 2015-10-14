@@ -1390,7 +1390,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     finalize_glslang();
 }
 
-void init_pipeline(struct sample_info &info)
+void init_pipeline_cache(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
 
@@ -1403,6 +1403,11 @@ void init_pipeline(struct sample_info &info)
 
     res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
     assert(res == VK_SUCCESS);
+}
+
+void init_pipeline(struct sample_info &info)
+{
+    VkResult U_ASSERT_ONLY res;
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
     VkPipelineDynamicStateCreateInfo       dynamicState = {};

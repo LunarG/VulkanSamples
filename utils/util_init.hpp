@@ -64,6 +64,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
 void init_framebuffers(struct sample_info &info);
 void init_descriptor_set(struct sample_info &info, bool use_texture);
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
+void init_pipeline_cache(struct sample_info &info);
 void init_pipeline(struct sample_info &info);
 void init_texture(struct sample_info &info);
 
