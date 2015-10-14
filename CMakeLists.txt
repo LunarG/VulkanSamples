@@ -40,14 +40,18 @@ option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKTRACE "Build VkTrace" ON)
 
-if (BUILD_ICD)
-    # Hard code our LunarGLASS and glslang paths for now
+if (BUILD_ICD OR BUILD_TESTS)
+    # Hard code our glslang path for now
     get_filename_component(GLSLANG_PREFIX ../glslang ABSOLUTE)
-    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
 
     if(NOT EXISTS ${GLSLANG_PREFIX})
         message(FATAL_ERROR "Necessary glslang components do not exist: " ${GLSLANG_PREFIX})
     endif()
+endif()
+
+if (BUILD_ICD)
+    # Hard code our LunarGLASS path for now
+    get_filename_component(LUNARGLASS_PREFIX ../LunarGLASS ABSOLUTE)
 
     if(NOT EXISTS ${LUNARGLASS_PREFIX})
         message(FATAL_ERROR "Necessary LunarGLASS components do not exist: " ${LUNARGLASS_PREFIX})
