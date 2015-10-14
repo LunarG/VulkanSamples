@@ -1261,7 +1261,12 @@ class ObjectTrackerSubcommand(Subcommand):
                     procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
                     procs_txt.append('    if (object == VK_NULL_HANDLE) return VK_TRUE;')
                     procs_txt.append('')
-                procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
+                if o == "VkImage":
+                    procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
+                    procs_txt.append('    if ((%sMap.find((void*)object.handle)        == %sMap.end()) &&' % (o, o))
+                    procs_txt.append('        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {')
+                else:
+                    procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object %%p", object.handle);' % o)
             procs_txt.append('    }')
@@ -1548,7 +1553,8 @@ class ObjectTrackerSubcommand(Subcommand):
             "MapMemory",
             "UnmapMemory",
             "FreeMemory",
-            "DestroySwapchainKHR"
+            "DestroySwapchainKHR",
+            "GetSwapchainImagesKHR"
         ]
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         param0_name = proto.params[0].name

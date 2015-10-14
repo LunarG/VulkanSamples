@@ -52,9 +52,10 @@ typedef enum _ObjectStatusFlagBits
 } ObjectStatusFlagBits;
 
 typedef struct _OBJTRACK_NODE {
-    uint64_t             vkObj;
-    VkDbgObjectType      objType;
-    ObjectStatusFlags    status;
+    uint64_t             vkObj;                 // Object handle
+    VkDbgObjectType      objType;               // Object type identifier
+    ObjectStatusFlags    status;                // Object state
+    uint64_t             parentObj;             // Parent object
 } OBJTRACK_NODE;
 
 // prototype for extension functions
@@ -88,6 +89,10 @@ static std::unordered_map<void *, struct instExts> instanceExtMap;
 static std::unordered_map<void*, layer_data *> layer_data_map;
 static device_table_map                        ObjectTracker_device_table_map;
 static instance_table_map                      ObjectTracker_instance_table_map;
+
+// We need additionally validate image usage using a separate map
+// of swapchain-created images
+static unordered_map<const void*, OBJTRACK_NODE*> swapchainImageMap;
 
 static long long unsigned int object_track_index = 0;
 static int objLockInitialized = 0;
@@ -446,7 +451,8 @@ extern unordered_map<const void*, OBJTRACK_NODE*> VkSwapchainKHRMap;
 
 static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object)
 {
-    if (VkImageMap.find((void*)object.handle) == VkImageMap.end()) {
+    if ((VkImageMap.find((void*)object.handle)        == VkImageMap.end()) &&
+        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkImage Object %p", object.handle);
     }
@@ -455,7 +461,8 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object)
 
 static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkImage object)
 {
-    if (VkImageMap.find((void*)object.handle) == VkImageMap.end()) {
+    if ((VkImageMap.find((void*)object.handle)        == VkImageMap.end()) &&
+        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkImage Object %p", object.handle);
     }
@@ -586,6 +593,20 @@ static void create_obj(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectT
     numObjs[objIndex]++;
     numTotalObjs++;
 }
+static void create_swapchain_image_obj(VkDevice dispatchable_object, VkImage vkObj, VkSwapchainKHR swapchain)
+{
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_IMAGE, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, "SwapchainImage",
+        vkObj.handle);
+
+    OBJTRACK_NODE* pNewObjNode             = new OBJTRACK_NODE;
+    pNewObjNode->objType                   = VK_OBJECT_TYPE_IMAGE;
+    pNewObjNode->status                    = OBJSTATUS_NONE;
+    pNewObjNode->vkObj                     = vkObj.handle;
+    pNewObjNode->parentObj                 = swapchain.handle;
+    swapchainImageMap[(void*)vkObj.handle] = pNewObjNode;
+}
+
 static void destroy_obj(VkDevice dispatchable_object, VkSwapchainKHR object)
 {
     if (VkSwapchainKHRMap.find((void*) object.handle) != VkSwapchainKHRMap.end()) {
@@ -834,16 +855,25 @@ explicit_AllocDescriptorSets(
 
 VkResult
 explicit_DestroySwapchainKHR(
-    VkDevice                        device,
+    VkDevice       device,
     VkSwapchainKHR swapchain)
 {
-
     loader_platform_thread_lock_mutex(&objLock);
+    // A swapchain's images are implicitly deleted when the swapchain is deleted.
+    // Remove this swapchain's images from our map of such images.
+    unordered_map<const void*, OBJTRACK_NODE*>::iterator itr = swapchainImageMap.begin();
+    while (itr != swapchainImageMap.end()) {
+        OBJTRACK_NODE* pNode = (*itr).second;
+        if (pNode->parentObj == swapchain.handle) {
+           swapchainImageMap.erase(itr++);
+        } else {
+           ++itr;
+        }
+    }
     destroy_obj(device, swapchain);
     loader_platform_thread_unlock_mutex(&objLock);
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain);
-
     return result;
 }
 
@@ -864,7 +894,11 @@ explicit_FreeMemory(
 }
 
 VkResult
-explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+explicit_FreeDescriptorSets(
+    VkDevice               device,
+    VkDescriptorPool       descriptorPool,
+    uint32_t               count,
+    const VkDescriptorSet *pDescriptorSets)
 {
     loader_platform_thread_lock_mutex(&objLock);
     validate_object(device, descriptorPool);
@@ -880,3 +914,30 @@ explicit_FreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, ui
     loader_platform_thread_unlock_mutex(&objLock);
     return result;
 }
+
+VkResult
+explicit_GetSwapchainImagesKHR(
+    VkDevice        device,
+    VkSwapchainKHR  swapchain,
+    uint32_t       *pCount,
+    VkImage        *pSwapchainImages)
+{
+    VkBool32 skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&objLock);
+    skipCall |= validate_object(device, device);
+    loader_platform_thread_unlock_mutex(&objLock);
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
+
+    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+
+    if (pSwapchainImages != NULL) {
+        loader_platform_thread_lock_mutex(&objLock);
+        for (uint32_t i = 0; i < *pCount; i++) {
+            create_swapchain_image_obj(device, pSwapchainImages[i], swapchain);
+        }
+        loader_platform_thread_unlock_mutex(&objLock);
+    }
+    return result;
+}
+
