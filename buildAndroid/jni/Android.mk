@@ -20,6 +20,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := layer_utils
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_config.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_extension_utils.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_utils.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
