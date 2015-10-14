@@ -1268,7 +1268,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     VkResult U_ASSERT_ONLY res;
     VkDescriptorInfo tex_desc;
 
-    VkDescriptorTypeCount type_count[2];
+    VkDescriptorTypeCount type_count[use_texture?2:1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].count = 1;
     if (use_texture)
@@ -1296,7 +1296,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
             info.desc_set.data());
     assert(res == VK_SUCCESS);
 
-    VkWriteDescriptorSet writes[2];
+    VkWriteDescriptorSet writes[use_texture?2:1];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
