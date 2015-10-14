@@ -92,6 +92,7 @@ int main(int argc, char **argv)
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_set(info, true);
+    init_pipeline_cache(info);
     init_pipeline(info);
 
     /* VULKAN_KEY_START */
