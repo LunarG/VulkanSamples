@@ -84,12 +84,9 @@ int main(int argc, char **argv)
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
     /* VULKAN_KEY_END */
 
-    vkDestroyBuffer(info.device, info.uniform_data.buf);
-    vkFreeMemory(info.device, info.uniform_data.mem);
-    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
-        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
-    vkDestroyPipelineLayout(info.device, info.pipeline_layout);
     vkDestroyDescriptorPool(info.device, info.desc_pool);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_uniform_buffer(info);
+    destroy_descriptor_and_pipeline_layouts(info);
+    destroy_device(info);
+    destroy_instance(info);
 }

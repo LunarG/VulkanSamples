@@ -157,14 +157,16 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    vkDestroyCommandBuffer(info.device, info.cmd);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
+
     vkDestroyImageView(info.device, info.depth.view);
     vkDestroyImage(info.device, info.depth.image);
     vkFreeMemory(info.device, info.depth.mem);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_command_buffer(info);
+    destroy_command_pool(info);
     destroy_window(info);
+    destroy_device(info);
+    destroy_instance(info);
+
     return 0;
 
 }

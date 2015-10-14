@@ -134,6 +134,6 @@ int main(int argc, char **argv)
     vkDestroyShader(info.device,info.shaderStages[1].shader);
     vkDestroyShaderModule(info.device, info.vert_shader_module);
     vkDestroyShaderModule(info.device, info.frag_shader_module);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_device(info);
+    destroy_instance(info);
 }

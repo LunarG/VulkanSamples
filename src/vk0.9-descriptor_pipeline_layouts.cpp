@@ -82,7 +82,7 @@ int main(int argc, char **argv)
     for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
         vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
     vkDestroyPipelineLayout(info.device, info.pipeline_layout);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_device(info);
+    destroy_instance(info);
 }
 

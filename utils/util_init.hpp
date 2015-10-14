@@ -71,6 +71,22 @@ void init_texture(struct sample_info &info);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);
+void destroy_pipeline(struct sample_info &info);
+void destroy_pipeline_cache(struct sample_info &info);
+void destroy_descriptor_pool(struct sample_info &info);
+void destroy_vertex_buffer(struct sample_info &info);
+void destroy_texture(struct sample_info &info);
+void destroy_framebuffers(struct sample_info &info);
+void destroy_shaders(struct sample_info &info);
+void destroy_renderpass(struct sample_info &info);
+void destroy_descriptor_and_pipeline_layouts(struct sample_info &info);
+void destroy_uniform_buffer(struct sample_info &info);
+void destroy_depth_buffer(struct sample_info &info);
+void destroy_swap_chain(struct sample_info &info);
+void destroy_command_buffer(struct sample_info &info);
+void destroy_command_pool(struct sample_info &info);
+void destroy_device(struct sample_info &info);
+void destroy_instance(struct sample_info &info);
 void destroy_window(struct sample_info &info);
 
 #endif // UTIL_INIT

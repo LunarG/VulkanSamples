@@ -292,13 +292,13 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    vkDestroyCommandBuffer(info.device, info.cmd);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
     vkDestroySampler(info.device, texObj.sampler);
     vkDestroyImageView(info.device, texObj.view);
     vkDestroyImage(info.device, texObj.image);
     vkFreeMemory(info.device, texObj.mem);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_command_buffer(info);
+    destroy_command_pool(info);
     destroy_window(info);
+    destroy_device(info);
+    destroy_instance(info);
 }

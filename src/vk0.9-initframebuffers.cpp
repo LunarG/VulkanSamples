@@ -82,22 +82,17 @@ int main(int argc, char **argv)
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    vkDestroyImageView(info.device, info.depth.view);
-    vkDestroyImage(info.device, info.depth.image);
-    vkFreeMemory(info.device, info.depth.mem);
-    info.fpDestroySwapchainKHR(info.device, info.swap_chain);
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         vkDestroyFramebuffer(info.device, info.framebuffers[i]);
     }
     free(info.framebuffers);
 
-    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(info.device, info.buffers[i].view);
-    }
-    vkDestroyCommandBuffer(info.device, info.cmd);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
-    vkDestroyRenderPass(info.device, info.render_pass);
-    vkDestroyDevice(info.device);
-    vkDestroyInstance(info.inst);
+    destroy_renderpass(info);
+    destroy_depth_buffer(info);
+    destroy_swap_chain(info);
+    destroy_command_buffer(info);
+    destroy_command_pool(info);
     destroy_window(info);
+    destroy_device(info);
+    destroy_instance(info);
 }
