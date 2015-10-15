@@ -766,6 +766,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
     printf("\ttextureCompressionBC                    = %u\n", features->textureCompressionBC                   );
+    printf("\tocclusionQueryNonConservative           = %u\n", features->occlusionQueryNonConservative          );
     printf("\tpipelineStatisticsQuery                 = %u\n", features->pipelineStatisticsQuery                );
     printf("\tvertexSideEffects                       = %u\n", features->vertexSideEffects                      );
     printf("\ttessellationSideEffects                 = %u\n", features->tessellationSideEffects                );
