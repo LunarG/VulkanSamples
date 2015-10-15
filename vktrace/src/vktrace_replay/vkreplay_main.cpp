@@ -53,7 +53,7 @@ vktrace_SettingGroup g_replaySettingGroup =
 };
 
 namespace vktrace_replay {
-    int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray[], vkreplayer_settings settings)
+int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray[], vkreplayer_settings settings)
 {
     int err = 0;
     vktrace_trace_packet_header *packet;
