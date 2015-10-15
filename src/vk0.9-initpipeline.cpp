@@ -172,9 +172,9 @@ int main(int argc, char **argv)
     VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
-    vp.viewportCount = 1;
+    vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-    vp.scissorCount = 1;
+    vp.scissorCount = NUM_SCISSORS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = 1;
+    ms.rasterSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
 
