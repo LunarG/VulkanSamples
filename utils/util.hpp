@@ -233,7 +233,7 @@ struct sample_info {
     uint32_t queue_count;
 };
 
-VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex);
+VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
 
 void set_image_layout(
         struct sample_info &demo,
