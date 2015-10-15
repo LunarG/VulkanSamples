@@ -99,14 +99,14 @@ static bool screenshotEnvQueried = false;
 static VkResult memory_type_from_properties(
     VkPhysicalDeviceMemoryProperties *memory_properties,
     uint32_t typeBits,
-    VkFlags properties,
+    VkFlags requirements_mask,
     uint32_t *typeIndex)
 {
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
          if ((typeBits & 1) == 1) {
              // Type is available, does it match user properties?
-             if ((memory_properties->memoryTypes[i].propertyFlags & properties) == properties) {
+             if ((memory_properties->memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
                  return VK_SUCCESS;
              }

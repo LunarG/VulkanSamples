@@ -407,13 +407,13 @@ struct demo {
     uint32_t queue_count;
 };
 
-static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags properties, uint32_t *typeIndex)
+static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
          if ((typeBits & 1) == 1) {
              // Type is available, does it match user properties?
-             if ((demo->memory_properties.memoryTypes[i].propertyFlags & properties) == properties) {
+             if ((demo->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
                  return VK_SUCCESS;
              }
@@ -853,7 +853,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     err = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_DEVICE_ONLY,
+                                      0, /* No requirements */
                                       &demo->depth.mem_alloc.memoryTypeIndex);
     assert(!err);
 
@@ -925,7 +925,7 @@ static void demo_prepare_texture_image(struct demo *demo,
                                        struct texture_object *tex_obj,
                                        VkImageTiling tiling,
                                        VkImageUsageFlags usage,
-                                       VkFlags mem_props)
+                                       VkFlags required_props)
 {
     const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     int32_t tex_width;
@@ -970,7 +970,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     tex_obj->mem_alloc.allocationSize = mem_reqs.size;
     tex_obj->mem_alloc.memoryTypeIndex = 0;
 
-    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, mem_props, &tex_obj->mem_alloc.memoryTypeIndex);
+    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &tex_obj->mem_alloc.memoryTypeIndex);
     assert(!err);
 
     /* allocate memory */
@@ -983,7 +983,7 @@ static void demo_prepare_texture_image(struct demo *demo,
             tex_obj->mem, 0);
     assert(!err);
 
-    if (mem_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+    if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         const VkImageSubresource subres = {
             .aspect = VK_IMAGE_ASPECT_COLOR,
             .mipLevel = 0,
