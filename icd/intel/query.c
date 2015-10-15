@@ -136,7 +136,7 @@ query_process_occlusion(const struct intel_query *query,
     uint32_t i;
 
     for (i = 0; i < count; i++) {
-        const uint32_t *pair = (const uint32_t *) raw;
+        const uint64_t *pair = (const uint64_t *) raw;
 
         results[i] = pair[1] - pair[0];
         raw += query->slot_stride;
