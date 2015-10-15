@@ -1154,7 +1154,6 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     m_cb_state.pNext = VK_NULL_HANDLE;
-    m_cb_state.alphaToCoverageEnable = VK_FALSE;
     m_cb_state.logicOp = VK_LOGIC_OP_COPY;
     m_cb_state.blendConst[0] = 1.0f;
     m_cb_state.blendConst[1] = 1.0f;
@@ -1164,6 +1163,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ms_state.pNext = VK_NULL_HANDLE;
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     m_ms_state.pSampleMask = NULL;
+    m_ms_state.alphaToCoverageEnable = VK_FALSE;
     m_ms_state.rasterSamples = 1;
     m_ms_state.minSampleShading = 0;
     m_ms_state.sampleShadingEnable = 0;

@@ -665,7 +665,7 @@ static void gen6_3DSTATE_WM(struct intel_cmd *cmd)
         dw5 |= GEN6_PS_DISPATCH_16 << GEN6_WM_DW5_PS_DISPATCH_MODE__SHIFT;
 
     if (fs->uses & INTEL_SHADER_USE_KILL ||
-        pipeline->cb_state.alphaToCoverageEnable)
+        pipeline->alphaToCoverageEnable)
         dw5 |= GEN6_WM_DW5_PS_KILL_PIXEL;
 
     if (fs->computed_depth_mode)
@@ -727,7 +727,7 @@ static void gen7_3DSTATE_WM(struct intel_cmd *cmd)
           GEN7_WM_DW1_POINT_RASTRULE_UPPER_RIGHT;
 
     if (fs->uses & INTEL_SHADER_USE_KILL ||
-        pipeline->cb_state.alphaToCoverageEnable)
+        pipeline->alphaToCoverageEnable)
         dw1 |= GEN7_WM_DW1_PS_KILL_PIXEL;
 
     dw1 |= fs->computed_depth_mode << GEN7_WM_DW1_PSCDEPTH__SHIFT;

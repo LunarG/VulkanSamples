@@ -208,6 +208,8 @@ struct intel_pipeline {
     bool rasterizerDiscardEnable;
     bool depthBiasEnable;
 
+    bool alphaToCoverageEnable;
+
     VkPipelineTessellationStateCreateInfo tess_state;
 
     uint32_t active_shaders;

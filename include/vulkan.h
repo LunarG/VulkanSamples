@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 174, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 175, 0)
 
 
 #if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
@@ -1680,6 +1680,8 @@ typedef struct {
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
     const VkSampleMask*                         pSampleMask;
+    VkBool32                                    alphaToCoverageEnable;
+    VkBool32                                    alphaToOneEnable;
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct {
@@ -1720,8 +1722,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkBool32                                    alphaToCoverageEnable;
-    VkBool32                                    alphaToOneEnable;
     VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
