@@ -40,7 +40,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_IMAGE_LAYOUT,             // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
-    DRAWSTATE_INVALID_COMMAND_BUFFER,               // Invalid CommandBuffer referenced
+    DRAWSTATE_INVALID_COMMAND_BUFFER,           // Invalid CommandBuffer referenced
+    DRAWSTATE_INVALID_BARRIER,                  // Invalid Barrier
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -149,6 +150,11 @@ typedef struct _IMAGE_CMD_BUF_NODE {
     VkImageLayout layout;
     VkImageLayout initialLayout;
 } IMAGE_CMD_BUF_NODE;
+
+typedef struct _RENDER_PASS_NODE {
+    VkRenderPassCreateInfo* createInfo;
+    std::vector<bool> hasSelfDependency;
+} RENDER_PASS_NODE;
 
 // Descriptor Data structures
 // Layout Node has the core layout data

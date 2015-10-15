@@ -77,9 +77,9 @@ struct layer_data {
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     // Map for layout chains
     unordered_map<void*, GLOBAL_CB_NODE*> commandBufferMap;
-    unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
     unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
     unordered_map<VkImage, IMAGE_NODE*> imageLayoutMap;
+    unordered_map<VkRenderPass, RENDER_PASS_NODE*> renderPassMap;
     // Current render pass
     VkRenderPassBeginInfo renderPassBeginInfo;
     uint32_t currentSubpass;
@@ -596,7 +596,7 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
         // Verify that any MSAA request in PSO matches sample# in bound FB
         VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
         if (pCB->activeRenderPass) {
-            const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass];
+            const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->createInfo;
             const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
             VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits) 0;
             uint32_t i;
@@ -3137,7 +3137,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
 
     // Validate that attachment is in reference list of active subpass
     if (pCB->activeRenderPass) {
-        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass];
+        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass]->createInfo;
         const VkSubpassDescription   *pSD   = &pRPCI->pSubpasses[pCB->activeSubpass];
 
         for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
@@ -3299,6 +3299,26 @@ bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
     return skip;
 }
 
+bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    if (pCB->activeRenderPass && memBarrierCount) {
+        for (uint32_t i = 0; i < memBarrierCount; ++i) {
+            auto mem_barrier = reinterpret_cast<const VkMemoryBarrier*>(ppMemBarriers[i]);
+            if (mem_barrier && mem_barrier->sType != VK_STRUCTURE_TYPE_MEMORY_BARRIER) {
+                skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                     "Image or Buffers Barriers cannot be used during a render pass.");
+            }
+        }
+        if (!dev_data->renderPassMap[pCB->activeRenderPass]->hasSelfDependency[pCB->activeSubpass]) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                 "Barriers cannot be set during subpass %d with no self dependency specified.", pCB->activeSubpass);
+        }
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -3312,6 +3332,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
         skipCall |= TransitionImageLayouts(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
+        skipCall |= ValidateBarriers(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
@@ -3330,6 +3351,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, V
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdPipelineBarrier()");
         }
         skipCall |= TransitionImageLayouts(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
+        skipCall |= ValidateBarriers(commandBuffer, memoryBarrierCount, ppMemoryBarriers);
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
@@ -3636,7 +3658,7 @@ bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderP
     return skip;
 }
 
-bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node) {
+bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node, std::vector<bool>& has_self_dependency) {
     bool skip_call = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         DAGNode& subpass_node = subpass_to_node[i];
@@ -3647,6 +3669,8 @@ bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPas
         if (dependency.srcSubpass > dependency.dstSubpass) {
             skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                                  "Depedency graph must be specified such that an earlier pass cannot depend on a later pass.");
+        } else if (dependency.srcSubpass == dependency.dstSubpass) {
+            has_self_dependency[dependency.srcSubpass] = true;
         }
         subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
         subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
@@ -3659,8 +3683,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Create DAG
+    std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
     std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
-    skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node);
+    skip_call |= CreatePassDAG(dev_data, device, pCreateInfo, subpass_to_node, has_self_dependency);
     // Validate using DAG
     skip_call |= ValidateDependencies(dev_data, device, pCreateInfo, subpass_to_node);
     skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
@@ -3719,7 +3744,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
             localRPCI->pDependencies = new VkSubpassDependency[localRPCI->dependencyCount];
             memcpy((void*)localRPCI->pDependencies, pCreateInfo->pDependencies, localRPCI->dependencyCount*sizeof(VkSubpassDependency));
         }
-        dev_data->renderPassMap[*pRenderPass] = localRPCI;
+        dev_data->renderPassMap[*pRenderPass] = new RENDER_PASS_NODE();
+        dev_data->renderPassMap[*pRenderPass]->hasSelfDependency = has_self_dependency;
+        dev_data->renderPassMap[*pRenderPass]->createInfo = localRPCI;
     }
     return result;
 }
@@ -3729,28 +3756,30 @@ static void deleteRenderPasses(layer_data* my_data)
     if (my_data->renderPassMap.size() <= 0)
         return;
     for (auto ii=my_data->renderPassMap.begin(); ii!=my_data->renderPassMap.end(); ++ii) {
-        if ((*ii).second->pAttachments) {
-            delete[] (*ii).second->pAttachments;
+        const VkRenderPassCreateInfo* pRenderPassInfo = (*ii).second->createInfo;
+        if (pRenderPassInfo->pAttachments) {
+            delete[] pRenderPassInfo->pAttachments;
         }
-        if ((*ii).second->pSubpasses) {
-            for (uint32_t i=0; i<(*ii).second->subpassCount; ++i) {
+        if (pRenderPassInfo->pSubpasses) {
+            for (uint32_t i=0; i<pRenderPassInfo->subpassCount; ++i) {
                 // Attachements are all allocated in a block, so just need to
                 //  find the first non-null one to delete
-                if ((*ii).second->pSubpasses[i].pInputAttachments) {
-                    delete[] (*ii).second->pSubpasses[i].pInputAttachments;
-                } else if ((*ii).second->pSubpasses[i].pColorAttachments) {
-                    delete[] (*ii).second->pSubpasses[i].pColorAttachments;
-                } else if ((*ii).second->pSubpasses[i].pResolveAttachments) {
-                    delete[] (*ii).second->pSubpasses[i].pResolveAttachments;
-                } else if ((*ii).second->pSubpasses[i].pPreserveAttachments) {
-                    delete[] (*ii).second->pSubpasses[i].pPreserveAttachments;
+                if (pRenderPassInfo->pSubpasses[i].pInputAttachments) {
+                    delete[] pRenderPassInfo->pSubpasses[i].pInputAttachments;
+                } else if (pRenderPassInfo->pSubpasses[i].pColorAttachments) {
+                    delete[] pRenderPassInfo->pSubpasses[i].pColorAttachments;
+                } else if (pRenderPassInfo->pSubpasses[i].pResolveAttachments) {
+                    delete[] pRenderPassInfo->pSubpasses[i].pResolveAttachments;
+                } else if (pRenderPassInfo->pSubpasses[i].pPreserveAttachments) {
+                    delete[] pRenderPassInfo->pSubpasses[i].pPreserveAttachments;
                 }
             }
-            delete[] (*ii).second->pSubpasses;
+            delete[] pRenderPassInfo->pSubpasses;
         }
-        if ((*ii).second->pDependencies) {
-            delete[] (*ii).second->pDependencies;
+        if (pRenderPassInfo->pDependencies) {
+            delete[] pRenderPassInfo->pDependencies;
         }
+        delete (*ii).second;
     }
     my_data->renderPassMap.clear();
 }
@@ -3759,8 +3788,9 @@ bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRe
     bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
-    const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass];
+    const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->createInfo;
     const VkFramebufferCreateInfo* pFramebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer];
+
     if (pRenderPassInfo->attachmentCount != pFramebufferInfo->attachmentCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                              "You cannot start a render pass using a framebuffer with a different number of attachments.");
@@ -3787,7 +3817,7 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
     if (render_pass_data == dev_data->renderPassMap.end()) {
         return;
     }
-    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second;
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->createInfo;
     auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;
@@ -3833,7 +3863,7 @@ void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPass
     if (render_pass_data == dev_data->renderPassMap.end()) {
         return;
     }
-    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second;
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->createInfo;
     auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;
