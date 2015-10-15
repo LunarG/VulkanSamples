@@ -28,9 +28,7 @@
  *   Jon Ashburn <jon@luanrg.com>
  *   Ian Elliott <ian@lunarg.com>
  */
-
-#ifndef LOADER_PLATFORM_H
-#define LOADER_PLATFORM_H
+#pragma once
 
 #include "vk_platform.h"
 #include "vk_sdk_platform.h"
@@ -390,6 +388,7 @@ char *loader_get_registry_string(const HKEY hive,
                                  const LPCTSTR sub_key,
                                  const char *value);
 
+#define loader_stack_alloc(size) _alloca(size)
 #else // defined(_WIN32)
 
 #error The "loader_platform.h" file must be modified for this OS.
@@ -403,22 +402,3 @@ char *loader_get_registry_string(const HKEY hive,
 
 #endif // defined(_WIN32)
 
-#else /* LOADER_PLATFORM_H */
-#ifndef LOADER_PLATFORM_H_TEMP
-#define LOADER_PLATFORM_H_TEMP
-
-// NOTE: The following are hopefully-temporary macros to ensure that people
-// don't forget to use the loader_platform_*() functions above:
-
-#if defined(__linux__)
-/* Linux-specific common code: */
-
-
-#elif defined(_WIN32) // defined(__linux__)
-/* Windows-specific common code: */
-
-#define loader_stack_alloc(size) _alloca(size)
-
-#endif // defined(_WIN32)
-#endif /* LOADER_PLATFORM_H_TEMP */
-#endif /* LOADER_PLATFORM_H */
