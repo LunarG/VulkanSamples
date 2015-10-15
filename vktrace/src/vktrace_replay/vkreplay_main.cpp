@@ -40,8 +40,8 @@ vktrace_SettingInfo g_settings_info[] =
 {
     { "t", "TraceFile", VKTRACE_SETTING_STRING, &replaySettings.pTraceFilePath, &replaySettings.pTraceFilePath, TRUE, "The trace file to replay."},
     { "l", "NumLoops", VKTRACE_SETTING_UINT, &replaySettings.numLoops, &replaySettings.numLoops, TRUE, "The number of times to replay the trace file or loop range." },
-    { "lsf", "LoopStartFrame", VKTRACE_SETTING_UINT, &replaySettings.loopStartFrame, &replaySettings.loopStartFrame, TRUE, "The start frame number of the loop range." },
-    { "lef", "LoopEndFrame", VKTRACE_SETTING_UINT, &replaySettings.loopEndFrame, &replaySettings.loopEndFrame, TRUE, "The end frame number of the loop range." },
+    { "lsf", "LoopStartFrame", VKTRACE_SETTING_INT, &replaySettings.loopStartFrame, &replaySettings.loopStartFrame, TRUE, "The start frame number of the loop range." },
+    { "lef", "LoopEndFrame", VKTRACE_SETTING_INT, &replaySettings.loopEndFrame, &replaySettings.loopEndFrame, TRUE, "The end frame number of the loop range." },
     { "s", "Screenshot", VKTRACE_SETTING_STRING, &replaySettings.screenshotList, &replaySettings.screenshotList, TRUE, "Comma separated list of frames to take a take snapshots of"},
 };
 
@@ -108,8 +108,6 @@ namespace vktrace_replay {
 
                         // frame control logic
                         int frameNumber = replayer->GetFrameNumber();
-                        printf("frame: %d\n", frameNumber);
-
                         if (prevFrameNumber != frameNumber)
                         {
                             prevFrameNumber = frameNumber;
