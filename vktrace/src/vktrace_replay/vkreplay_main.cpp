@@ -65,6 +65,9 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
     bool trace_running = true;
     int prevFrameNumber = -1;
 
+    // record the location of looping start packet
+    seq.record_bookmark();
+    seq.get_bookmark(startingPacket);
     while (settings.numLoops > 0)
     {
         while ((packet = seq.get_next_packet()) != NULL && trace_running)
@@ -112,7 +115,7 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
                         {
                             prevFrameNumber = frameNumber;
 
-                            if (settings.loopStartFrame == -1 || frameNumber == settings.loopStartFrame)
+                            if (frameNumber == settings.loopStartFrame)
                             {
                                 // record the location of looping start packet
                                 seq.record_bookmark();
