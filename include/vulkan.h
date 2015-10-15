@@ -1366,7 +1366,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    queueRecordCount;
+    uint32_t                                    requestedQueueCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    layerCount;
     const char*const*                           ppEnabledLayerNames;

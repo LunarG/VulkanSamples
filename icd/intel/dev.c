@@ -154,7 +154,7 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
             (uint8_t *) dev->sample_pattern_16x);
 
     ret = dev_create_queues(dev, info->pRequestedQueues,
-            info->queueRecordCount);
+            info->requestedQueueCount);
     if (ret != VK_SUCCESS) {
         intel_dev_destroy(dev);
         return ret;

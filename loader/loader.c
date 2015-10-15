@@ -2933,7 +2933,7 @@ VkResult VKAPI loader_CreateDevice(
     char **filtered_extension_names = NULL;
     VkResult res;
 
-    assert(pCreateInfo->queueRecordCount >= 1);
+    assert(pCreateInfo->requestedQueueCount >= 1);
 
     if (!icd->CreateDevice) {
         return VK_ERROR_INITIALIZATION_FAILED;

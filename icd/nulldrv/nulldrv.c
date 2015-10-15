@@ -213,7 +213,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     }
 
     ret = dev_create_queues(dev, info->pRequestedQueues,
-            info->queueRecordCount);
+            info->requestedQueueCount);
     if (ret != VK_SUCCESS) {
         return ret;
     }

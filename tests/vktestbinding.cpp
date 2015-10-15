@@ -287,7 +287,7 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
-    dev_info.queueRecordCount = queue_info.size();
+    dev_info.requestedQueueCount = queue_info.size();
     dev_info.pRequestedQueues = queue_info.data();
     dev_info.layerCount = layers.size();
     dev_info.ppEnabledLayerNames = layers.data();

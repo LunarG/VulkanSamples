@@ -1896,7 +1896,7 @@ static void demo_init_vk(struct demo *demo)
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
-        .queueRecordCount = 1,
+        .requestedQueueCount = 1,
         .pRequestedQueues = &queue,
         .layerCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),

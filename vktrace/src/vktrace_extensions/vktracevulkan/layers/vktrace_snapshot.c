@@ -70,7 +70,7 @@ VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo
     {
         uint32_t i;
         vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VkDeviceCreateInfo), pSrcCreateInfo);
-        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
+        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->requestedQueueCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
 
         if (pSrcCreateInfo->extensionCount > 0)
         {

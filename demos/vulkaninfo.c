@@ -394,7 +394,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     VkDeviceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
-        .queueRecordCount = 0,
+        .requestedQueueCount = 0,
         .pRequestedQueues = NULL,
         .layerCount = 0,
         .ppEnabledLayerNames = NULL,
@@ -478,7 +478,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     }
 
     /* request all queues */
-    info.queueRecordCount = gpu->queue_count;
+    info.requestedQueueCount = gpu->queue_count;
     info.pRequestedQueues = gpu->queue_reqs;
 
     info.layerCount = 0;

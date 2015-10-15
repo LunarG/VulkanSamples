@@ -580,7 +580,7 @@ class Subcommand(object):
         pid_enum.append('static void add_VkDeviceCreateInfo_to_packet(vktrace_trace_packet_header*  pHeader, VkDeviceCreateInfo** ppStruct, const VkDeviceCreateInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkDeviceCreateInfo), pInStruct);')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->queueRecordCount*sizeof(VkDeviceQueueCreateInfo), pInStruct->pRequestedQueues);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues, pInStruct->requestedQueueCount*sizeof(VkDeviceQueueCreateInfo), pInStruct->pRequestedQueues);')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')

@@ -408,7 +408,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
             "Invalid call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
     } else {
         // Check that the requested queue properties are valid
-        for (uint32_t i=0; i<pCreateInfo->queueRecordCount; i++) {
+        for (uint32_t i=0; i<pCreateInfo->requestedQueueCount; i++) {
             uint32_t requestedIndex = pCreateInfo->pRequestedQueues[i].queueFamilyIndex;
             if (phy_dev_data->queueFamilyProperties.size() <= requestedIndex) { // requested index is out of bounds for this physical device
                 skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
