@@ -1150,7 +1150,7 @@ typedef struct {
     VkBool32                                    dualSourceBlend;
     VkBool32                                    logicOp;
     VkBool32                                    multiDrawIndirect;
-    VkBool32                                    depthClip;
+    VkBool32                                    depthClamp;
     VkBool32                                    depthBiasClamp;
     VkBool32                                    fillModeNonSolid;
     VkBool32                                    depthBounds;
@@ -1665,7 +1665,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkBool32                                    depthClipEnable;
+    VkBool32                                    depthClampEnable;
     VkBool32                                    rasterizerDiscardEnable;
     VkFillMode                                  fillMode;
     VkCullMode                                  cullMode;

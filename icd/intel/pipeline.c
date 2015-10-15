@@ -363,7 +363,7 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
     const VkPipelineRasterStateCreateInfo *rs_state = &info->rs;
     bool ccw;
 
-    pipeline->depthClipEnable = rs_state->depthClipEnable;
+    pipeline->depthClipEnable = !rs_state->depthClampEnable;
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
     pipeline->depthBiasEnable = rs_state->depthBiasEnable;
 

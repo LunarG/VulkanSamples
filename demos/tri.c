@@ -1286,7 +1286,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
-    rs.depthClipEnable = VK_TRUE;
+    rs.depthClampEnable = VK_FALSE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
 

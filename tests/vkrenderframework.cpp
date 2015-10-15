@@ -1140,7 +1140,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
 
     m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     m_rs_state.pNext = VK_NULL_HANDLE;
-    m_rs_state.depthClipEnable = VK_FALSE;
+    m_rs_state.depthClampEnable = VK_TRUE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
     m_rs_state.fillMode = VK_FILL_MODE_SOLID;
     m_rs_state.cullMode = VK_CULL_MODE_BACK;
