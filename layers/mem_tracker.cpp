@@ -1955,6 +1955,29 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     }
 }
 
+VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+    VkCmdBuffer                                 cmdBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    startQuery,
+    uint32_t                                    queryCount,
+    VkBuffer                                    destBuffer,
+    VkDeviceSize                                destOffset,
+    VkDeviceSize                                destStride,
+    VkQueryResultFlags                          flags)
+{
+    VkDeviceMemory mem;
+    VkBool32       skipCall = VK_FALSE;
+    loader_platform_thread_lock_mutex(&globalLock);
+    skipCall |= get_mem_binding_from_object(cmdBuffer, destBuffer.handle, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyQueryPoolResults");
+    // Validate that DST buffer has correct usage flags set
+    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
+    }
+}
+
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     VkCmdBuffer        cmdBuffer,
     VkImage            srcImage,
@@ -2521,9 +2544,11 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     if (!strcmp(funcName, "vkCmdDrawIndexedIndirect"))
         return (PFN_vkVoidFunction) vkCmdDrawIndexedIndirect;
     if (!strcmp(funcName, "vkCmdDispatchIndirect"))
-        return (PFN_vkVoidFunction) vkCmdDispatchIndirect;
+        return (PFN_vkVoidFunction)vkCmdDispatchIndirect;
     if (!strcmp(funcName, "vkCmdCopyBuffer"))
-        return (PFN_vkVoidFunction) vkCmdCopyBuffer;
+        return (PFN_vkVoidFunction)vkCmdCopyBuffer;
+    if (!strcmp(funcName, "vkCmdCopyQueryPoolResults"))
+        return (PFN_vkVoidFunction)vkCmdCopyQueryPoolResults;
     if (!strcmp(funcName, "vkCmdCopyImage"))
         return (PFN_vkVoidFunction) vkCmdCopyImage;
     if (!strcmp(funcName, "vkCmdCopyBufferToImage"))
