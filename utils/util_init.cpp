@@ -584,7 +584,7 @@ void init_depth_buffer(struct sample_info &info)
     /* Use the memory properties to determine the type of memory required */
     res = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_DEVICE_ONLY,
+                                      0, /* No requirements */
                                       &mem_alloc.memoryTypeIndex);
     assert(res == VK_SUCCESS);
 
@@ -1652,7 +1652,7 @@ void init_texture(struct sample_info &info)
 
         mem_alloc.allocationSize = mem_reqs.size;
 
-        /* Find memory type with DEVICE_ONLY property */
+        /* Find memory type - dont specify any mapping requirements */
         res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
         assert(res == VK_SUCCESS);
 

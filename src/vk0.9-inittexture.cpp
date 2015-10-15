@@ -182,8 +182,8 @@ int main(int argc, char **argv)
 
         mem_alloc.allocationSize = mem_reqs.size;
 
-        /* Find memory type with DEVICE_ONLY property */
-        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
+        /* Find memory type - don't specify any mapping requirements */
+        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex);
         assert(res == VK_SUCCESS);
 
         /* allocate memory */

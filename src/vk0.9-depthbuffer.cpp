@@ -128,7 +128,7 @@ int main(int argc, char **argv)
     /* Use the memory properties to determine the type of memory required */
     res = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_DEVICE_ONLY,
+                                      0, /* No Requirements */
                                       &mem_alloc.memoryTypeIndex);
     assert(res == VK_SUCCESS);
 
