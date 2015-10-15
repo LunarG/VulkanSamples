@@ -154,14 +154,14 @@ int main(int argc, char **argv)
     viewport.maxDepth = (float) 1.0f;
     viewport.originX = 0;
     viewport.originY = 0;
-    vkCmdSetViewport(info.cmd, 1, &viewport);
+    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, 1, &scissor);
+    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);
@@ -679,7 +679,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
-    image_info.samples = 1;
+    image_info.samples = NUM_SAMPLES;
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1214,9 +1214,9 @@ void init_pipeline(struct sample_info &info)
     VkPipelineViewportStateCreateInfo vp;
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
-    vp.viewportCount = 1;
+    vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-    vp.scissorCount = 1;
+    vp.scissorCount = NUM_SCISSORS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
@@ -1239,7 +1239,7 @@ void init_pipeline(struct sample_info &info)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = 1;
+    ms.rasterSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
 

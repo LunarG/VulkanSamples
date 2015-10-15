@@ -160,14 +160,14 @@ int main(int argc, char **argv)
     viewport.maxDepth = (float) 1.0f;
     viewport.originX = 0;
     viewport.originY = 0;
-    vkCmdSetViewport(info.cmd, 1, &viewport);
+    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, 1, &scissor);
+    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);

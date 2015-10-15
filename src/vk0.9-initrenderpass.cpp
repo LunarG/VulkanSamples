@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     attachments[0].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[0].pNext = NULL;
     attachments[0].format = info.format;
-    attachments[0].samples = 1;
+    attachments[0].samples = NUM_SAMPLES;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[1].pNext = NULL;
     attachments[1].format = info.depth.format;
-    attachments[1].samples = 1;
+    attachments[1].samples = NUM_SAMPLES;
     attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;

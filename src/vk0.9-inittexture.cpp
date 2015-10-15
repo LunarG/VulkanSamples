@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
     image_create_info.arraySize = 1;
-    image_create_info.samples = 1;
+    image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;

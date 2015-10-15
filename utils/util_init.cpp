@@ -542,7 +542,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
     image_info.arraySize = 1;
-    image_info.samples = 1;
+    image_info.samples = NUM_SAMPLES;
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1042,7 +1042,7 @@ void init_renderpass(struct sample_info &info)
     attachments[0].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[0].pNext = NULL;
     attachments[0].format = info.format;
-    attachments[0].samples = 1;
+    attachments[0].samples = NUM_SAMPLES;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -1054,7 +1054,7 @@ void init_renderpass(struct sample_info &info)
     attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
     attachments[1].pNext = NULL;
     attachments[1].format = info.depth.format;
-    attachments[1].samples = 1;
+    attachments[1].samples = NUM_SAMPLES;
     attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -1477,9 +1477,9 @@ void init_pipeline(struct sample_info &info)
     VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
-    vp.viewportCount = 1;
+    vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-    vp.scissorCount = 1;
+    vp.scissorCount = NUM_SCISSORS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
 
     VkPipelineDepthStencilStateCreateInfo ds;
@@ -1502,7 +1502,7 @@ void init_pipeline(struct sample_info &info)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = 1;
+    ms.rasterSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
 
@@ -1560,7 +1560,7 @@ void init_texture(struct sample_info &info)
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
     image_create_info.arraySize = 1;
-    image_create_info.samples = 1;
+    image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
