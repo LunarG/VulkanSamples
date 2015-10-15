@@ -1357,22 +1357,13 @@ LOADER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer, VkIm
     disp->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
-LOADER_EXPORT void VKAPI vkCmdClearColorAttachment(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects)
+LOADER_EXPORT void VKAPI vkCmdClearAttachments(VkCmdBuffer cmdBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkRect3D* pRects)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
-}
-
-LOADER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(VkCmdBuffer cmdBuffer, VkImageAspectFlags imageAspectMask, VkImageLayout imageLayout, const VkClearDepthStencilValue *pDepthStencil, uint32_t rectCount, const VkRect3D* pRects)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(cmdBuffer);
-
-    disp->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
+    disp->CmdClearAttachments(cmdBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
 LOADER_EXPORT void VKAPI vkCmdResolveImage(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions)

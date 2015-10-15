@@ -4132,15 +4132,16 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     /* Now, partway through this renderpass we want to clear the color
      * attachment again, this time to green.
      */
-    VkClearColorValue clear_color;
-    clear_color.float32[0] = 0;
-    clear_color.float32[1] = 1;
-    clear_color.float32[2] = 0;
-    clear_color.float32[3] = 0;
+    VkClearAttachment color_attachment;
+    color_attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    color_attachment.clearValue.color.float32[0] = 0;
+    color_attachment.clearValue.color.float32[1] = 1;
+    color_attachment.clearValue.color.float32[2] = 0;
+    color_attachment.clearValue.color.float32[3] = 0;
+    color_attachment.colorAttachment = 0;
     VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
-    vkCmdClearColorAttachment(m_cmdBuffer->handle(), 0,
-                              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                              &clear_color, 1, &clear_rect);
+    vkCmdClearAttachments(m_cmdBuffer->handle(), 1, &color_attachment,
+                          1, &clear_rect);
 
     EndCommandBuffer();
     QueueCommandBuffer();

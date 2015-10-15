@@ -948,24 +948,12 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
-    VkCmdBuffer                             cmdBuffer,
-    uint32_t                                colorAttachment,
-    VkImageLayout                           imageLayout,
-    const VkClearColorValue                *pColor,
-    uint32_t                                rectCount,
-    const VkRect3D                         *pRects)
-{
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
-    VkCmdBuffer                             cmdBuffer,
-    VkImageAspectFlags                      imageAspectMask,
-    VkImageLayout                           imageLayout,
-    const VkClearDepthStencilValue*         pDepthStencil,
-    uint32_t                                rectCount,
-    const VkRect3D                         *pRects)
+ICD_EXPORT void VKAPI vkCmdClearAttachments(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
 {
     NULLDRV_LOG_FUNC;
 }

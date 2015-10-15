@@ -6361,7 +6361,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     PostCmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount);
 }
 
-bool PreCmdClearColorAttachment(
+bool PreCmdClearAttachments(
     VkCmdBuffer cmdBuffer,
     const VkClearColorValue* pColor,
     const VkRect3D* pRects)
@@ -6377,88 +6377,18 @@ bool PreCmdClearColorAttachment(
     return true;
 }
 
-bool PostCmdClearColorAttachment(
-    VkCmdBuffer cmdBuffer,
-    uint32_t colorAttachment,
-    VkImageLayout imageLayout,
-    uint32_t rectCount)
+VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
 {
-
-
-    if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearColorAttachment parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
-        return false;
+    for (uint32_t i = 0; i < attachmentCount; i++) {
+        PreCmdClearAttachments(cmdBuffer, &pAttachments[i].clearValue.color, pRects);
     }
 
-
-    return true;
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
-    VkCmdBuffer cmdBuffer,
-    uint32_t colorAttachment,
-    VkImageLayout imageLayout,
-    const VkClearColorValue* pColor,
-    uint32_t rectCount,
-    const VkRect3D* pRects)
-{
-    PreCmdClearColorAttachment(cmdBuffer, pColor, pRects);
-
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
-
-    PostCmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, rectCount);
-}
-
-bool PreCmdClearDepthStencilAttachment(
-    VkCmdBuffer cmdBuffer,
-    const VkRect3D* pRects)
-{
-    if(pRects != nullptr)
-    {
-    }
-
-    return true;
-}
-
-bool PostCmdClearDepthStencilAttachment(
-    VkCmdBuffer cmdBuffer,
-    VkImageAspectFlags imageAspectMask,
-    VkImageLayout imageLayout,
-    const VkClearDepthStencilValue* pDepthStencil,
-    uint32_t rectCount)
-{
-
-
-    if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdClearDepthStencilAttachment parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
-        return false;
-    }
-
-
-
-
-    return true;
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
-    VkCmdBuffer cmdBuffer,
-    VkImageAspectFlags imageAspectMask,
-    VkImageLayout imageLayout,
-    const VkClearDepthStencilValue* pDepthStencil,
-    uint32_t rectCount,
-    const VkRect3D* pRects)
-{
-    PreCmdClearDepthStencilAttachment(cmdBuffer, pRects);
-
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
-
-    PostCmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearAttachments(cmdBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
 bool PreCmdResolveImage(

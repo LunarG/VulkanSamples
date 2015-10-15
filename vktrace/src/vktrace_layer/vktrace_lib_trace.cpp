@@ -1319,10 +1319,8 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkCmdClearColorImage;
     if (!strcmp(name, "CmdClearDepthStencilImage"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdClearDepthStencilImage;
-    if (!strcmp(name, "CmdClearColorAttachment"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearColorAttachment;
-    if (!strcmp(name, "CmdClearDepthStencilAttachment"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearDepthStencilAttachment;
+    if (!strcmp(name, "CmdClearAttachments"))
+        return (PFN_vkVoidFunction) __HOOKED_vkCmdClearAttachments;
     if (!strcmp(name, "CmdResolveImage"))
         return (PFN_vkVoidFunction) __HOOKED_vkCmdResolveImage;
     if (!strcmp(name, "CmdSetEvent"))

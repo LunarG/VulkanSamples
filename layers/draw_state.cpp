@@ -173,12 +173,10 @@ static string cmdTypeToString(CMD_TYPE cmd)
             return "CMD_FILLBUFFER";
         case CMD_CLEARCOLORIMAGE:
             return "CMD_CLEARCOLORIMAGE";
-        case CMD_CLEARCOLORATTACHMENT:
+        case CMD_CLEARATTACHMENTS:
             return "CMD_CLEARCOLORATTACHMENT";
         case CMD_CLEARDEPTHSTENCILIMAGE:
             return "CMD_CLEARDEPTHSTENCILIMAGE";
-        case CMD_CLEARDEPTHSTENCILATTACHMENT:
-            return "CMD_CLEARDEPTHSTENCILATTACHMENT";
         case CMD_RESOLVEIMAGE:
             return "CMD_RESOLVEIMAGE";
         case CMD_SETEVENT:
@@ -2761,61 +2759,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
         dev_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
+VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    colorAttachment,
-    VkImageLayout                               imageLayout,
-    const VkClearColorValue*                    pColor,
-    uint32_t                                    rectCount,
-    const VkRect3D*                             pRects)
-{
-    VkBool32 skipCall = VK_FALSE;
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
-    if (pCB) {
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            // Warn if this is issued prior to Draw Cmd
-            if (!hasDrawCmd(pCB)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
-                        "vkCmdClearColorAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
-                        " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
-            }
-            updateCBTracking(pCB);
-            skipCall |= addCmd(dev_data, pCB, CMD_CLEARCOLORATTACHMENT);
-        } else {
-            skipCall |= report_error_no_cb_begin(dev_data, cmdBuffer, "vkCmdClearColorAttachment()");
-        }
-
-        // Validate that attachment is in reference list of active subpass
-        if (pCB->activeRenderPass) {
-            const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass.handle];
-            const VkSubpassDescription   *pSD   = &pRPCI->pSubpasses[pCB->activeSubpass];
-
-            VkBool32 found = VK_FALSE;
-            for (uint32_t i = 0; i < pSD->colorCount; i++) {
-                if (colorAttachment == pSD->pColorAttachments[i].attachment) {
-                    found = VK_TRUE;
-                    break;
-                }
-            }
-            if (VK_FALSE == found) {
-                skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                        (uint64_t)cmdBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                        "vkCmdClearColorAttachment() attachment index %d not found in attachment reference array of active subpass %d",
-                        colorAttachment, pCB->activeSubpass);
-            }
-        }
-        skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdClearColorAttachment");
-    }
-    if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdClearColorAttachment(cmdBuffer, colorAttachment, imageLayout, pColor, rectCount, pRects);
-}
-
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
-    VkCmdBuffer                                 cmdBuffer,
-    VkImageAspectFlags                          imageAspectMask,
-    VkImageLayout                               imageLayout,
-    const VkClearDepthStencilValue*             pDepthStencil,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
     const VkRect3D*                             pRects)
 {
@@ -2828,18 +2775,51 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
             if (!hasDrawCmd(pCB)) {
                 // TODO : cmdBuffer should be srcObj
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
-                        "vkCmdClearDepthStencilAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
-                        " It is recommended you use RenderPass LOAD_OP_CLEAR on DS Attachment prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
+                        "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
+                        " It is recommended you use RenderPass LOAD_OP_CLEAR on Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
             updateCBTracking(pCB);
-            skipCall |= addCmd(dev_data, pCB, CMD_CLEARDEPTHSTENCILATTACHMENT);
+            skipCall |= addCmd(dev_data, pCB, CMD_CLEARATTACHMENTS);
         } else {
-            skipCall |= report_error_no_cb_begin(dev_data, cmdBuffer, "vkCmdClearDepthStencilAttachment()");
+            skipCall |= report_error_no_cb_begin(dev_data, cmdBuffer, "vkCmdClearAttachments()");
         }
-        skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdClearDepthStencilAttachment");
+        skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdClearAttachments");
+    }
+
+    // Validate that attachment is in reference list of active subpass
+    if (pCB->activeRenderPass) {
+        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass.handle];
+        const VkSubpassDescription   *pSD   = &pRPCI->pSubpasses[pCB->activeSubpass];
+
+        for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
+            const VkClearAttachment *attachment = &pAttachments[attachment_idx];
+            if (attachment->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+                VkBool32 found = VK_FALSE;
+                for (uint32_t i = 0; i < pSD->colorCount; i++) {
+                    if (attachment->colorAttachment == pSD->pColorAttachments[i].attachment) {
+                        found = VK_TRUE;
+                        break;
+                    }
+                }
+                if (VK_FALSE == found) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                            (uint64_t)cmdBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                            "vkCmdClearAttachments() attachment index %d not found in attachment reference array of active subpass %d",
+                            attachment->colorAttachment, pCB->activeSubpass);
+                }
+            } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                /* TODO: Is this a good test for depth/stencil? */
+                if (pSD->depthStencilAttachment.attachment != attachment->colorAttachment) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                            (uint64_t)cmdBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                            "vkCmdClearAttachments() attachment index %d does not match depthStencilAttachment.attachment (%d) found in active subpass %d",
+                            attachment->colorAttachment, pSD->depthStencilAttachment.attachment, pCB->activeSubpass);
+                }
+            }
+        }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdClearDepthStencilAttachment(cmdBuffer, imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
+        dev_data->device_dispatch_table->CmdClearAttachments(cmdBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
@@ -3621,10 +3601,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdClearColorImage;
     if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
         return (PFN_vkVoidFunction) vkCmdClearDepthStencilImage;
-    if (!strcmp(funcName, "vkCmdClearColorAttachment"))
-        return (PFN_vkVoidFunction) vkCmdClearColorAttachment;
-    if (!strcmp(funcName, "vkCmdClearDepthStencilAttachment"))
-        return (PFN_vkVoidFunction) vkCmdClearDepthStencilAttachment;
+    if (!strcmp(funcName, "vkCmdClearAttachments"))
+        return (PFN_vkVoidFunction) vkCmdClearAttachments;
     if (!strcmp(funcName, "vkCmdResolveImage"))
         return (PFN_vkVoidFunction) vkCmdResolveImage;
     if (!strcmp(funcName, "vkCmdSetEvent"))

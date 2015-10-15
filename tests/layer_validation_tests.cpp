@@ -2595,7 +2595,7 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass)
 
 TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
 {
-    // Call CmdClearColorAttachments outside of an active RenderPass
+    // Call CmdClearAttachmentss outside of an active RenderPass
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
@@ -2608,18 +2608,23 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     err = m_cmdBuffer->BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
 
-    VkClearColorValue clear_color = {0};
+    VkClearAttachment color_attachment;
+    color_attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    color_attachment.clearValue.color.float32[0] = 0;
+    color_attachment.clearValue.color.float32[1] = 0;
+    color_attachment.clearValue.color.float32[2] = 0;
+    color_attachment.clearValue.color.float32[3] = 0;
+    color_attachment.colorAttachment = 0;
     VkRect3D          clear_rect  = { { 0, 0, 0 }, { 32, 32, 1 } };
-
-    vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0,
-                              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                              &clear_color, 1, &clear_rect);
+    vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(),
+                          1, &color_attachment,
+                          1, &clear_rect);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
-                "Did not receive error after calling CmdClearColorAttachment outside of an active RenderPass.";
-    if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment: This call must be issued inside an active render pass")) {
-        FAIL() << "Error received was not 'vkCmdClearColorAttachment: This call must be issued inside an active render pass.'";
+                "Did not receive error after calling CmdClearAttachments outside of an active RenderPass.";
+    if (!strstr(msgString.c_str(),"vkCmdClearAttachments: This call must be issued inside an active render pass")) {
+        FAIL() << "Error received was not 'vkCmdClearAttachments: This call must be issued inside an active render pass.'";
     }
 }
 
@@ -3232,17 +3237,20 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     m_errorMonitor->ClearState();
     // Main thing we care about for this test is that the VkImage obj we're clearing matches Color Attachment of FB
     //  Also pass down other dummy params to keep driver and paramchecker happy
-    VkClearColorValue cCV;
-    cCV.float32[0] = 1.0;
-    cCV.float32[1] = 1.0;
-    cCV.float32[2] = 1.0;
-    cCV.float32[3] = 1.0;
+    VkClearAttachment color_attachment;
+    color_attachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    color_attachment.clearValue.color.float32[0] = 1.0;
+    color_attachment.clearValue.color.float32[1] = 1.0;
+    color_attachment.clearValue.color.float32[2] = 1.0;
+    color_attachment.clearValue.color.float32[3] = 1.0;
+    color_attachment.colorAttachment = 0;
+    VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
 
-    vkCmdClearColorAttachment(m_cmdBuffer->GetBufferHandle(), 0, (VkImageLayout)NULL, &cCV, 0, NULL);
+    vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
-    if (!strstr(msgString.c_str(),"vkCmdClearColorAttachment() issued on CB object ")) {
-        FAIL() << "Error received was not 'vkCmdClearColorAttachment() issued on CB object...'";
+    if (!strstr(msgString.c_str(),"vkCmdClearAttachments() issued on CB object ")) {
+        FAIL() << "Error received was not 'vkCmdClearAttachments() issued on CB object...'";
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);

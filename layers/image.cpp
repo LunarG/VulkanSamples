@@ -490,32 +490,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
-    VkCmdBuffer                     cmdBuffer,
-    VkImageAspectFlags              imageAspectMask,
-    VkImageLayout                   imageLayout,
-    const VkClearDepthStencilValue *pDepthStencil,
-    uint32_t                        rectCount,
-    const VkRect3D                 *pRects)
-{
-    VkBool32 skipCall = VK_FALSE;
-
-    // Image aspect must be depth or stencil or both
-    if (((imageAspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)   != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-        ((imageAspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT))
-    {
-        layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-        char const str[] = "vkCmdClearDepthStencilAttachment aspectMask must be set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
-        skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                            (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
-    }
-
-    if (VK_FALSE == skipCall) {
-        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdClearDepthStencilAttachment(cmdBuffer,
-            imageAspectMask, imageLayout, pDepthStencil, rectCount, pRects);
-    }
-}
-
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     VkCmdBuffer        cmdBuffer,
     VkImage            srcImage,
@@ -574,6 +548,45 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     if (VK_FALSE == skipCall) {
         get_dispatch_table(image_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage,
             srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    }
+}
+
+void VKAPI vkCmdClearAttachments(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+    VkBool32 skipCall = VK_FALSE;
+    VkImageAspectFlags aspectMask;
+
+    for (uint32_t i = 0; i < attachmentCount; i++) {
+        aspectMask = pAttachments[i].aspectMask;
+        if (aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+            if (aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
+                // VK_IMAGE_ASPECT_COLOR_BIT is not the only bit set for this attachment
+                layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+                char const str[] = "vkCmdClearAttachments aspectMask [%d] must set only VK_IMAGE_ASPECT_COLOR_BIT of a color attachment.";
+                skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str, i);
+            }
+        } else {
+            // Image aspect must be depth or stencil or both
+            if (((aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)   != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT))
+            {
+                layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+                char const str[] = "vkCmdClearAttachments aspectMask [%d] must be set to VK_IMAGE_ASPECT_DEPTH_BIT and/or VK_IMAGE_ASPECT_STENCIL_BIT";
+                skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                    (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str, i);
+            }
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        get_dispatch_table(image_device_table_map, cmdBuffer)->CmdClearAttachments(cmdBuffer,
+            attachmentCount, pAttachments, rectCount, pRects);
     }
 }
 
@@ -753,8 +766,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCmdClearColorImage;
     if (!strcmp(funcName, "vkCmdClearDepthStencilImage"))
         return (PFN_vkVoidFunction) vkCmdClearDepthStencilImage;
-    if (!strcmp(funcName, "vkCmdClearDepthStencilAttachment"))
-        return (PFN_vkVoidFunction) vkCmdClearDepthStencilAttachment;
+    if (!strcmp(funcName, "vkCmdClearAttachments"))
+        return (PFN_vkVoidFunction) vkCmdClearAttachments;
     if (!strcmp(funcName, "vkCmdCopyImage"))
         return (PFN_vkVoidFunction) vkCmdCopyImage;
     if (!strcmp(funcName, "vkCmdCopyImageToBuffer"))

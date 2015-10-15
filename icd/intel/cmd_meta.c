@@ -957,7 +957,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     cmd_meta_clear_depth_stencil_image(cmdBuffer, img, imageLayout, pDepthStencil->depth, pDepthStencil->stencil, rangeCount, pRanges);
 }
 
-ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
+void cmd_clear_color_attachment(
     VkCmdBuffer                             cmdBuffer,
     uint32_t                                colorAttachment,
     VkImageLayout                           imageLayout,
@@ -994,7 +994,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorAttachment(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
+void cmd_clear_depth_stencil_attachment(
     VkCmdBuffer                             cmdBuffer,
     VkImageAspectFlags                      aspectMask,
     VkImageLayout                           imageLayout,
@@ -1025,6 +1025,36 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilAttachment(
         cmd_meta_clear_depth_stencil_image(cmdBuffer,
                 view->img, imageLayout,
                 pDepthStencil->depth, pDepthStencil->stencil, 1, &range);
+    }
+}
+
+void VKAPI vkCmdClearAttachments(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+
+    for (uint32_t i = 0; i < attachmentCount; i++) {
+        if (pAttachments[i].aspectMask == VK_IMAGE_ASPECT_COLOR_BIT) {
+            cmd_clear_color_attachment(
+                        cmdBuffer,
+                        pAttachments[i].colorAttachment,
+                        cmd->bind.render_pass->attachments[i].final_layout,
+                        &pAttachments[i].clearValue.color,
+                        rectCount,
+                        pRects);
+        } else {
+            cmd_clear_depth_stencil_attachment(
+                        cmdBuffer,
+                        pAttachments[i].aspectMask,
+                        cmd->bind.render_pass_subpass->ds_layout,
+                        &pAttachments[i].clearValue.depthStencil,
+                        rectCount,
+                        pRects);
+        }
     }
 }
 

@@ -149,8 +149,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CmdFillBuffer = (PFN_vkCmdFillBuffer) gpa(dev, "vkCmdFillBuffer");
     table->CmdClearColorImage = (PFN_vkCmdClearColorImage) gpa(dev, "vkCmdClearColorImage");
     table->CmdClearDepthStencilImage = (PFN_vkCmdClearDepthStencilImage) gpa(dev, "vkCmdClearDepthStencilImage");
-    table->CmdClearColorAttachment = (PFN_vkCmdClearColorAttachment) gpa(dev, "vkCmdClearColorAttachment");
-    table->CmdClearDepthStencilAttachment = (PFN_vkCmdClearDepthStencilAttachment) gpa(dev, "vkCmdClearDepthStencilAttachment");
+    table->CmdClearAttachments = (PFN_vkCmdClearAttachments) gpa(dev, "vkCmdClearAttachments");
     table->CmdResolveImage = (PFN_vkCmdResolveImage) gpa(dev, "vkCmdResolveImage");
     table->CmdSetEvent = (PFN_vkCmdSetEvent) gpa(dev, "vkCmdSetEvent");
     table->CmdResetEvent = (PFN_vkCmdResetEvent) gpa(dev, "vkCmdResetEvent");
@@ -413,10 +412,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CmdClearColorImage;
     if (!strcmp(name, "CmdClearDepthStencilImage"))
         return (void *) table->CmdClearDepthStencilImage;
-    if (!strcmp(name, "CmdClearColorAttachment"))
-        return (void *) table->CmdClearColorAttachment;
-    if (!strcmp(name, "CmdClearDepthStencilAttachment"))
-        return (void *) table->CmdClearDepthStencilAttachment;
+    if (!strcmp(name, "CmdClearAttachments"))
+        return (void *) table->CmdClearAttachments;
     if (!strcmp(name, "CmdResolveImage"))
         return (void *) table->CmdResolveImage;
     if (!strcmp(name, "CmdSetEvent"))

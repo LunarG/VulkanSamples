@@ -818,19 +818,10 @@ core = Extension(
              Param("uint32_t", "rangeCount"),
              Param("const VkImageSubresourceRange*", "pRanges")]),
 
-        Proto("void", "CmdClearColorAttachment",
+        Proto("void", "CmdClearAttachments",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("uint32_t", "colorAttachment"),
-             Param("VkImageLayout", "imageLayout"),
-             Param("const VkClearColorValue*", "pColor"),
-             Param("uint32_t", "rectCount"),
-             Param("const VkRect3D*", "pRects")]),
-
-        Proto("void", "CmdClearDepthStencilAttachment",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkImageAspectFlags", "imageAspectMask"),
-             Param("VkImageLayout", "imageLayout"),
-             Param("const VkClearDepthStencilValue*", "pDepthStencil"),
+             Param("uint32_t", "attachmentCount"),
+             Param("const VkClearAttachment*", "pAttachments"),
              Param("uint32_t", "rectCount"),
              Param("const VkRect3D*", "pRects")]),
 
