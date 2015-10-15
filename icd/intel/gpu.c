@@ -488,6 +488,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
 {
     /* TODO: fill out features */
     memset(pFeatures, 0, sizeof(*pFeatures));
+    pFeatures->occlusionQueryNonConservative = 1;
 }
 
 void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
