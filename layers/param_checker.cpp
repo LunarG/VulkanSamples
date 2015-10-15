@@ -1241,8 +1241,8 @@ bool ValidateEnumerator(VkShaderStageFlagBits const& enumerator)
         VK_SHADER_STAGE_FRAGMENT_BIT |
         VK_SHADER_STAGE_GEOMETRY_BIT |
         VK_SHADER_STAGE_COMPUTE_BIT |
-        VK_SHADER_STAGE_TESS_EVALUATION_BIT |
-        VK_SHADER_STAGE_TESS_CONTROL_BIT |
+        VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT |
+        VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT |
         VK_SHADER_STAGE_VERTEX_BIT);
     if(enumerator & (~allFlags))
     {
@@ -1277,13 +1277,13 @@ std::string EnumeratorString(VkShaderStageFlagBits const& enumerator)
     {
         strings.push_back("VK_SHADER_STAGE_COMPUTE_BIT");
     }
-    if(enumerator & VK_SHADER_STAGE_TESS_EVALUATION_BIT)
+    if(enumerator & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
     {
-        strings.push_back("VK_SHADER_STAGE_TESS_EVALUATION_BIT");
+        strings.push_back("VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT");
     }
-    if(enumerator & VK_SHADER_STAGE_TESS_CONTROL_BIT)
+    if(enumerator & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT)
     {
-        strings.push_back("VK_SHADER_STAGE_TESS_CONTROL_BIT");
+        strings.push_back("VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT");
     }
     if(enumerator & VK_SHADER_STAGE_VERTEX_BIT)
     {
@@ -1354,11 +1354,11 @@ bool ValidateEnumerator(VkPipelineStageFlagBits const& enumerator)
         VK_PIPELINE_STAGE_ALL_GPU_COMMANDS |
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-        VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
         VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-        VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT |
+        VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
         VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
         VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
         VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
@@ -1408,9 +1408,9 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
     {
         strings.push_back("VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT");
     }
-    if(enumerator & VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
     {
-        strings.push_back("VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT");
     }
     if(enumerator & VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT)
     {
@@ -1424,9 +1424,9 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
     {
         strings.push_back("VK_PIPELINE_STAGE_VERTEX_SHADER_BIT");
     }
-    if(enumerator & VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT)
+    if(enumerator & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
     {
-        strings.push_back("VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT");
+        strings.push_back("VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT");
     }
     if(enumerator & VK_PIPELINE_STAGE_VERTEX_INPUT_BIT)
     {

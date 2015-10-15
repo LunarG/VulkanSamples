@@ -1965,10 +1965,10 @@ static void emit_shader_resources(struct intel_cmd *cmd)
             VK_SHADER_STAGE_VERTEX);
     binding_tables[1] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->tcs.rmap,
-            VK_SHADER_STAGE_TESS_CONTROL);
+            VK_SHADER_STAGE_TESSELLATION_CONTROL);
     binding_tables[2] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->tes.rmap,
-            VK_SHADER_STAGE_TESS_EVALUATION);
+            VK_SHADER_STAGE_TESSELLATION_EVALUATION);
     binding_tables[3] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->gs.rmap,
             VK_SHADER_STAGE_GEOMETRY);

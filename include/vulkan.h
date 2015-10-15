@@ -511,8 +511,8 @@ typedef enum {
 
 typedef enum {
     VK_SHADER_STAGE_VERTEX = 0,
-    VK_SHADER_STAGE_TESS_CONTROL = 1,
-    VK_SHADER_STAGE_TESS_EVALUATION = 2,
+    VK_SHADER_STAGE_TESSELLATION_CONTROL = 1,
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION = 2,
     VK_SHADER_STAGE_GEOMETRY = 3,
     VK_SHADER_STAGE_FRAGMENT = 4,
     VK_SHADER_STAGE_COMPUTE = 5,
@@ -1000,8 +1000,8 @@ typedef VkFlags VkPipelineCreateFlags;
 
 typedef enum {
     VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
-    VK_SHADER_STAGE_TESS_CONTROL_BIT = 0x00000002,
-    VK_SHADER_STAGE_TESS_EVALUATION_BIT = 0x00000004,
+    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 0x00000002,
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 0x00000004,
     VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
     VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
     VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
@@ -1024,8 +1024,8 @@ typedef enum {
     VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT = 0x00000002,
     VK_PIPELINE_STAGE_VERTEX_INPUT_BIT = 0x00000004,
     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT = 0x00000008,
-    VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT = 0x00000010,
-    VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT = 0x00000020,
+    VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT = 0x00000010,
+    VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT = 0x00000020,
     VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT = 0x00000040,
     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT = 0x00000080,
     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT = 0x00000100,
@@ -1246,14 +1246,14 @@ typedef struct {
     uint32_t                                    maxVertexInputAttributeOffset;
     uint32_t                                    maxVertexInputBindingStride;
     uint32_t                                    maxVertexOutputComponents;
-    uint32_t                                    maxTessGenLevel;
-    uint32_t                                    maxTessPatchSize;
-    uint32_t                                    maxTessControlPerVertexInputComponents;
-    uint32_t                                    maxTessControlPerVertexOutputComponents;
-    uint32_t                                    maxTessControlPerPatchOutputComponents;
-    uint32_t                                    maxTessControlTotalOutputComponents;
-    uint32_t                                    maxTessEvaluationInputComponents;
-    uint32_t                                    maxTessEvaluationOutputComponents;
+    uint32_t                                    maxTessellationGenLevel;
+    uint32_t                                    maxTessellationPatchSize;
+    uint32_t                                    maxTessellationControlPerVertexInputComponents;
+    uint32_t                                    maxTessellationControlPerVertexOutputComponents;
+    uint32_t                                    maxTessellationControlPerPatchOutputComponents;
+    uint32_t                                    maxTessellationControlTotalOutputComponents;
+    uint32_t                                    maxTessellationEvaluationInputComponents;
+    uint32_t                                    maxTessellationEvaluationOutputComponents;
     uint32_t                                    maxGeometryShaderInvocations;
     uint32_t                                    maxGeometryInputComponents;
     uint32_t                                    maxGeometryOutputComponents;

@@ -1800,17 +1800,17 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
 
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
     // Just using VS txt for Tess shaders as we don't care about functionality
-    VkShaderObj tc(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESS_CONTROL, this);
-    VkShaderObj te(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESS_EVALUATION, this);
+    VkShaderObj tc(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_CONTROL, this);
+    VkShaderObj te(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_EVALUATION, this);
 
     shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
     shaderStages[0].shader = vs.handle();
     shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].stage  = VK_SHADER_STAGE_TESS_CONTROL;
+    shaderStages[1].stage  = VK_SHADER_STAGE_TESSELLATION_CONTROL;
     shaderStages[1].shader = tc.handle();
     shaderStages[2].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[2].stage  = VK_SHADER_STAGE_TESS_EVALUATION;
+    shaderStages[2].stage  = VK_SHADER_STAGE_TESSELLATION_EVALUATION;
     shaderStages[2].shader = te.handle();
 
     VkPipelineInputAssemblyStateCreateInfo iaCI = {};

@@ -1205,10 +1205,10 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
             case VK_SHADER_STAGE_VERTEX:
                 dst = &info->vs;
                 break;
-            case VK_SHADER_STAGE_TESS_CONTROL:
+            case VK_SHADER_STAGE_TESSELLATION_CONTROL:
                 dst = &info->tcs;
                 break;
-            case VK_SHADER_STAGE_TESS_EVALUATION:
+            case VK_SHADER_STAGE_TESSELLATION_EVALUATION:
                 dst = &info->tes;
                 break;
             case VK_SHADER_STAGE_GEOMETRY:

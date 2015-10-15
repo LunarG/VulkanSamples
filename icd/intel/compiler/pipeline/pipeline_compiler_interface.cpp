@@ -503,8 +503,8 @@ const char *shader_stage_to_string(VkShaderStage stage)
 {
    switch (stage) {
    case VK_SHADER_STAGE_VERTEX:          return "vertex";
-   case VK_SHADER_STAGE_TESS_CONTROL:    return "tessellation evaluation";
-   case VK_SHADER_STAGE_TESS_EVALUATION: return "tessellation control";
+   case VK_SHADER_STAGE_TESSELLATION_CONTROL:    return "tessellation evaluation";
+   case VK_SHADER_STAGE_TESSELLATION_EVALUATION: return "tessellation control";
    case VK_SHADER_STAGE_GEOMETRY:        return "geometry";
    case VK_SHADER_STAGE_FRAGMENT:        return "fragment";
    case VK_SHADER_STAGE_COMPUTE:         return "compute";

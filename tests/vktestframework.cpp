@@ -1668,10 +1668,10 @@ EShLanguage VkTestFramework::FindLanguage(const VkShaderStage shader_type)
     case VK_SHADER_STAGE_VERTEX:
         return EShLangVertex;
 
-    case VK_SHADER_STAGE_TESS_CONTROL:
+    case VK_SHADER_STAGE_TESSELLATION_CONTROL:
         return EShLangTessControl;
 
-    case VK_SHADER_STAGE_TESS_EVALUATION:
+    case VK_SHADER_STAGE_TESSELLATION_EVALUATION:
         return EShLangTessEvaluation;
 
     case VK_SHADER_STAGE_GEOMETRY:
