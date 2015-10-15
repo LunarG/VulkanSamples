@@ -44,6 +44,11 @@ int main(int argc, char **argv)
     init_enumerate_device(info);
     init_device(info);
 
+    /* For this sample, we'll start with GLSL so the shader function is plain */
+    /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
+    /* the driver.  We do this for clarity rather than using pre-compiled     */
+    /* SPIR-V                                                                 */
+
     /* VULKAN_KEY_START */
     static const char *vertShaderText =
             "#version 140\n"
@@ -58,6 +63,8 @@ int main(int argc, char **argv)
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
+            "\n"
+            "   // GL->VK conventions\n"
             "   gl_Position.y = -gl_Position.y;\n"
             "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
             "}\n";
