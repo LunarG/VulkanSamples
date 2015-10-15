@@ -33,6 +33,11 @@ Create Graphics Pipeline
 #include <cstdlib>
 #include "cube_data.h"
 
+/* For this sample, we'll start with GLSL so the shader function is plain */
+/* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
+/* the driver.  We do this for clarity rather than using pre-compiled     */
+/* SPIR-V                                                                 */
+
 static const char *vertShaderText =
         "#version 140\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
@@ -46,6 +51,8 @@ static const char *vertShaderText =
         "void main() {\n"
         "   outColor = inColor;\n"
         "   gl_Position = myBufferVals.mvp * pos;\n"
+        "\n"
+        "   // GL->VK conventions\n"
         "   gl_Position.y = -gl_Position.y;\n"
         "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
         "}\n";

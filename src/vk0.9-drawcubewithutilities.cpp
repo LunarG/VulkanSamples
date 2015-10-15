@@ -49,6 +49,8 @@ static const char *vertShaderText =
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
+    "\n"
+    "   // GL->VK conventions\n"
     "   gl_Position.y = -gl_Position.y;\n"
     "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
     "}\n";
