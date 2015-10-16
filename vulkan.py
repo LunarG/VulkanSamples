@@ -824,7 +824,7 @@ core = Extension(
              Param("uint32_t", "attachmentCount"),
              Param("const VkClearAttachment*", "pAttachments"),
              Param("uint32_t", "rectCount"),
-             Param("const VkRect3D*", "pRects")]),
+             Param("const VkClearRect*", "pRects")]),
 
         Proto("void", "CmdResolveImage",
             [Param("VkCmdBuffer", "cmdBuffer"),

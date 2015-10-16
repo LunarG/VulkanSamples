@@ -964,7 +964,7 @@ void cmd_clear_color_attachment(
     VkImageLayout                           imageLayout,
     const VkClearColorValue                *pColor,
     uint32_t                                rectCount,
-    const VkRect3D                         *pRects)
+    const VkClearRect                      *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_render_pass_subpass *subpass =
@@ -1001,7 +1001,7 @@ void cmd_clear_depth_stencil_attachment(
     VkImageLayout                           imageLayout,
     const VkClearDepthStencilValue*         pDepthStencil,
     uint32_t                                rectCount,
-    const VkRect3D                         *pRects)
+    const VkClearRect                      *pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     const struct intel_render_pass_subpass *subpass =
@@ -1034,7 +1034,7 @@ void VKAPI vkCmdClearAttachments(
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
-    const VkRect3D*                             pRects)
+    const VkClearRect*                          pRects)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 

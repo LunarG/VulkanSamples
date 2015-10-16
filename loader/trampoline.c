@@ -1340,7 +1340,7 @@ LOADER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCmdBuffer cmdBuffer, VkIm
     disp->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
-LOADER_EXPORT void VKAPI vkCmdClearAttachments(VkCmdBuffer cmdBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkRect3D* pRects)
+LOADER_EXPORT void VKAPI vkCmdClearAttachments(VkCmdBuffer cmdBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkClearRect* pRects)
 {
     const VkLayerDispatchTable *disp;
 

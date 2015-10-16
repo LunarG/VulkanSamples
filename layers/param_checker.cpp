@@ -6182,7 +6182,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
 bool PreCmdClearAttachments(
     VkCmdBuffer cmdBuffer,
     const VkClearColorValue* pColor,
-    const VkRect3D* pRects)
+    const VkClearRect* pRects)
 {
     if(pColor != nullptr)
     {
@@ -6200,7 +6200,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
-    const VkRect3D*                             pRects)
+    const VkClearRect*                          pRects)
 {
     for (uint32_t i = 0; i < attachmentCount; i++) {
         PreCmdClearAttachments(cmdBuffer, &pAttachments[i].clearValue.color, pRects);

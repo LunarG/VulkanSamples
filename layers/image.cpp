@@ -545,7 +545,7 @@ void VKAPI vkCmdClearAttachments(
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
-    const VkRect3D*                             pRects)
+    const VkClearRect*                          pRects)
 {
     VkBool32 skipCall = VK_FALSE;
     VkImageAspectFlags aspectMask;

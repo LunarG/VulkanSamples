@@ -2650,7 +2650,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     color_attachment.clearValue.color.float32[2] = 0;
     color_attachment.clearValue.color.float32[3] = 0;
     color_attachment.colorAttachment = 0;
-    VkRect3D          clear_rect  = { { 0, 0, 0 }, { 32, 32, 1 } };
+    VkClearRect clear_rect  = { { 0, 0, 0 }, { 32, 32, 1 } };
     vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(),
                           1, &color_attachment,
                           1, &clear_rect);
@@ -3279,7 +3279,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     color_attachment.clearValue.color.float32[2] = 1.0;
     color_attachment.clearValue.color.float32[3] = 1.0;
     color_attachment.colorAttachment = 0;
-    VkRect3D clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
+    VkClearRect clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
 
     vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
     msgFlags = m_errorMonitor->GetState(&msgString);
