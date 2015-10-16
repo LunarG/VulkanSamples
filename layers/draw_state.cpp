@@ -2722,8 +2722,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
         if (pCB->state == CB_UPDATE_ACTIVE) {
             // Warn if this is issued prior to Draw Cmd
             if (!hasDrawCmd(pCB)) {
-                // TODO : cmdBuffer should be srcObj
-                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearColorAttachment() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
                         " It is recommended you use RenderPass LOAD_OP_CLEAR on Color Attachments prior to any Draw.", reinterpret_cast<uint64_t>(cmdBuffer));
             }
@@ -2731,6 +2730,26 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorAttachment(
             skipCall |= addCmd(pCB, CMD_CLEARCOLORATTACHMENT);
         } else {
             skipCall |= report_error_no_cb_begin(cmdBuffer, "vkCmdClearColorAttachment()");
+        }
+
+        // Validate that attachment is in reference list of active subpass
+        if (pCB->activeRenderPass) {
+            const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass.handle];
+            const VkSubpassDescription   *pSD   = &pRPCI->pSubpasses[pCB->activeSubpass];
+
+            VkBool32 found = VK_FALSE;
+            for (uint32_t i = 0; i < pSD->colorCount; i++) {
+                if (colorAttachment == pSD->pColorAttachments[i].attachment) {
+                    found = VK_TRUE;
+                    break;
+                }
+            }
+            if (VK_FALSE == found) {
+                skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                        (uint64_t)cmdBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                        "vkCmdClearColorAttachment() attachment index %d not found in attachment reference array of active subpass %d",
+                        colorAttachment, pCB->activeSubpass);
+            }
         }
         skipCall |= outsideRenderPass(pCB, "vkCmdClearColorAttachment");
     }

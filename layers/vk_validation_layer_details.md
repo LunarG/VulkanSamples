@@ -49,6 +49,7 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | Index Buffer Binding | Verify that an index buffer is bound at the point when an indexed draw is attempted. | INDEX_BUFFER_NOT_BOUND | vkCmdDrawIndexed vkCmdDrawIndexedIndirect | TODO | Implement validation test |
 | Viewport and Scissors match | In PSO viewportCount and scissorCount must match. Also for each count that is non-zero, there corresponding data array ptr should be non-NULL. | VIEWPORT_SCISSOR_MISMATCH | vkCreateGraphicsPipelines vkCmdSetViewport vkCmdSetScissor | TODO | Implement validation test |
 | Valid Image Aspects for DS Updates | When updating Descriptor Sets, the Image Aspect must not have both the DEPTH and STENCIL aspects set | INVALID_IMAGE_ASPECT | vkUpdateDescriptorSets | TODO | Implement validation test |
+| Attachment References in Subpass | Attachment reference must be present in active subpass | MISSING_ATTACHMENT_REFERENCE | vkCmdClearColorAttachment | TODO | Implement validation test |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when Drawstate attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |

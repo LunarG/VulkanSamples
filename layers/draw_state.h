@@ -71,6 +71,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
     DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
+    DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,     // Attachment reference must be present in active subpass
     DRAWSTATE_INVALID_EXTENSION,
 } DRAW_STATE_ERROR;
 
