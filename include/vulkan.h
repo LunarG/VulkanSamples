@@ -1013,10 +1013,6 @@ typedef enum {
     VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT = 0x00000001,
 } VkAttachmentDescriptionFlagBits;
 typedef VkFlags VkAttachmentDescriptionFlags;
-
-typedef enum {
-    VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT = 0x00000001,
-} VkSubpassDescriptionFlagBits;
 typedef VkFlags VkSubpassDescriptionFlags;
 
 typedef enum {

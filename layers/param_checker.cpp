@@ -1305,46 +1305,6 @@ std::string EnumeratorString(VkShaderStageFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkSubpassDescriptionFlagBits const& enumerator)
-{
-    VkSubpassDescriptionFlagBits allFlags = (VkSubpassDescriptionFlagBits)(VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkSubpassDescriptionFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT)
-    {
-        strings.push_back("VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
 bool ValidateEnumerator(VkPipelineStageFlagBits const& enumerator)
 {
     VkPipelineStageFlagBits allFlags = (VkPipelineStageFlagBits)(VK_PIPELINE_STAGE_ALL_GRAPHICS |
