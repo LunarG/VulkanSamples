@@ -619,19 +619,19 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     startTime = vktrace_get_time();
     result = mdd(device)->devTable.AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
     endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkAllocDescriptorSets, (pAllocInfo->count * sizeof(VkDescriptorSetLayout)) + (pAllocInfo->count * sizeof(VkDescriptorSet)));
+    CREATE_TRACE_PACKET(vkAllocDescriptorSets, vk_size_vkdescriptorsetallocinfo(pAllocInfo) + (pAllocInfo->count * sizeof(VkDescriptorSet)));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
     pPacket = interpret_body_as_vkAllocDescriptorSets(pHeader);
     pPacket->device = device;
-    pPacket->pAllocInfo->count = pAllocInfo->count;
-    pPacket->pAllocInfo->descriptorPool = pAllocInfo->descriptorPool;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkDescriptorSetAllocInfo), pAllocInfo);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pSetLayouts), pPacket->pAllocInfo->count * sizeof(VkDescriptorSetLayout), pAllocInfo->pSetLayouts);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), pPacket->pAllocInfo->count * sizeof(VkDescriptorSet), pDescriptorSets);
     pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo->pSetLayouts));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorSets));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo));
     FINISH_TRACE_PACKET();
     return result;
 }

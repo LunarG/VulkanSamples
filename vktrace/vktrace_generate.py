@@ -587,6 +587,7 @@ class Subcommand(object):
         pid_enum.append('        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(*ppStruct)->pRequestedQueues[i].pQueuePriorities,')
         pid_enum.append('                                   pInStruct->pRequestedQueues[i].queueCount*sizeof(float),')
         pid_enum.append('                                   pInStruct->pRequestedQueues[i].pQueuePriorities);')
+        pid_enum.append('        vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues[i].pQueuePriorities);')
         pid_enum.append('    }')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&(*ppStruct)->pRequestedQueues);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
@@ -852,6 +853,9 @@ class Subcommand(object):
                                                                                          '    vktrace_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
+                             'AllocDescriptorSets' : {'param': 'pAllocInfo', 'txt':
+                                                                               ['VkDescriptorSetLayout **ppDescSetLayout = (VkDescriptorSetLayout **) &pPacket->pAllocInfo->pSetLayouts;\n'
+                                                                                '        *ppDescSetLayout = (VkDescriptorSetLayout *) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pAllocInfo->pSetLayouts));']},
                              'UpdateDescriptorSets' : {'param': 'pDescriptorWrites', 'txt':
                                                                                [ 'uint32_t i;\n',
                                                                                  'for (i = 0; i < pPacket->writeCount; i++) {\n',
@@ -1542,12 +1546,18 @@ class Subcommand(object):
                 elif create_func: # Declare local var to store created handle into
                     if 'AllocDescriptorSets' == proto.name:
                         p_ty = proto.params[-1].ty.strip('*').replace('const ', '')
-                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->count * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
-                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->count * sizeof(VkDescriptorSetLayout));')
-                        rbody.append('            for (uint32_t i = 0; i < pPacket->count; i++)')
+                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->pAllocInfo->count * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
+                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocInfo->count * sizeof(VkDescriptorSetLayout));')
+                        rbody.append('            VkDescriptorSetAllocInfo local_AllocInfo, *local_pAllocInfo = &local_AllocInfo;')
+                        rbody.append('            VkDescriptorPool local_descPool;')
+                        rbody.append('            local_descPool.handle = m_objMapper.remap_descriptorpools(pPacket->pAllocInfo->descriptorPool.handle);')
+                        rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++)')
                         rbody.append('            {')
-                        rbody.append('                local_pSetLayouts[i].handle = m_objMapper.remap_descriptorsetlayouts(pPacket->%s[i].handle);' % (proto.params[-2].name))
+                        rbody.append('                local_pSetLayouts[i].handle = m_objMapper.remap_descriptorsetlayouts(pPacket->%s->pSetLayouts[i].handle);' % (proto.params[-2].name))
                         rbody.append('            }')
+                        rbody.append('            memcpy(local_pAllocInfo, pPacket->pAllocInfo, sizeof(VkDescriptorSetAllocInfo));')
+                        rbody.append('            local_pAllocInfo->pSetLayouts = local_pSetLayouts;')
+                        rbody.append('            local_pAllocInfo->descriptorPool.handle = local_descPool.handle;')
                     else:
                         rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif proto.name == 'ResetFences':
@@ -1655,7 +1665,7 @@ class Subcommand(object):
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                for (uint32_t i = 0; i < pPacket->count; i++) {')
+                    rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++) {')
                     rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i].handle, local_%s[i].handle);' % (proto.params[-1].name, proto.params[-1].name))
                     rbody.append('                }')
                     rbody.append('            }')

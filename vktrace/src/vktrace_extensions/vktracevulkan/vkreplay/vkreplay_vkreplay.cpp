@@ -1961,12 +1961,12 @@ VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBu
     uint64_t remappedCmdPoolHandle = m_objMapper.remap_cmdpools(pPacket->pAllocInfo->cmdPool.handle);
     memcpy((void*)&(pPacket->pAllocInfo->cmdPool.handle), (void*)&(remappedCmdPoolHandle), sizeof(uint64_t));
 
-    replayResult = m_vkFuncs.real_vkAllocCommandBuffers(remappeddevice, pPacket->pAllocInfo, &local_pCmdBuffers);
+    replayResult = m_vkFuncs.real_vkAllocCommandBuffers(remappeddevice, pPacket->pAllocInfo, local_pCmdBuffers);
     memcpy((void*)&(pPacket->pAllocInfo->cmdPool.handle), (void*)&(local_CmdPool.handle), sizeof(uint64_t));
     if (replayResult == VK_SUCCESS)
     {
         for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++) {
-            m_objMapper.add_to_cmdbuffers_map(*(pPacket->pCmdBuffers[i]), local_pCmdBuffers[i]);
+            m_objMapper.add_to_cmdbuffers_map(pPacket->pCmdBuffers[i], local_pCmdBuffers[i]);
         }
     }
     return replayResult;
