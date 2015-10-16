@@ -44,7 +44,7 @@ extern "C" {
 #define VK_API_VERSION VK_MAKE_VERSION(0, 175, 0)
 
 
-#if defined(__cplusplus) && (_MSC_VER >= 1800 || __cplusplus >= 201103L)
+#if defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
     #define VK_NULL_HANDLE nullptr
 #else
     #define VK_NULL_HANDLE 0
