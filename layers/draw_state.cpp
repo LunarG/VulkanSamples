@@ -2947,10 +2947,10 @@ bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImag
     if (srcImageLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
         if (srcImageLayout == VK_IMAGE_LAYOUT_GENERAL) {
             skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Layout for input image should be TRANSFER_SOURCE_OPTIMAL instead of GENERAL.");
+                                 "Layout for input image should be TRANSFER_SRC_OPTIMAL instead of GENERAL.");
         } else {
             skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Layout for input image is %d but can only be TRANSFER_SOURCE_OPTIMAL or GENERAL.", srcImageLayout);
+                                 "Layout for input image is %d but can only be TRANSFER_SRC_OPTIMAL or GENERAL.", srcImageLayout);
         }
     }
     return skip_call;
@@ -3300,6 +3300,49 @@ bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
     return skip;
 }
 
+bool ValidateOutputMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkImageMemoryBarrier* image_mem_barrier, VkAccessFlags bit) {
+    bool skip_call = false;
+    if (image_mem_barrier->srcAccessMask | bit) {
+        if (image_mem_barrier->srcAccessMask != bit) {
+            skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                 "Additional bits in srcAccessMask %d are specified when source layout is %d.", image_mem_barrier->srcAccessMask, image_mem_barrier->oldLayout);
+        }
+    } else {
+        skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                             "Cannot specify srcAccessMask %d without %d when source layout is %d.", image_mem_barrier->srcAccessMask, bit, image_mem_barrier->oldLayout);
+    }
+    return skip_call;
+}
+
+//TODO: Combine this with function below
+bool ValidateInputMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkImageMemoryBarrier* image_mem_barrier, VkAccessFlags bit) {
+    bool skip_call = false;
+    if (image_mem_barrier->dstAccessMask | bit) {
+        if (image_mem_barrier->dstAccessMask != bit) {
+            skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                 "Additional bits in dstAccessMask %d are specified when dest layout is %d.", image_mem_barrier->srcAccessMask, image_mem_barrier->newLayout);
+        }
+    } else {
+        skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                             "Cannot specify srcAccessMask %d without %d when dest layout is %d.", image_mem_barrier->srcAccessMask, bit, image_mem_barrier->newLayout);
+    }
+    return skip_call;
+}
+
+bool ValidateInputMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkImageMemoryBarrier* image_mem_barrier, VkAccessFlags bit1, VkAccessFlags bit2) {
+    bool skip_call = false;
+    if (image_mem_barrier->dstAccessMask | bit1 || image_mem_barrier->dstAccessMask | bit2) {
+        if (image_mem_barrier->dstAccessMask & !(bit1 | bit2)) {
+            skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                 "Additional bits in dstAccessMask %d are specified when dest layout is %d.", image_mem_barrier->srcAccessMask, image_mem_barrier->newLayout);
+        }
+    } else {
+        skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                             "Cannot specify srcAccessMask %d without %d or %d when dest layout is %d.", image_mem_barrier->srcAccessMask, bit1, bit2, image_mem_barrier->newLayout);
+    }
+    return skip_call;
+}
+
 bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
     bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -3315,6 +3358,79 @@ bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const
         if (!dev_data->renderPassMap[pCB->activeRenderPass]->hasSelfDependency[pCB->activeSubpass]) {
             skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
                                  "Barriers cannot be set during subpass %d with no self dependency specified.", pCB->activeSubpass);
+        }
+    }
+    for (uint32_t i = 0; i < memBarrierCount; ++i) {
+        auto mem_barrier = reinterpret_cast<const VkMemoryBarrier*>(ppMemBarriers[i]);
+        if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
+            auto image_mem_barrier = reinterpret_cast<const VkImageMemoryBarrier*>(mem_barrier);
+            switch (image_mem_barrier->oldLayout) {
+                case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
+                    ValidateOutputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
+                    ValidateOutputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: {
+                    ValidateOutputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_TRANSFER_WRITE_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_PREINITIALIZED: {
+                    ValidateOutputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_HOST_WRITE_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_UNDEFINED:
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: {
+                    if (image_mem_barrier->srcAccessMask != 0) {
+                        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                             "Additional bits in srcAccessMask %d are specified when source layout is %d.", image_mem_barrier->srcAccessMask, image_mem_barrier->oldLayout);
+                    }
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_GENERAL:
+                default: {
+                    break;
+                }
+            }
+            switch (image_mem_barrier->newLayout) {
+                case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
+                    ValidateInputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
+                    ValidateInputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL: {
+                    ValidateInputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: {
+                    ValidateInputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: {
+                    ValidateInputMaskBits(dev_data, cmdBuffer, image_mem_barrier, VK_ACCESS_MEMORY_READ_BIT);
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: {
+                    if (image_mem_barrier->srcAccessMask != 0) {
+                        skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_BARRIER, "DS",
+                                             "Additional bits in dstAccessMask %d are specified when dest layout is %d.", image_mem_barrier->dstAccessMask, image_mem_barrier->newLayout);
+                    }
+                    break;
+                }
+                case VK_IMAGE_LAYOUT_PREINITIALIZED:
+                case VK_IMAGE_LAYOUT_UNDEFINED:
+                case VK_IMAGE_LAYOUT_GENERAL:
+                default: {
+                    break;
+                }
+            }
         }
     }
     return skip_call;
