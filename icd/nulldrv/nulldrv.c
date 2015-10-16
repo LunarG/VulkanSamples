@@ -1750,6 +1750,7 @@ ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
 ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
+    size_t                                      dataSize,
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;

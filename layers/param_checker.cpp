@@ -4008,6 +4008,7 @@ VK_LAYER_EXPORT size_t VKAPI vkGetPipelineCacheSize(
 bool PostGetPipelineCacheData(
     VkDevice device,
     VkPipelineCache pipelineCache,
+    size_t dataSize,
     void* pData,
     VkResult result)
 {
@@ -4030,11 +4031,12 @@ bool PostGetPipelineCacheData(
 VK_LAYER_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkDevice device,
     VkPipelineCache pipelineCache,
+    size_t dataSize,
     void* pData)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pData);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, dataSize, pData);
 
-    PostGetPipelineCacheData(device, pipelineCache, pData, result);
+    PostGetPipelineCacheData(device, pipelineCache, dataSize, pData, result);
 
     return result;
 }

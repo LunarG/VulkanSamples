@@ -1735,10 +1735,11 @@ size_t VKAPI vkGetPipelineCacheSize(
 VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
+    size_t                                      dataSize,
     void*                                       pData)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, pData);
+    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, dataSize, pData);
     return result;
 }
 

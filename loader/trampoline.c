@@ -827,13 +827,13 @@ LOADER_EXPORT size_t VKAPI vkGetPipelineCacheSize(VkDevice device, VkPipelineCac
     return disp->GetPipelineCacheSize(device, pipelineCache);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, void* pData)
+LOADER_EXPORT VkResult VKAPI vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t dataSize, void* pData)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetPipelineCacheData(device, pipelineCache, pData);
+    return disp->GetPipelineCacheData(device, pipelineCache, dataSize, pData);
 }
 
 LOADER_EXPORT VkResult VKAPI vkMergePipelineCaches(VkDevice device, VkPipelineCache destCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches)
