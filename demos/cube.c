@@ -819,9 +819,9 @@ static void demo_prepare_buffers(struct demo *demo)
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
-                .mipLevels = 1,
+                .numLevels = 1,
                 .baseArrayLayer = 0,
-                .arraySize = 1
+                .numLayers = 1
             },
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .flags = 0,
@@ -869,9 +869,9 @@ static void demo_prepare_depth(struct demo *demo)
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,
-            .mipLevels = 1,
+            .numLevels = 1,
             .baseArrayLayer = 0,
-            .arraySize = 1
+            .numLayers = 1
         },
         .flags = 0,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,

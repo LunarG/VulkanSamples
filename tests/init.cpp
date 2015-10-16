@@ -456,9 +456,9 @@ void VkTest::CreateImageTest()
     viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.arraySize = 1;
+    viewInfo.subresourceRange.numLayers = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.mipLevels = 1;
+    viewInfo.subresourceRange.numLevels = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 //    VkResult VKAPI vkCreateImageView(

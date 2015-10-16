@@ -714,6 +714,6 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     pImageFormatProperties->maxExtent.width  = 8192;
     pImageFormatProperties->maxExtent.height = 8192;
     pImageFormatProperties->maxExtent.depth  = 8192;
-    pImageFormatProperties->maxArraySize     = 2048;
+    pImageFormatProperties->maxArrayLayers   = 2048;
     pImageFormatProperties->maxResourceSize  = intel_max_resource_size;
 }

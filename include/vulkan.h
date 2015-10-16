@@ -1179,7 +1179,7 @@ typedef struct {
 typedef struct {
     VkExtent3D                                  maxExtent;
     uint32_t                                    maxMipLevels;
-    uint32_t                                    maxArraySize;
+    uint32_t                                    maxArrayLayers;
     VkSampleCountFlags                          sampleCounts;
     VkDeviceSize                                maxResourceSize;
 } VkImageFormatProperties;
@@ -1512,9 +1512,9 @@ typedef struct {
 typedef struct {
     VkImageAspectFlags                          aspectMask;
     uint32_t                                    baseMipLevel;
-    uint32_t                                    mipLevels;
+    uint32_t                                    numLevels;
     uint32_t                                    baseArrayLayer;
-    uint32_t                                    arraySize;
+    uint32_t                                    numLayers;
 } VkImageSubresourceRange;
 
 typedef struct {
@@ -1952,8 +1952,8 @@ typedef struct {
 typedef struct {
     VkImageAspectFlags                          aspect;
     uint32_t                                    mipLevel;
-    uint32_t                                    arrayLayer;
-    uint32_t                                    arraySize;
+    uint32_t                                    baseArrayLayer;
+    uint32_t                                    numLayers;
 } VkImageSubresourceCopy;
 
 typedef struct {

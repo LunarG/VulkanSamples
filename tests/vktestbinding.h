@@ -421,7 +421,7 @@ public:
     static VkImageSubresourceCopy subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
     static VkImageSubresourceCopy subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
     static VkImageSubresourceRange subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t mip_levels,
-                                                     uint32_t base_array_layer, uint32_t array_size);
+                                                     uint32_t base_array_layer, uint32_t num_layers);
     static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspectFlags aspect_mask);
     static VkImageSubresourceRange subresource_range(const VkImageSubresource &subres);
 
@@ -693,8 +693,8 @@ inline VkImageSubresourceCopy Image::subresource(VkImageAspectFlagBits aspect, u
     VkImageSubresourceCopy subres = {};
     subres.aspect = aspect;
     subres.mipLevel = mip_level;
-    subres.arrayLayer = array_layer;
-    subres.arraySize = array_size;
+    subres.baseArrayLayer = array_layer;
+    subres.numLayers = array_size;
     return subres;
 }
 
@@ -725,14 +725,14 @@ inline VkImageSubresourceCopy Image::subresource(const VkImageSubresourceRange &
 }
 
 inline VkImageSubresourceRange Image::subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t mip_levels,
-                                                        uint32_t base_array_layer, uint32_t array_size)
+                                                        uint32_t base_array_layer, uint32_t num_layers)
 {
     VkImageSubresourceRange range = {};
     range.aspectMask = aspect_mask;
     range.baseMipLevel = base_mip_level;
-    range.mipLevels = mip_levels;
+    range.numLevels = mip_levels;
     range.baseArrayLayer = base_array_layer;
-    range.arraySize = array_size;
+    range.numLayers = num_layers;
     return range;
 }
 

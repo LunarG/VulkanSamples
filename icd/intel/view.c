@@ -1239,11 +1239,11 @@ void intel_img_view_init(struct intel_dev *dev,
     uint32_t mip_levels, array_size;
     struct intel_img *img = intel_img(info->image);
 
-    mip_levels = info->subresourceRange.mipLevels;
+    mip_levels = info->subresourceRange.numLevels;
     if (mip_levels > img->mip_levels - info->subresourceRange.baseMipLevel)
         mip_levels = img->mip_levels - info->subresourceRange.baseMipLevel;
 
-    array_size = info->subresourceRange.arraySize;
+    array_size = info->subresourceRange.numLayers;
     if (array_size > img->array_size - info->subresourceRange.baseArrayLayer)
         array_size = img->array_size - info->subresourceRange.baseArrayLayer;
 
@@ -1329,27 +1329,27 @@ void intel_att_view_init(struct intel_dev *dev,
 
     att_view->mipLevel = info->subresourceRange.baseMipLevel;
     att_view->baseArrayLayer = info->subresourceRange.baseArrayLayer;
-    att_view->array_size = info->subresourceRange.arraySize;
+    att_view->array_size = info->subresourceRange.numLayers;
 
     view_type = img_type_to_view_type(img->type,
                                       info->subresourceRange.baseArrayLayer,
-                                      info->subresourceRange.arraySize);
+                                      info->subresourceRange.numLayers);
 
     att_view_init_for_input(att_view, dev->gpu, img, view_type, info->format,
                             info->subresourceRange.baseMipLevel,
                             info->subresourceRange.baseArrayLayer,
-                            info->subresourceRange.arraySize);
+                            info->subresourceRange.numLayers);
 
     if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         att_view_init_for_ds(att_view, dev->gpu, img, view_type, img->layout.format,
                              info->subresourceRange.baseMipLevel,
                              info->subresourceRange.baseArrayLayer,
-                             info->subresourceRange.arraySize);
+                             info->subresourceRange.numLayers);
     } else {
         att_view_init_for_rt(att_view, dev->gpu, img, view_type, info->format,
                              info->subresourceRange.baseMipLevel,
                              info->subresourceRange.baseArrayLayer,
-                             info->subresourceRange.arraySize);
+                             info->subresourceRange.numLayers);
     }
 }
 

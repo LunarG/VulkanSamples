@@ -400,12 +400,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second->arraySize << " mip levels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
-        if (!pCreateInfo->subresourceRange.mipLevels) {
+        if (!pCreateInfo->subresourceRange.numLevels) {
             std::stringstream ss;
             ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.mipLevels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
-        if (!pCreateInfo->subresourceRange.arraySize) {
+        if (!pCreateInfo->subresourceRange.numLayers) {
             std::stringstream ss;
             ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.arraySize.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());

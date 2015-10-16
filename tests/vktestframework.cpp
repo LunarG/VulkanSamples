@@ -559,9 +559,9 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     memoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     memoryBarrier.subresourceRange.baseMipLevel = 0;
-    memoryBarrier.subresourceRange.mipLevels = 1;
+    memoryBarrier.subresourceRange.numLevels = 1;
     memoryBarrier.subresourceRange.baseArrayLayer = 0;
-    memoryBarrier.subresourceRange.arraySize = 1;
+    memoryBarrier.subresourceRange.numLayers = 1;
     memoryBarrier.image = m_buffers[m_current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -957,9 +957,9 @@ void TestFrameworkVkPresent::CreateSwapchain()
         color_image_view.format = m_format;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.numLevels = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.subresourceRange.numLayers = 1;
 
         m_buffers[i].image = swapchainImages[i];
 
@@ -1002,9 +1002,9 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.numLevels = 1;
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.arraySize = 1;
+    image_memory_barrier.subresourceRange.numLayers = 1;
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
