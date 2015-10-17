@@ -347,7 +347,7 @@ struct demo {
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
     VkSurfaceDescriptionWindowKHR surface_description;
     uint32_t swapchainImageCount;
-    VkSwapchainKHR swap_chain;
+    VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
 
     VkCmdPool cmd_pool;
@@ -406,6 +406,9 @@ struct demo {
     uint32_t current_buffer;
     uint32_t queue_count;
 };
+
+// Forward declaration:
+static void demo_resize(struct demo *demo);
 
 static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
@@ -636,13 +639,23 @@ static void demo_draw(struct demo *demo)
     assert(!err);
 
     // Get the index of the next available swapchain image:
-    err = demo->fpAcquireNextImageKHR(demo->device, demo->swap_chain,
+    err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
                                       &demo->current_buffer);
-    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
-    // return codes
-    assert(!err);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
+        // demo->swapchain is out of date (e.g. the window was resized) and
+        // must be recreated:
+        demo_resize(demo);
+        demo_draw(demo);
+        vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+        return;
+    } else if (err == VK_SUBOPTIMAL_KHR) {
+        // demo->swapchain is not as optimal as it could be, but the platform's
+        // presentation engine will still present the image correctly.
+    } else {
+        assert(!err);
+    }
 
     // Assume the command buffer has been run on current_buffer before so
     // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
@@ -674,15 +687,22 @@ static void demo_draw(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = NULL,
         .swapchainCount = 1,
-        .swapchains = &demo->swap_chain,
+        .swapchains = &demo->swapchain,
         .imageIndices = &demo->current_buffer,
     };
 
 // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
     err = demo->fpQueuePresentKHR(demo->queue, &present);
-    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
-    // return codes
-    assert(!err);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR) {
+        // demo->swapchain is out of date (e.g. the window was resized) and
+        // must be recreated:
+        demo_resize(demo);
+    } else if (err == VK_SUBOPTIMAL_KHR) {
+        // demo->swapchain is not as optimal as it could be, but the platform's
+        // presentation engine will still present the image correctly.
+    } else {
+        assert(!err);
+    }
 
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
@@ -693,6 +713,7 @@ static void demo_draw(struct demo *demo)
 static void demo_prepare_buffers(struct demo *demo)
 {
     VkResult U_ASSERT_ONLY err;
+    VkSwapchainKHR oldSwapchain = demo->swapchain;
 
     // Check the surface properties and formats
     VkSurfacePropertiesKHR surfProperties;
@@ -727,6 +748,8 @@ static void demo_prepare_buffers(struct demo *demo)
     {
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfProperties.currentExtent;
+        demo->width = surfProperties.currentExtent.width;
+        demo->height = surfProperties.currentExtent.height;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
@@ -763,7 +786,7 @@ static void demo_prepare_buffers(struct demo *demo)
         preTransform = surfProperties.currentTransform;
     }
 
-    const VkSwapchainCreateInfoKHR swap_chain = {
+    const VkSwapchainCreateInfoKHR swapchain = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
         .pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&demo->surface_description,
@@ -781,22 +804,30 @@ static void demo_prepare_buffers(struct demo *demo)
         .queueFamilyCount = 0,
         .pQueueFamilyIndices = NULL,
         .presentMode = swapchainPresentMode,
-        .oldSwapchain.handle = 0,
+        .oldSwapchain = oldSwapchain,
         .clipped = true,
     };
     uint32_t i;
 
-    err = demo->fpCreateSwapchainKHR(demo->device, &swap_chain, &demo->swap_chain);
+    err = demo->fpCreateSwapchainKHR(demo->device, &swapchain, &demo->swapchain);
     assert(!err);
 
-    err = demo->fpGetSwapchainImagesKHR(demo->device, demo->swap_chain,
+    // If we just re-created an existing swapchain, we should destroy the old
+    // swapchain at this point.
+    // Note: destroying the swapchain also cleans up all its associated
+    // presentable images once the platform is done with them.
+    if (oldSwapchain.handle != VK_NULL_HANDLE) {
+        demo->fpDestroySwapchainKHR(demo->device, oldSwapchain);
+    }
+
+    err = demo->fpGetSwapchainImagesKHR(demo->device, demo->swapchain,
                                         &demo->swapchainImageCount, NULL);
     assert(!err);
 
     VkImage* swapchainImages =
         (VkImage*)malloc(demo->swapchainImageCount * sizeof(VkImage));
     assert(swapchainImages);
-    err = demo->fpGetSwapchainImagesKHR(demo->device, demo->swap_chain,
+    err = demo->fpGetSwapchainImagesKHR(demo->device, demo->swapchain,
                                         &demo->swapchainImageCount,
                                         swapchainImages);
     assert(!err);
@@ -1732,6 +1763,8 @@ static void demo_prepare(struct demo *demo)
         .count = 1,
     };
 
+    demo->swapchain.handle = VK_NULL_HANDLE;
+
     demo_prepare_buffers(demo);
     demo_prepare_depth(demo);
     demo_prepare_textures(demo);
@@ -1790,7 +1823,7 @@ static void demo_cleanup(struct demo *demo)
         vkFreeMemory(demo->device, demo->textures[i].mem);
         vkDestroySampler(demo->device, demo->textures[i].sampler);
     }
-    demo->fpDestroySwapchainKHR(demo->device, demo->swap_chain);
+    demo->fpDestroySwapchainKHR(demo->device, demo->swapchain);
 
     vkDestroyImageView(demo->device, demo->depth.view);
     vkDestroyImage(demo->device, demo->depth.image);
@@ -1819,6 +1852,67 @@ static void demo_cleanup(struct demo *demo)
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
 #endif // _WIN32
+}
+
+static void demo_resize(struct demo *demo)
+{
+    uint32_t i;
+
+    // In order to properly resize the window, we must re-create the swapchain
+    // AND redo the command buffers, etc.
+    //
+    // First, perform part of the demo_cleanup() function:
+    demo->prepared = false;
+
+    for (i = 0; i < demo->swapchainImageCount; i++) {
+        vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
+    }
+    free(demo->framebuffers);
+    vkDestroyDescriptorPool(demo->device, demo->desc_pool);
+
+    vkDestroyPipeline(demo->device, demo->pipeline);
+    vkDestroyPipelineCache(demo->device, demo->pipelineCache);
+    vkDestroyRenderPass(demo->device, demo->render_pass);
+    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout);
+    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout);
+
+    for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        vkDestroyImageView(demo->device, demo->textures[i].view);
+        vkDestroyImage(demo->device, demo->textures[i].image);
+        vkFreeMemory(demo->device, demo->textures[i].mem);
+        vkDestroySampler(demo->device, demo->textures[i].sampler);
+    }
+#if 0
+    demo->fpDestroySwapchainKHR(demo->device, demo->swapchain);
+#endif
+
+    vkDestroyImageView(demo->device, demo->depth.view);
+    vkDestroyImage(demo->device, demo->depth.image);
+    vkFreeMemory(demo->device, demo->depth.mem);
+
+    vkDestroyBuffer(demo->device, demo->uniform_data.buf);
+    vkFreeMemory(demo->device, demo->uniform_data.mem);
+
+    for (i = 0; i < demo->swapchainImageCount; i++) {
+        vkDestroyImageView(demo->device, demo->buffers[i].view);
+        vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
+    }
+    free(demo->buffers);
+
+#if 0
+    free(demo->queue_props);
+
+    vkDestroyCommandPool(demo->device, demo->cmd_pool);
+    vkDestroyDevice(demo->device);
+    if (demo->validate) {
+        demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
+    }
+#endif
+
+
+    // Second, re-perform the demo_prepare() function, which will re-create the
+    // swapchain:
+    demo_prepare(demo);
 }
 
 // On MS-Windows, make this a global, so it's available to WndProc()
@@ -1952,6 +2046,15 @@ static void demo_handle_event(struct demo *demo,
             }
         }
         break;
+    case XCB_CONFIGURE_NOTIFY:
+        {
+            const xcb_configure_notify_event_t *cfg =
+                (const xcb_configure_notify_event_t *) event;
+            if ((demo->width != cfg->width) || (demo->height != cfg->height)) {
+              demo_resize(demo);
+            }
+        }
+        break;
     default:
         break;
     }
@@ -1998,7 +2101,8 @@ static void demo_create_window(struct demo *demo)
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = demo->screen->black_pixel;
     value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
-                    XCB_EVENT_MASK_EXPOSURE;
+                    XCB_EVENT_MASK_EXPOSURE |
+                    XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     xcb_create_window(demo->connection,
             XCB_COPY_FROM_PARENT,
