@@ -297,7 +297,7 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
     case INTEL_GPU_ENGINE_3D:
         props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
         props->queueCount = 1;
-        props->supportsTimestamps = true;
+        props->timestampValidBits = 0;
         break;
     default:
         assert(!"unknown engine type");

@@ -1331,7 +1331,7 @@ typedef struct {
 typedef struct {
     VkQueueFlags                                queueFlags;
     uint32_t                                    queueCount;
-    VkBool32                                    supportsTimestamps;
+    uint32_t                                    timestampValidBits;
 } VkQueueFamilyProperties;
 
 typedef struct {

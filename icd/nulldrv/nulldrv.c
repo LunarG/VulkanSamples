@@ -1404,7 +1404,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     }
     pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
     pProperties->queueCount = 1;
-    pProperties->supportsTimestamps = false;
+    pProperties->timestampValidBits = 0;
 
     return VK_SUCCESS;
 }
