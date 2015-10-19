@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 177, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 178, 0)
 
 
 #if defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
@@ -152,7 +152,8 @@ typedef enum {
     VK_ERROR_MEMORY_MAP_FAILED = -5,
     VK_ERROR_LAYER_NOT_PRESENT = -6,
     VK_ERROR_EXTENSION_NOT_PRESENT = -7,
-    VK_ERROR_INCOMPATIBLE_DRIVER = -8,
+    VK_ERROR_FEATURE_NOT_PRESENT = -8,
+    VK_ERROR_INCOMPATIBLE_DRIVER = -9,
     VK_RESULT_BEGIN_RANGE = VK_ERROR_INCOMPATIBLE_DRIVER,
     VK_RESULT_END_RANGE = VK_INCOMPLETE,
     VK_RESULT_NUM = (VK_INCOMPLETE - VK_ERROR_INCOMPATIBLE_DRIVER + 1),
