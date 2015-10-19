@@ -4576,22 +4576,22 @@ bool PreCreateSampler(
         "vkCreateSampler parameter, VkTexMipmapMode pCreateInfo->mipMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeU < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressModeU > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeU < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeU > VK_TEX_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeU, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeV < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressModeV > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeV < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeV > VK_TEX_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeV, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeW < VK_TEX_ADDRESS_BEGIN_RANGE ||
-        pCreateInfo->addressModeW > VK_TEX_ADDRESS_END_RANGE)
+    if(pCreateInfo->addressModeW < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeW > VK_TEX_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
