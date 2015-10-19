@@ -1927,7 +1927,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    maxCommandBuffers;
     uint32_t                                    queueFamilyIndex;
     VkCmdPoolCreateFlags                        flags;
 } VkCmdPoolCreateInfo;
