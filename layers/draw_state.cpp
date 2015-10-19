@@ -886,7 +886,7 @@ static VkBool32 validateDescriptorSetImageView(VkDevice device, uint32_t writeDs
                     (flags & VK_IMAGE_ASPECT_STENCIL_BIT)) {
                     skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageView.handle, 0,
                         DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: DesriptorSet[%d] in WriteDesriptorSet[%d] "
-                        "has ImageView with both STENCIL and DEPTH aspects set", i, j);
+                        "has ImageView with both STENCIL and DEPTH aspects set", j, i);
                 }
             }
         }
