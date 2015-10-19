@@ -1911,6 +1911,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                         return VK_ERROR_VALIDATION_FAILED;
                 } else {
                     memset(pNewNode, 0, sizeof(SET_NODE));
+                    // TODO : Pool should store a total count of each type of Descriptor available
+                    //  When descriptors are allocated, decrement the count and validate here
+                    //  that the count doesn't go below 0. One reset/free need to bump count back up.
                     // Insert set at head of Set LL for this pool
                     pNewNode->pNext = pPoolNode->pSets;
                     pPoolNode->pSets = pNewNode;
