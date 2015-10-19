@@ -1058,11 +1058,20 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
 int main(int argc, char **argv)
 {
-    struct app_gpu gpus[MAX_GPUS];
+	unsigned int major, minor, patch;
+	struct app_gpu gpus[MAX_GPUS];
     VkPhysicalDevice objs[MAX_GPUS];
     uint32_t gpu_count, i;
     VkResult err;
     struct app_instance inst;
+
+	major = VK_API_VERSION >> 22;
+	minor = (VK_API_VERSION >> 12) & 0x4ff;
+	patch = VK_API_VERSION & 0xfff;
+	printf("===========\n");
+	printf("VULKAN INFO\n");
+    printf("===========\n\n");
+    printf("Vulkan API Version: %d %d %d\n\n", major, minor, patch);
 
     app_create_instance(&inst);
 
