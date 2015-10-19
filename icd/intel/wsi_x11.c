@@ -74,6 +74,10 @@ struct intel_x11_swap_chain {
 
     xcb_connection_t *c;
     xcb_window_t window;
+    uint32_t width;  // To compare with XCB_PRESENT_EVENT_CONFIGURE_NOTIFY's
+    uint32_t height; // ditto
+    bool out_of_date;
+    bool being_deleted;
     bool force_copy;
     VkPresentModeKHR present_mode;
 
@@ -376,7 +380,8 @@ static bool x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 
     cookie = xcb_present_select_input_checked(sc->c,
             sc->present_special_event_id, sc->window,
-            XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY);
+            XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
+            XCB_PRESENT_EVENT_MASK_CONFIGURE_NOTIFY);
 
     error = xcb_request_check(sc->c, cookie);
     if (error) {
@@ -580,6 +585,7 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
     union {
         const xcb_present_generic_event_t *ev;
         const xcb_present_complete_notify_event_t *complete;
+        const xcb_present_configure_notify_event_t *configure;
     } u = { .ev = ev };
 
     switch (u.ev->evtype) {
@@ -598,6 +604,13 @@ static void x11_swap_chain_present_event(struct intel_x11_swap_chain *sc,
         assert(sc->present_queue_length > 0);
         assert(sc->image_state[sc->present_queue[0]] == INTEL_SC_STATE_QUEUED_FOR_PRESENT);
         sc->image_state[sc->present_queue[0]] = INTEL_SC_STATE_DISPLAYED;
+        break;
+    case XCB_PRESENT_EVENT_CONFIGURE_NOTIFY:
+        if ((u.configure->width != sc->width) ||
+            (u.configure->height != sc->height)) {
+            // The swapchain is now considered "out of date" with the window:
+            sc->out_of_date = true;
+        }
         break;
     default:
         break;
@@ -695,7 +708,7 @@ static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
     return VK_SUCCESS;
 }
 
-static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
+static void x11_swap_chain_destroy_begin(struct intel_x11_swap_chain *sc)
 {
     if (sc->persistent_images) {
         uint32_t i;
@@ -715,7 +728,10 @@ static void x11_swap_chain_destroy(struct intel_x11_swap_chain *sc)
 
     if (sc->present_special_event)
         xcb_unregister_for_special_event(sc->c, sc->present_special_event);
+}
 
+static void x11_swap_chain_destroy_end(struct intel_x11_swap_chain *sc)
+{
     intel_free(sc, sc);
 }
 
@@ -772,12 +788,19 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 
     /* always copy unless flip bit is set */
     sc->present_mode = info->presentMode;
+    // Record the swapchain's width and height, so that we can determine when
+    // it is "out of date" w.r.t. the window:
+    sc->width = info->imageExtent.width;
+    sc->height = info->imageExtent.height;
+    sc->out_of_date = false;
+    sc->being_deleted = false;
     sc->force_copy = true;
 
     if (!x11_swap_chain_dri3_and_present_query_version(sc) ||
         !x11_swap_chain_present_select_input(sc) ||
         !x11_swap_chain_create_persistent_images(sc, dev, info)) {
-        x11_swap_chain_destroy(sc);
+        x11_swap_chain_destroy_begin(sc);
+        x11_swap_chain_destroy_end(sc);
         return VK_ERROR_VALIDATION_FAILED;
     }
 
@@ -989,7 +1012,8 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
         struct intel_x11_swap_chain *sc =
             x11_swap_chain(pCreateInfo->oldSwapchain);
 
-        x11_swap_chain_destroy(sc);
+        sc->being_deleted = true;
+        x11_swap_chain_destroy_begin(sc);
     }
 
     return x11_swap_chain_create(dev, pCreateInfo,
@@ -1002,7 +1026,10 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
 
-    x11_swap_chain_destroy(sc);
+    if (!sc->being_deleted) {
+        x11_swap_chain_destroy_begin(sc);
+    }
+    x11_swap_chain_destroy_end(sc);
 
     return VK_SUCCESS;
 }
@@ -1045,6 +1072,11 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
     VkResult ret = VK_SUCCESS;
 
+    if (sc->out_of_date) {
+        // The window was resized, and the swapchain must be re-created:
+        return VK_ERROR_OUT_OF_DATE_KHR;
+    }
+
     // Find an unused image to return:
     for (int i = 0; i < sc->persistent_image_count; i++) {
         if (sc->image_state[i] == INTEL_SC_STATE_UNUSED) {
@@ -1081,6 +1113,7 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
     struct intel_queue *queue = intel_queue(queue_);
     uint32_t i;
     uint32_t num_swapchains = pPresentInfo->swapchainCount;
+    VkResult rtn = VK_SUCCESS;
 
     // Wait for queue to idle before out-of-band xcb present operation.
     const VkResult r = intel_queue_wait(queue, -1);
@@ -1094,6 +1127,16 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
         struct intel_x11_fence_data *data =
             (struct intel_x11_fence_data *) queue->fence->wsi_data;
         VkResult ret;
+
+        if (sc->out_of_date) {
+            // The window was resized, and the swapchain must be re-created:
+            rtn = VK_ERROR_OUT_OF_DATE_KHR;
+            // TODO: Potentially change this to match the result of Bug 14952
+            // (which deals with some of the swapchains being out-of-date, but
+            // not all of them).  For now, just present the swapchains that
+            // aren't out-of-date, and skip the ones that are out-of-date:
+            continue;
+        }
 
         ret = x11_swap_chain_present_pixmap(sc, img);
         if (ret != VK_SUCCESS) {
@@ -1113,5 +1156,5 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
         intel_fence_set_seqno(queue->fence, img->obj.mem->bo);
     }
 
-    return VK_SUCCESS;
+    return rtn;
 }
