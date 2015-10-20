@@ -144,11 +144,17 @@ typedef struct _BUFFER_NODE {
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
     VkDescriptorSetLayout           layout;
-    VkDescriptorType*               pTypes; // Dynamic array that will be created to verify descriptor types
     VkDescriptorSetLayoutCreateInfo createInfo;
     uint32_t                        startIndex; // 1st index of this layout
     uint32_t                        endIndex; // last index of this layout
+    vector<VkDescriptorType>        descriptorTypes; // Type per descriptor in this layout to verify correct updates
 } LAYOUT_NODE;
+// Store layouts and pushconstants for PipelineLayout
+struct PIPELINE_LAYOUT_NODE {
+    vector<VkDescriptorSetLayout>  descriptorSetLayouts;
+    vector<VkPushConstantRange>    pushConstantRanges;
+};
+
 typedef struct _SET_NODE {
     VkDescriptorSet      set;
     VkDescriptorPool     pool;

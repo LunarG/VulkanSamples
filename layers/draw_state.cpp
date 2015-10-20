@@ -69,6 +69,7 @@ struct layer_data {
     unordered_map<uint64_t, POOL_NODE*> poolMap;
     unordered_map<uint64_t, SET_NODE*> setMap;
     unordered_map<uint64_t, LAYOUT_NODE*> layoutMap;
+    unordered_map<uint64_t, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
     // Map for layout chains
     unordered_map<void*, GLOBAL_CB_NODE*> cmdBufferMap;
     unordered_map<uint64_t, VkRenderPassCreateInfo*> renderPassMap;
@@ -824,10 +825,10 @@ static VkBool32 validateUpdateType(const VkDevice device, const LAYOUT_NODE* pLa
     skipCall |= getUpdateEndIndex(device, pLayout, pUpdateStruct, &endIndex);
     if (VK_FALSE == skipCall) {
         for (i = startIndex; i <= endIndex; i++) {
-            if (pLayout->pTypes[i] != actualType) {
+            if (pLayout->descriptorTypes[i] != actualType) {
                 skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
                         "Descriptor update type of %s has descriptor type %s that does not match overlapping binding descriptor type of %s!",
-                        string_VkStructureType(pUpdateStruct->sType), string_VkDescriptorType(actualType), string_VkDescriptorType(pLayout->pTypes[i]));
+                        string_VkStructureType(pUpdateStruct->sType), string_VkDescriptorType(actualType), string_VkDescriptorType(pLayout->descriptorTypes[i]));
             }
         }
     }
@@ -1062,9 +1063,6 @@ static void deleteLayouts(layer_data* my_data)
                     delete[] pLayout->createInfo.pBinding[i].pImmutableSamplers;
             }
             delete[] pLayout->createInfo.pBinding;
-        }
-        if (pLayout->pTypes) {
-            delete[] pLayout->pTypes;
         }
         delete pLayout;
     }
@@ -1827,12 +1825,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
             }
         }
         if (totalCount > 0) {
-            pNewNode->pTypes = new VkDescriptorType[totalCount];
+            pNewNode->descriptorTypes.reserve(totalCount);
             uint32_t offset = 0;
             uint32_t j = 0;
             for (uint32_t i=0; i<pCreateInfo->count; i++) {
                 for (j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
-                    pNewNode->pTypes[offset + j] = pCreateInfo->pBinding[i].descriptorType;
+                    pNewNode->descriptorTypes[offset + j] = pCreateInfo->pBinding[i].descriptorType;
                 }
                 offset += j;
             }
@@ -1854,7 +1852,16 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
-        // TODO : Need to capture the pipeline layout
+        PIPELINE_LAYOUT_NODE plNode = dev_data->pipelineLayoutMap[pPipelineLayout->handle];
+        plNode.descriptorSetLayouts.reserve(pCreateInfo->descriptorSetCount);
+        uint32_t i = 0;
+        for (i=0; i<pCreateInfo->descriptorSetCount; ++i) {
+            plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
+        }
+        plNode.pushConstantRanges.reserve(pCreateInfo->pushConstantRangeCount);
+        for (i=0; i<pCreateInfo->pushConstantRangeCount; ++i) {
+            plNode.pushConstantRanges[i] = pCreateInfo->pPushConstantRanges[i];
+        }
     }
     return result;
 }
