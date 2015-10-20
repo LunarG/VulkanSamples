@@ -1300,10 +1300,67 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
-        FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0x<handle>) without an active RenderPass'";
+        FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0x<handle>) without an active RenderPass' but rather '" << msgString.c_str() << "'";
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
+TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
+{
+    // Initiate Draw w/o a PSO bound
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+    m_errorMonitor->ClearState();
+
+    // Create Pool w/ 1 Sampler descriptor, but try to alloc Uniform Buffer descriptor from it
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_ONE_SHOT, 1, &ds_layout, &descriptorSet);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after alloc descriptor from pool w/o requested type";
+    if (!strstr(msgString.c_str(),"Unable to allocate 1 descriptors of type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ")) {
+        FAIL() << "Error received was not 'Unable to allocate 1 descriptors of type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER...' but rather '" << msgString.c_str() << "'";
+    }
+
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }

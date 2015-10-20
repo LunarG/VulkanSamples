@@ -990,6 +990,33 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
     loader_platform_thread_unlock_mutex(&globalLock);
     return skipCall;
 }
+// Verify that given pool has descriptors that are being requested for allocation
+static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, POOL_NODE* pPoolNode, uint32_t count, const VkDescriptorSetLayout* pSetLayouts)
+{
+    VkBool32 skipCall = VK_FALSE;
+    uint32_t i = 0, j = 0;
+    for (i=0; i<count; ++i) {
+        LAYOUT_NODE* pLayout = getLayoutNode(dev_data, pSetLayouts[i]);
+        if (NULL == pLayout) {
+            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pSetLayouts[i].handle, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
+                    "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pSetLayouts[i].handle);
+        } else {
+            uint32_t typeIndex = 0, typeCount = 0;
+            for (j=0; j<pLayout->createInfo.count; ++j) {
+                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
+                typeCount = pLayout->createInfo.pBinding[j].arraySize;
+                if (typeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pLayout->layout.handle, 0, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
+                        "Unable to allocate %u descriptors of type %s from pool %#" PRIxLEAST64 ". This pool only has %u descriptors of this type remaining.",
+                            typeCount, string_VkDescriptorType(pLayout->createInfo.pBinding[j].descriptorType), pPoolNode->pool.handle, pPoolNode->availableDescriptorTypeCount[typeIndex]);
+                } else { // Decrement available descriptors of this type
+                    pPoolNode->availableDescriptorTypeCount[typeIndex] -= typeCount;
+                }
+            }
+        }
+    }
+    return skipCall;
+}
 // Free the shadowed update node for this Set
 // NOTE : Calls to this function should be wrapped in mutex
 static void freeShadowUpdateTree(SET_NODE* pSet)
@@ -1042,9 +1069,6 @@ static void deletePools(layer_data* my_data)
             }
             delete pFreeSet;
         }
-        if ((*ii).second->createInfo.pTypeCount) {
-            delete[] (*ii).second->createInfo.pTypeCount;
-        }
         delete (*ii).second;
     }
     my_data->poolMap.clear();
@@ -1093,6 +1117,10 @@ static void clearDescriptorPool(layer_data* my_data, const VkDevice device, cons
         SET_NODE* pSet = pPool->pSets;
         while (pSet) {
             clearDescriptorSet(my_data, pSet->set);
+        }
+        // Reset available count to max count for this pool
+        for (uint32_t i=0; i<pPool->availableDescriptorTypeCount.size(); ++i) {
+            pPool->availableDescriptorTypeCount[i] = pPool->maxDescriptorTypeCount[i];
         }
     }
 }
@@ -1876,23 +1904,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkD
                 "Created Descriptor Pool %#" PRIxLEAST64, (*pDescriptorPool).handle))
             return VK_ERROR_VALIDATION_FAILED;
         loader_platform_thread_lock_mutex(&globalLock);
-        POOL_NODE* pNewNode = new POOL_NODE;
+        POOL_NODE* pNewNode = new POOL_NODE(*pDescriptorPool, pCreateInfo);
         if (NULL == pNewNode) {
             if (log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (*pDescriptorPool).handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                     "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()"))
                 return VK_ERROR_VALIDATION_FAILED;
         } else {
-            memset(pNewNode, 0, sizeof(POOL_NODE));
-            VkDescriptorPoolCreateInfo* pCI = (VkDescriptorPoolCreateInfo*)&pNewNode->createInfo;
-            memcpy((void*)pCI, pCreateInfo, sizeof(VkDescriptorPoolCreateInfo));
-            if (pNewNode->createInfo.count) {
-                size_t typeCountSize = pNewNode->createInfo.count * sizeof(VkDescriptorTypeCount);
-                pNewNode->createInfo.pTypeCount = new VkDescriptorTypeCount[typeCountSize];
-                memcpy((void*)pNewNode->createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
-            }
-            pNewNode->poolUsage  = pCreateInfo->poolUsage;
-            pNewNode->maxSets    = pCreateInfo->maxSets;
-            pNewNode->pool       = *pDescriptorPool;
             dev_data->poolMap[pDescriptorPool->handle] = pNewNode;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1914,14 +1931,22 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescript
 
 VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets)
 {
+    VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    // Verify that requested descriptorSets are available in pool
+    POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
+    if (!pPoolNode) {
+        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPool.handle, 0, DRAWSTATE_INVALID_POOL, "DS",
+                "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", descriptorPool.handle);
+    } else { // Make sure pool has all the available descriptors before calling down chain
+        skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, count, pSetLayouts);
+    }
+    if (skipCall)
+        return VK_ERROR_VALIDATION_FAILED;
     VkResult result = dev_data->device_dispatch_table->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
     if (VK_SUCCESS == result) {
         POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
-        if (!pPoolNode) {
-            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPool.handle, 0, DRAWSTATE_INVALID_POOL, "DS",
-                    "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", descriptorPool.handle);
-        } else {
+        if (pPoolNode) {
             if (count == 0) {
                 log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, count, 0, DRAWSTATE_NONE, "DS",
                         "AllocDescriptorSets called with 0 count");
@@ -1972,15 +1997,28 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
-    if (pPoolNode && (VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT == pPoolNode->poolUsage)) {
+    if (pPoolNode && (VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT == pPoolNode->createInfo.poolUsage)) {
         // Can't Free from a ONE_SHOT pool
-        skipCall |= log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL, "DS",
+        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL, "DS",
                     "It is invalid to call vkFreeDescriptorSets() with a pool created with usage type VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT.");
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
-    // TODO : Clean up any internal data structures using this obj.
+    if (VK_SUCCESS == result) {
+        // For each freed descriptor add it back into the pool as available
+        for (uint32_t i=0; i<count; ++i) {
+            SET_NODE* pSet = dev_data->setMap[pDescriptorSets[i].handle]; // getSetNode() without locking
+            LAYOUT_NODE* pLayout = pSet->pLayout;
+            uint32_t typeIndex = 0, typeCount = 0;
+            for (uint32_t j=0; j<pLayout->createInfo.count; ++j) {
+                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
+                typeCount = pLayout->createInfo.pBinding[j].arraySize;
+                pPoolNode->availableDescriptorTypeCount[typeIndex] += typeCount;
+            }
+        }
+    }
+    // TODO : Any other clean-up or book-keeping to do here?
     return result;
 }
 

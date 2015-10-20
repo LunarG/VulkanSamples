@@ -30,6 +30,7 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | Valid Secondary CmdBuffer | Validates that no primary command buffers are sent to vkCmdExecuteCommands() are | INVALID_SECONDARY_CMD_BUFFER | vkCmdExecuteCommands | ExecuteCommandsPrimaryCB | NA |
 | Descriptor Type | Verify Descriptor type in bound descriptor set layout matches descriptor type specified in update | DESCRIPTOR_TYPE_MISMATCH | vkUpdateDescriptorSets | DSTypeMismatch | With various DS API updates, need to revisit this code |
 | DS Update Size | DS update out of bounds for given layout section | DESCRIPTOR_UPDATE_OUT_OF_BOUNDS | vkUpdateDescriptorSets | DSUpdateOutOfBounds | NA |
+| Descriptor Pool empty | Attempt to allocate descriptor type from descriptor pool when no more of that type are available to be allocated. | DESCRIPTOR_POOL_EMPTY | vkAllocDescriptorSets | AllocDescriptorFromEmptyPool | NA |
 | Free from ONE_SHOT Pool | It's invalid to call vkFreeDescriptorSets() on Sets that were allocated from a Pool created with ONE_SHOT usage. | CANT_FREE_FROM_ONE_SHOT_POOL | vkFreeDescriptorSets | None | NA |
 | DS Update Index | DS update binding too large for layout count | INVALID_UPDATE_INDEX | vkUpdateDescriptorSets | InvalidDSUpdateIndex | NA |
 | DS Update Type | Verifies that structs in DS Update tree are properly created, currenly valid, and of the right type | INVALID_UPDATE_STRUCT | vkUpdateDescriptorSets | InvalidDSUpdateStruct | NA |

@@ -46,6 +46,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
+    DRAWSTATE_DESCRIPTOR_POOL_EMPTY,            // Attempt to allocate descriptor from a pool with no more descriptors of that type available
     DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL,     // Invalid to call vkFreeDescriptorSets on Sets allocated from a ONE_SHOT Pool
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
@@ -170,10 +171,42 @@ typedef struct _SET_NODE {
 
 typedef struct _POOL_NODE {
     VkDescriptorPool           pool;
-    VkDescriptorPoolUsage      poolUsage;
-    uint32_t                   maxSets;
     VkDescriptorPoolCreateInfo createInfo;
     SET_NODE*                  pSets; // Head of LL of sets for this Pool
+    vector<uint32_t>           maxDescriptorTypeCount; // max # of descriptors of each type in this pool
+    vector<uint32_t>           availableDescriptorTypeCount; // available # of descriptors of each type in this pool
+
+    _POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo* pCreateInfo) :
+    pool(pool), createInfo(*pCreateInfo), pSets(NULL),
+    maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE)
+    {
+        if (createInfo.count) { // Shadow type struct from ptr into local struct
+            size_t typeCountSize = createInfo.count * sizeof(VkDescriptorTypeCount);
+            createInfo.pTypeCount = new VkDescriptorTypeCount[typeCountSize];
+            memcpy((void*)createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
+            // Now set max counts for each descriptor type based on count of that type times maxSets
+            int32_t i=0;
+            for (i=0; i<createInfo.count; ++i) {
+                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pTypeCount[i].type);
+                uint32_t typeCount = createInfo.pTypeCount[i].count;
+                maxDescriptorTypeCount[typeIndex] += typeCount;
+            }
+            for (i=0; i<maxDescriptorTypeCount.size(); ++i) {
+                maxDescriptorTypeCount[i] *= createInfo.maxSets;
+                // Initially the available counts are equal to the max counts
+                availableDescriptorTypeCount[i] = maxDescriptorTypeCount[i];
+            }
+        } else {
+            createInfo.pTypeCount = NULL; // Make sure this is NULL so we don't try to clean it up
+        }
+    }
+    ~_POOL_NODE() {
+        if (createInfo.pTypeCount) {
+            delete[] createInfo.pTypeCount;
+        }
+        // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
+        //  need to migrate that struct to smart ptrs for auto-cleanup
+    }
 } POOL_NODE;
 
 // Cmd Buffer Tracking
