@@ -513,7 +513,6 @@ static
 bool ValidateEnumerator(VkMemoryPropertyFlagBits const& enumerator)
 {
     VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT |
-        VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT |
         VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT |
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
         VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
@@ -538,10 +537,6 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
     if(enumerator & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
     {
         strings.push_back("VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT");
-    }
-    if(enumerator & VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT)
-    {
-        strings.push_back("VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT");
     }
     if(enumerator & VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT)
     {
