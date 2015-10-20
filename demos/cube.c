@@ -622,7 +622,8 @@ static void demo_draw(struct demo *demo)
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
-    vkQueueWaitSemaphore(demo->queue, presentCompleteSemaphore);
+    err = vkQueueWaitSemaphore(demo->queue, presentCompleteSemaphore);
+    assert(!err);
 
 // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
     err = vkQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
