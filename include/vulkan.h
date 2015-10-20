@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 175, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 176, 0)
 
 
 #if defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
