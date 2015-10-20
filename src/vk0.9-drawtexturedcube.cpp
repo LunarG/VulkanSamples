@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
     presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
-    presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    presentCompleteSemaphoreCreateInfo.flags = 0;
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
@@ -177,7 +177,8 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     /* Make sure buffer is ready for rendering */
-    vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
+    res = vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
+    assert(res == VK_SUCCESS);
 
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = { VK_NULL_HANDLE };
