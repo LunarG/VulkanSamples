@@ -1487,7 +1487,7 @@ LRESULT CALLBACK WndProc(HWND hWnd,
     case WM_PAINT:
         if (demo.prepared) {
             demo_run(&demo);
-            return 0;
+            break;
         }
     default:
         break;
@@ -2193,6 +2193,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
             TranslateMessage(&msg); 
             DispatchMessage(&msg);
         }
+        RedrawWindow(demo.window, NULL, NULL, RDW_INTERNALPAINT);
     }
 
     demo_cleanup(&demo);
