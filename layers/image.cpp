@@ -280,12 +280,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
         VkFormatProperties properties;
-        VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
+        get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
                 device_data->physicalDevice, pCreateInfo->format, &properties);
-        if(result != VK_SUCCESS) {
-            char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, cannot be validated";
-            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
-        }
 
         if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
@@ -320,15 +316,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
         {
             layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
             VkFormatProperties properties;
-            VkResult result = get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
+            get_dispatch_table(image_instance_table_map, device_data->physicalDevice)->GetPhysicalDeviceFormatProperties(
                     device_data->physicalDevice, pCreateInfo->pAttachments[i].format, &properties);
-            if(result != VK_SUCCESS)
-            {
-                std::stringstream ss;
-                ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], cannot be validated";
-                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", ss.str().c_str());
-                continue;
-            }
 
             if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
             {
@@ -725,19 +714,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
+VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
     VkDevice                  device,
     VkImage                   image,
     const VkImageSubresource *pSubresource,
     VkSubresourceLayout      *pLayout)
 {
-    VkResult result = get_dispatch_table(image_device_table_map, device)->GetImageSubresourceLayout(device,
+    get_dispatch_table(image_device_table_map, device)->GetImageSubresourceLayout(device,
          image, pSubresource, pLayout);
 
     // TODO: After state tracking for images/buffers is implemented, validate that returned aspects match
     //       the created formats -- color for color formats, depth|stencil for ds formats
-
-    return result;
 }
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)

@@ -515,10 +515,9 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(),
+    vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
@@ -665,10 +664,9 @@ TEST_F(VkLayerTest, RebindMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(),
+    vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
     err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
@@ -922,10 +920,9 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(),
+    vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
@@ -995,10 +992,9 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     err = vkCreateImage(m_device->device(), &image_create_info, &image);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(),
+    vkGetImageMemoryRequirements(m_device->device(),
                           image,
                           &mem_reqs);
-    ASSERT_VK_SUCCESS(err);
 
     mem_alloc.allocationSize = mem_reqs.size;
     err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
@@ -4369,16 +4365,14 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
@@ -4476,16 +4470,14 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
@@ -4578,16 +4570,14 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
@@ -4683,16 +4673,14 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
@@ -4789,16 +4777,14 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
@@ -4895,16 +4881,14 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
 
-    err = vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    err = vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);

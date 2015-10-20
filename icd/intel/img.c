@@ -160,7 +160,7 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
+ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
@@ -179,15 +179,13 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     pLayout->rowPitch = img->layout.bo_stride;
     pLayout->depthPitch = intel_layout_get_slice_stride(&img->layout,
                                                        pSubresource->mipLevel);
-    return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetImageSparseMemoryRequirements(
+void VKAPI vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pNumRequirements,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
     *pNumRequirements = 0;
-    return VK_SUCCESS;
 }

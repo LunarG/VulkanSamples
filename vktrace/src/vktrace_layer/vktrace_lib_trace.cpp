@@ -508,19 +508,18 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceLayerProperties(
 }
 // TODO : This should be pretty easy to fit into codegen. Don't need to make the call prior to creating packet
 //  Just need to account for "count" number of queue properties
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
+VKTRACER_EXPORT void VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
     VkQueueFamilyProperties* pQueueFamilyProperties)
 {
     vktrace_trace_packet_header* pHeader;
-    VkResult result;
     packet_vkGetPhysicalDeviceQueueFamilyProperties* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mid(physicalDevice)->instTable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
+    mid(physicalDevice)->instTable.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueFamilyProperties);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceQueueFamilyProperties, sizeof(uint32_t) + *pCount * sizeof(VkQueueFamilyProperties));
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -530,11 +529,9 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties
     pPacket->physicalDevice = physicalDevice;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pQueueFamilyProperties), *pCount * sizeof(VkQueueFamilyProperties), pQueueFamilyProperties);
-    pPacket->result = result;
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pQueueFamilyProperties));
     FINISH_TRACE_PACKET();
-    return result;
 }
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(

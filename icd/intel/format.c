@@ -680,17 +680,14 @@ static void intel_format_get_props(const struct intel_gpu *gpu,
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)
 {
     const struct intel_gpu *gpu = intel_gpu(physicalDevice);
-    VkResult ret = VK_SUCCESS;
 
     intel_format_get_props(gpu, format, pFormatInfo);
-
-    return ret;
 }
 
 // From the Ivy Bridge PRM, volume 1 part 1, page 105:
@@ -700,7 +697,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
 //      maximum is 2 GB for all products and all surface types."
 static const size_t intel_max_resource_size = 1u << 31;
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -719,5 +716,4 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     pImageFormatProperties->maxExtent.depth  = 8192;
     pImageFormatProperties->maxArraySize     = 2048;
     pImageFormatProperties->maxResourceSize  = intel_max_resource_size;
-    return VK_SUCCESS;
 }

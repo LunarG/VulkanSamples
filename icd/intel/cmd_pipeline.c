@@ -3801,15 +3801,13 @@ void VKAPI vkCmdPushConstants(
     /* TODO: Implement */
 }
 
-VkResult VKAPI vkGetRenderAreaGranularity(
+void VKAPI vkGetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
 {
     pGranularity->height = 1;
     pGranularity->width = 1;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(

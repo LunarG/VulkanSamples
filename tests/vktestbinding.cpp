@@ -91,7 +91,7 @@ VkPhysicalDeviceProperties PhysicalDevice::properties() const
 {
     VkPhysicalDeviceProperties info;
 
-    EXPECT(vkGetPhysicalDeviceProperties(handle(), &info) == VK_SUCCESS);
+    vkGetPhysicalDeviceProperties(handle(), &info);
 
     return info;
 }
@@ -102,11 +102,9 @@ std::vector<VkQueueFamilyProperties> PhysicalDevice::queue_properties() const
     uint32_t count;
 
     // Call once with NULL data to receive count
-    if (EXPECT(vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, NULL) == VK_SUCCESS)) {
-        info.resize(count);
-        if (!EXPECT(vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, info.data()) == VK_SUCCESS))
-            info.clear();
-    }
+    vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, NULL);
+    info.resize(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(handle(), &count, info.data());
 
     return info;
 }
@@ -115,8 +113,7 @@ VkPhysicalDeviceMemoryProperties PhysicalDevice::memory_properties() const
 {
     VkPhysicalDeviceMemoryProperties info;
 
-    EXPECT(vkGetPhysicalDeviceMemoryProperties(handle(), &info) == VK_SUCCESS);
-
+    vkGetPhysicalDeviceMemoryProperties(handle(), &info);
 
     return info;
 }
@@ -310,26 +307,22 @@ void Device::init(const VkDeviceCreateInfo &info)
 
 void Device::init_queues()
 {
-    VkResult err;
     uint32_t queue_node_count;
 
     // Call with NULL data to get count
-    err = vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, NULL);
-    EXPECT(err == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, NULL);
     EXPECT(queue_node_count >= 1);
 
     VkQueueFamilyProperties* queue_props = new VkQueueFamilyProperties[queue_node_count];
 
-    err = vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, queue_props);
-    EXPECT(err == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(phy_.handle(), &queue_node_count, queue_props);
 
     for (uint32_t i = 0; i < queue_node_count; i++) {
         VkQueue queue;
 
         for (uint32_t j = 0; j < queue_props[i].queueCount; j++) {
             // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
-            err = vkGetDeviceQueue(handle(), i, j, &queue);
-            EXPECT(err == VK_SUCCESS);
+            vkGetDeviceQueue(handle(), i, j, &queue);
 
             if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 queues_[GRAPHICS].push_back(new Queue(queue, i));
@@ -373,10 +366,7 @@ void Device::init_formats()
 VkFormatProperties Device::format_properties(VkFormat format)
 {
     VkFormatProperties data;
-    VkResult res = vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data);
-    if (res != VK_SUCCESS)
-        memset(&data, 0, sizeof(data));
-    EXPECT(res == VK_SUCCESS || res == VK_UNSUPPORTED);
+    vkGetPhysicalDeviceFormatProperties(phy().handle(), format, &data);
 
     return data;
 }
@@ -538,7 +528,7 @@ VkMemoryRequirements Buffer::memory_requirements() const
 {
     VkMemoryRequirements reqs;
 
-    EXPECT(vkGetBufferMemoryRequirements(device(), handle(), &reqs) == VK_SUCCESS);
+    vkGetBufferMemoryRequirements(device(), handle(), &reqs);
 
     return reqs;
 }
@@ -587,7 +577,7 @@ VkMemoryRequirements Image::memory_requirements() const
 {
     VkMemoryRequirements reqs;
 
-    EXPECT(vkGetImageMemoryRequirements(device(), handle(), &reqs) == VK_SUCCESS);
+    vkGetImageMemoryRequirements(device(), handle(), &reqs);
 
     return reqs;
 }
@@ -601,7 +591,8 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) 
 {
     VkSubresourceLayout data;
     size_t size = sizeof(data);
-    if (!EXPECT(vkGetImageSubresourceLayout(device(), handle(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
+    vkGetImageSubresourceLayout(device(), handle(), &subres, &data);
+    if (size != sizeof(data))
         memset(&data, 0, sizeof(data));
 
     return data;
@@ -612,7 +603,8 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceCopy &subr
     VkSubresourceLayout data;
     VkImageSubresource subres = subresource(subrescopy.aspect, subrescopy.mipLevel, subrescopy.arrayLayer);
     size_t size = sizeof(data);
-    if (!EXPECT(vkGetImageSubresourceLayout(device(), handle(), &subres, &data) == VK_SUCCESS && size == sizeof(data)))
+    vkGetImageSubresourceLayout(device(), handle(), &subres, &data);
+    if (size != sizeof(data))
         memset(&data, 0, sizeof(data));
 
     return data;

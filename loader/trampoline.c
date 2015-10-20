@@ -214,76 +214,64 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
 
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceFeatures *pFeatures)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
-    return res;
+    disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
                                             VkPhysicalDevice gpu,
                                             VkFormat format,
                                             VkFormatProperties *pFormatInfo)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
-    return res;
+    disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(physicalDevice);
-    res = disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
-    return res;
+    disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceProperties* pProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceProperties(gpu, pProperties);
-    return res;
+    disp->GetPhysicalDeviceProperties(gpu, pProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
                                             VkPhysicalDevice gpu,
                                             uint32_t* pCount,
                                             VkQueueFamilyProperties* pQueueProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pQueueProperties);
-    return res;
+    disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pQueueProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_instance_dispatch(gpu);
-    res = disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
-    return res;
+    disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateDevice(
@@ -344,19 +332,14 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
+LOADER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
     const VkLayerDispatchTable *disp;
-    VkResult res;
 
     disp = loader_get_dispatch(device);
 
-    res = disp->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
-    if (res == VK_SUCCESS) {
-        loader_set_dispatch(*pQueue, disp);
-    }
-
-    return res;
+    disp->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    loader_set_dispatch(*pQueue, disp);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
@@ -440,13 +423,13 @@ LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uin
     return disp->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes)
+LOADER_EXPORT void VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+    disp->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
 }
 
 LOADER_EXPORT VkResult VKAPI vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize offset)
@@ -467,40 +450,40 @@ LOADER_EXPORT VkResult VKAPI vkBindImageMemory(VkDevice device, VkImage image, V
     return disp->BindImageMemory(device, image, mem, offset);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
+LOADER_EXPORT void VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
+LOADER_EXPORT void VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
+LOADER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
+    disp->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
     disp = loader_get_instance_dispatch(physicalDevice);
 
-    return disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
+    disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
@@ -737,13 +720,13 @@ LOADER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     disp->DestroyImage(device, image);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
+LOADER_EXPORT void VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
+    disp->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
@@ -1018,13 +1001,13 @@ LOADER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass rende
     disp->DestroyRenderPass(device, renderPass);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity)
+LOADER_EXPORT void VKAPI vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->GetRenderAreaGranularity(device, renderPass, pGranularity);
+    disp->GetRenderAreaGranularity(device, renderPass, pGranularity);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool)

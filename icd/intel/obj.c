@@ -299,24 +299,24 @@ void intel_base_destroy(struct intel_base *base)
     intel_free(base, base);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(
+ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pRequirements)
 {
     struct intel_base *base = intel_base(buffer.handle);
 
-    return base->get_memory_requirements(base, pRequirements);
+    base->get_memory_requirements(base, pRequirements);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(
+ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pRequirements)
 {
     struct intel_base *base = intel_base(image.handle);
 
-    return base->get_memory_requirements(base, pRequirements);
+    base->get_memory_requirements(base, pRequirements);
 }
 
 ICD_EXPORT VkResult VKAPI vkBindBufferMemory(

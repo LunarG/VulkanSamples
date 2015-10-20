@@ -223,16 +223,16 @@ core = Extension(
              Param("uint32_t*", "pPhysicalDeviceCount"),
              Param("VkPhysicalDevice*", "pPhysicalDevices")]),
 
-        Proto("VkResult", "GetPhysicalDeviceFeatures",
+        Proto("void", "GetPhysicalDeviceFeatures",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceFeatures*", "pFeatures")]),
 
-        Proto("VkResult", "GetPhysicalDeviceFormatProperties",
+        Proto("void", "GetPhysicalDeviceFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkFormatProperties*", "pFormatProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceImageFormatProperties",
+        Proto("void", "GetPhysicalDeviceImageFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkImageType", "type"),
@@ -257,16 +257,16 @@ core = Extension(
         Proto("void", "DestroyDevice",
             [Param("VkDevice", "device")]),
 
-        Proto("VkResult", "GetPhysicalDeviceProperties",
+        Proto("void", "GetPhysicalDeviceProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceQueueFamilyProperties",
+        Proto("void", "GetPhysicalDeviceQueueFamilyProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("uint32_t*", "pCount"),
              Param("VkQueueFamilyProperties*", "pQueueFamilyProperties")]),
 
-        Proto("VkResult", "GetPhysicalDeviceMemoryProperties",
+        Proto("void", "GetPhysicalDeviceMemoryProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkPhysicalDeviceMemoryProperties*", "pMemoryProperties")]),
 
@@ -290,7 +290,7 @@ core = Extension(
              Param("uint32_t*", "pCount"),
              Param("VkLayerProperties*", "pProperties")]),
 
-        Proto("VkResult", "GetDeviceQueue",
+        Proto("void", "GetDeviceQueue",
             [Param("VkDevice", "device"),
              Param("uint32_t", "queueFamilyIndex"),
              Param("uint32_t", "queueIndex"),
@@ -339,7 +339,7 @@ core = Extension(
              Param("uint32_t", "memRangeCount"),
              Param("const VkMappedMemoryRange*", "pMemRanges")]),
 
-        Proto("VkResult", "GetDeviceMemoryCommitment",
+        Proto("void", "GetDeviceMemoryCommitment",
             [Param("VkDevice", "device"),
              Param("VkDeviceMemory", "memory"),
              Param("VkDeviceSize*", "pCommittedMemoryInBytes")]),
@@ -356,23 +356,23 @@ core = Extension(
              Param("VkDeviceMemory", "mem"),
              Param("VkDeviceSize", "memOffset")]),
 
-        Proto("VkResult", "GetBufferMemoryRequirements",
+        Proto("void", "GetBufferMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkBuffer", "buffer"),
              Param("VkMemoryRequirements*", "pMemoryRequirements")]),
 
-        Proto("VkResult", "GetImageMemoryRequirements",
+        Proto("void", "GetImageMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
              Param("VkMemoryRequirements*", "pMemoryRequirements")]),
 
-        Proto("VkResult", "GetImageSparseMemoryRequirements",
+        Proto("void", "GetImageSparseMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
              Param("uint32_t*", "pNumRequirements"),
              Param("VkSparseImageMemoryRequirements*", "pSparseMemoryRequirements")]),
 
-        Proto("VkResult", "GetPhysicalDeviceSparseImageFormatProperties",
+        Proto("void", "GetPhysicalDeviceSparseImageFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkImageType", "type"),
@@ -508,7 +508,7 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkImage", "image")]),
 
-        Proto("VkResult", "GetImageSubresourceLayout",
+        Proto("void", "GetImageSubresourceLayout",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
              Param("const VkImageSubresource*", "pSubresource"),
@@ -913,7 +913,7 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkRenderPass", "renderPass")]),
 
-        Proto("VkResult", "GetRenderAreaGranularity",
+        Proto("void", "GetRenderAreaGranularity",
             [Param("VkDevice", "device"),
              Param("VkRenderPass", "renderPass"),
              Param("VkExtent2D*", "pGranularity")]),

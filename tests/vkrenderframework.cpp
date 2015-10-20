@@ -312,10 +312,8 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         VkImageObj *img = new VkImageObj(m_device);
 
         VkFormatProperties props;
-        VkResult err;
 
-        err = vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), m_render_target_fmt, &props);
-        ASSERT_VK_SUCCESS(err);
+        vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), m_render_target_fmt, &props);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
             img->init((uint32_t)m_width, (uint32_t)m_height, m_render_target_fmt,
@@ -691,7 +689,6 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     uint32_t mipCount;
     VkFormatProperties image_fmt;
     VkImageTiling tiling;
-    VkResult err;
 
     mipCount = 0;
 
@@ -704,8 +701,7 @@ void VkImageObj::init(uint32_t w, uint32_t h,
         mipCount++;
     }
 
-    err = vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt, &image_fmt);
-    ASSERT_VK_SUCCESS(err);
+    vkGetPhysicalDeviceFormatProperties(m_device->phy().handle(), fmt, &image_fmt);
 
     if (requested_tiling == VK_IMAGE_TILING_LINEAR) {
         if (IsCompatible(usage, image_fmt.linearTilingFeatures)) {

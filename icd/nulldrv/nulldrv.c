@@ -1239,7 +1239,7 @@ ICD_EXPORT void VKAPI vkDestroyDevice(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
+ICD_EXPORT void VKAPI vkGetDeviceQueue(
     VkDevice                                  device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
@@ -1248,7 +1248,6 @@ ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
     *pQueue = (VkQueue) dev->queues[0];
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(
@@ -1345,12 +1344,11 @@ ICD_EXPORT VkResult VKAPI vkWaitForFences(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                             gpu_,
     VkPhysicalDeviceProperties*                  pProperties)
 {
     NULLDRV_LOG_FUNC;
-    VkResult ret = VK_SUCCESS;
 
     pProperties->apiVersion = VK_API_VERSION;
     pProperties->driverVersion = 0; // Appropriate that the nulldrv have 0's
@@ -1362,59 +1360,49 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
     /* TODO: fill out limits */
     memset(&pProperties->limits, 0, sizeof(VkPhysicalDeviceLimits));
     memset(&pProperties->sparseProperties, 0, sizeof(VkPhysicalDeviceSparseProperties));
-    return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice                          physicalDevice,
     VkPhysicalDeviceFeatures*                 pFeatures)
 {
     NULLDRV_LOG_FUNC;
-    VkResult ret = VK_SUCCESS;
 
     /* TODO: fill out features */
     memset(pFeatures, 0, sizeof(*pFeatures));
-
-    return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)
 {
     NULLDRV_LOG_FUNC;
-    VkResult ret = VK_SUCCESS;
 
     pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     pFormatInfo->optimalTilingFeatures = pFormatInfo->linearTilingFeatures;
     pFormatInfo->bufferFeatures = 0;
-
-    return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                             gpu_,
     uint32_t*                                    pCount,
     VkQueueFamilyProperties*                     pProperties)
  {
     if (pProperties == NULL) {
         *pCount = 1;
-        return VK_SUCCESS;
+        return;
     }
     pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
     pProperties->queueCount = 1;
     pProperties->timestampValidBits = 0;
-
-    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceMemoryProperties* pProperties)
 {
     // TODO: Fill in with real data
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
@@ -1485,7 +1473,7 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
+ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
@@ -1497,8 +1485,6 @@ ICD_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
     pLayout->size = 1;
     pLayout->rowPitch = 4;
     pLayout->depthPitch = 4;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
@@ -1561,12 +1547,11 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(
+ICD_EXPORT void VKAPI vkGetDeviceMemoryCommitment(
     VkDevice                                  device,
     VkDeviceMemory                            memory,
     VkDeviceSize*                             pCommittedMemoryInBytes)
 {
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateInstance(
@@ -1620,7 +1605,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(
+ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1628,10 +1613,10 @@ ICD_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(
     NULLDRV_LOG_FUNC;
     struct nulldrv_base *base = nulldrv_base((void*)buffer.handle);
 
-    return base->get_memory_requirements(base, pMemoryRequirements);
+    base->get_memory_requirements(base, pMemoryRequirements);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(
+ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1639,7 +1624,7 @@ ICD_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(
     NULLDRV_LOG_FUNC;
     struct nulldrv_base *base = nulldrv_base((void*)image.handle);
 
-    return base->get_memory_requirements(base, pMemoryRequirements);
+    base->get_memory_requirements(base, pMemoryRequirements);
 }
 
 ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
@@ -1662,17 +1647,16 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(
+ICD_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pNumRequirements,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -1683,7 +1667,6 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkSparseImageFormatProperties*              pProperties)
 {
     NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
@@ -2128,15 +2111,13 @@ ICD_EXPORT void VKAPI vkCmdPushConstants(
     /* TODO: Implement */
 }
 
-ICD_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(
+ICD_EXPORT void VKAPI vkGetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
 {
     pGranularity->height = 1;
     pGranularity->width = 1;
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
@@ -2194,7 +2175,7 @@ ICD_EXPORT VkResult xcbQueuePresent(void *queue, void *image, void* fence)
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -2203,5 +2184,4 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-    return VK_ERROR_INITIALIZATION_FAILED;
 }

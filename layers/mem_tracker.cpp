@@ -1071,17 +1071,13 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice                  physicalDevice,
     VkPhysicalDeviceMemoryProperties *pMemoryProperties)
 {
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(mem_tracker_instance_table_map, physicalDevice);
-    VkResult result = pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
-    if (result == VK_SUCCESS) {
-        // copy mem props to local var...
-        memcpy(&memProps, pMemoryProperties, sizeof(VkPhysicalDeviceMemoryProperties));
-    }
-    return result;
+    pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
+    memcpy(&memProps, pMemoryProperties, sizeof(VkPhysicalDeviceMemoryProperties));
 }
 
 static const VkLayerProperties mtGlobalLayers[] = {
@@ -1131,19 +1127,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     VkDevice  device,
     uint32_t  queueNodeIndex,
     uint32_t  queueIndex,
     VkQueue   *pQueue)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
-    if (result == VK_SUCCESS) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        add_queue_info(*pQueue);
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    loader_platform_thread_lock_mutex(&globalLock);
+    add_queue_info(*pQueue);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
@@ -1321,26 +1314,24 @@ VkResult VKAPI vkBindImageMemory(
     return result;
 }
 
-VkResult VKAPI vkGetBufferMemoryRequirements(
+void VKAPI vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindBufferMemory
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-VkResult VKAPI vkGetImageMemoryRequirements(
+void VKAPI vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindImageMemory
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
-    return result;
+    get_dispatch_table(mem_tracker_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(

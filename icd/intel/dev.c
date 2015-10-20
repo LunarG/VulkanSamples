@@ -224,7 +224,7 @@ ICD_EXPORT void VKAPI vkDestroyDevice(
     intel_dev_destroy(dev);
 }
 
-ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
+ICD_EXPORT void VKAPI vkGetDeviceQueue(
     VkDevice                                  device,
     uint32_t                                  queueFamilyIndex,
     uint32_t                                  queueIndex,
@@ -233,7 +233,6 @@ ICD_EXPORT VkResult VKAPI vkGetDeviceQueue(
     struct intel_dev *dev = intel_dev(device);
 
     *pQueue = (VkQueue) dev->queues[queueFamilyIndex];
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(

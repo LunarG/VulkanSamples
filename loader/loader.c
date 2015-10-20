@@ -2808,79 +2808,64 @@ VkResult VKAPI loader_EnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceProperties(
+void VKAPI loader_GetPhysicalDeviceProperties(
         VkPhysicalDevice                        gpu,
         VkPhysicalDeviceProperties*             pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceProperties)
-        res = icd->GetPhysicalDeviceProperties(gpu, pProperties);
-
-    return res;
+        icd->GetPhysicalDeviceProperties(gpu, pProperties);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
+void VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
         VkPhysicalDevice                        gpu,
         uint32_t*                               pCount,
         VkQueueFamilyProperties*                pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceQueueFamilyProperties)
-        res = icd->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
-
-    return res;
+        icd->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceMemoryProperties (
+void VKAPI loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice gpu,
         VkPhysicalDeviceMemoryProperties* pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceMemoryProperties)
-        res = icd->GetPhysicalDeviceMemoryProperties(gpu, pProperties);
-
-    return res;
+        icd->GetPhysicalDeviceMemoryProperties(gpu, pProperties);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceFeatures(
+void VKAPI loader_GetPhysicalDeviceFeatures(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceFeatures*               pFeatures)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceFeatures)
-        res = icd->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
-
-    return res;
+        icd->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceFormatProperties(
+void VKAPI loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceFormatProperties)
-        res = icd->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
-
-    return res;
+        icd->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatInfo);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+void VKAPI loader_GetPhysicalDeviceImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2891,16 +2876,13 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceImageFormatProperties)
-        res = icd->GetPhysicalDeviceImageFormatProperties(physicalDevice, format,
+        icd->GetPhysicalDeviceImageFormatProperties(physicalDevice, format,
                                 type, tiling, usage, flags, pImageFormatProperties);
-
-    return res;
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
+void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2912,12 +2894,9 @@ VkResult VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
-    VkResult res = VK_ERROR_INITIALIZATION_FAILED;
 
     if (icd->GetPhysicalDeviceSparseImageFormatProperties)
-        res = icd->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
-
-    return res;
+        icd->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
 VkResult VKAPI loader_CreateDevice(

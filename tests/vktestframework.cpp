@@ -304,7 +304,6 @@ void VkTestFramework::InitArgs(int *argc, char *argv[])
 void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
 {
     string filename;
-    VkResult err;
     uint32_t x, y;
     VkImageObj displayImage(image->device());
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -320,8 +319,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     };
     VkSubresourceLayout sr_layout;
    
-    err = vkGetImageSubresourceLayout(image->device()->device(), displayImage.image(), &sr, &sr_layout);
-    ASSERT_VK_SUCCESS( err );
+    vkGetImageSubresourceLayout(image->device()->device(), displayImage.image(), &sr, &sr_layout);
 
     char *ptr;
     ptr = (char *) displayImage.MapMemory();
@@ -435,8 +433,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
         VK_IMAGE_ASPECT_COLOR, 0, 0
     };
 
-    err = vkGetImageSubresourceLayout(displayImage.device()->device(), displayImage.image(), &sr, &sr_layout);
-    ASSERT_VK_SUCCESS( err );
+    vkGetImageSubresourceLayout(displayImage.device()->device(), displayImage.image(), &sr, &sr_layout);
 
     ptr = (char *) displayImage.MapMemory();
     ASSERT_VK_SUCCESS( err );

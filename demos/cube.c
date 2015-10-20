@@ -873,7 +873,7 @@ static void demo_prepare_depth(struct demo *demo)
             &demo->depth.image);
     assert(!err);
 
-    err = vkGetImageMemoryRequirements(demo->device,
+    vkGetImageMemoryRequirements(demo->device,
                     demo->depth.image, &mem_reqs);
     assert(!err);
 
@@ -993,8 +993,7 @@ static void demo_prepare_texture_image(struct demo *demo,
             &tex_obj->image);
     assert(!err);
 
-    err = vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
-    assert(!err);
+    vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
 
     tex_obj->mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     tex_obj->mem_alloc.pNext = NULL;
@@ -1023,8 +1022,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         VkSubresourceLayout layout;
         void *data;
 
-        err = vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
-        assert(!err);
+        vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
 
         err = vkMapMemory(demo->device, tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize, 0, &data);
         assert(!err);
@@ -1055,13 +1053,12 @@ static void demo_prepare_textures(struct demo *demo)
 {
     const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
     VkFormatProperties props;
-    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    err = vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
-    assert(!err);
+    vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
+        VkResult U_ASSERT_ONLY err;
 
         if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !demo->use_staging_buffer) {
             /* Device can texture using linear textures */
@@ -1193,8 +1190,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     err = vkCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
     assert(!err);
 
-    err = vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
-    assert(!err);
+    vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
 
     demo->uniform_data.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     demo->uniform_data.mem_alloc.pNext = NULL;
@@ -2272,17 +2268,14 @@ static void demo_init_vk(struct demo *demo)
             break;
         }
     }
-    err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
-    assert(!err);
+    vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
     /* Call with NULL data to get count */
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
-    assert(!err);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
     assert(demo->queue_count >= 1);
 
     demo->queue_props = (VkQueueFamilyProperties *) malloc(demo->queue_count * sizeof(VkQueueFamilyProperties));
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
-    assert(!err);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
     // Find a queue that supports gfx
     uint32_t gfx_queue_idx = 0;
     for (gfx_queue_idx = 0; gfx_queue_idx<demo->queue_count; gfx_queue_idx++) {
@@ -2293,8 +2286,7 @@ static void demo_init_vk(struct demo *demo)
     // Query fine-grained feature support for this device.
     //  If app has specific feature requirements it should check supported features based on this query
     VkPhysicalDeviceFeatures physDevFeatures;
-    err = vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
-    assert(!err);
+    vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
 
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -2405,9 +2397,8 @@ static void demo_init_vk_swapchain(struct demo *demo)
 
     demo->graphics_queue_node_index = graphicsQueueNodeIndex;
 
-    err = vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
+    vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
-    assert(!err);
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
@@ -2439,8 +2430,7 @@ static void demo_init_vk_swapchain(struct demo *demo)
     demo->curFrame = 0;
 
     // Get Memory information and properties
-    err = vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
-    assert(!err);
+    vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
 static void demo_init_connection(struct demo *demo)

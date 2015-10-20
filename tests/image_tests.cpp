@@ -150,8 +150,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
      * amount of data may vary and that doesn't work well for using a
      * fixed structure.
      */
-    err = vkGetPhysicalDeviceFormatProperties(this->objs[0], fmt, &image_fmt);
-    ASSERT_VK_SUCCESS(err);
+    vkGetPhysicalDeviceFormatProperties(this->objs[0], fmt, &image_fmt);
 
     //    typedef struct VkImageCreateInfo_
     //    {
@@ -221,8 +220,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
-    err = vkGetImageMemoryRequirements(device(), m_image, &mem_req);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(device(), m_image, &mem_req);
 
     ASSERT_NE(0, mem_req.size) << "vkGetObjectMemoryRequirements (Image): Failed - expect images to require memory";
     mem_info.allocationSize = mem_req.size;

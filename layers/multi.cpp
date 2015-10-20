@@ -118,28 +118,24 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi2GetPhysicalDeviceProperties(
+VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceProperties(
                                         VkPhysicalDevice physicalDevice,
                                         VkPhysicalDeviceProperties* pProperties)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, physicalDevice);
     printf("At start of wrapped multi2 vkGetPhysicalDeviceProperties()\n");
-    VkResult result = pDisp->GetPhysicalDeviceProperties(physicalDevice, pProperties);
+    pDisp->GetPhysicalDeviceProperties(physicalDevice, pProperties);
     printf("Completed multi2 layer vkGetPhysicalDeviceProperties()\n");
-
-    return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi2GetPhysicalDeviceFeatures(
+VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceFeatures(
                                         VkPhysicalDevice physicalDevice,
                                         VkPhysicalDeviceFeatures* pFeatures)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, physicalDevice);
     printf("At start of wrapped multi2 vkGetPhysicalDeviceFeatures()\n");
-    VkResult result = pDisp->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
+    pDisp->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
     printf("Completed multi2 layer vkGetPhysicalDeviceFeatures()\n");
-
-    return result;
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */

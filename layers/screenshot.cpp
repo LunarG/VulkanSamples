@@ -210,13 +210,11 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableDevice->CreateImage(device, &imgCreateInfo, &image2);
     assert(!err);
 
-    err = pTableDevice->GetImageMemoryRequirements(device, image2, &memRequirements);
-    assert(!err);
+    pTableDevice->GetImageMemoryRequirements(device, image2, &memRequirements);
 
     memAllocInfo.allocationSize = memRequirements.size;
     pInstanceTable = instance_dispatch_table(instance);
-    err = pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, &memory_properties);
-    assert(!err);
+    pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, &memory_properties);
 
     err = memory_type_from_properties(&memory_properties,
                                 memRequirements.memoryTypeBits,
@@ -255,8 +253,7 @@ static void writePPM( const char *filename, VkImage image1)
     err =  pTableDevice->DeviceWaitIdle(device);
     assert(!err);
 
-    err =  pTableDevice->GetImageSubresourceLayout(device, image2, &sr, &sr_layout);
-    assert(!err);
+    pTableDevice->GetImageSubresourceLayout(device, image2, &sr, &sr_layout);
 
     err = pTableDevice->MapMemory(device, mem2, 0, 0, 0, (void **) &ptr );
     assert(!err);
@@ -422,35 +419,32 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     VkDevice  device,
     uint32_t  queueNodeIndex,
     uint32_t  queueIndex,
     VkQueue   *pQueue)
 {
     VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    get_dispatch_table(screenshot_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
         // We are all done taking screenshots, so don't do anything else
         loader_platform_thread_unlock_mutex(&globalLock);
-        return result;
+        return;
     }
 
-    if (result == VK_SUCCESS) {
-        screenshot_device_table_map.emplace(*pQueue, pTable);
+    screenshot_device_table_map.emplace(*pQueue, pTable);
 
-        // Create a mapping from a device to a queue
-        if (deviceMap[device] == NULL)
-        {
-            DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
-            deviceMap[device] = deviceMapElem;
-        }
-        deviceMap[device]->queue = *pQueue;
+    // Create a mapping from a device to a queue
+    if (deviceMap[device] == NULL)
+    {
+        DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
+        deviceMap[device] = deviceMapElem;
     }
+    deviceMap[device]->queue = *pQueue;
     loader_platform_thread_unlock_mutex(&globalLock);
-    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(

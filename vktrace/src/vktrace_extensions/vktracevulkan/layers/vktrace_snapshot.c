@@ -604,13 +604,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
     return VK_SUCCESS;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
+VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
-    return result;
+    nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)

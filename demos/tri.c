@@ -687,7 +687,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(!err);
 
     /* get memory requirements for this object */
-    err = vkGetImageMemoryRequirements(demo->device, demo->depth.image,
+    vkGetImageMemoryRequirements(demo->device, demo->depth.image,
                                        &mem_reqs);
 
     /* select memory size and type */
@@ -759,8 +759,7 @@ static void demo_prepare_texture_image(struct demo *demo,
             &tex_obj->image);
     assert(!err);
 
-    err = vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
-    assert(!err);
+    vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
 
     mem_alloc.allocationSize  = mem_reqs.size;
     err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &mem_alloc.memoryTypeIndex);
@@ -785,8 +784,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         void *data;
         int32_t x, y;
 
-        err = vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
-        assert(!err);
+        vkGetImageSubresourceLayout(demo->device, tex_obj->image, &subres, &layout);
 
         err = vkMapMemory(demo->device, tex_obj->mem, 0, mem_alloc.allocationSize, 0, &data);
         assert(!err);
@@ -822,11 +820,10 @@ static void demo_prepare_textures(struct demo *demo)
     const uint32_t tex_colors[DEMO_TEXTURE_COUNT][2] = {
         { 0xffff0000, 0xff00ff00 },
     };
-    VkResult U_ASSERT_ONLY err;
     uint32_t i;
+    VkResult err;
 
-    err = vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
-    assert(!err);
+    vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
         if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !demo->use_staging_buffer) {
@@ -955,7 +952,7 @@ static void demo_prepare_vertices(struct demo *demo)
     err = vkCreateBuffer(demo->device, &buf_info, &demo->vertices.buf);
     assert(!err);
 
-    err = vkGetBufferMemoryRequirements(demo->device,
+    vkGetBufferMemoryRequirements(demo->device,
             demo->vertices.buf, &mem_reqs);
     assert(!err);
 
@@ -1944,16 +1941,13 @@ static void demo_init_vk(struct demo *demo)
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 
-    err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
-    assert(!err);
+    vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
     // Query with NULL data to get count
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
-    assert(!err);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);
 
     demo->queue_props = (VkQueueFamilyProperties *) malloc(demo->queue_count * sizeof(VkQueueFamilyProperties));
-    err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
-    assert(!err);
+    vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, demo->queue_props);
     assert(demo->queue_count >= 1);
 
     // Graphics queue and MemMgr queue can be separate.
@@ -2035,9 +2029,8 @@ static void demo_init_vk_swapchain(struct demo *demo)
 
     demo->graphics_queue_node_index = graphicsQueueNodeIndex;
 
-    err = vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
+    vkGetDeviceQueue(demo->device, demo->graphics_queue_node_index,
             0, &demo->queue);
-    assert(!err);
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
@@ -2066,8 +2059,7 @@ static void demo_init_vk_swapchain(struct demo *demo)
     demo->color_space = surfFormats[0].colorSpace;
 
     // Get Memory information and properties
-    err = vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
-    assert(!err);
+    vkGetPhysicalDeviceMemoryProperties(demo->gpu, &demo->memory_properties);
 }
 
 static void demo_init_connection(struct demo *demo)

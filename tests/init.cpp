@@ -272,14 +272,12 @@ TEST_F(VkTest, Query) {
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
 {
     uint32_t que_idx;
-    VkResult err;
     VkQueue queue;
 
     const VkQueueFamilyProperties props = device->phy().queue_properties()[queue_node_index];
     for (que_idx = 0; que_idx < props.queueCount; que_idx++) {
         // TODO: Need to add support for separate MEMMGR and work queues, including synchronization
-        err = vkGetDeviceQueue(device->handle(), queue_node_index, que_idx, &queue);
-        ASSERT_EQ(VK_SUCCESS, err) << "vkGetDeviceQueue: " << qname << " queue #" << que_idx << ": Failed with error: " << vk_result_string(err);
+        vkGetDeviceQueue(device->handle(), queue_node_index, que_idx, &queue);
     }
 }
 
@@ -315,8 +313,7 @@ void VkTest::CreateImageTest()
      * fixed structure.
      */
 
-    err = vkGetPhysicalDeviceFormatProperties(objs[m_device_id], fmt, &image_fmt);
-    ASSERT_VK_SUCCESS(err);
+    vkGetPhysicalDeviceFormatProperties(objs[m_device_id], fmt, &image_fmt);
 
 //    typedef struct VkImageCreateInfo_
 //    {
@@ -364,7 +361,7 @@ void VkTest::CreateImageTest()
     ASSERT_VK_SUCCESS(err);
 
     // Verify image resources
-//    VkResult VKAPI vkGetImageSubresourceLayout(
+//    void VKAPI vkGetImageSubresourceLayout(
 //        VkImage                                   image,
 //        const VkImageSubresource*                pSubresource,
 //        VkSubresourceLayout*                     pLayout);
@@ -394,8 +391,7 @@ void VkTest::CreateImageTest()
         while ((_w > 0) || (_h > 0))
         {
             VkSubresourceLayout layout = {};
-            err = vkGetImageSubresourceLayout(device(), image, &subresource, &layout);
-            ASSERT_VK_SUCCESS(err);
+            vkGetImageSubresourceLayout(device(), image, &subresource, &layout);
 
             // TODO: 4 should be replaced with pixel size for given format
             EXPECT_LE(_w * 4, layout.rowPitch) << "Pitch does not match expected image pitch";
@@ -409,8 +405,7 @@ void VkTest::CreateImageTest()
     VkMemoryRequirements mem_req;
     VkDeviceMemory image_mem;
 
-    err = vkGetImageMemoryRequirements(device(), image, &mem_req);
-    ASSERT_VK_SUCCESS(err);
+    vkGetImageMemoryRequirements(device(), image, &mem_req);
 
     if (mem_req.size) {
 

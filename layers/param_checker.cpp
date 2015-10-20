@@ -1919,40 +1919,29 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
 
 bool PostGetPhysicalDeviceFeatures(
     VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceFeatures* pFeatures,
-    VkResult result)
+    VkPhysicalDeviceFeatures* pFeatures)
 {
 
     if(pFeatures != nullptr)
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceFeatures parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceFeatures* pFeatures)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
 
-    PostGetPhysicalDeviceFeatures(physicalDevice, pFeatures, result);
-
-    return result;
+    PostGetPhysicalDeviceFeatures(physicalDevice, pFeatures);
 }
 
 bool PostGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
-    VkFormatProperties* pFormatProperties,
-    VkResult result)
+    VkFormatProperties* pFormatProperties)
 {
 
     if(format < VK_FORMAT_BEGIN_RANGE ||
@@ -1967,26 +1956,17 @@ bool PostGetPhysicalDeviceFormatProperties(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceFormatProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkFormatProperties* pFormatProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
 
-    PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceFormatProperties(physicalDevice, format, pFormatProperties);
 }
 
 bool PostGetPhysicalDeviceImageFormatProperties(
@@ -1996,8 +1976,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     VkImageTiling tiling,
     VkImageUsageFlags usage,
     VkImageCreateFlags flags,
-    VkImageFormatProperties* pImageFormatProperties,
-    VkResult result)
+    VkImageFormatProperties* pImageFormatProperties)
 {
 
     if(format < VK_FORMAT_BEGIN_RANGE ||
@@ -2029,17 +2008,10 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkImageType type,
@@ -2048,17 +2020,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags flags,
     VkImageFormatProperties* pImageFormatProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 
-    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 }
 
 bool PostGetPhysicalDeviceProperties(
     VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceProperties* pProperties,
-    VkResult result)
+    VkPhysicalDeviceProperties* pProperties)
 {
 
     if(pProperties != nullptr)
@@ -2072,32 +2041,22 @@ bool PostGetPhysicalDeviceProperties(
     }
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceProperties* pProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceProperties(physicalDevice, pProperties);
 
-    PostGetPhysicalDeviceProperties(physicalDevice, pProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceProperties(physicalDevice, pProperties);
 }
 
 bool PostGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
-    VkQueueFamilyProperties* pQueueProperties,
-    VkResult result)
+    VkQueueFamilyProperties* pQueueProperties)
 {
 
     if(pQueueProperties == nullptr && pCount != nullptr)
@@ -2108,13 +2067,6 @@ bool PostGetPhysicalDeviceQueueFamilyProperties(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceQueueFamilyProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
@@ -2123,42 +2075,30 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
     uint32_t* pCount,
     VkQueueFamilyProperties* pQueueProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties);
 
-    PostGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pCount, pQueueProperties);
 }
 
 bool PostGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice physicalDevice,
-    VkPhysicalDeviceMemoryProperties* pMemoryProperties,
-    VkResult result)
+    VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
 
     if(pMemoryProperties != nullptr)
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceMemoryProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 
-    PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
@@ -2204,8 +2144,7 @@ bool PostGetDeviceQueue(
     VkDevice device,
     uint32_t queueFamilyIndex,
     uint32_t queueIndex,
-    VkQueue* pQueue,
-    VkResult result)
+    VkQueue* pQueue)
 {
 
 
@@ -2214,27 +2153,18 @@ bool PostGetDeviceQueue(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetDeviceQueue parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     VkDevice device,
     uint32_t queueFamilyIndex,
     uint32_t queueIndex,
     VkQueue* pQueue)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
+    get_dispatch_table(pc_device_table_map, device)->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 
-    PostGetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue, result);
-
-    return result;
+    PostGetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 }
 
 bool PreQueueSubmit(
@@ -2525,8 +2455,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
 bool PostGetDeviceMemoryCommitment(
     VkDevice device,
     VkDeviceMemory memory,
-    VkDeviceSize* pCommittedMemoryInBytes,
-    VkResult result)
+    VkDeviceSize* pCommittedMemoryInBytes)
 {
 
 
@@ -2534,26 +2463,17 @@ bool PostGetDeviceMemoryCommitment(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetDeviceMemoryCommitment parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetDeviceMemoryCommitment(
+VK_LAYER_EXPORT void VKAPI vkGetDeviceMemoryCommitment(
     VkDevice device,
     VkDeviceMemory memory,
     VkDeviceSize* pCommittedMemoryInBytes)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
+    get_dispatch_table(pc_device_table_map, device)->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
 
-    PostGetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes, result);
-
-    return result;
+    PostGetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
 }
 
 bool PostBindBufferMemory(
@@ -2627,8 +2547,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemory(
 bool PostGetBufferMemoryRequirements(
     VkDevice device,
     VkBuffer buffer,
-    VkMemoryRequirements* pMemoryRequirements,
-    VkResult result)
+    VkMemoryRequirements* pMemoryRequirements)
 {
 
 
@@ -2636,33 +2555,23 @@ bool PostGetBufferMemoryRequirements(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetBufferMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetBufferMemoryRequirements(
+VK_LAYER_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     VkDevice device,
     VkBuffer buffer,
     VkMemoryRequirements* pMemoryRequirements)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    get_dispatch_table(pc_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 
-    PostGetBufferMemoryRequirements(device, buffer, pMemoryRequirements, result);
-
-    return result;
+    PostGetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
 bool PostGetImageMemoryRequirements(
     VkDevice device,
     VkImage image,
-    VkMemoryRequirements* pMemoryRequirements,
-    VkResult result)
+    VkMemoryRequirements* pMemoryRequirements)
 {
 
 
@@ -2670,34 +2579,24 @@ bool PostGetImageMemoryRequirements(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetImageMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageMemoryRequirements(
+VK_LAYER_EXPORT void VKAPI vkGetImageMemoryRequirements(
     VkDevice device,
     VkImage image,
     VkMemoryRequirements* pMemoryRequirements)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    get_dispatch_table(pc_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 
-    PostGetImageMemoryRequirements(device, image, pMemoryRequirements, result);
-
-    return result;
+    PostGetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
 bool PostGetImageSparseMemoryRequirements(
     VkDevice device,
     VkImage image,
     uint32_t* pNumRequirements,
-    VkSparseImageMemoryRequirements* pSparseMemoryRequirements,
-    VkResult result)
+    VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
 
 
@@ -2716,27 +2615,18 @@ bool PostGetImageSparseMemoryRequirements(
     }
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetImageSparseMemoryRequirements parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageSparseMemoryRequirements(
+VK_LAYER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
     VkDevice device,
     VkImage image,
     uint32_t* pNumRequirements,
     VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
+    get_dispatch_table(pc_device_table_map, device)->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
 
-    PostGetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements, result);
-
-    return result;
+    PostGetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
 }
 
 bool PostGetPhysicalDeviceSparseImageFormatProperties(
@@ -2747,8 +2637,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     VkImageUsageFlags usage,
     VkImageTiling tiling,
     uint32_t* pNumProperties,
-    VkSparseImageFormatProperties* pProperties,
-    VkResult result)
+    VkSparseImageFormatProperties* pProperties)
 {
 
     if(format < VK_FORMAT_BEGIN_RANGE ||
@@ -2792,17 +2681,10 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     }
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkImageType type,
@@ -2812,11 +2694,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     uint32_t* pNumProperties,
     VkSparseImageFormatProperties* pProperties)
 {
-    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
+    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 
-    PostGetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties, result);
-
-    return result;
+    PostGetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
 bool PreQueueBindSparseBufferMemory(
@@ -3701,8 +3581,7 @@ bool PreGetImageSubresourceLayout(
 bool PostGetImageSubresourceLayout(
     VkDevice device,
     VkImage image,
-    VkSubresourceLayout* pLayout,
-    VkResult result)
+    VkSubresourceLayout* pLayout)
 {
 
 
@@ -3710,17 +3589,10 @@ bool PostGetImageSubresourceLayout(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetImageSubresourceLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
+VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
     VkDevice device,
     VkImage image,
     const VkImageSubresource* pSubresource,
@@ -3728,11 +3600,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetImageSubresourceLayout(
 {
     PreGetImageSubresourceLayout(device, pSubresource);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
+    get_dispatch_table(pc_device_table_map, device)->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
 
-    PostGetImageSubresourceLayout(device, image, pLayout, result);
-
-    return result;
+    PostGetImageSubresourceLayout(device, image, pLayout);
 }
 
 bool PreCreateImageView(
@@ -5218,8 +5088,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
 bool PostGetRenderAreaGranularity(
     VkDevice device,
     VkRenderPass renderPass,
-    VkExtent2D* pGranularity,
-    VkResult result)
+    VkExtent2D* pGranularity)
 {
 
 
@@ -5227,26 +5096,17 @@ bool PostGetRenderAreaGranularity(
     {
     }
 
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkGetRenderAreaGranularity parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetRenderAreaGranularity(
+VK_LAYER_EXPORT void VKAPI vkGetRenderAreaGranularity(
     VkDevice device,
     VkRenderPass renderPass,
     VkExtent2D* pGranularity)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetRenderAreaGranularity(device, renderPass, pGranularity);
+    get_dispatch_table(pc_device_table_map, device)->GetRenderAreaGranularity(device, renderPass, pGranularity);
 
-    PostGetRenderAreaGranularity(device, renderPass, pGranularity, result);
-
-    return result;
+    PostGetRenderAreaGranularity(device, renderPass, pGranularity);
 }
 
 bool PreCreateCommandPool(

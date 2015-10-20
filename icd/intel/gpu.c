@@ -443,17 +443,16 @@ enum intel_phy_dev_ext_type intel_gpu_lookup_phy_dev_extension(
     return type;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceProperties* pProperties)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
 
     intel_gpu_get_props(gpu, pProperties);
-    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice gpu_,
     uint32_t* pCount,
     VkQueueFamilyProperties* pProperties)
@@ -463,36 +462,30 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
 
    if (pProperties == NULL) {
        *pCount = INTEL_GPU_ENGINE_COUNT;
-       return VK_SUCCESS;
+       return;
    }
 
    for (engine = 0; engine < *pCount; engine++) {
        intel_gpu_get_queue_props(gpu, engine, pProperties);
        pProperties++;
    }
-   return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceMemoryProperties* pProperties)
 {
    struct intel_gpu *gpu = intel_gpu(gpu_);
 
    intel_gpu_get_memory_props(gpu, pProperties);
-   return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceFeatures(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
                                                VkPhysicalDevice physicalDevice,
                                                VkPhysicalDeviceFeatures* pFeatures)
 {
-    VkResult ret = VK_SUCCESS;
-
     /* TODO: fill out features */
     memset(pFeatures, 0, sizeof(*pFeatures));
-
-    return ret;
 }
 
 void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
@@ -533,7 +526,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -544,6 +537,5 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkSparseImageFormatProperties*              pProperties)
 {
     *pNumProperties = 0;
-    return VK_SUCCESS;
 }
 

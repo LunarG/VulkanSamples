@@ -345,13 +345,8 @@ static void app_dev_init_formats(struct app_dev *dev)
 
     for (f = 0; f < VK_FORMAT_NUM; f++) {
         const VkFormat fmt = f;
-        VkResult err;
 
-        err = vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
-        if (err) {
-            memset(&dev->format_props[f], 0,
-                   sizeof(dev->format_props[f]));
-        }
+        vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
     }
 }
 
@@ -637,7 +632,6 @@ static void app_destroy_instance(struct app_instance *inst)
 
 static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
 {
-    VkResult err;
     uint32_t i;
 
     memset(gpu, 0, sizeof(*gpu));
@@ -645,23 +639,17 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     gpu->id = id;
     gpu->obj = obj;
 
-    err = vkGetPhysicalDeviceProperties(gpu->obj, &gpu->props);
-    if (err)
-        ERR_EXIT(err);
+    vkGetPhysicalDeviceProperties(gpu->obj, &gpu->props);
 
     /* get queue count */
-    err = vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, NULL);
-    if (err)
-        ERR_EXIT(err);
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, NULL);
 
     gpu->queue_props =
             malloc(sizeof(gpu->queue_props[0]) * gpu->queue_count);
 
     if (!gpu->queue_props)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
-    err = vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, gpu->queue_props);
-    if (err)
-        ERR_EXIT(err);
+    vkGetPhysicalDeviceQueueFamilyProperties(gpu->obj, &gpu->queue_count, gpu->queue_props);
 
     /* set up queue requests */
     gpu->queue_reqs = malloc(sizeof(*gpu->queue_reqs) * gpu->queue_count);
@@ -674,13 +662,9 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
     }
 
-    err = vkGetPhysicalDeviceMemoryProperties(gpu->obj, &gpu->memory_props);
-    if (err)
-        ERR_EXIT(err);
+    vkGetPhysicalDeviceMemoryProperties(gpu->obj, &gpu->memory_props);
 
-    err = vkGetPhysicalDeviceFeatures(gpu->obj, &gpu->features);
-    if (err)
-        ERR_EXIT(err);
+    vkGetPhysicalDeviceFeatures(gpu->obj, &gpu->features);
 
     app_dev_init(&gpu->dev, gpu);
     app_dev_init_formats(&gpu->dev);

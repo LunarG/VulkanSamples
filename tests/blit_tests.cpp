@@ -1275,10 +1275,8 @@ TEST_F(VkCmdClearColorImageTest, Basic)
          it != test_formats_.end(); it++) {
         const float color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
         VkFormatProperties props;
-        VkResult err;
 
-        err = vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
-        ASSERT_EQ(err, VK_SUCCESS);
+        vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
 
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
             continue;
@@ -1453,10 +1451,8 @@ TEST_F(VkCmdClearDepthStencilTest, Basic)
     for (std::vector<vk_testing::Device::Format>::const_iterator it = test_formats_.begin();
          it != test_formats_.end(); it++) {
         VkFormatProperties props;
-        VkResult err;
 
-        err = vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
-        ASSERT_EQ(err, VK_SUCCESS);
+        vkGetPhysicalDeviceFormatProperties(dev_.phy().handle(), it->format, &props);
 
         if (it->tiling == VK_IMAGE_TILING_LINEAR && !(props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
             continue;
