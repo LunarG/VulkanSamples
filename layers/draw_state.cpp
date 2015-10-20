@@ -895,6 +895,25 @@ static VkBool32 validateDescriptorSetImageView(VkDevice device, uint32_t writeDs
 }
 
 // update DS mappings based on ppUpdateArray
+// TODO : copy updates are completely broken
+// TODO : Validate that actual VkDescriptorInfo in pDescriptors matches type:
+//   pImageInfo array should be used for each descriptor if type is:
+//    VK_DESCRIPTOR_TYPE_SAMPLER:
+//      - uses sampler field of VkDescriptorImageInfo,
+//    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+//       - uses sampler if binding doesn't use immutable sampler,
+//       - uses imageView & imageLayout
+//    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+//    VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
+//       - all use imageView & imageLayout
+//   pTexelBuffer array should be used for each descriptor if type is:
+//    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+//   pBufferInfo array should be used for each descriptor if type is:
+//    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+//    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
+// TODO : Verify we validate this spec req: All consecutive bindings updated via a single
+//  VkWriteDescriptorSet structure must have identical descriptorType and stageFlags,
+//  and must all either use immutable samplers or none must use immutable samplers.
 static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
 {
     const VkWriteDescriptorSet *pWDS = NULL;
@@ -2332,6 +2351,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
+    // TODO : Validate dynamic offsets
+    //  If any of the sets being bound include dynamic uniform or storage buffers,
+    //  then pDynamicOffsets must include one element for each array element
+    //  in each dynamic descriptor type binding in each set.
+    //  dynamicOffsetCount is the total number of dynamic offsets provided, and
+    //  must equal the total number of dynamic descriptors in the sets being bound
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
