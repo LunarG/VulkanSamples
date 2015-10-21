@@ -233,12 +233,12 @@ Example debug build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
 cd LoaderAndTools  # cd to the root of the Vulkan git repository
 update_external_sources.bat --build-glslang
-mkdir _out64
-cd _out64
+mkdir build
+cd build
 cmake -G "Visual Studio 12 Win64" ..
 ```
 
-At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \_out64 folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "_out64" folder.
+At this point, you can use Windows Explorer to launch Visual Studio by double-clicking on the "VULKAN.sln" file in the \build folder.  Once Visual Studio comes up, you can select "Debug" or "Release" from a drop-down list.  You can start a build with either the menu (Build->Build Solution), or a keyboard shortcut (Ctrl+Shift+B).  As part of the build process, Python scripts will create additional Visual Studio files and projects, along with additional source files.  All of these auto-generated files are under the "build" folder.
 
 VK programs must be able to find and use the VK.dll libary. Make sure it is either installed in the C:\Windows\System32 folder, or the PATH enviroment variable includes the folder that it is located in.
 
