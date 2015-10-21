@@ -234,8 +234,8 @@ Example debug build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
 cd LoaderAndTools  # cd to the root of the Vulkan git repository
 update_external_sources.bat --build-glslang
-mkdir _out64
-cd _out64
+mkdir build
+cd build
 cmake -G "Visual Studio 12 Win64" ..
 ```
 
