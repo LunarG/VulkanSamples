@@ -282,7 +282,7 @@ static VkResult nulldrv_img_create(struct nulldrv_dev *dev,
     img->type = info->imageType;
     img->depth = info->extent.depth;
     img->mip_levels = info->mipLevels;
-    img->array_size = info->arraySize;
+    img->array_size = info->arrayLayers;
     img->usage = info->usage;
     img->samples = info->samples;
 

@@ -518,7 +518,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -667,7 +667,7 @@ TEST_F(VkLayerTest, RebindMemory)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -935,7 +935,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -1008,7 +1008,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -2558,7 +2558,7 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
     image_create_info.extent.height         = tex_height;
     image_create_info.extent.depth          = 1;
     image_create_info.mipLevels             = 1;
-    image_create_info.arraySize             = 1;
+    image_create_info.arrayLayers             = 1;
     image_create_info.samples               = 1;
     image_create_info.tiling                = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage                 = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -2650,7 +2650,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     color_attachment.clearValue.color.float32[2] = 0;
     color_attachment.clearValue.color.float32[3] = 0;
     color_attachment.colorAttachment = 0;
-    VkClearRect clear_rect  = { { 0, 0, 0 }, { 32, 32, 1 } };
+    VkClearRect clear_rect  = { { { 0, 0 }, { 32, 32 } } };
     vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(),
                           1, &color_attachment,
                           1, &clear_rect);
@@ -3279,7 +3279,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     color_attachment.clearValue.color.float32[2] = 1.0;
     color_attachment.clearValue.color.float32[3] = 1.0;
     color_attachment.colorAttachment = 0;
-    VkClearRect clear_rect = { { 0, 0, 0 }, { (int)m_width, (int)m_height, 1 } };
+    VkClearRect clear_rect = { { { 0, 0 }, { (int)m_width, (int)m_height } } };
 
     vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -4176,7 +4176,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
     image_create_info.extent.height = tex_height;
     image_create_info.extent.depth  = 1;
     image_create_info.mipLevels     = 1;
-    image_create_info.arraySize     = 1;
+    image_create_info.arrayLayers     = 1;
     image_create_info.samples       = 1;
     image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -4218,7 +4218,7 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
     image_create_info.extent.height = tex_height;
     image_create_info.extent.depth  = 1;
     image_create_info.mipLevels     = 1;
-    image_create_info.arraySize     = 1;
+    image_create_info.arrayLayers     = 1;
     image_create_info.samples       = 1;
     image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -4229,7 +4229,7 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
     image_create_info.extent.width  = 8192;
     image_create_info.extent.height = 8192;
     image_create_info.extent.depth  = 16;
-    image_create_info.arraySize     = 4;
+    image_create_info.arrayLayers     = 4;
     image_create_info.samples       = 2;
     image_create_info.format        = VK_FORMAT_R8G8B8A8_UNORM;
     vkCreateImage(m_device->device(), &image_create_info, &image);
@@ -4329,7 +4329,7 @@ TEST_F(VkLayerTest, InvalidImageView)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -4383,7 +4383,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
         image_create_info.extent.height = 32;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
@@ -4489,7 +4489,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
         image_create_info.extent.height = 32;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
@@ -4590,7 +4590,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
         image_create_info.extent.height = 1;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
@@ -4694,7 +4694,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         image_create_info.extent.height = 1;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
@@ -4798,7 +4798,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.extent.height = 1;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
@@ -4903,7 +4903,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.extent.height = 1;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.arraySize = 1;
+        image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;

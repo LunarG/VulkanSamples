@@ -983,8 +983,8 @@ void cmd_clear_color_attachment(
                VK_IMAGE_ASPECT_COLOR_BIT,
                view->mipLevel,
                1,
-               pRects[i].offset.z,
-               pRects[i].extent.depth
+               0,
+               1
            };
 
            cmd_meta_clear_color_image(cmdBuffer, view->img,
@@ -1019,8 +1019,8 @@ void cmd_clear_depth_stencil_attachment(
             aspectMask,
             view->mipLevel,
             1,
-            pRects[i].offset.z,
-            pRects[i].extent.depth
+            0,
+            1
         };
 
         cmd_meta_clear_depth_stencil_image(cmdBuffer,

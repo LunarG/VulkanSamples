@@ -1688,7 +1688,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.extent.height = height;
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
-    image_info.arraySize = 1;
+    image_info.arrayLayers = 1;
     image_info.samples = 1;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;

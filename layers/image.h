@@ -52,7 +52,7 @@ typedef struct _IMAGE_STATE
     _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(0), imageType(VK_IMAGE_TYPE_NUM) {};
     _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):
         mipLevels(pCreateInfo->mipLevels),
-        arraySize(pCreateInfo->arraySize),
+        arraySize(pCreateInfo->arrayLayers),
         format(pCreateInfo->format),
         samples(pCreateInfo->samples),
         imageType(pCreateInfo->imageType)

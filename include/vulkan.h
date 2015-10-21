@@ -1484,7 +1484,7 @@ typedef struct {
     VkFormat                                    format;
     VkExtent3D                                  extent;
     uint32_t                                    mipLevels;
-    uint32_t                                    arraySize;
+    uint32_t                                    arrayLayers;
     uint32_t                                    samples;
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
@@ -2005,8 +2005,7 @@ typedef struct {
 } VkClearAttachment;
 
 typedef struct {
-    VkOffset3D                                  offset;
-    VkExtent3D                                  extent;
+    VkRect2D                                    rect;
     uint32_t                                    baseArrayLayer;
     uint32_t                                    numLayers;
 } VkClearRect;

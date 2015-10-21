@@ -119,13 +119,13 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
 
     // arraySize should be limited in our tests.  If this proves to be an
     // issue, we can store only the regions for array slice 0 and be smart.
-    if (info_.arraySize > 1) {
+    if (info_.arrayLayers > 1) {
         const VkDeviceSize slice_pitch = offset;
         const uint32_t slice_region_count = regions_.size();
 
-        regions_.reserve(slice_region_count * info_.arraySize);
+        regions_.reserve(slice_region_count * info_.arrayLayers);
 
-        for (uint32_t slice = 1; slice < info_.arraySize; slice++) {
+        for (uint32_t slice = 1; slice < info_.arrayLayers; slice++) {
             for (uint32_t i = 0; i < slice_region_count; i++) {
                 VkBufferImageCopy region = regions_[i];
 

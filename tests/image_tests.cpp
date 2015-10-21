@@ -173,7 +173,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
-    imageCreateInfo.arraySize = 1;
+    imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.extent.width = w;
     imageCreateInfo.extent.height = h;
     imageCreateInfo.extent.depth = 1;

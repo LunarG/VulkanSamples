@@ -480,7 +480,7 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     img_info.extent.height = info->imageExtent.height;
     img_info.extent.depth = 1;
     img_info.mipLevels = 1;
-    img_info.arraySize = info->imageArraySize;
+    img_info.arrayLayers = info->imageArraySize;
     img_info.samples = 1;
     img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     img_info.usage = info->imageUsageFlags;

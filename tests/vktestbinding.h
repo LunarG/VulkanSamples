@@ -669,7 +669,7 @@ inline VkImageCreateInfo Image::create_info()
     info.extent.height = 1;
     info.extent.depth = 1;
     info.mipLevels = 1;
-    info.arraySize = 1;
+    info.arrayLayers = 1;
     info.samples = 1;
     return info;
 }
@@ -738,7 +738,7 @@ inline VkImageSubresourceRange Image::subresource_range(VkImageAspectFlags aspec
 
 inline VkImageSubresourceRange Image::subresource_range(const VkImageCreateInfo &info, VkImageAspectFlags aspect_mask)
 {
-    return subresource_range(aspect_mask, 0, info.mipLevels, 0, info.arraySize);
+    return subresource_range(aspect_mask, 0, info.mipLevels, 0, info.arrayLayers);
 }
 
 inline VkImageSubresourceRange Image::subresource_range(const VkImageSubresource &subres)

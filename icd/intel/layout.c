@@ -162,7 +162,7 @@ layout_get_num_layers(const struct intel_layout *layout,
                       const struct intel_layout_params *params)
 {
    const VkImageCreateInfo *info = params->info;
-   unsigned num_layers = info->arraySize;
+   unsigned num_layers = info->arrayLayers;
 
    /* samples of the same index are stored in a layer */
    if (info->samples > 1 && !layout->interleaved_samples)
@@ -764,7 +764,7 @@ layout_want_mcs(struct intel_layout *layout,
        *      ..."
        */
       if (layout->tiling != GEN6_TILING_NONE &&
-          info->mipLevels == 1 && info->arraySize == 1) {
+          info->mipLevels == 1 && info->arrayLayers == 1) {
          switch (layout->block_size) {
          case 4:
          case 8:
@@ -874,7 +874,7 @@ layout_align(struct intel_layout *layout, struct intel_layout_params *params)
     */
    if (layout->aux == INTEL_LAYOUT_AUX_HIZ &&
        info->mipLevels == 1 &&
-       info->arraySize == 1 &&
+       info->arrayLayers == 1 &&
        info->extent.depth == 1) {
       if (align_w < 8)
           align_w = 8;
@@ -1054,7 +1054,7 @@ layout_calculate_hiz_size(struct intel_layout *layout,
 
             tw = u_align(layout->lods[lv].slice_width, 16);
             th = u_align(layout->lods[lv].slice_height, hz_align_j) *
-               info->arraySize / 2;
+               info->arrayLayers / 2;
             /* convert to Y-tiles */
             tw = u_align(tw, 128) / 128;
             th = u_align(th, 32) / 32;
@@ -1089,7 +1089,7 @@ layout_calculate_hiz_size(struct intel_layout *layout,
 
          hz_width = u_align(layout->lods[0].slice_width, 16);
 
-         hz_height = hz_qpitch * info->arraySize / 2;
+         hz_height = hz_qpitch * info->arrayLayers / 2;
          if (intel_gpu_gen(params->gpu) >= INTEL_GEN(7))
             hz_height = u_align(hz_height, 8);
 
@@ -1152,7 +1152,7 @@ layout_calculate_hiz_size(struct intel_layout *layout,
    }
 
    /* we padded to allow this in layout_align() */
-   if (info->mipLevels == 1 && info->arraySize == 1 && info->extent.depth == 1)
+   if (info->mipLevels == 1 && info->arrayLayers == 1 && info->extent.depth == 1)
       layout->aux_enables |= 0x1;
 
    /* align to Y-tile */

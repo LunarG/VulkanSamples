@@ -523,7 +523,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width               *
                           (uint64_t)pCreateInfo->extent.height              *
                           (uint64_t)pCreateInfo->extent.depth               *
-                          (uint64_t)pCreateInfo->arraySize                  *
+                          (uint64_t)pCreateInfo->arrayLayers                *
                           (uint64_t)pCreateInfo->samples                    *
                           (uint64_t)vk_format_get_size(pCreateInfo->format) +
                           (uint64_t)imageGranularity ) & ~(uint64_t)imageGranularity;
