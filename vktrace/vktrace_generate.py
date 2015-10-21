@@ -277,6 +277,7 @@ class Subcommand(object):
         ps = [] # List of elements to be added together to account for packet size for given params
         skip_list = [] # store params that are already accounted for so we don't count them twice
         # Dict of specific params with unique custom sizes
+        # TODO: Now using bitfields for all stages, need pSetBindPoints to accomodate that.
         custom_size_dict = {'pSetBindPoints': '(VK_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
                             'VkSwapchainCreateInfoKHR' : 'vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo)',
                             }

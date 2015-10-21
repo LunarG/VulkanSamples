@@ -306,7 +306,7 @@ void intel_desc_region_copy(struct intel_desc_region *region,
 
 void intel_desc_region_read_surface(const struct intel_desc_region *region,
                                     const struct intel_desc_offset *offset,
-                                    VkShaderStage stage,
+                                    VkShaderStageFlagBits stage,
                                     const struct intel_mem **mem,
                                     bool *read_only,
                                     const uint32_t **cmd,
@@ -326,7 +326,7 @@ void intel_desc_region_read_surface(const struct intel_desc_region *region,
     *read_only = desc->read_only;
     switch (desc->type) {
     case INTEL_DESC_SURFACE_BUF:
-        *cmd = (stage == VK_SHADER_STAGE_FRAGMENT) ?
+        *cmd = (stage == VK_SHADER_STAGE_FRAGMENT_BIT) ?
             desc->u.buf.fs_cmd : desc->u.buf.cmd;
         *cmd_len = desc->u.buf.cmd_len;
         break;

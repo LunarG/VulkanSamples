@@ -72,7 +72,7 @@ public:
     void CreateCommandBufferTest();
     void CreatePipelineTest();
     void CreateShaderTest();
-    void CreateShader(VkShader *pshader, VkShaderStage stage);
+    void CreateShader(VkShader *pshader, VkShaderStageFlagBits stage);
 
     VkDevice device() {return m_device->handle();}
 
@@ -518,7 +518,7 @@ TEST_F(VkTest, TestCommandBuffer) {
     CreateCommandBufferTest();
 }
 
-void VkTest::CreateShader(VkShader *pshader, VkShaderStage stage)
+void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
 {
     void *code;
     uint32_t codeSize;

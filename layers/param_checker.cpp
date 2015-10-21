@@ -3978,8 +3978,10 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pStages->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->pStages->stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfos->pStages->stage > VK_SHADER_STAGE_END_RANGE)
+    if((pCreateInfos->pStages->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT |
+                                       VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT |
+                                       VK_SHADER_STAGE_GEOMETRY_BIT |
+                                       VK_SHADER_STAGE_COMPUTE_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkShaderStage pCreateInfos->pStages->stage, is an unrecognized enumerator");
@@ -4299,8 +4301,10 @@ bool PreCreateComputePipelines(
         "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->cs.sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->stage.stage < VK_SHADER_STAGE_BEGIN_RANGE ||
-        pCreateInfos->stage.stage > VK_SHADER_STAGE_END_RANGE)
+    if((pCreateInfos->stage.stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT |
+                                       VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT |
+                                       VK_SHADER_STAGE_GEOMETRY_BIT |
+                                       VK_SHADER_STAGE_COMPUTE_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateComputePipelines parameter, VkShaderStage pCreateInfos->cs.stage, is an unrecognized enumerator");

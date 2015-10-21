@@ -1071,7 +1071,7 @@ VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
     return stageInfo;
 }
 
-VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShaderStage stage, VkRenderFramework *framework)
+VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShaderStageFlagBits stage, VkRenderFramework *framework)
 {
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;

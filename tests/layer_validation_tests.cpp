@@ -288,8 +288,8 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
 
     VkConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1308,8 +1308,8 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -1562,8 +1562,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
 
     VkPipelineObj pipe(m_device);
@@ -1829,19 +1829,19 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     VkPipelineShaderStageCreateInfo shaderStages[3];
     memset(&shaderStages, 0, 3 * sizeof(VkPipelineShaderStageCreateInfo));
 
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
     // Just using VS txt for Tess shaders as we don't care about functionality
-    VkShaderObj tc(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_CONTROL, this);
-    VkShaderObj te(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_EVALUATION, this);
+    VkShaderObj tc(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, this);
+    VkShaderObj te(m_device,bindStateVertShaderText,VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, this);
 
     shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = vs.handle();
     shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].stage  = VK_SHADER_STAGE_TESSELLATION_CONTROL;
+    shaderStages[1].stage  = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
     shaderStages[1].shader = tc.handle();
     shaderStages[2].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[2].stage  = VK_SHADER_STAGE_TESSELLATION_EVALUATION;
+    shaderStages[2].stage  = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     shaderStages[2].shader = te.handle();
 
     VkPipelineInputAssemblyStateCreateInfo iaCI = {};
@@ -1960,15 +1960,15 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     VkPipelineShaderStageCreateInfo shaderStages[2];
 	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
-	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = vs.handle();
 
 	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
@@ -2066,15 +2066,15 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     VkPipelineShaderStageCreateInfo shaderStages[2];
 	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
-	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = vs.handle();
 
 	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shaderStages[1].shader = fs.handle();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
@@ -2179,15 +2179,15 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     VkPipelineShaderStageCreateInfo shaderStages[2];
 	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
-	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = vs.handle();
 
 	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shaderStages[1].shader = fs.handle();
 
 	VkPipelineVertexInputStateCreateInfo vi_ci = {};
@@ -2335,15 +2335,15 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     VkPipelineShaderStageCreateInfo shaderStages[2];
 	memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
-    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX, this);
-	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); // TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
     shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = vs.handle();
 
 	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT;
+	shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 	shaderStages[1].shader = fs.handle();
 
     VkPipelineVertexInputStateCreateInfo vi_ci = {};
@@ -3166,8 +3166,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -3254,8 +3254,8 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -3355,8 +3355,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT, this); //  TODO - We shouldn't need a fragment shader
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
                                                                                        // but add it to be able to run on more devices
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -3588,8 +3588,8 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
         "   color = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3637,8 +3637,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
         "   color = vec4(x);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3688,8 +3688,8 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
         "   color = vec4(x);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3743,8 +3743,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
         "   color = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3795,8 +3795,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
         "   color = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3851,8 +3851,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
         "   color = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3911,8 +3911,8 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
         "   color = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddColorAttachment();
@@ -3962,8 +3962,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
         "void main(){\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -4014,8 +4014,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
         "   y = vec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -4065,8 +4065,8 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
         "   x = ivec4(1);\n"
         "}\n";
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
@@ -4118,8 +4118,8 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
 
     m_errorMonitor->ClearState();
 
-    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
 
     VkPipelineObj pipe(m_device);

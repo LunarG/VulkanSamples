@@ -405,12 +405,12 @@ protected:
 class VkShaderObj : public vk_testing::Shader
 {
 public:
-    VkShaderObj(VkDeviceObj *device, const char * shaderText, VkShaderStage stage, VkRenderFramework *framework);
+    VkShaderObj(VkDeviceObj *device, const char * shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework);
     VkPipelineShaderStageCreateInfo* GetStageCreateInfo();
 
 protected:
     VkPipelineShaderStageCreateInfo     stage_info;
-    VkShaderStage                       m_stage;
+    VkShaderStageFlagBits               m_stage;
     VkDeviceObj                        *m_device;
 
 };

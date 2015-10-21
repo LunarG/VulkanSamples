@@ -500,19 +500,6 @@ typedef enum {
 } VkChannelSwizzle;
 
 typedef enum {
-    VK_SHADER_STAGE_VERTEX = 0,
-    VK_SHADER_STAGE_TESSELLATION_CONTROL = 1,
-    VK_SHADER_STAGE_TESSELLATION_EVALUATION = 2,
-    VK_SHADER_STAGE_GEOMETRY = 3,
-    VK_SHADER_STAGE_FRAGMENT = 4,
-    VK_SHADER_STAGE_COMPUTE = 5,
-    VK_SHADER_STAGE_BEGIN_RANGE = VK_SHADER_STAGE_VERTEX,
-    VK_SHADER_STAGE_END_RANGE = VK_SHADER_STAGE_COMPUTE,
-    VK_SHADER_STAGE_NUM = (VK_SHADER_STAGE_COMPUTE - VK_SHADER_STAGE_VERTEX + 1),
-    VK_SHADER_STAGE_MAX_ENUM = 0x7FFFFFFF
-} VkShaderStage;
-
-typedef enum {
     VK_VERTEX_INPUT_STEP_RATE_VERTEX = 0,
     VK_VERTEX_INPUT_STEP_RATE_INSTANCE = 1,
     VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE = VK_VERTEX_INPUT_STEP_RATE_VERTEX,
@@ -973,6 +960,16 @@ typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
 typedef enum {
+    VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
+    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 0x00000002,
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 0x00000004,
+    VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
+    VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
+    VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
+    VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
+} VkShaderStageFlagBits;
+
+typedef enum {
     VK_CHANNEL_R_BIT = 0x00000001,
     VK_CHANNEL_G_BIT = 0x00000002,
     VK_CHANNEL_B_BIT = 0x00000004,
@@ -986,16 +983,6 @@ typedef enum {
     VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
 } VkPipelineCreateFlagBits;
 typedef VkFlags VkPipelineCreateFlags;
-
-typedef enum {
-    VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
-    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT = 0x00000002,
-    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT = 0x00000004,
-    VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
-    VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
-    VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
-    VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
-} VkShaderStageFlagBits;
 typedef VkFlags VkShaderStageFlags;
 
 typedef enum {
@@ -1556,7 +1543,7 @@ typedef struct {
     VkShaderModule                              module;
     const char*                                 pName;
     VkShaderCreateFlags                         flags;
-    VkShaderStage                               stage;
+    VkShaderStageFlagBits                       stage;
 } VkShaderCreateInfo;
 
 typedef struct {
@@ -1583,7 +1570,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkShaderStage                               stage;
+    VkShaderStageFlagBits                       stage;
     VkShader                                    shader;
     const VkSpecializationInfo*                 pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;

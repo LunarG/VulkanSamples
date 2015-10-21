@@ -499,15 +499,15 @@ void unpack_set_and_binding(const int location, int &set, int &binding)
         --set;
 }
 
-const char *shader_stage_to_string(VkShaderStage stage)
+const char *shader_stage_to_string(VkShaderStageFlagBits stage)
 {
    switch (stage) {
-   case VK_SHADER_STAGE_VERTEX:          return "vertex";
-   case VK_SHADER_STAGE_TESSELLATION_CONTROL:    return "tessellation evaluation";
-   case VK_SHADER_STAGE_TESSELLATION_EVALUATION: return "tessellation control";
-   case VK_SHADER_STAGE_GEOMETRY:        return "geometry";
-   case VK_SHADER_STAGE_FRAGMENT:        return "fragment";
-   case VK_SHADER_STAGE_COMPUTE:         return "compute";
+   case VK_SHADER_STAGE_VERTEX_BIT:          return "vertex";
+   case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:    return "tessellation evaluation";
+   case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT: return "tessellation control";
+   case VK_SHADER_STAGE_GEOMETRY_BIT:        return "geometry";
+   case VK_SHADER_STAGE_FRAGMENT_BIT:        return "fragment";
+   case VK_SHADER_STAGE_COMPUTE_BIT:         return "compute";
    default:
        assert(0 && "Unknown shader stage");
        return "unknown";
@@ -519,13 +519,13 @@ static VkResult build_binding_table(const struct intel_gpu *gpu,
                                     struct brw_binding_table *bt,
                                     brw_stage_prog_data data,
                                     struct gl_shader_program *sh_prog,
-                                    VkShaderStage stage)
+                                    VkShaderStageFlagBits stage)
 {
     gl_shader *sh = 0;
     switch (stage) {
-    case VK_SHADER_STAGE_VERTEX:   sh = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];   break;
-    case VK_SHADER_STAGE_GEOMETRY: sh = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]; break;
-    case VK_SHADER_STAGE_FRAGMENT: sh = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]; break;
+    case VK_SHADER_STAGE_VERTEX_BIT:   sh = sh_prog->_LinkedShaders[MESA_SHADER_VERTEX];   break;
+    case VK_SHADER_STAGE_GEOMETRY_BIT: sh = sh_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]; break;
+    case VK_SHADER_STAGE_FRAGMENT_BIT: sh = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]; break;
     default:
         assert(0 && "Unknown shader stage");
     }
@@ -688,7 +688,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
-            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_VERTEX);
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_VERTEX_BIT);
             if (status != VK_SUCCESS)
                 break;
 
@@ -760,7 +760,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->ubo_start     = data->base.base.binding_table.ubo_start;
             pipe_shader->per_thread_scratch_size = data->base.total_scratch;
 
-            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_GEOMETRY);
+            status = build_binding_table(gpu, brw, &bt, data->base.base, sh_prog, VK_SHADER_STAGE_GEOMETRY_BIT);
             if (status != VK_SUCCESS)
 
             if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
@@ -864,7 +864,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
             pipe_shader->per_thread_scratch_size = data->total_scratch;
 
             // call common code for common binding table entries
-            status = build_binding_table(gpu, brw, &bt, data->base, sh_prog, VK_SHADER_STAGE_FRAGMENT);
+            status = build_binding_table(gpu, brw, &bt, data->base, sh_prog, VK_SHADER_STAGE_FRAGMENT_BIT);
             if (status != VK_SUCCESS)
                 break;
 

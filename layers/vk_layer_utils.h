@@ -24,6 +24,9 @@
  **************************************************************************/
 #pragma once
 #include <stdbool.h>
+#ifndef WIN32
+#include <strings.h> /* for ffs() */
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +51,14 @@ bool   vk_format_is_srgb(VkFormat format);
 bool   vk_format_is_compressed(VkFormat format);
 size_t vk_format_get_size(VkFormat format);
 
+static inline int u_ffs(int val)
+{
+#ifdef WIN32
+        return __lzcnt(val) + 1;
+#else
+        return ffs(val);
+#endif
+}
 
 #ifdef __cplusplus
 }

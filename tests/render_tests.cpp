@@ -493,8 +493,8 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 
     VkConstantBufferObj constantBuffer(m_device, bufSize*2, sizeof(float), (const void*) &data);
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -752,8 +752,8 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -833,8 +833,8 @@ TEST_F(VkRenderTest, TriangleMRT)
     VkConstantBufferObj meshBuffer(m_device, sizeof(vb_data) / sizeof(vb_data[0]), sizeof(vb_data[0]), vb_data);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -939,8 +939,8 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     indexBuffer.CreateAndInitBuffer(sizeof(g_idxData)/sizeof(g_idxData[0]), VK_INDEX_TYPE_UINT16, g_idxData);
     indexBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1033,8 +1033,8 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1121,8 +1121,8 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1219,8 +1219,8 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1308,8 +1308,8 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1395,8 +1395,8 @@ TEST_F(VkRenderTest, TriangleVSUniform)
     const int matrixSize = sizeof(MVP) / sizeof(MVP[0]);
 
     VkConstantBufferObj MVPBuffer(m_device, matrixSize, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1476,8 +1476,8 @@ TEST_F(VkRenderTest, MixTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1545,8 +1545,8 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1648,8 +1648,8 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     VkConstantBufferObj meshBuffer(m_device,sizeof(vData)/sizeof(vData[0]),sizeof(vData[0]), vData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1741,8 +1741,8 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     VkConstantBufferObj meshBuffer(m_device,sizeof(g_vbData)/sizeof(g_vbData[0]),sizeof(g_vbData[0]), g_vbData);
     meshBuffer.BufferMemoryBarrier();
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1844,8 +1844,8 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     const int buf_size = sizeof(MVP) / sizeof(float);
 
     VkConstantBufferObj MVPBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -1947,8 +1947,8 @@ TEST_F(VkRenderTest, VSTexture)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkSamplerObj sampler(m_device);
     VkTextureObj texture(m_device);
 
@@ -2018,8 +2018,8 @@ TEST_F(VkRenderTest, TexturedTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkSamplerObj sampler(m_device);
     VkTextureObj texture(m_device);
 
@@ -2096,8 +2096,8 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkSamplerObj sampler(m_device);
     VkTextureObj texture(m_device);
 
@@ -2164,8 +2164,8 @@ TEST_F(VkRenderTest, FSTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkSamplerObj sampler(m_device);
     VkTextureObj texture(m_device);
 
@@ -2238,8 +2238,8 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkSamplerObj sampler1(m_device);
     VkSamplerObj sampler2(m_device);
@@ -2320,8 +2320,8 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     // Let's populate our buffer with the following:
     //     vec4 red;
@@ -2402,8 +2402,8 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2496,8 +2496,8 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2614,8 +2614,8 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     // We're going to create a number of uniform buffers, and then allow
     // the shader to select which it wants to read from with a binding
@@ -2729,8 +2729,8 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     const int buf_size = sizeof(MVP) / sizeof(float);
 
     VkConstantBufferObj mvpBuffer(m_device, buf_size, sizeof(MVP[0]), (const void*) &MVP[0][0]);
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkSamplerObj sampler(m_device);
     VkTextureObj texture(m_device);
 
@@ -2845,8 +2845,8 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -2955,8 +2955,8 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     const float redVals[4]   = { 1.0, 0.0, 0.0, 1.0 };
     const float greenVals[4] = { 0.0, 1.0, 0.0, 1.0 };
@@ -3237,8 +3237,8 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
 
     const int constCount   = sizeof(mixedVals)   / sizeof(float);
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
@@ -3334,8 +3334,8 @@ TEST_F(VkRenderTest, TextureGather)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX, this);
-    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device,vertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj ps(m_device,fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     uint32_t tex_colors[2] = { 0xffff0000, 0xffff0000 };
     VkSamplerObj sampler0(m_device);
@@ -3453,9 +3453,9 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
-    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
-    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY_BIT, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -3801,9 +3801,9 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
 
     const int constCount   = sizeof(mixedVals)   / sizeof(float);
 
-    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
-    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
-    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY_BIT, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkConstantBufferObj mixedBuffer(m_device, constCount, sizeof(mixedVals[0]), (const void*) mixedVals);
 
@@ -3929,9 +3929,9 @@ TEST_F(VkRenderTest, GSPositions)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
-    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
-    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY_BIT, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();
@@ -4059,9 +4059,9 @@ TEST_F(VkRenderTest, GSTriStrip)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
 
-    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX,   this);
-    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY, this);
-    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT, this);
+    VkShaderObj vs(m_device, vertShaderText, VK_SHADER_STAGE_VERTEX_BIT,   this);
+    VkShaderObj gs(m_device, geomShaderText, VK_SHADER_STAGE_GEOMETRY_BIT, this);
+    VkShaderObj ps(m_device, fragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this);
 
     VkPipelineObj pipelineobj(m_device);
     pipelineobj.AddColorAttachment();

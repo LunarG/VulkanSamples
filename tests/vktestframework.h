@@ -91,7 +91,7 @@ public:
     void Compare(const char *comment, VkImageObj *image);
     void RecordImage(VkImageObj * image);
     void RecordImages(vector<VkImageObj *> image);
-    bool GLSLtoSPV(const VkShaderStage shader_type,
+    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
     static bool         m_use_glsl;
@@ -109,7 +109,7 @@ private:
     void SetMessageOptions(EShMessages& messages);
     void ProcessConfigFile();
     EShLanguage FindLanguage(const std::string& name);
-    EShLanguage FindLanguage(const VkShaderStage shader_type);
+    EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type);
     std::string ConfigFile;
     bool SetConfigFile(const std::string& name);
 

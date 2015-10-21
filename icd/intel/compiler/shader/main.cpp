@@ -65,7 +65,7 @@ static char* load_spv_file(const char *filename, size_t *psize)
 }
 
 
-static char* load_glsl_file(const char *filename, size_t *psize, VkShaderStage stage)
+static char* load_glsl_file(const char *filename, size_t *psize, VkShaderStageFlagBits stage)
 {
     long int size;
     void *shader_code;
@@ -144,16 +144,16 @@ int main(int argc, char **argv)
 
            void *shaderCode;
            size_t size;
-           VkShaderStage stage = VK_SHADER_STAGE_VERTEX;
+           VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
 
            if (checkFileExt(argv[1], ".spv")) {
                shaderCode = load_spv_file(argv[1], &size);
            } else if (checkFileExt(argv[1], ".vert")) {
-               stage = VK_SHADER_STAGE_VERTEX;
+               stage = VK_SHADER_STAGE_VERTEX_BIT;
            } else if (checkFileExt(argv[1], ".geom")) {
-               stage = VK_SHADER_STAGE_GEOMETRY;
+               stage = VK_SHADER_STAGE_GEOMETRY_BIT;
            } else if (checkFileExt(argv[1], ".frag")) {
-               stage = VK_SHADER_STAGE_FRAGMENT;
+               stage = VK_SHADER_STAGE_FRAGMENT_BIT;
            } else {
                return EXIT_FAILURE;
            }
@@ -214,14 +214,14 @@ int main(int argc, char **argv)
        shaderCode[0] = load_spv_file(argv[1], &size[0]);
        assert(shaderCode[0]);
        printf("Compiling %s\n", argv[1]);
-       result[0] = shader_create_ir(NULL, shaderCode[0], size[0], VK_SHADER_STAGE_VERTEX);
+       result[0] = shader_create_ir(NULL, shaderCode[0], size[0], VK_SHADER_STAGE_VERTEX_BIT);
        assert(result[0]);
 
        // Compile second shader
        shaderCode[1] = load_spv_file(argv[2], &size[1]);
        assert(shaderCode[1]);
        printf("Compiling %s\n", argv[2]);
-       result[1] = shader_create_ir(NULL, shaderCode[1], size[1], VK_SHADER_STAGE_FRAGMENT);
+       result[1] = shader_create_ir(NULL, shaderCode[1], size[1], VK_SHADER_STAGE_FRAGMENT_BIT);
        assert(result[1]);
 
 

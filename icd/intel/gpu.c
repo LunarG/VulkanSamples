@@ -327,17 +327,17 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
 }
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              VkShaderStage stage)
+                              VkShaderStageFlagBits stage)
 {
     switch (intel_gpu_gen(gpu)) {
     case INTEL_GEN(7.5):
         switch (stage) {
-        case VK_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX_BIT:
             return (gpu->gt >= 2) ? 280 : 70;
-        case VK_SHADER_STAGE_GEOMETRY:
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
             /* values from ilo_gpe_init_gs_cso_gen7 */
             return (gpu->gt >= 2) ? 256 : 70;
-        case VK_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
             return (gpu->gt == 3) ? 408 :
                    (gpu->gt == 2) ? 204 : 102;
         default:
@@ -346,12 +346,12 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     case INTEL_GEN(7):
         switch (stage) {
-        case VK_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX_BIT:
             return (gpu->gt == 2) ? 128 : 36;
-        case VK_SHADER_STAGE_GEOMETRY:
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
             /* values from ilo_gpe_init_gs_cso_gen7 */
             return (gpu->gt == 2) ? 128 : 36;
-        case VK_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
             return (gpu->gt == 2) ? 172 : 48;
         default:
             break;
@@ -359,12 +359,12 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     case INTEL_GEN(6):
         switch (stage) {
-        case VK_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX_BIT:
             return (gpu->gt == 2) ? 60 : 24;
-        case VK_SHADER_STAGE_GEOMETRY:
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
             /* values from ilo_gpe_init_gs_cso_gen6 */
             return (gpu->gt == 2) ? 28 : 21;
-        case VK_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
             return (gpu->gt == 2) ? 80 : 40;
         default:
             break;
@@ -378,11 +378,11 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
             0, 0, "unknown Gen or shader stage");
 
     switch (stage) {
-    case VK_SHADER_STAGE_VERTEX:
+    case VK_SHADER_STAGE_VERTEX_BIT:
         return 1;
-    case VK_SHADER_STAGE_GEOMETRY:
+    case VK_SHADER_STAGE_GEOMETRY_BIT:
         return 1;
-    case VK_SHADER_STAGE_FRAGMENT:
+    case VK_SHADER_STAGE_FRAGMENT_BIT:
         return 4;
     default:
         return 1;

@@ -223,11 +223,11 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     case INTEL_DEV_META_VS_COPY_MEM:
     case INTEL_DEV_META_VS_COPY_MEM_UNALIGNED:
         sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
-                VK_SHADER_STAGE_VERTEX);
+                VK_SHADER_STAGE_VERTEX_BIT);
         break;
     default:
         sh->max_threads = intel_gpu_get_max_threads(dev->gpu,
-                VK_SHADER_STAGE_FRAGMENT);
+                VK_SHADER_STAGE_FRAGMENT_BIT);
         break;
     }
 
@@ -263,7 +263,7 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
     pipeline->scratch_size = sh->scratch_offset +
         sh->per_thread_scratch_size * sh->max_threads;
 
-    pipeline->active_shaders |= 1 << sh_info->stage;
+    pipeline->active_shaders |= sh_info->stage;
 
     return VK_SUCCESS;
 }
@@ -1204,22 +1204,22 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     for (uint32_t i = 0; i < vkinfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *thisStage = &vkinfo->pStages[i];
         switch (thisStage->stage) {
-            case VK_SHADER_STAGE_VERTEX:
+            case VK_SHADER_STAGE_VERTEX_BIT:
                 dst = &info->vs;
                 break;
-            case VK_SHADER_STAGE_TESSELLATION_CONTROL:
+            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
                 dst = &info->tcs;
                 break;
-            case VK_SHADER_STAGE_TESSELLATION_EVALUATION:
+            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
                 dst = &info->tes;
                 break;
-            case VK_SHADER_STAGE_GEOMETRY:
+            case VK_SHADER_STAGE_GEOMETRY_BIT:
                 dst = &info->gs;
                 break;
-            case VK_SHADER_STAGE_FRAGMENT:
+            case VK_SHADER_STAGE_FRAGMENT_BIT:
                 dst = &info->fs;
                 break;
-            case VK_SHADER_STAGE_COMPUTE:
+            case VK_SHADER_STAGE_COMPUTE_BIT:
                 dst = &info->compute;
                 break;
             default:

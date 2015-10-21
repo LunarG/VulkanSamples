@@ -40,7 +40,7 @@ void initialize_mesa_context_to_defaults(struct gl_context *ctx);
 
 struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
                                   const void *code, size_t size,
-                                  VkShaderStage stage);
+                                  VkShaderStageFlagBits stage);
 
 void shader_destroy_ir(struct intel_ir *ir);
 

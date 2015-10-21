@@ -1723,7 +1723,7 @@ static uint32_t emit_samplers(struct intel_cmd *cmd,
 
 static uint32_t emit_binding_table(struct intel_cmd *cmd,
                                    const struct intel_pipeline_rmap *rmap,
-                                   const VkShaderStage stage)
+                                   const VkShaderStageFlagBits stage)
 {
     const struct intel_desc_region *region = cmd->dev->desc_region;
     const struct intel_cmd_dset_data *data = &cmd->bind.dset.graphics_data;
@@ -1962,19 +1962,19 @@ static void emit_shader_resources(struct intel_cmd *cmd)
 
     binding_tables[0] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->vs.rmap,
-            VK_SHADER_STAGE_VERTEX);
+            VK_SHADER_STAGE_VERTEX_BIT);
     binding_tables[1] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->tcs.rmap,
-            VK_SHADER_STAGE_TESSELLATION_CONTROL);
+            VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
     binding_tables[2] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->tes.rmap,
-            VK_SHADER_STAGE_TESSELLATION_EVALUATION);
+            VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
     binding_tables[3] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->gs.rmap,
-            VK_SHADER_STAGE_GEOMETRY);
+            VK_SHADER_STAGE_GEOMETRY_BIT);
     binding_tables[4] = emit_binding_table(cmd,
             cmd->bind.pipeline.graphics->fs.rmap,
-            VK_SHADER_STAGE_FRAGMENT);
+            VK_SHADER_STAGE_FRAGMENT_BIT);
 
     samplers[0] = emit_samplers(cmd, cmd->bind.pipeline.graphics->vs.rmap);
     samplers[1] = emit_samplers(cmd, cmd->bind.pipeline.graphics->tcs.rmap);

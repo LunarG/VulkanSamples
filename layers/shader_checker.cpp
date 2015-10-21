@@ -33,6 +33,7 @@
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vk_layer.h"
+#include "vk_layer_utils.h"
 #include "vk_layer_config.h"
 #include "vk_layer_table.h"
 #include "vk_layer_logging.h"
@@ -1013,7 +1014,7 @@ struct shader_stage_attributes {
 
 
 static shader_stage_attributes
-shader_stage_attribs[VK_SHADER_STAGE_FRAGMENT + 1] = {
+shader_stage_attribs[] = {
     { "vertex shader", false },
     { "tessellation control shader", true },
     { "tessellation evaluation shader", false },
@@ -1040,14 +1041,22 @@ find_descriptor_binding(std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*
     return &(*set)[slot.second];
 }
 
+static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
+{
+    uint32_t bit_pos = u_ffs(stage);
+    return bit_pos-1;
+}
 
 static bool
 validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
+    int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
+    int geometry_stage = get_shader_stage_id(VK_SHADER_STAGE_GEOMETRY_BIT);
+    int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    shader_module const *shaders[VK_SHADER_STAGE_FRAGMENT + 1];  /* exclude CS */
+    shader_module const *shaders[fragment_stage + 1];  /* exclude CS */
     memset(shaders, 0, sizeof(shaders));
     render_pass const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
@@ -1059,7 +1068,8 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
         if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 
-            if (pStage->stage < VK_SHADER_STAGE_VERTEX || pStage->stage > VK_SHADER_STAGE_FRAGMENT) {
+            if ((pStage->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+                                  | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
                 if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
                         "Unknown shader stage %d", pStage->stage)) {
                     pass = false;
@@ -1067,7 +1077,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
             }
             else {
                 struct shader_object *shader = shader_object_map[pStage->shader.handle];
-                shaders[pStage->stage] = shader->module;
+                shaders[get_shader_stage_id(pStage->stage)] = shader->module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
@@ -1106,20 +1116,20 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
         pass = validate_vi_consistency(dev, vi) && pass;
     }
 
-    if (shaders[VK_SHADER_STAGE_VERTEX]) {
-        pass = validate_vi_against_vs_inputs(dev, vi, shaders[VK_SHADER_STAGE_VERTEX]) && pass;
+    if (shaders[vertex_stage]) {
+        pass = validate_vi_against_vs_inputs(dev, vi, shaders[vertex_stage]) && pass;
     }
 
     /* TODO: enforce rules about present combinations of shaders */
-    int producer = VK_SHADER_STAGE_VERTEX;
-    int consumer = VK_SHADER_STAGE_GEOMETRY;
+    int producer = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
+    int consumer = get_shader_stage_id(VK_SHADER_STAGE_GEOMETRY_BIT);
 
-    while (!shaders[producer] && producer != VK_SHADER_STAGE_FRAGMENT) {
+    while (!shaders[producer] && producer != fragment_stage) {
         producer++;
         consumer++;
     }
 
-    for (; producer != VK_SHADER_STAGE_FRAGMENT && consumer <= VK_SHADER_STAGE_FRAGMENT; consumer++) {
+    for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
             pass = validate_interface_between_stages(dev,
@@ -1131,8 +1141,8 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
         }
     }
 
-    if (shaders[VK_SHADER_STAGE_FRAGMENT] && rp) {
-        pass = validate_fs_outputs_against_render_pass(dev, shaders[VK_SHADER_STAGE_FRAGMENT], rp, pCreateInfo->subpass) && pass;
+    if (shaders[fragment_stage] && rp) {
+        pass = validate_fs_outputs_against_render_pass(dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);

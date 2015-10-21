@@ -111,7 +111,7 @@ void intel_gpu_get_memory_props(const struct intel_gpu *gpu,
                                 VkPhysicalDeviceMemoryProperties *props);
 
 int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
-                              VkShaderStage stage);
+                              VkShaderStageFlagBits stage);
 
 int intel_gpu_get_primary_fd(struct intel_gpu *gpu);
 

@@ -217,7 +217,6 @@ static string cmdTypeToString(CMD_TYPE cmd)
 }
 // Block of code at start here for managing/tracking Pipeline state that this layer cares about
 // Just track 2 shaders for now
-#define VK_NUM_GRAPHICS_SHADERS VK_SHADER_STAGE_COMPUTE
 #define MAX_SLOTS 2048
 #define NUM_COMMAND_BUFFERS_TO_DISPLAY 10
 
@@ -448,27 +447,27 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
         const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
 
         switch (pPSSCI->stage) {
-            case VK_SHADER_STAGE_VERTEX:
+            case VK_SHADER_STAGE_VERTEX_BIT:
                 memcpy(&pPipeline->vsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
                 break;
-            case VK_SHADER_STAGE_TESSELLATION_CONTROL:
+            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
                 memcpy(&pPipeline->tcsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
                 break;
-            case VK_SHADER_STAGE_TESSELLATION_EVALUATION:
+            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
                 memcpy(&pPipeline->tesCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
                 break;
-            case VK_SHADER_STAGE_GEOMETRY:
+            case VK_SHADER_STAGE_GEOMETRY_BIT:
                 memcpy(&pPipeline->gsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_GEOMETRY_BIT;
                 break;
-            case VK_SHADER_STAGE_FRAGMENT:
+            case VK_SHADER_STAGE_FRAGMENT_BIT:
                 memcpy(&pPipeline->fsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_FRAGMENT_BIT;
                 break;
-            case VK_SHADER_STAGE_COMPUTE:
+            case VK_SHADER_STAGE_COMPUTE_BIT:
                 // TODO : Flag error, CS is specified through VkComputePipelineCreateInfo
                 pPipeline->active_shaders |= VK_SHADER_STAGE_COMPUTE_BIT;
                 break;

@@ -344,7 +344,7 @@ extern "C" {
 // program object that contains Mesa HIR
 struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
                                   const void *code, size_t size,
-                                  VkShaderStage stage)
+                                  VkShaderStageFlagBits stage)
 {
     // Wrap this path in a mutex until we can clean up initialization
     static mtx_t mutex = _MTX_INITIALIZER_NP;
@@ -382,13 +382,13 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Source = (const char *) code + sizeof(header);
 
         switch(header.gen_magic) {
-        case VK_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX_BIT:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case VK_SHADER_STAGE_GEOMETRY:
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
             shader->Type = GL_GEOMETRY_SHADER;
             break;
-        case VK_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:
@@ -401,13 +401,13 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
         shader->Size   = size / sizeof(unsigned);  // size in SPV words
 
         switch (stage) {
-        case VK_SHADER_STAGE_VERTEX:
+        case VK_SHADER_STAGE_VERTEX_BIT:
             shader->Type = GL_VERTEX_SHADER;
             break;
-        case VK_SHADER_STAGE_GEOMETRY:
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
             shader->Type = GL_GEOMETRY_SHADER;
             break;
-        case VK_SHADER_STAGE_FRAGMENT:
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
             shader->Type = GL_FRAGMENT_SHADER;
             break;
         default:

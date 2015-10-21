@@ -1113,7 +1113,7 @@ static void demo_prepare_render_pass(struct demo *demo)
 }
 
 static VkShader demo_prepare_shader(struct demo *demo,
-                                      VkShaderStage stage,
+                                      VkShaderStageFlagBits stage,
                                       VkShaderModule* pShaderModule,
                                       const void *code,
                                       size_t size)
@@ -1202,7 +1202,7 @@ static VkShader demo_prepare_vs(struct demo *demo)
 
         vertShaderCode = demo_read_spv("tri-vert.spv", &size);
 
-        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX_BIT,
                                      &demo->vert_shader_module,
                                      vertShaderCode, size);
         free(vertShaderCode);
@@ -1220,7 +1220,7 @@ static VkShader demo_prepare_vs(struct demo *demo)
             "   gl_Position = pos;\n"
             "}\n";
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX,
+        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX_BIT,
                                    &demo->vert_shader_module,
                                    (const void *) vertShaderText,
                                    strlen(vertShaderText));
@@ -1236,7 +1236,7 @@ static VkShader demo_prepare_fs(struct demo *demo)
 
         fragShaderCode = demo_read_spv("tri-frag.spv", &size);
 
-        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT_BIT,
                                      &demo->frag_shader_module,
                                      fragShaderCode, size);
 
@@ -1254,7 +1254,7 @@ static VkShader demo_prepare_fs(struct demo *demo)
                 "   uFragColor = texture(tex, texcoord);\n"
                 "}\n";
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT,
+        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT_BIT,
                                    &demo->frag_shader_module,
                                    (const void *) fragShaderText,
                                    strlen(fragShaderText));
@@ -1341,11 +1341,11 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     shaderStages[0].sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage                = VK_SHADER_STAGE_VERTEX;
+    shaderStages[0].stage                = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader               = demo_prepare_vs(demo);
 
     shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
+    shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     shaderStages[1].shader = demo_prepare_fs(demo);
 
     pipeline.pVertexInputState   = &vi;
