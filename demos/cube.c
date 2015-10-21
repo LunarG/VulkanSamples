@@ -1944,6 +1944,9 @@ LRESULT CALLBACK WndProc(HWND hWnd,
     case WM_PAINT:
         demo_run(&demo);
         break;
+    case WM_SIZE:
+        demo_resize(&demo);
+        break;
     default:
         break;
     }
