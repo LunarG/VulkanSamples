@@ -93,7 +93,6 @@ quilt edit configure.ac
  	      [DRI3=$enableval],
 -	      [DRI3=no])
 +	      [DRI3=yes])
-
  AC_ARG_ENABLE(xvmc, AS_HELP_STRING([--disable-xvmc],
                                    [Disable XvMC support [[default=yes]]]),
 ```
@@ -234,8 +233,8 @@ Example debug build (e.g. in a "Developer Command Prompt for VS2013" window):
 ```
 cd LoaderAndTools  # cd to the root of the Vulkan git repository
 update_external_sources.bat --build-glslang
-mkdir build
-cd build
+mkdir _out64
+cd _out64
 cmake -G "Visual Studio 12 Win64" ..
 ```
 
