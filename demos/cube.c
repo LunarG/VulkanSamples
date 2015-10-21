@@ -566,6 +566,24 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(cmd_buf);
 
+    VkImageMemoryBarrier prePresentBarrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = NULL,
+        .outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT,
+        .inputMask = 0,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+    };
+
+    prePresentBarrier.image = demo->buffers[demo->current_buffer].image;
+    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
+    vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+
+
     err = vkEndCommandBuffer(cmd_buf);
     assert(!err);
 }
@@ -624,6 +642,14 @@ static void demo_draw(struct demo *demo)
     // okay to render to the image.
     err = vkQueueWaitSemaphore(demo->queue, presentCompleteSemaphore);
     assert(!err);
+
+    // Assume the command buffer has been run on current_buffer before so
+    // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
+    demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
+                           VK_IMAGE_ASPECT_COLOR_BIT,
+                           VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    demo_flush_init_cmd(demo);
 
 // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
     err = vkQueueSubmit(demo->queue, 1, &demo->buffers[demo->current_buffer].cmd,
@@ -788,10 +814,12 @@ static void demo_prepare_buffers(struct demo *demo)
 
         demo->buffers[i].image = swapchainImages[i];
 
+        // Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
+        // layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
-                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+                               VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR);
 
         color_image_view.image = demo->buffers[i].image;
 
