@@ -198,6 +198,10 @@ struct sample_info {
     } uniform_data;
 
     struct {
+        VkDescriptorInfo desc;
+    } texture_data;
+
+    struct {
         VkBuffer buf;
         VkDeviceMemory mem;
         VkDescriptorInfo desc;

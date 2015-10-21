@@ -1294,7 +1294,6 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     /* DEPENDS on init_descriptor_pool() */
 
     VkResult U_ASSERT_ONLY res;
-    VkDescriptorInfo tex_desc;
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
     res = vkAllocDescriptorSets(info.device, info.desc_pool,
@@ -1316,18 +1315,12 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     if (use_texture)
     {
-        tex_desc.imageView = 0;
-        tex_desc.bufferView = 0;
-        tex_desc.imageView = info.textures[0].view;
-        tex_desc.sampler = info.textures[0].sampler;
-        tex_desc.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[1].destSet = info.desc_set[0];
         writes[1].destBinding = 1;
         writes[1].count = 1;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writes[1].pDescriptors = &tex_desc;
+        writes[1].pDescriptors = &info.texture_data.desc;
         writes[1].destArrayElement = 0;
     }
 
@@ -1776,6 +1769,15 @@ void init_texture(struct sample_info &info)
     assert(res == VK_SUCCESS);
 
     info.textures.push_back(texObj);
+
+    /* track a description of the texture */
+    assert(info.textures.size() == 1);
+    info.texture_data.desc.imageView = 0;
+    info.texture_data.desc.bufferView = 0;
+    info.texture_data.desc.imageView = info.textures[0].view;
+    info.texture_data.desc.sampler = info.textures[0].sampler;
+    info.texture_data.desc.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
 }
 
 void destroy_pipeline(struct sample_info &info)
