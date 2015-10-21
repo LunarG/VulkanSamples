@@ -501,8 +501,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
-        if ((pRegions[i].srcSubresource.aspect & VK_IMAGE_ASPECT_COLOR) &&
-            (pRegions[i].srcSubresource.aspect & (VK_IMAGE_ASPECT_DEPTH | VK_IMAGE_ASPECT_STENCIL))) {
+        if ((pRegions[i].srcSubresource.aspect & VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (pRegions[i].srcSubresource.aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))) {
             char const str[] = "vkCmdCopyImage aspectMask cannot specify both COLOR and DEPTH/STENCIL aspects";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
@@ -591,10 +591,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
 
     // Image aspect must be ONE OF color, depth, stencil
     for (uint32_t i = 0; i < regionCount; i++) {
-        VkImageAspect aspect = pRegions[i].imageSubresource.aspect;
-        if ((aspect != VK_IMAGE_ASPECT_COLOR) &&
-            (aspect != VK_IMAGE_ASPECT_DEPTH) &&
-            (aspect != VK_IMAGE_ASPECT_STENCIL)) {
+        VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
+        if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+            (aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
             char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
@@ -621,10 +621,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
 
     // Image aspect must be ONE OF color, depth, stencil
     for (uint32_t i = 0; i < regionCount; i++) {
-        VkImageAspect aspect = pRegions[i].imageSubresource.aspect;
-        if ((aspect != VK_IMAGE_ASPECT_COLOR) &&
-            (aspect != VK_IMAGE_ASPECT_DEPTH) &&
-            (aspect != VK_IMAGE_ASPECT_STENCIL)) {
+        VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
+        if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+            (aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
             char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
@@ -676,8 +676,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
 
     // For each region, src and dest image aspect must be color only
     for (uint32_t i = 0; i < regionCount; i++) {
-        if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR) ||
-            (pRegions[i].destSubresource.aspect != VK_IMAGE_ASPECT_COLOR)) {
+        if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR_BIT) ||
+            (pRegions[i].destSubresource.aspect != VK_IMAGE_ASPECT_COLOR_BIT)) {
             char const str[] = "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)cmdBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);

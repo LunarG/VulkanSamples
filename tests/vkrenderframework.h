@@ -292,7 +292,7 @@ public:
     }
 
     void ImageMemoryBarrier(VkCommandBufferObj *cmd,
-                            VkImageAspect aspect,
+                            VkImageAspectFlags aspect,
                             VkFlags output_mask,
                             VkFlags input_mask,
                             VkImageLayout image_layout);
@@ -324,8 +324,8 @@ public:
         return m_targetView.handle();
     }
 
-    void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspect aspect, VkImageLayout image_layout);
-    void SetLayout(VkImageAspect aspect, VkImageLayout image_layout);
+    void SetLayout(VkCommandBufferObj *cmd_buf, VkImageAspectFlagBits aspect, VkImageLayout image_layout);
+    void SetLayout(VkImageAspectFlagBits aspect, VkImageLayout image_layout);
 
     VkImageLayout layout() const
     {

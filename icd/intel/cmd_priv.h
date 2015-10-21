@@ -126,7 +126,9 @@ struct intel_cmd_meta {
     struct {
         struct intel_att_view view;
         uint32_t stencil_ref;
-        VkImageAspect aspect;
+        /* Using VkImageAspectFlagBits as that means we
+         * are expecting only one bit to be set at a time */
+        VkImageAspectFlagBits aspect;
 
         enum intel_cmd_meta_ds_op op;
         bool optimal;

@@ -791,7 +791,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         const VkImageSubresource subres = {
-            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
             .arrayLayer = 0,
         };
@@ -869,9 +869,9 @@ static void demo_prepare_textures(struct demo *demo)
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
             VkImageCopy copy_region = {
-                .srcSubresource = { VK_IMAGE_ASPECT_COLOR, 0, 0 },
+                .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 },
                 .srcOffset = { 0, 0, 0 },
-                .destSubresource = { VK_IMAGE_ASPECT_COLOR, 0, 0 },
+                .destSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 },
                 .destOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };

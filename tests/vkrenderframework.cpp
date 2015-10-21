@@ -558,7 +558,7 @@ VkImageObj::VkImageObj(VkDeviceObj *dev)
 
 void VkImageObj::ImageMemoryBarrier(
         VkCommandBufferObj *cmd_buf,
-        VkImageAspect aspect,
+        VkImageAspectFlags aspect,
         VkFlags output_mask /*=
             VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
             VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
@@ -592,7 +592,7 @@ void VkImageObj::ImageMemoryBarrier(
 }
 
 void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
-                         VkImageAspect aspect,
+                         VkImageAspectFlagBits aspect,
                          VkImageLayout image_layout)
 {
     VkFlags output_mask, input_mask;
@@ -643,7 +643,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
     m_descriptorInfo.imageLayout = image_layout;
 }
 
-void VkImageObj::SetLayout(VkImageAspect aspect,
+void VkImageObj::SetLayout(VkImageAspectFlagBits aspect,
                            VkImageLayout image_layout)
 {
     VkResult U_ASSERT_ONLY err;
@@ -732,9 +732,9 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
 
     if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        SetLayout(VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     } else {
-        SetLayout(VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_GENERAL);
+        SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL);
     }
 }
 
@@ -757,19 +757,19 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
 
     /* TODO: Can we determine image aspect from image object? */
     src_image_layout = src_image.layout();
-    src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
+    src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
 
     dest_image_layout = this->layout();
-    this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
+    this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
     VkImageCopy copy_region = {};
-    copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.srcSubresource.arrayLayer = 0;
     copy_region.srcSubresource.mipLevel = 0;
     copy_region.srcOffset.x = 0;
     copy_region.srcOffset.y = 0;
     copy_region.srcOffset.z = 0;
-    copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.destSubresource.arrayLayer = 0;
     copy_region.destSubresource.mipLevel = 0;
     copy_region.destOffset.x = 0;
@@ -782,9 +782,9 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
                     handle(), layout(),
                     1, &copy_region);
 
-    src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, src_image_layout);
+    src_image.SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, src_image_layout);
 
-    this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR, dest_image_layout);
+    this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, dest_image_layout);
 
     err = cmd_buf.EndCommandBuffer();
     assert(!err);
@@ -806,7 +806,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
     stagingImage.init(16, 16, tex_format, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, VK_IMAGE_TILING_LINEAR, reqs);
-    VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR, 0, 0));
+    VkSubresourceLayout layout = stagingImage.subresource_layout(subresource(VK_IMAGE_ASPECT_COLOR_BIT, 0, 0));
 
     if (colors == NULL)
         colors = tex_colors;

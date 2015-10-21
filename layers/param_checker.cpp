@@ -2608,8 +2608,8 @@ bool PostGetImageSparseMemoryRequirements(
 
     if(pSparseMemoryRequirements != nullptr)
     {
-    if(pSparseMemoryRequirements->formatProps.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pSparseMemoryRequirements->formatProps.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pSparseMemoryRequirements->formatProps.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProps.aspect, is an unrecognized enumerator");
@@ -2674,8 +2674,8 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
 
     if(pProperties != nullptr)
     {
-    if(pProperties->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pProperties->aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pProperties->aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspect, is an unrecognized enumerator");
@@ -2797,8 +2797,8 @@ bool PreQueueBindSparseImageMemory(
 {
     if(pBindInfo != nullptr)
     {
-    if(pBindInfo->subresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pBindInfo->subresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pBindInfo->subresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkQueueBindSparseImageMemory parameter, VkImageAspect pBindInfo->subresource.aspect, is an unrecognized enumerator");
@@ -3568,8 +3568,8 @@ bool PreGetImageSubresourceLayout(
 {
     if(pSubresource != nullptr)
     {
-    if(pSubresource->aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pSubresource->aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pSubresource->aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspect, is an unrecognized enumerator");
@@ -5751,15 +5751,15 @@ bool PreCmdCopyImage(
 {
     if(pRegions != nullptr)
     {
-    if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->srcSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->destSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
@@ -5823,18 +5823,18 @@ bool PreCmdBlitImage(
 {
     if(pRegions != nullptr)
     {
-    if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->srcSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->destSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5905,8 +5905,8 @@ bool PreCmdCopyBufferToImage(
 {
     if(pRegions != nullptr)
     {
-    if(pRegions->imageSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->imageSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->imageSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
@@ -5960,8 +5960,8 @@ bool PreCmdCopyImageToBuffer(
 {
     if(pRegions != nullptr)
     {
-    if(pRegions->imageSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->imageSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->imageSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
@@ -6216,15 +6216,15 @@ bool PreCmdResolveImage(
 {
     if(pRegions != nullptr)
     {
-    if(pRegions->srcSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->srcSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->srcSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if(pRegions->destSubresource.aspect < VK_IMAGE_ASPECT_BEGIN_RANGE ||
-        pRegions->destSubresource.aspect > VK_IMAGE_ASPECT_END_RANGE)
+    if ((pRegions->destSubresource.aspect &
+       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");

@@ -439,17 +439,6 @@ typedef enum {
 } VkPhysicalDeviceType;
 
 typedef enum {
-    VK_IMAGE_ASPECT_COLOR = 0,
-    VK_IMAGE_ASPECT_DEPTH = 1,
-    VK_IMAGE_ASPECT_STENCIL = 2,
-    VK_IMAGE_ASPECT_METADATA = 3,
-    VK_IMAGE_ASPECT_BEGIN_RANGE = VK_IMAGE_ASPECT_COLOR,
-    VK_IMAGE_ASPECT_END_RANGE = VK_IMAGE_ASPECT_METADATA,
-    VK_IMAGE_ASPECT_NUM = (VK_IMAGE_ASPECT_METADATA - VK_IMAGE_ASPECT_COLOR + 1),
-    VK_IMAGE_ASPECT_MAX_ENUM = 0x7FFFFFFF
-} VkImageAspect;
-
-typedef enum {
     VK_QUERY_TYPE_OCCLUSION = 0,
     VK_QUERY_TYPE_PIPELINE_STATISTICS = 1,
     VK_QUERY_TYPE_BEGIN_RANGE = VK_QUERY_TYPE_OCCLUSION,
@@ -905,6 +894,13 @@ typedef VkFlags VkMemoryHeapFlags;
 typedef VkFlags VkMemoryMapFlags;
 
 typedef enum {
+    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+    VK_IMAGE_ASPECT_METADATA_BIT = 0x00000008,
+} VkImageAspectFlagBits;
+
+typedef enum {
     VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT = 0x00000001,
     VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT = 0x00000002,
     VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT = 0x00000004,
@@ -966,13 +962,6 @@ typedef enum {
     VK_BUFFER_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
 } VkBufferCreateFlagBits;
 typedef VkFlags VkBufferCreateFlags;
-
-typedef enum {
-    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
-    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
-    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
-    VK_IMAGE_ASPECT_METADATA_BIT = 0x00000008,
-} VkImageAspectFlagBits;
 typedef VkFlags VkImageAspectFlags;
 
 typedef enum {
@@ -1414,7 +1403,7 @@ typedef struct {
 } VkMemoryRequirements;
 
 typedef struct {
-    VkImageAspect                               aspect;
+    VkImageAspectFlagBits                       aspect;
     VkExtent3D                                  imageGranularity;
     VkSparseImageFormatFlags                    flags;
 } VkSparseImageFormatProperties;
@@ -1436,7 +1425,7 @@ typedef struct {
 } VkSparseMemoryBindInfo;
 
 typedef struct {
-    VkImageAspect                               aspect;
+    VkImageAspectFlagBits                       aspect;
     uint32_t                                    mipLevel;
     uint32_t                                    arrayLayer;
 } VkImageSubresource;
@@ -1975,7 +1964,7 @@ typedef struct {
 } VkBufferCopy;
 
 typedef struct {
-    VkImageAspect                               aspect;
+    VkImageAspectFlags                          aspect;
     uint32_t                                    mipLevel;
     uint32_t                                    arrayLayer;
     uint32_t                                    arraySize;

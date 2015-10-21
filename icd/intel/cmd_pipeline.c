@@ -2396,7 +2396,7 @@ static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
     CMD_ASSERT(cmd, 6, 7.5);
 
     /* TODO: aspect is now a mask, can you do both? */
-    if (meta->ds.aspect == VK_IMAGE_ASPECT_DEPTH) {
+    if (meta->ds.aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
         dw[0] = 0;
         dw[1] = 0;
 
@@ -2408,7 +2408,7 @@ static uint32_t gen6_meta_DEPTH_STENCIL_STATE(struct intel_cmd *cmd,
             dw[2] = GEN6_COMPAREFUNCTION_ALWAYS << 27 |
                     GEN6_ZS_DW2_DEPTH_WRITE_ENABLE;
         }
-    } else if (meta->ds.aspect == VK_IMAGE_ASPECT_STENCIL) {
+    } else if (meta->ds.aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
         dw[0] = GEN6_ZS_DW0_STENCIL_TEST_ENABLE |
                 (GEN6_COMPAREFUNCTION_ALWAYS) << 28 |
                 (GEN6_STENCILOP_KEEP) << 25 |
@@ -2453,7 +2453,8 @@ static void gen6_meta_dynamic_states(struct intel_cmd *cmd)
     }
 
     if (meta->mode != INTEL_CMD_META_VS_POINTS) {
-        if (meta->ds.aspect != VK_IMAGE_ASPECT_COLOR) {
+        if (meta->ds.aspect == VK_IMAGE_ASPECT_DEPTH_BIT ||
+            meta->ds.aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
             const uint32_t blend_color[4] = { 0, 0, 0, 0 };
             uint32_t stencil_ref = (meta->ds.stencil_ref & 0xff) << 24 |
                                    (meta->ds.stencil_ref & 0xff) << 16;

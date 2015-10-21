@@ -146,7 +146,7 @@ static void writePPM( const char *filename, VkImage image1)
     int width = imageMap[image1.handle]->imageExtent.width;
     int height = imageMap[image1.handle]->imageExtent.height;
     VkFormat format = imageMap[image1.handle]->format;
-    const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR, 0, 0};
+    const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
     VkSubresourceLayout sr_layout;
     const VkImageCreateInfo imgCreateInfo = {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -181,9 +181,9 @@ static void writePPM( const char *filename, VkImage image1)
             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
     };
     const VkImageCopy imageCopyRegion = {
-        {VK_IMAGE_ASPECT_COLOR, 0, 0},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},
         {0, 0, 0},
-        {VK_IMAGE_ASPECT_COLOR, 0, 0},
+        {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},
         {0, 0, 0},
         {width, height, 1}
     };

@@ -121,7 +121,7 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
 static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
                                      const struct intel_img *img,
                                      VkFormat format,
-                                     VkImageAspect aspect,
+                                     VkImageAspectFlagBits aspect,
                                      struct intel_cmd_meta *meta)
 {
     VkImageViewCreateInfo info;
@@ -261,6 +261,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image.handle = (uint64_t) img;
     info.format = format;
+    info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     info.subresourceRange.baseMipLevel = lod;
     info.subresourceRange.mipLevels = 1;
     info.subresourceRange.baseArrayLayer = layer;
@@ -332,7 +333,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 }
 
 static void cmd_meta_set_ds_state(struct intel_cmd *cmd,
-                                  VkImageAspect aspect,
+                                  VkImageAspectFlagBits aspect,
                                   uint32_t stencil_ref,
                                   struct intel_cmd_meta *meta)
 {
@@ -502,7 +503,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
 
     cmd_meta_set_src_for_img(cmd, src,
             (raw_copy) ? raw_format : src->layout.format,
-            VK_IMAGE_ASPECT_COLOR, &meta);
+            VK_IMAGE_ASPECT_COLOR_BIT, &meta);
 
     meta.samples = dst->samples;
 
@@ -681,7 +682,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     }
 
     cmd_meta_set_src_for_img(cmd, img, img_format,
-            VK_IMAGE_ASPECT_COLOR, &meta);
+            VK_IMAGE_ASPECT_COLOR_BIT, &meta);
     cmd_meta_set_dst_for_buf(cmd, buf, buf_format, &meta);
 
     meta.samples = 1;
@@ -828,13 +829,13 @@ static void cmd_meta_clear_image(struct intel_cmd *cmd,
                 cmd_meta_set_ds_view(cmd, img, meta->dst.lod,
                         meta->dst.layer, meta);
                 if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_DEPTH,
+                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_DEPTH_BIT,
                             meta->clear_val[1], meta);
 
                     cmd_draw_meta(cmd, meta);
                 }
                 if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_STENCIL,
+                    cmd_meta_set_ds_state(cmd, VK_IMAGE_ASPECT_STENCIL_BIT,
                             meta->clear_val[1], meta);
 
                     cmd_draw_meta(cmd, meta);
@@ -1096,7 +1097,7 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     meta.samples = 1;
 
     format = cmd_meta_img_raw_format(cmd, src->layout.format);
-    cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR, &meta);
+    cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR_BIT, &meta);
 
     for (i = 0; i < regionCount; i++) {
         const VkImageResolve *region = &pRegions[i];

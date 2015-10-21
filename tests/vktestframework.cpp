@@ -315,7 +315,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     filename.append(".ppm");
     
     const VkImageSubresource sr = {
-        VK_IMAGE_ASPECT_COLOR, 0, 0
+        VK_IMAGE_ASPECT_COLOR_BIT, 0, 0
     };
     VkSubresourceLayout sr_layout;
    
@@ -430,7 +430,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     displayImage.CopyImage(*image);
 
     const VkImageSubresource sr = {
-        VK_IMAGE_ASPECT_COLOR, 0, 0
+        VK_IMAGE_ASPECT_COLOR_BIT, 0, 0
     };
 
     vkGetImageSubresourceLayout(displayImage.device()->device(), displayImage.image(), &sr, &sr_layout);
