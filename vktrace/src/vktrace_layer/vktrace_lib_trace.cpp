@@ -695,6 +695,42 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     FINISH_TRACE_PACKET();
 }
 
+VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueueSubmit(
+    VkQueue queue,
+    uint32_t submitCount,
+    const VkSubmitInfo* pSubmitInfo,
+    VkFence fence)
+{
+    vktrace_trace_packet_header* pHeader;
+    VkResult result;
+    packet_vkQueueSubmit* pPacket = NULL;
+    size_t arrayByteCount = 0;
+    uint32_t i = 0;
+    for (i=0; i<submitCount; ++i) {
+        arrayByteCount += vk_size_vksubmitinfo(&pSubmitInfo[i]);
+    }
+    CREATE_TRACE_PACKET(vkQueueSubmit, arrayByteCount);
+    result = mdd(queue)->devTable.QueueSubmit(queue, submitCount, pSubmitInfo, fence);
+    vktrace_set_packet_entrypoint_end_time(pHeader);
+    pPacket = interpret_body_as_vkQueueSubmit(pHeader);
+    pPacket->queue = queue;
+    pPacket->submitCount = submitCount;
+    pPacket->fence = fence;
+    pPacket->result = result;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo), submitCount*sizeof(VkSubmitInfo), pSubmitInfo);
+    for (i=0; i<submitCount; ++i) {
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pCommandBuffers), pPacket->pSubmitInfo[i].cmdBufferCount * sizeof(VkCmdBuffer), pSubmitInfo[i].pCommandBuffers);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pCommandBuffers));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pWaitSemaphores), pPacket->pSubmitInfo[i].waitSemCount * sizeof(VkSemaphore), pSubmitInfo[i].pWaitSemaphores);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pWaitSemaphores));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pSignalSemaphores), pPacket->pSubmitInfo[i].signalSemCount * sizeof(VkSemaphore), pSubmitInfo[i].pSignalSemaphores);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pSignalSemaphores));
+    }
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
 VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    eventCount,

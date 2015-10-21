@@ -298,8 +298,8 @@ core = Extension(
 
         Proto("VkResult", "QueueSubmit",
             [Param("VkQueue", "queue"),
-             Param("uint32_t", "cmdBufferCount"),
-             Param("const VkCmdBuffer*", "pCmdBuffers"),
+             Param("uint32_t", "submitCount"),
+             Param("const VkSubmitInfo*", "pSubmitInfo"),
              Param("VkFence", "fence")]),
 
         Proto("VkResult", "QueueWaitIdle",

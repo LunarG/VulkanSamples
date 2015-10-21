@@ -350,6 +350,17 @@ VkResult intel_queue_wait(struct intel_queue *queue, int64_t timeout)
     return intel_fence_wait(queue->fence, timeout);
 }
 
+static void intel_wait_queue_semaphore(struct intel_queue *queue, struct intel_semaphore *semaphore)
+{
+    intel_queue_wait(queue, -1);
+    semaphore->references--;
+}
+
+static void intel_signal_queue_semaphore(struct intel_queue *queue, struct intel_semaphore *semaphore)
+{
+    semaphore->references++;
+}
+
 ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
     VkQueue                                   queue_)
 {
@@ -360,8 +371,8 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
 
 ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue                                   queue_,
-    uint32_t                                    cmdBufferCount,
-    const VkCmdBuffer*                       pCmdBuffers,
+    uint32_t                                  submitCount,
+    const VkSubmitInfo*                       pSubmitInfo,
     VkFence                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
@@ -369,42 +380,57 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     struct intel_cmd *last_cmd;
     uint32_t i;
 
-    if (unlikely(intel_debug)) {
-        for (i = 0; i < cmdBufferCount; i++) {
-            struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
-            ret = queue_submit_cmd_debug(queue, cmd);
-            if (ret != VK_SUCCESS)
-                break;
+    for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+
+        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+
+        for (i = 0; i < submit->waitSemCount; i++) {
+            struct intel_semaphore *pSemaphore = intel_semaphore(submit->pWaitSemaphores[i]);
+            intel_wait_queue_semaphore(queue, pSemaphore);
         }
-    } else {
-        for (i = 0; i < cmdBufferCount; i++) {
-            struct intel_cmd *cmd = intel_cmd(pCmdBuffers[i]);
-            ret = queue_submit_cmd(queue, cmd);
-            if (ret != VK_SUCCESS)
-                break;
+
+        if (unlikely(intel_debug)) {
+            for (i = 0; i < submit->cmdBufferCount; i++) {
+                struct intel_cmd *cmd = intel_cmd(submit->pCommandBuffers[i]);
+                ret = queue_submit_cmd_debug(queue, cmd);
+                if (ret != VK_SUCCESS)
+                    break;
+            }
+        } else {
+            for (i = 0; i < submit->cmdBufferCount; i++) {
+                struct intel_cmd *cmd = intel_cmd(submit->pCommandBuffers[i]);
+                ret = queue_submit_cmd(queue, cmd);
+                if (ret != VK_SUCCESS)
+                    break;
+            }
         }
-    }
 
-    /* no cmd submitted */
-    if (i == 0)
-        return ret;
+        /* no cmd submitted */
+        if (i == 0)
+            return ret;
 
-    last_cmd = intel_cmd(pCmdBuffers[i - 1]);
+        last_cmd = intel_cmd(submit->pCommandBuffers[i - 1]);
 
-    if (ret == VK_SUCCESS) {
-        intel_fence_set_seqno(queue->fence,
-                intel_cmd_get_batch(last_cmd, NULL));
+        if (ret == VK_SUCCESS) {
+            intel_fence_set_seqno(queue->fence,
+                    intel_cmd_get_batch(last_cmd, NULL));
 
-        if (fence_.handle != VK_NULL_HANDLE) {
-            struct intel_fence *fence = intel_fence(fence_);
-            intel_fence_copy(fence, queue->fence);
+            if (fence_.handle != VK_NULL_HANDLE) {
+                struct intel_fence *fence = intel_fence(fence_);
+                intel_fence_copy(fence, queue->fence);
+            }
+        } else {
+            struct intel_bo *last_bo;
+
+            /* unbusy submitted BOs */
+            last_bo = intel_cmd_get_batch(last_cmd, NULL);
+            intel_bo_wait(last_bo, -1);
         }
-    } else {
-        struct intel_bo *last_bo;
 
-        /* unbusy submitted BOs */
-        last_bo = intel_cmd_get_batch(last_cmd, NULL);
-        intel_bo_wait(last_bo, -1);
+        for (i = 0; i < submit->signalSemCount; i++) {
+            struct intel_semaphore *pSemaphore = intel_semaphore(submit->pSignalSemaphores[i]);
+            intel_signal_queue_semaphore(queue, pSemaphore);
+        }
     }
 
     return ret;
@@ -440,21 +466,22 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
-    VkQueue                                   queue,
+    VkQueue                                   queue_,
     VkSemaphore                               semaphore)
 {
     struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
-    pSemaphore->references++;
+    struct intel_queue *queue = intel_queue(queue_);
+    intel_signal_queue_semaphore(queue, pSemaphore);
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
-    VkQueue                                   queue,
+    VkQueue                                   queue_,
     VkSemaphore                               semaphore)
 {
     struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
-    vkQueueWaitIdle(queue);
-    pSemaphore->references--;
+    struct intel_queue *queue = intel_queue(queue_);
+    intel_wait_queue_semaphore(queue, pSemaphore);
 
     return VK_SUCCESS;
 }

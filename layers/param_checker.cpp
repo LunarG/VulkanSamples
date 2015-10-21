@@ -2199,15 +2199,17 @@ bool PostQueueSubmit(
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue queue,
-    uint32_t cmdBufferCount,
-    const VkCmdBuffer* pCmdBuffers,
+    uint32_t submitCount,
+    const VkSubmitInfo* pSubmitInfo,
     VkFence fence)
 {
-    PreQueueSubmit(queue, pCmdBuffers);
+    for (uint32_t i = 0; i < submitCount; i++) {
+        PreQueueSubmit(queue, pSubmitInfo[i].pCommandBuffers);
+    }
 
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
 
-    PostQueueSubmit(queue, cmdBufferCount, fence, result);
+    PostQueueSubmit(queue, submitCount, fence, result);
 
     return result;
 }

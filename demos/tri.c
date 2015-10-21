@@ -276,8 +276,16 @@ static void demo_flush_init_cmd(struct demo *demo)
 
     const VkCmdBuffer cmd_bufs[] = { demo->setup_cmd };
     VkFence nullFence = {VK_NULL_HANDLE};
+    VkSubmitInfo submit_info = {
+        .waitSemCount = 0,
+        .pWaitSemaphores = NULL,
+        .cmdBufferCount = 1,
+        .pCommandBuffers = cmd_bufs,
+        .signalSemCount = 0,
+        .pSignalSemaphores = NULL
+    };
 
-    err = vkQueueSubmit(demo->queue, 1, cmd_bufs, nullFence);
+    err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
     assert(!err);
 
     err = vkQueueWaitIdle(demo->queue);
@@ -455,13 +463,6 @@ static void demo_draw(struct demo *demo)
     // return codes
     assert(!err);
 
-    // Wait for the present complete semaphore to be signaled to ensure
-    // that the image won't be rendered to until the presentation
-    // engine has fully released ownership to the application, and it is
-    // okay to render to the image.
-    err = vkQueueWaitSemaphore(demo->queue, presentCompleteSemaphore);
-    assert(!err);
-
     // Assume the command buffer has been run on current_buffer before so
     // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
     demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
@@ -470,11 +471,25 @@ static void demo_draw(struct demo *demo)
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     demo_flush_init_cmd(demo);
 
+    // Wait for the present complete semaphore to be signaled to ensure
+    // that the image won't be rendered to until the presentation
+    // engine has fully released ownership to the application, and it is
+    // okay to render to the image.
+
 // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
     demo_draw_build_cmd(demo);
     VkFence nullFence = { VK_NULL_HANDLE };
 
-    err = vkQueueSubmit(demo->queue, 1, &demo->draw_cmd, nullFence);
+    VkSubmitInfo submit_info = {
+        .waitSemCount = 1,
+        .pWaitSemaphores = &presentCompleteSemaphore,
+        .cmdBufferCount = 1,
+        .pCommandBuffers = &demo->draw_cmd,
+        .signalSemCount = 0,
+        .pSignalSemaphores = NULL
+    };
+
+    err = vkQueueSubmit(demo->queue, 1, &submit_info, nullFence);
     assert(!err);
 
     VkPresentInfoKHR present = {

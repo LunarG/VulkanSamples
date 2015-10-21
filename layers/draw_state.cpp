@@ -1543,32 +1543,35 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmitInfo, VkFence fence)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    for (uint32_t i=0; i < cmdBufferCount; i++) {
-        // Validate that cmd buffers have been updated
-        pCB = getCBNode(dev_data, pCmdBuffers[i]);
-        loader_platform_thread_lock_mutex(&globalLock);
-        pCB->submitCount++; // increment submit count
-        if ((pCB->beginInfo.flags & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
-            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
-                    "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<uint64_t>(pCB->cmdBuffer), pCB->submitCount);
-        }
-        if (CB_UPDATE_COMPLETE != pCB->state) {
-            // Flag error for using CB w/o vkEndCommandBuffer() called
-            // TODO : How to pass cb as srcObj?
-            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS",
-                    "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->cmdBuffer));
+    for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        for (uint32_t i=0; i < submit->cmdBufferCount; i++) {
+            // Validate that cmd buffers have been updated
+            pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
+            loader_platform_thread_lock_mutex(&globalLock);
+            pCB->submitCount++; // increment submit count
+            if ((pCB->beginInfo.flags & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT) && (pCB->submitCount > 1)) {
+                skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, "DS",
+                        "CB %#" PRIxLEAST64 " was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted %#" PRIxLEAST64 " times.", reinterpret_cast<uint64_t>(pCB->cmdBuffer), pCB->submitCount);
+            }
+            if (CB_UPDATE_COMPLETE != pCB->state) {
+                // Flag error for using CB w/o vkEndCommandBuffer() called
+                // TODO : How to pass cb as srcObj?
+                skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_END_CMD_BUFFER, "DS",
+                        "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->cmdBuffer));
+                loader_platform_thread_unlock_mutex(&globalLock);
+                return VK_ERROR_VALIDATION_FAILED;
+            }
             loader_platform_thread_unlock_mutex(&globalLock);
-            return VK_ERROR_VALIDATION_FAILED;
         }
-        loader_platform_thread_unlock_mutex(&globalLock);
     }
     if (VK_FALSE == skipCall)
-        return dev_data->device_dispatch_table->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+        return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
     return VK_ERROR_VALIDATION_FAILED;
 }
 

@@ -363,6 +363,7 @@ class Subcommand(object):
                                          'EnumeratePhysicalDevices',
                                          'FreeMemory',
                                          'FreeDescriptorSets',
+                                         'QueueSubmit',
                                          'FlushMappedMemoryRanges',
                                          'GetDeviceProcAddr',
                                          'GetInstanceProcAddr',
@@ -394,7 +395,7 @@ class Subcommand(object):
             if ext.name.lower() == extName.lower():
                 for proto in ext.protos:
                     if proto.name in manually_written_hooked_funcs:
-                        func_body.append( '// __HOOKED_vk%s is manually written. Look in vktrace_vk_trace.c\n' % proto.name)
+                        func_body.append( '// __HOOKED_vk%s is manually written. Look in vktrace_lib_trace.cpp\n' % proto.name)
                     else:
                         raw_packet_update_list = [] # non-ptr elements placed directly into packet
                         ptr_packet_update_list = [] # ptr elements to be updated into packet
@@ -850,6 +851,17 @@ class Subcommand(object):
                                                                                  'for (i = 0; i < pPacket->writeCount; i++) {\n',
                                                                                  '   VkDescriptorInfo** ppDescriptors = (VkDescriptorInfo**)&pPacket->pDescriptorWrites[i].pDescriptors;\n',
                                                                                  '   *ppDescriptors = (VkDescriptorInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pDescriptorWrites[i].pDescriptors);\n',
+                                                                                 '}'
+                                                                               ]},
+                             'QueueSubmit' : {'param': 'pSubmitInfo', 'txt':
+                                                                               [ 'uint32_t i;\n',
+                                                                                 'for (i = 0; i < pPacket->submitCount; i++) {\n',
+                                                                                 '   VkCmdBuffer** ppCBs = (VkCmdBuffer**)&pPacket->pSubmitInfo[i].pCommandBuffers;\n',
+                                                                                 '   *ppCBs = (VkCmdBuffer*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pCommandBuffers);\n',
+                                                                                 '   VkSemaphore** ppSems = (VkSemaphore**)&pPacket->pSubmitInfo[i].pWaitSemaphores;\n',
+                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pWaitSemaphores);\n',
+                                                                                 '   ppSems = (VkSemaphore**)&pPacket->pSubmitInfo[i].pSignalSemaphores;\n',
+                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pSignalSemaphores);\n',
                                                                                  '}'
                                                                                ]},
                              'CreateGraphicsPipelines' : {'param': 'pCreateInfos', 'txt': create_gfx_pipe},
@@ -1646,8 +1658,9 @@ class Subcommand(object):
                 elif proto.name == 'ResetFences':
                     rbody.append('            VKTRACE_DELETE(fences);')
                 elif create_func: # save handle mapping if create successful
-                    rbody.append('            if (replayResult == VK_SUCCESS)')
-                    rbody.append('            {')
+                    if ret_value:
+                        rbody.append('            if (replayResult == VK_SUCCESS)')
+                        rbody.append('            {')
                     clean_type = proto.params[-1].ty.strip('*').replace('const ', '')
                     VkNonDispObjType = [o for o in vulkan.object_non_dispatch_list]
                     if clean_type in VkNonDispObjType:
@@ -1656,7 +1669,8 @@ class Subcommand(object):
                         rbody.append('                m_objMapper.add_to_%ss_map(*(pPacket->%s), local_%s);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
                     if 'AllocMemory' == proto.name:
                         rbody.append('                m_objMapper.add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
-                    rbody.append('            }')
+                    if ret_value:
+                        rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody[-1] = '    %s' % rbody[-1]
                     rbody.append('            } while (%s);' % do_while_dict[proto.name])

@@ -1141,8 +1141,8 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue             queue,
-    uint32_t            cmdBufferCount,
-    const VkCmdBuffer  *pCmdBuffers,
+    uint32_t            submitCount,
+    const VkSubmitInfo *pSubmitInfo,
     VkFence             fence)
 {
     VkResult result = VK_ERROR_VALIDATION_FAILED;
@@ -1155,17 +1155,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
 
     print_mem_list(queue);
     printCBList(queue);
-    for (uint32_t i = 0; i < cmdBufferCount; i++) {
-        pCBInfo = get_cmd_buf_info(pCmdBuffers[i]);
-        pCBInfo->fenceId = fenceId;
-        pCBInfo->lastSubmittedFence = fence;
-        pCBInfo->lastSubmittedQueue = queue;
+    for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        for (uint32_t i = 0; i < submit->cmdBufferCount; i++) {
+            pCBInfo = get_cmd_buf_info(submit->pCommandBuffers[i]);
+            pCBInfo->fenceId = fenceId;
+            pCBInfo->lastSubmittedFence = fence;
+            pCBInfo->lastSubmittedQueue = queue;
+        }
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueSubmit(
-            queue, cmdBufferCount, pCmdBuffers, fence);
+            queue, submitCount, pSubmitInfo, fence);
     }
     return result;
 }

@@ -244,7 +244,17 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableCmdBuffer->EndCommandBuffer(cmdBuffer);
     assert(!err);
 
-    err = pTableQueue->QueueSubmit(queue, 1, &cmdBuffer, VK_NULL_HANDLE);
+    VkFence nullFence = { VK_NULL_HANDLE };
+    VkSubmitInfo submit_info = {
+        .waitSemCount = 0,
+        .pWaitSemaphores = NULL,
+        .cmdBufferCount = 1,
+        .pCommandBuffers = &cmdBuffer,
+        .signalSemCount = 0,
+        .pSignalSemaphores = NULL
+    };
+
+    err = pTableQueue->QueueSubmit(queue, 1, &submit_info, nullFence);
     assert(!err);
 
     err = pTableQueue->QueueWaitIdle(queue);

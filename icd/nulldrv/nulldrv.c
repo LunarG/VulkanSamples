@@ -1818,8 +1818,8 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
 
 ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue                                   queue_,
-    uint32_t                                    cmdBufferCount,
-    const VkCmdBuffer*                       pCmdBuffers,
+    uint32_t                                  submitCount,
+    const VkSubmitInfo*                       pSubmitInfo,
     VkFence                                   fence_)
 {
     NULLDRV_LOG_FUNC;

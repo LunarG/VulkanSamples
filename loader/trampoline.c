@@ -342,13 +342,13 @@ LOADER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeInd
     loader_set_dispatch(*pQueue, disp);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
+LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmitInfo, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    return disp->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)

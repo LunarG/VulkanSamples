@@ -990,7 +990,16 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     // submit the command buffer to the universal queue
     VkCmdBuffer bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    err = vkQueueSubmit( m_device->m_queue, 1, bufferArray, m_fence.handle() );
+    VkSubmitInfo submit_info = {
+        .waitSemCount = 0,
+        .pWaitSemaphores = NULL,
+        .cmdBufferCount = 1,
+        .pCommandBuffers = bufferArray,
+        .signalSemCount = 0,
+        .pSignalSemaphores = NULL
+    };
+
+    err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, m_fence.handle());
     ASSERT_VK_SUCCESS(err);
 }
 
@@ -1605,7 +1614,16 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
     VkResult err = VK_SUCCESS;
 
     // submit the command buffer to the universal queue
-    err = vkQueueSubmit( m_device->m_queue, 1, &handle(), fence );
+    VkSubmitInfo submit_info = {
+        .waitSemCount = 0,
+        .pWaitSemaphores = NULL,
+        .cmdBufferCount = 1,
+        .pCommandBuffers = &handle(),
+        .signalSemCount = 0,
+        .pSignalSemaphores = NULL
+    };
+
+    err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, fence );
     ASSERT_VK_SUCCESS( err );
 
     err = vkQueueWaitIdle( m_device->m_queue );

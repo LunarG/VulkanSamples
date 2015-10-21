@@ -655,25 +655,68 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
     VkFence remappedFence;
     remappedFence.handle = remappedFenceHandle;
 
-    VkCmdBuffer *remappedBuffers = NULL;
-    if (pPacket->pCmdBuffers != NULL)
-    {
-        remappedBuffers = VKTRACE_NEW_ARRAY( VkCmdBuffer, pPacket->cmdBufferCount);
-        for (uint32_t i = 0; i < pPacket->cmdBufferCount; i++)
-        {
-            *(remappedBuffers + i) = m_objMapper.remap_cmdbuffers(*(pPacket->pCmdBuffers + i));
-            if (*(remappedBuffers + i) == VK_NULL_HANDLE)
-            {
-                VKTRACE_DELETE(remappedBuffers);
-                return replayResult;
+    VkSubmitInfo *remappedSubmitInfo = NULL;
+    remappedSubmitInfo = VKTRACE_NEW_ARRAY( VkSubmitInfo, pPacket->submitCount);
+    VkCmdBuffer *pRemappedBuffers = NULL;
+    VkSemaphore *pRemappedWaitSems = NULL, *pRemappedSignalSems = NULL;
+    uint64_t remapHandle = 0;
+    for (uint32_t submit_idx = 0; submit_idx < pPacket->submitCount; submit_idx++) {
+        const VkSubmitInfo *submit = &pPacket->pSubmitInfo[submit_idx];
+        VkSubmitInfo *remappedSubmit = &remappedSubmitInfo[submit_idx];
+        memset(remappedSubmit, 0, sizeof(VkSubmitInfo));
+        // Remap Semaphores & CmdBuffers for this submit
+        uint32_t i = 0;
+        if (submit->pCommandBuffers != NULL) {
+            pRemappedBuffers = VKTRACE_NEW_ARRAY( VkCmdBuffer, submit->cmdBufferCount);
+            remappedSubmit->pCommandBuffers = pRemappedBuffers;
+            remappedSubmit->cmdBufferCount = submit->cmdBufferCount;
+            for (i = 0; i < submit->cmdBufferCount; i++) {
+                *(pRemappedBuffers + i) = m_objMapper.remap_cmdbuffers(*(submit->pCommandBuffers + i));
+                if (*(pRemappedBuffers + i) == VK_NULL_HANDLE) {
+                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(pRemappedBuffers);
+                    return replayResult;
+                }
+            }
+        }
+        if (submit->pWaitSemaphores != NULL) {
+            pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->waitSemCount);
+            remappedSubmit->pWaitSemaphores = pRemappedWaitSems;
+            remappedSubmit->waitSemCount = submit->waitSemCount;
+            for (i = 0; i < submit->waitSemCount; i++) {
+                remapHandle = m_objMapper.remap_semaphores((*(submit->pWaitSemaphores + i)).handle);
+                (*(pRemappedWaitSems + i)).handle = remapHandle;
+                //*(pRemappedWaitSems + i)->handle = m_objMapper.remap_semaphores(*(submit->pWaitSemaphores + i));
+                if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
+                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(pRemappedWaitSems);
+                    return replayResult;
+                }
+            }
+        }
+        if (submit->pSignalSemaphores != NULL) {
+            pRemappedSignalSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->signalSemCount);
+            remappedSubmit->pSignalSemaphores = pRemappedSignalSems;
+            remappedSubmit->signalSemCount = submit->signalSemCount;
+            for (i = 0; i < submit->signalSemCount; i++) {
+                remapHandle = m_objMapper.remap_semaphores((*(submit->pSignalSemaphores + i)).handle);
+                (*(pRemappedSignalSems + i)).handle = remapHandle;
+                if (*(pRemappedSignalSems + i) == VK_NULL_HANDLE) {
+                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(pRemappedSignalSems);
+                    return replayResult;
+                }
             }
         }
     }
     replayResult = m_vkFuncs.real_vkQueueSubmit(remappedQueue,
-                                                  pPacket->cmdBufferCount,
-                                                  remappedBuffers,
-                                                  remappedFence);
-    VKTRACE_DELETE(remappedBuffers);
+                                                pPacket->submitCount,
+                                                remappedSubmitInfo,
+                                                remappedFence);
+    VKTRACE_DELETE(pRemappedBuffers);
+    VKTRACE_DELETE(pRemappedWaitSems);
+    VKTRACE_DELETE(pRemappedSignalSems);
+    VKTRACE_DELETE(remappedSubmitInfo);
     return replayResult;
 }
 
