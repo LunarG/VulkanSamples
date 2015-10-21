@@ -145,26 +145,35 @@ bool read_ppm(char const*const filename, int *width, int *height, uint64_t rowPi
     /* TODO: make this more flexible in handling comments and whitespace in ppm file */
 
     FILE *fPtr = fopen(filename,"rb");
-    char header[16];
+    char header[256], *cPtr;
 
     if (!fPtr)
         return false;
 
-    fgets(header, 16, fPtr); // P6
-    fgets(header, 16, fPtr); // Width
-    *width = atoi(header);
-    fgets(header, 16, fPtr); // Height
-    *height = atoi(header);
+    cPtr = fgets(header, 256, fPtr); // P6
+    if (cPtr == NULL || strncmp(header, "P6\n", 3))
+        return false;
+
+    do {
+        cPtr = fgets(header, 256, fPtr);
+        if (cPtr == NULL)
+            return false;
+    } while ( !strncmp(header, "#", 1) );
+
+    sscanf(header, "%u %u", height, width);
     if (dataPtr == NULL)
         return true;
-    fgets(header, 16, fPtr); // Format
+    fgets(header, 256, fPtr); // Format
+    if (cPtr == NULL || strncmp(header, "255\n", 3))
+        return false;
 
     for(int y = 0; y < *height; y++)
     {
-        char *rowPtr = dataPtr;
+        char* rowPtr = dataPtr;
         for(int x = 0; x < *width; x++)
         {
             fread(rowPtr, 3, 1, fPtr);
+            rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
         }
         dataPtr += rowPitch;
