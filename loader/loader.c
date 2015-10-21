@@ -153,6 +153,7 @@ void* loader_heap_realloc(
             return NULL;
         memcpy(new_ptr, pMem, orig_size);
         instance->alloc_callbacks.pfnFree(instance->alloc_callbacks.pUserData, pMem);
+	return new_ptr;
     }
     return realloc(pMem, size);
 }
