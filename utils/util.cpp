@@ -140,36 +140,80 @@ void set_image_layout(
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 }
 
-bool read_ppm(char const*const filename, int *width, int *height, uint64_t rowPitch, char *dataPtr)
+bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, char* dataPtr)
 {
-    /* TODO: make this more flexible in handling comments and whitespace in ppm file */
+    // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
+    //  1. magic number
+    //  2. whitespace
+    //  3. width
+    //  4. whitespace
+    //  5. height
+    //  6. whitespace
+    //  7. max color value
+    //  8. whitespace
+    //  7. data
+
+    // Comments are not supported, but are detected and we kick out
+    // Only 8 bits per channel is supported
+    // If dataPtr is nullptr, only width and height are returned
+
+    // Read in values from the PPM file as characters to check for comments
+    char magicStr[2] = {}, heightStr[5] = {}, widthStr[5] = {}, formatStr[5] = {};
 
     FILE *fPtr = fopen(filename,"rb");
-    char header[16];
-
-    if (!fPtr)
+    if (!fPtr) {
+        printf("Bad filename in read_ppm: %s\n", filename);
         return false;
+    }
 
-    fgets(header, 16, fPtr); // P6
-    fgets(header, 16, fPtr); // Width
-    *width = atoi(header);
-    fgets(header, 16, fPtr); // Height
-    *height = atoi(header);
-    if (dataPtr == NULL)
+    // Read the four values from file, accounting with any and all whitepace
+    fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
+
+    // Kick out if comments present
+    if (magicStr[0]  == '#' || widthStr[0] == '#' || heightStr[0]  == '#' || formatStr[0] == '#') {
+        printf("Unhandled comment in PPM file\n");
+        return false;
+    }
+
+    // Only one magic value is valid
+    if (strncmp(magicStr, "P6", sizeof(magicStr))) {
+        printf("Unhandled PPM magic number: %s\n", magicStr);
+        return false;
+    }
+
+    width = atoi(widthStr);
+    height = atoi(heightStr);
+
+    // Ensure we got something sane for width/height
+    static const int saneDimension = 32768; //??
+    if (width <= 0 || width > saneDimension) {
+        printf("Width seems wrong.  Update read_ppm if not: %u\n", width);
+        return false;
+    }
+    if (height <= 0 || height > saneDimension) {
+        printf("Height seems wrong.  Update read_ppm if not: %u\n", height);
+        return false;
+    }
+
+    if (dataPtr == nullptr) {
+        // If no destination pointer, caller only wanted dimensions
         return true;
-    fgets(header, 16, fPtr); // Format
+    }
 
-    for(int y = 0; y < *height; y++)
+    // Now read the data
+    for(int y = 0; y < height; y++)
     {
-        char *rowPtr = dataPtr;
-        for(int x = 0; x < *width; x++)
+        char* rowPtr = dataPtr;
+        for(int x = 0; x < width; x++)
         {
             fread(rowPtr, 3, 1, fPtr);
+            rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
         }
         dataPtr += rowPitch;
     }
     fclose(fPtr);
+
     return true;
 }
 

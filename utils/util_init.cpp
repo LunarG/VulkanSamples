@@ -1536,7 +1536,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     else
         filename.append(textureName);
 
-    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, 0, NULL))
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, 0, NULL))
     {
         std::cout << "Could not read texture file lunarg.ppm\n";
         exit(-1);
@@ -1621,7 +1621,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm(filename.c_str(), &texObj.tex_width, &texObj.tex_height, layout.rowPitch, (char *)data)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
