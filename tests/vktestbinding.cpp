@@ -832,8 +832,7 @@ void CmdBuffer::begin(const VkCmdBufferBeginInfo *info)
 void CmdBuffer::begin()
 {
     VkCmdBufferBeginInfo info = {};
-    info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-          VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     info.renderPass = VK_NULL_HANDLE;
     info.subpass = 0;

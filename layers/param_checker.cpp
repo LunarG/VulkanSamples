@@ -1640,13 +1640,11 @@ std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkCmdBufferOptimizeFlagBits const& enumerator)
+bool ValidateEnumerator(VkCmdBufferUsageFlags const& enumerator)
 {
-    VkCmdBufferOptimizeFlagBits allFlags = (VkCmdBufferOptimizeFlagBits)(VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT |
-        VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT |
-        VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT |
-        VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT |
-        VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT);
+    VkCmdBufferUsageFlags allFlags = (VkCmdBufferUsageFlags)(VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
+        VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT |
+        VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1656,7 +1654,7 @@ bool ValidateEnumerator(VkCmdBufferOptimizeFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkCmdBufferOptimizeFlagBits const& enumerator)
+std::string EnumeratorString(VkCmdBufferUsageFlags const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1664,25 +1662,17 @@ std::string EnumeratorString(VkCmdBufferOptimizeFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT)
+    if(enumerator & VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT");
+        strings.push_back("VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT");
     }
-    if(enumerator & VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT)
+    if(enumerator & VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT");
+        strings.push_back("VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT");
     }
-    if(enumerator & VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT)
+    if(enumerator & VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT");
-    }
-    if(enumerator & VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT)
-    {
-        strings.push_back("VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT");
-    }
-    if(enumerator & VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT)
-    {
-        strings.push_back("VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT");
+        strings.push_back("VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT");
     }
 
     std::string enumeratorString;

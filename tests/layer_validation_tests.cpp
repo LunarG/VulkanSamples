@@ -474,7 +474,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     m_errorMonitor->ClearState();
 
     VkCmdBufferBeginInfo info = {};
-    info.flags       = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT | VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    info.flags       = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     info.sType       = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     info.renderPass  = VK_NULL_HANDLE;
     info.subpass     = 0;
@@ -1217,7 +1217,7 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    // We luck out b/c by default the framework creates CB w/ the VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set
+    // We luck out b/c by default the framework creates CB w/ the VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set
     BeginCommandBuffer();
     m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
     EndCommandBuffer();
@@ -1243,8 +1243,8 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after re-submitting Command Buffer that was created with one-time submit flag";
-    if (!strstr(msgString.c_str(),"was begun w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
-        FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT set...'";
+    if (!strstr(msgString.c_str(),"was begun w/ VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
+        FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set...'";
     }
 }
 
@@ -1327,8 +1327,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     memset(&cmd_buf_info, 0, sizeof(VkCmdBufferBeginInfo));
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
     vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
@@ -1622,8 +1621,7 @@ TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     cmd_buf_info.renderPass = (VkRenderPass)0xcadecade;
     cmd_buf_info.framebuffer = (VkFramebuffer)0xcadecade;
 
@@ -1663,8 +1661,7 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);

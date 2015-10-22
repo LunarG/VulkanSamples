@@ -509,7 +509,7 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
     VkCmdBufferBeginInfo cbBeginInfo;
     memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
     cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);
@@ -1412,7 +1412,7 @@ TEST_F(VkRenderTest, TriangleVSUniform)
     VkCmdBufferBeginInfo cbBeginInfo;
     memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
     cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);
@@ -2781,7 +2781,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkCmdBufferBeginInfo cbBeginInfo;
     memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
     cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
-    cbBeginInfo.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT;
+    cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
     GenericDrawPreparation(pipelineobj, descriptorSet);

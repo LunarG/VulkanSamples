@@ -983,8 +983,7 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkCmdBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     cmd_buf_info.renderPass = { VK_NULL_HANDLE };
     cmd_buf_info.subpass = 0;
     cmd_buf_info.framebuffer = { VK_NULL_HANDLE };

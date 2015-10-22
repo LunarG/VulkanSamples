@@ -1046,13 +1046,11 @@ typedef VkFlags VkCmdPoolResetFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
 
 typedef enum {
-    VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
-    VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT = 0x00000002,
-    VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
-    VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
-    VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
-} VkCmdBufferOptimizeFlagBits;
-typedef VkFlags VkCmdBufferOptimizeFlags;
+    VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT = 0x00000001,
+    VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT = 0x00000002,
+    VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT = 0x00000004,
+} VkCmdBufferUsageFlagBits;
+typedef VkFlags VkCmdBufferUsageFlags;
 
 typedef enum {
     VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
@@ -1937,7 +1935,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkCmdBufferOptimizeFlags                    flags;
+    VkCmdBufferUsageFlags                       flags;
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;

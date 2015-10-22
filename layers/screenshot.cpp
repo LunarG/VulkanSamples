@@ -178,8 +178,7 @@ static void writePPM( const char *filename, VkImage image1)
     const VkCmdBufferBeginInfo cmdBufferBeginInfo = {
         VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         NULL,
-        VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     const VkImageCopy imageCopyRegion = {
         {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},

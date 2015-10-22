@@ -319,8 +319,7 @@ static void demo_set_image_layout(
         VkCmdBufferBeginInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
             .pNext = NULL,
-            .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+            .flags = 0,
             .renderPass = { VK_NULL_HANDLE },
             .subpass = 0,
             .framebuffer = { VK_NULL_HANDLE },
@@ -363,8 +362,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     const VkCmdBufferBeginInfo cmd_buf_info = {
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
-        .flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+        .flags = 0,
         .renderPass = { VK_NULL_HANDLE },
         .subpass = 0,
         .framebuffer = { VK_NULL_HANDLE },

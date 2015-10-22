@@ -338,15 +338,11 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info
 
     if (!cmd->writers[INTEL_CMD_WRITER_BATCH].size) {
         const uint32_t size = cmd->dev->gpu->max_batch_buffer_size / 2;
-        uint32_t divider = 1;
 
-        if (info->flags & VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT)
-            divider *= 4;
-
-        cmd->writers[INTEL_CMD_WRITER_BATCH].size = size / divider;
-        cmd->writers[INTEL_CMD_WRITER_SURFACE].size = size / divider / 2;
-        cmd->writers[INTEL_CMD_WRITER_STATE].size = size / divider / 2;
-        cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].size = 16384 / divider;
+        cmd->writers[INTEL_CMD_WRITER_BATCH].size = size;
+        cmd->writers[INTEL_CMD_WRITER_SURFACE].size = size / 2;
+        cmd->writers[INTEL_CMD_WRITER_STATE].size = size / 2;
+        cmd->writers[INTEL_CMD_WRITER_INSTRUCTION].size = 16384;
     }
 
     for (i = 0; i < INTEL_CMD_WRITER_COUNT; i++) {

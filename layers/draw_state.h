@@ -53,7 +53,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
     DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
     DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
-    DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
+    DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
     DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER,     // vkCmdExecuteCommands() called with a primary cmdBuffer in pCmdBuffers array
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state bound
     DRAWSTATE_SCISSOR_NOT_BOUND,                // Draw submitted with no scissor state bound
