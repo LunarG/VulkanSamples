@@ -27,6 +27,8 @@
 
 #include "util.hpp"
 
+// Make sure functions start with init, execute, or destroy to assist codegen
+
 VkResult init_global_extension_properties(
         layer_properties &layer_props);
 
@@ -47,6 +49,7 @@ void init_connection(struct sample_info &info);
 void init_window(struct sample_info &info);
 void init_presentable_image(struct sample_info &info);
 void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs);
+void execute_pre_present_barrier(struct sample_info &info);
 void execute_present_image(struct sample_info &info);
 void init_swapchain_extension(struct sample_info &info);
 void init_command_pool(struct sample_info &info);
