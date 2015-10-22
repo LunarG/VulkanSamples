@@ -4806,8 +4806,8 @@ bool PreUpdateDescriptorSets(
     }
     if(pDescriptorWrites->pDescriptors != nullptr)
     {
-    if(pDescriptorWrites->pDescriptors->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pDescriptorWrites->pDescriptors->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pDescriptorWrites->pDescriptors->imageInfo.imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pDescriptorWrites->pDescriptors->imageInfo.imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an unrecognized enumerator");

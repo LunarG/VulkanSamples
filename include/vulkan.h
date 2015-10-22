@@ -1813,17 +1813,25 @@ typedef struct {
 } VkDescriptorPoolCreateInfo;
 
 typedef struct {
+    VkSampler                                   sampler;
+    VkImageView                                 imageView;
+    VkImageLayout                               imageLayout;
+} VkDescriptorImageInfo;
+
+typedef struct {
     VkBuffer                                    buffer;
     VkDeviceSize                                offset;
     VkDeviceSize                                range;
 } VkDescriptorBufferInfo;
 
+/* TODO: this should be union, except that causes a compiler error:
+ * error: member 'VkDescriptorImageInfo <anonymous union>::imageInfo' with constructor not allowed in union
+ * This issue should go away when the change to remove the constructor lands.
+ */
 typedef struct {
-    VkBufferView                                bufferView;
-    VkSampler                                   sampler;
-    VkImageView                                 imageView;
-    VkImageLayout                               imageLayout;
+    VkDescriptorImageInfo                       imageInfo;
     VkDescriptorBufferInfo                      bufferInfo;
+    VkBufferView                                texelBufferView;
 } VkDescriptorInfo;
 
 typedef struct {

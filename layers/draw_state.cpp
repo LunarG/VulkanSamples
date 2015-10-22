@@ -830,7 +830,9 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
             pWDS = new VkWriteDescriptorSet;
             *pNewNode = (GENERIC_HEADER*)pWDS;
             memcpy(pWDS, pUpdate, sizeof(VkWriteDescriptorSet));
-            pWDS->pDescriptors = new VkDescriptorInfo[pWDS->count];
+            /* TODO: restore new once constructors have been removed from vulkan.h */
+//            pWDS->pDescriptors = new VkDescriptorInfo[pWDS->count];
+            pWDS->pDescriptors = (VkDescriptorInfo *) malloc(sizeof(VkDescriptorInfo) * pWDS->count);
             array_size = sizeof(VkDescriptorInfo) * pWDS->count;
             memcpy((void*)pWDS->pDescriptors, ((VkWriteDescriptorSet*)pUpdate)->pDescriptors, array_size);
             break;
@@ -858,12 +860,12 @@ static VkBool32 validateDescriptorSetImageView(const layer_data* my_data, VkDevi
     for (uint32_t i = 0; i < writeDsCount; i++) {
         for (uint32_t j = 0; j < pWDS[i].count; j++) {
             const VkDescriptorInfo *dInfo = &pWDS[i].pDescriptors[j];
-            auto imageViewItem = dev_data->imageViewMap.find(dInfo->imageView.handle);
+            auto imageViewItem = dev_data->imageViewMap.find(dInfo->imageInfo.imageView.handle);
             if (imageViewItem != dev_data->imageViewMap.end()) {
                 VkImageAspectFlags flags = ((*imageViewItem).second)->subresourceRange.aspectMask;
                 if ((flags & VK_IMAGE_ASPECT_DEPTH_BIT) &&
                     (flags & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageView.handle, 0,
+                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageInfo.imageView.handle, 0,
                         DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: DesriptorSet[%d] in WriteDesriptorSet[%d] "
                         "has ImageView with both STENCIL and DEPTH aspects set", j, i);
                 }
@@ -1015,8 +1017,10 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         {
             case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
                 pWDS = (VkWriteDescriptorSet*)pFreeUpdate;
-                if (pWDS->pDescriptors)
-                    delete[] pWDS->pDescriptors;
+                if (pWDS->pDescriptors) {
+//                    delete[] pWDS->pDescriptors;
+                    free((void *) pWDS->pDescriptors);
+                }
                 break;
             case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
                 break;

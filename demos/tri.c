@@ -1413,9 +1413,9 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
     memset(&tex_descs, 0, sizeof(tex_descs));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        tex_descs[i].sampler = demo->textures[i].sampler;
-        tex_descs[i].imageView = demo->textures[i].view;
-        tex_descs[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        tex_descs[i].imageInfo.sampler = demo->textures[i].sampler;
+        tex_descs[i].imageInfo.imageView = demo->textures[i].view;
+        tex_descs[i].imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     }
 
     memset(&write, 0, sizeof(write));

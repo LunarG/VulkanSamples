@@ -889,7 +889,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             for (j = 0; j < write->count; j++) {
                 const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_sampler *sampler =
-                    intel_sampler(info->sampler);
+                    intel_sampler(info->imageInfo.sampler);
 
                 desc_set_write_sampler(set, &iter, sampler);
 
@@ -920,14 +920,14 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             for (j = 0; j < write->count; j++) {
                 const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_img_view *img_view =
-                    intel_img_view(info->imageView);
+                    intel_img_view(info->imageInfo.imageView);
                 const struct intel_sampler *sampler =
                     (binding->immutable_samplers) ?
                     binding->immutable_samplers[write->destArrayElement + j] :
-                    intel_sampler(info->sampler);
+                    intel_sampler(info->imageInfo.sampler);
 
                 desc_set_write_combined_image_sampler(set, &iter,
-                        img_view, info->imageLayout, sampler);
+                        img_view, info->imageInfo.imageLayout, sampler);
 
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
@@ -941,9 +941,9 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             for (j = 0; j < write->count; j++) {
                 const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_img_view *img_view =
-                    intel_img_view(info->imageView);
+                    intel_img_view(info->imageInfo.imageView);
 
-                desc_set_write_image(set, &iter, img_view, info->imageLayout);
+                desc_set_write_image(set, &iter, img_view, info->imageInfo.imageLayout);
 
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
@@ -957,7 +957,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             for (j = 0; j < write->count; j++) {
                 const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_buf_view *buf_view =
-                    intel_buf_view(info->bufferView);
+                    intel_buf_view(info->texelBufferView);
 
                 desc_set_write_buffer(set, &iter, buf_view);
 

@@ -2796,7 +2796,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
 
     VkDescriptorInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.sampler = sampler;
+    descriptor_info.imageInfo.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -2890,7 +2890,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
 
     VkDescriptorInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.sampler = sampler;
+    descriptor_info.imageInfo.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -2984,7 +2984,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
 
     VkDescriptorInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.sampler = sampler;
+    descriptor_info.imageInfo.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -3079,7 +3079,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 
     VkDescriptorInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.sampler = sampler;
+    descriptor_info.imageInfo.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));

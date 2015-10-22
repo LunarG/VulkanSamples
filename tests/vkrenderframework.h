@@ -273,7 +273,7 @@ public:
 
     void layout( VkImageLayout layout )
     {
-        m_descriptorInfo.imageLayout = layout;
+        m_descriptorInfo.imageInfo.imageLayout = layout;
     }
 
     VkDeviceMemory memory() const
@@ -329,7 +329,7 @@ public:
 
     VkImageLayout layout() const
     {
-        return m_descriptorInfo.imageLayout;
+        return m_descriptorInfo.imageInfo.imageLayout;
     }
     uint32_t width() const
     {
