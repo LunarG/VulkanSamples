@@ -232,14 +232,13 @@ void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
     pLimits->maxColorAttachments = INTEL_MAX_RENDER_TARGETS;
 
     // ?
-    pLimits->maxDescriptorSets     = 2;
     pLimits->maxImageDimension1D   = 8192;
     pLimits->maxImageDimension2D   = 8192;
     pLimits->maxImageDimension3D   = 8192;
     pLimits->maxImageDimensionCube = 8192;
     pLimits->maxImageArrayLayers   = 2048;
     pLimits->maxTexelBufferSize    = 128 * 1024 * 1024;  // 128M texels hard limit
-    pLimits->maxUniformBufferSize  = 64 * 1024;          // not hard limit
+    pLimits->maxUniformBufferRange = 64 * 1024;          // not hard limit
 
     /* HW has two per-stage resource tables:
      * - samplers, 16 per stage on IVB; blocks of 16 on HSW+ via shader hack, as the

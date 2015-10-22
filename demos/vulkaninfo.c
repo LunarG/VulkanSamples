@@ -818,13 +818,12 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxImageDimensionCube                   = 0x%" PRIxLEAST32 "\n", limits->maxImageDimensionCube                  );
     printf("\t\tmaxImageArrayLayers                     = 0x%" PRIxLEAST32 "\n", limits->maxImageArrayLayers                    );
     printf("\t\tmaxTexelBufferSize                      = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferSize                     );
-    printf("\t\tmaxUniformBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferSize                   );
-    printf("\t\tmaxStorageBufferSize                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferSize                   );
+    printf("\t\tmaxUniformBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferRange                 );
+    printf("\t\tmaxStorageBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferRange                 );
     printf("\t\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );
     printf("\t\tmaxMemoryAllocationCount                = 0x%" PRIxLEAST32 "\n", limits->maxMemoryAllocationCount               );
     printf("\t\tbufferImageGranularity                  = 0x%" PRIxLEAST64 "\n", limits->bufferImageGranularity                 );
     printf("\t\tmaxBoundDescriptorSets                  = 0x%" PRIxLEAST32 "\n", limits->maxBoundDescriptorSets                 );
-    printf("\t\tmaxDescriptorSets                       = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSets                      );
     printf("\t\tmaxPerStageDescriptorSamplers           = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSamplers          );
     printf("\t\tmaxPerStageDescriptorUniformBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorUniformBuffers    );
     printf("\t\tmaxPerStageDescriptorStorageBuffers     = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageBuffers    );
@@ -853,8 +852,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxGeometryOutputVertices               = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputVertices              );
     printf("\t\tmaxGeometryTotalOutputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxGeometryTotalOutputComponents       );
     printf("\t\tmaxFragmentInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxFragmentInputComponents             );
-    printf("\t\tmaxFragmentOutputBuffers                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputBuffers               );
-    printf("\t\tmaxFragmentDualSourceBuffers            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSourceBuffers           );
+    printf("\t\tmaxFragmentOutputAttachments                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputAttachments               );
+    printf("\t\tmaxFragmentDualSourceAttachments            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSourceAttachments           );
     printf("\t\tmaxFragmentCombinedOutputResources      = 0x%" PRIxLEAST32 "\n", limits->maxFragmentCombinedOutputResources     );
     printf("\t\tmaxComputeSharedMemorySize              = 0x%" PRIxLEAST32 "\n", limits->maxComputeSharedMemorySize             );
     printf("\t\tmaxComputeWorkGroupCount[0]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[0]            );

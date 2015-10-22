@@ -1125,6 +1125,9 @@ typedef struct {
     VkBool32                                    depthBounds;
     VkBool32                                    wideLines;
     VkBool32                                    largePoints;
+    VkBool32                                    alphaToOne;
+    VkBool32                                    multiViewport;
+    VkBool32                                    samplerAnisotropy;
     VkBool32                                    textureCompressionETC2;
     VkBool32                                    textureCompressionASTC_LDR;
     VkBool32                                    textureCompressionBC;
@@ -1150,7 +1153,6 @@ typedef struct {
     VkBool32                                    shaderInt16;
     VkBool32                                    shaderResourceResidency;
     VkBool32                                    shaderResourceMinLOD;
-    VkBool32                                    alphaToOne;
     VkBool32                                    sparseBinding;
     VkBool32                                    sparseResidencyBuffer;
     VkBool32                                    sparseResidencyImage2D;
@@ -1190,14 +1192,13 @@ typedef struct {
     uint32_t                                    maxImageArrayLayers;
     VkSampleCountFlags                          sampleCounts;
     uint32_t                                    maxTexelBufferSize;
-    uint32_t                                    maxUniformBufferSize;
-    uint32_t                                    maxStorageBufferSize;
+    uint32_t                                    maxUniformBufferRange;
+    uint32_t                                    maxStorageBufferRange;
     uint32_t                                    maxPushConstantsSize;
     uint32_t                                    maxMemoryAllocationCount;
     VkDeviceSize                                bufferImageGranularity;
     VkDeviceSize                                sparseAddressSpaceSize;
     uint32_t                                    maxBoundDescriptorSets;
-    uint32_t                                    maxDescriptorSets;
     uint32_t                                    maxPerStageDescriptorSamplers;
     uint32_t                                    maxPerStageDescriptorUniformBuffers;
     uint32_t                                    maxPerStageDescriptorStorageBuffers;
@@ -1229,8 +1230,8 @@ typedef struct {
     uint32_t                                    maxGeometryOutputVertices;
     uint32_t                                    maxGeometryTotalOutputComponents;
     uint32_t                                    maxFragmentInputComponents;
-    uint32_t                                    maxFragmentOutputBuffers;
-    uint32_t                                    maxFragmentDualSourceBuffers;
+    uint32_t                                    maxFragmentOutputAttachments;
+    uint32_t                                    maxFragmentDualSourceAttachments;
     uint32_t                                    maxFragmentCombinedOutputResources;
     uint32_t                                    maxComputeSharedMemorySize;
     uint32_t                                    maxComputeWorkGroupCount[3];
@@ -1252,9 +1253,9 @@ typedef struct {
     uint32_t                                    minTexelBufferOffsetAlignment;
     uint32_t                                    minUniformBufferOffsetAlignment;
     uint32_t                                    minStorageBufferOffsetAlignment;
-    uint32_t                                    minTexelOffset;
+    int32_t                                     minTexelOffset;
     uint32_t                                    maxTexelOffset;
-    uint32_t                                    minTexelGatherOffset;
+    int32_t                                     minTexelGatherOffset;
     uint32_t                                    maxTexelGatherOffset;
     float                                       minInterpolationOffset;
     float                                       maxInterpolationOffset;
