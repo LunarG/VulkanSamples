@@ -764,6 +764,31 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
 
 }
 
+void execute_pre_present_barrier(struct sample_info &info)
+{
+    /* DEPENDS on init_swap_chain() */
+    /* Add mem barrier to change layout to present */
+
+    VkImageMemoryBarrier prePresentBarrier = {};
+    prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    prePresentBarrier.pNext = NULL;
+    prePresentBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
+    prePresentBarrier.inputMask = 0;
+    prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    prePresentBarrier.subresourceRange.baseMipLevel = 0;
+    prePresentBarrier.subresourceRange.mipLevels = 1;
+    prePresentBarrier.subresourceRange.baseArrayLayer = 0;
+    prePresentBarrier.subresourceRange.arraySize = 1;
+    prePresentBarrier.image = info.buffers[info.current_buffer].image;
+    VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+}
+
 void execute_present_image(struct sample_info &info)
 {
     /* DEPENDS on init_presentable_image() and init_swap_chain()*/
