@@ -31,6 +31,8 @@ Initialize Framebuffer
 #include <assert.h>
 #include <cstdlib>
 
+#define DEPTH_PRESENT true
+
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
@@ -53,7 +55,7 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    init_renderpass(info);
+    init_renderpass(info, DEPTH_PRESENT);
 
     /* VULKAN_KEY_START */
     VkImageView attachments[2];

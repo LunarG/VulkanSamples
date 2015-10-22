@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, false);
-    init_renderpass(info);
+    init_renderpass(info, true);
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, true);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
@@ -854,7 +854,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     assert(!err);
 }
 
-void init_renderpass(struct sample_info &info)
+void init_renderpass(struct sample_info &info, bool include_depth)
 {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 

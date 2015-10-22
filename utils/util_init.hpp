@@ -62,7 +62,7 @@ void init_swap_chain(struct sample_info &info);
 void init_depth_buffer(struct sample_info &info);
 void init_uniform_buffer(struct sample_info &info);
 void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture);
-void init_renderpass(struct sample_info &info);
+void init_renderpass(struct sample_info &info, bool include_depth);
 void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture);
 void init_framebuffers(struct sample_info &info, bool include_depth);
 void init_descriptor_pool(struct sample_info &info, bool use_texture);
