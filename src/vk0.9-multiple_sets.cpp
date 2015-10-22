@@ -108,9 +108,9 @@ int main(int argc, char **argv)
     const char* textureName = "green.ppm";
     init_texture(info, textureName);
     init_uniform_buffer(info);
-    init_renderpass(info);
+    init_renderpass(info, true);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info);
+    init_framebuffers(info, true);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
 
@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 
     // Call remaining boilerplate utils
     init_pipeline_cache(info);
-    init_pipeline(info);
+    init_pipeline(info, true);
 
     // The remaining is identical to drawtexturedcube
     VkClearValue clear_values[2];

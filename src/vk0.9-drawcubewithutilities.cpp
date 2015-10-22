@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_set(info, false);
-    init_pipeline(info);
+    init_pipeline(info, VK_TRUE);
 
     /* VULKAN_KEY_START */
 
@@ -1139,7 +1139,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     vkUpdateDescriptorSets(info.device, use_texture?2:1, writes, 0, NULL);
 }
 
-void init_pipeline(struct sample_info &info)
+void init_pipeline(struct sample_info &info, VkBool32 include_depth)
 {
     VkResult U_ASSERT_ONLY res;
 

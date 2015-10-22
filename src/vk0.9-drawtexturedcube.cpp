@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
-    init_pipeline(info);
+    init_pipeline(info, DEPTH_PRESENT);
 
     /* VULKAN_KEY_START */
 
