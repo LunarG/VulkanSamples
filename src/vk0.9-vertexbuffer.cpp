@@ -33,6 +33,8 @@ Create Vertex Buffer
 #include <cstdlib>
 #include "cube_data.h"
 
+#define DEPTH_PRESENT true
+
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
@@ -55,8 +57,8 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    init_renderpass(info);
-    init_framebuffers(info, true);
+    init_renderpass(info, DEPTH_PRESENT);
+    init_framebuffers(info, DEPTH_PRESENT);
 
     /* VULKAN_KEY_START */
     /*

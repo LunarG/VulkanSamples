@@ -1058,7 +1058,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     assert(!err);
 }
 
-void init_renderpass(struct sample_info &info)
+void init_renderpass(struct sample_info &info, bool include_depth)
 {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
@@ -1077,17 +1077,20 @@ void init_renderpass(struct sample_info &info)
     attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachments[0].flags = 0;
 
-    attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
-    attachments[1].pNext = NULL;
-    attachments[1].format = info.depth.format;
-    attachments[1].samples = NUM_SAMPLES;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].flags = 0;
+    if (include_depth)
+    {
+        attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
+        attachments[1].pNext = NULL;
+        attachments[1].format = info.depth.format;
+        attachments[1].samples = NUM_SAMPLES;
+        attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[1].flags = 0;
+    }
 
     VkAttachmentReference color_reference = {};
     color_reference.attachment = 0;
@@ -1103,15 +1106,16 @@ void init_renderpass(struct sample_info &info)
     subpass.colorCount = 1;
     subpass.pColorAttachments = &color_reference;
     subpass.pResolveAttachments = NULL;
-    subpass.depthStencilAttachment.attachment = 1;
-    subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    subpass.depthStencilAttachment.attachment = include_depth?1:VK_ATTACHMENT_UNUSED;
+    subpass.depthStencilAttachment.layout = include_depth?VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                                                          VK_IMAGE_LAYOUT_UNDEFINED;
     subpass.preserveCount = 0;
     subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.pNext = NULL;
-    rp_info.attachmentCount = 2;
+    rp_info.attachmentCount = include_depth?2:1;
     rp_info.pAttachments = attachments;
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;

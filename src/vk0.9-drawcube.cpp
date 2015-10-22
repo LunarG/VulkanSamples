@@ -33,6 +33,8 @@ Draw Cube
 #include <cstdlib>
 #include "cube_data.h"
 
+#define DEPTH_PRESENT true
+
 /* For this sample, we'll start with GLSL so the shader function is plain */
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
 /* the driver.  We do this for clarity rather than using pre-compiled     */
@@ -91,9 +93,9 @@ int main(int argc, char **argv)
     init_depth_buffer(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, false);
-    init_renderpass(info);
+    init_renderpass(info, DEPTH_PRESENT);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info, true);
+    init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_pool(info, false);

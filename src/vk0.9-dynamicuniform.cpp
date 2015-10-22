@@ -33,6 +33,8 @@ Draw 2 Cubes using dynamic uniform buffer
 #include <cstdlib>
 #include "cube_data.h"
 
+#define DEPTH_PRESENT true
+
 /* This sample builds upon the drawcube sample by using a dynamic uniform */
 /* buffer to store two transformation matrices, using the first matrix on */
 /* the first draw, and then specifying an offset to the second matrix in  */
@@ -95,9 +97,9 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    init_renderpass(info);
+    init_renderpass(info, DEPTH_PRESENT);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info, true);
+    init_framebuffers(info, DEPTH_PRESENT);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                sizeof(g_vb_solid_face_colors_Data[0]), false);
 
