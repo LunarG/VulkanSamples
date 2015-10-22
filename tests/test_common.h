@@ -35,7 +35,6 @@ static inline const char *vk_result_string(VkResult err)
     switch (err) {
 #define STR(r) case r: return #r
     STR(VK_SUCCESS);
-    STR(VK_UNSUPPORTED);
     STR(VK_NOT_READY);
     STR(VK_TIMEOUT);
     STR(VK_EVENT_SET);

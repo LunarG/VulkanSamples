@@ -407,7 +407,7 @@ struct demo {
     uint32_t queue_count;
 };
 
-static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
+static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
@@ -415,13 +415,13 @@ static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits
              // Type is available, does it match user properties?
              if ((demo->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
-                 return VK_SUCCESS;
+                 return true;
              }
          }
          typeBits >>= 1;
      }
      // No memory types matched, return failure
-     return VK_UNSUPPORTED;
+     return false;
 }
 
 static void demo_flush_init_cmd(struct demo *demo)
@@ -879,6 +879,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     VkMemoryRequirements mem_reqs;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
 
     demo->depth.format = depth_format;
 
@@ -896,11 +897,11 @@ static void demo_prepare_depth(struct demo *demo)
     demo->depth.mem_alloc.allocationSize = mem_reqs.size;
     demo->depth.mem_alloc.memoryTypeIndex = 0;
 
-    err = memory_type_from_properties(demo,
+    pass = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       0, /* No requirements */
                                       &demo->depth.mem_alloc.memoryTypeIndex);
-    assert(!err);
+    assert(pass);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &demo->depth.mem_alloc, &demo->depth.mem);
@@ -976,6 +977,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     int32_t tex_width;
     int32_t tex_height;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
 
     if (!loadTexture(filename, NULL, NULL, &tex_width, &tex_height))
     {
@@ -1014,8 +1016,8 @@ static void demo_prepare_texture_image(struct demo *demo,
     tex_obj->mem_alloc.allocationSize = mem_reqs.size;
     tex_obj->mem_alloc.memoryTypeIndex = 0;
 
-    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &tex_obj->mem_alloc.memoryTypeIndex);
-    assert(!err);
+    pass = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &tex_obj->mem_alloc.memoryTypeIndex);
+    assert(pass);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &tex_obj->mem_alloc,
@@ -1179,6 +1181,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     int i;
     mat4x4 MVP, VP;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
     struct vktexcube_vs_uniform data;
 
     mat4x4_mul(VP, demo->projection_matrix, demo->view_matrix);
@@ -1211,11 +1214,11 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     demo->uniform_data.mem_alloc.allocationSize = mem_reqs.size;
     demo->uniform_data.mem_alloc.memoryTypeIndex = 0;
 
-    err = memory_type_from_properties(demo,
+    pass = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &demo->uniform_data.mem_alloc.memoryTypeIndex);
-    assert(!err);
+    assert(pass);
 
     err = vkAllocMemory(demo->device, &demo->uniform_data.mem_alloc, &(demo->uniform_data.mem));
     assert(!err);

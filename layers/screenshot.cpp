@@ -96,7 +96,7 @@ static vector<int> screenshotFrames;
 // Flag indicating we have queried _VK_SCREENSHOT env var
 static bool screenshotEnvQueried = false;
 
-static VkResult memory_type_from_properties(
+static bool memory_type_from_properties(
     VkPhysicalDeviceMemoryProperties *memory_properties,
     uint32_t typeBits,
     VkFlags requirements_mask,
@@ -108,13 +108,13 @@ static VkResult memory_type_from_properties(
              // Type is available, does it match user properties?
              if ((memory_properties->memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
-                 return VK_SUCCESS;
+                 return true;
              }
          }
          typeBits >>= 1;
      }
      // No memory types matched, return failure
-     return VK_UNSUPPORTED;
+     return false;
 }
 
 static void init_screenshot()
@@ -135,6 +135,7 @@ static void writePPM( const char *filename, VkImage image1)
 {
     VkImage image2;
     VkResult err;
+    bool pass;
     int x, y;
     const char *ptr;
     VkDeviceMemory mem2;
@@ -216,11 +217,11 @@ static void writePPM( const char *filename, VkImage image1)
     pInstanceTable = instance_dispatch_table(instance);
     pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, &memory_properties);
 
-    err = memory_type_from_properties(&memory_properties,
+    pass = memory_type_from_properties(&memory_properties,
                                 memRequirements.memoryTypeBits,
                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                 &memAllocInfo.memoryTypeIndex);
-	assert(!err);
+    assert(pass);
 
     err = pTableDevice->AllocMemory(device, &memAllocInfo, &mem2);
     assert(!err);

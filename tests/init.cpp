@@ -141,6 +141,7 @@ protected:
 
 TEST_F(VkTest, AllocMemory) {
     VkResult err;
+    bool pass;
     VkMemoryAllocInfo alloc_info = {};
     VkDeviceMemory gpu_mem;
     uint8_t *pData;
@@ -152,8 +153,8 @@ TEST_F(VkTest, AllocMemory) {
     VkPhysicalDeviceMemoryProperties mem_props;
     vkGetPhysicalDeviceMemoryProperties(m_device->phy().handle(), &mem_props);
 
-    err = m_device->phy().set_memory_type(((1 << mem_props.memoryTypeCount) - 1), &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(((1 << mem_props.memoryTypeCount) - 1), &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    ASSERT_TRUE(pass);
 
     err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
@@ -284,6 +285,7 @@ void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char 
 void VkTest::CreateImageTest()
 {
     VkResult err;
+    bool pass;
     VkImage image;
     uint32_t w, h, mipCount;
     VkFormat fmt;
@@ -420,8 +422,8 @@ void VkTest::CreateImageTest()
         mem_info.allocationSize = mem_req.size;
         mem_info.memoryTypeIndex = 0;
 
-        err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-        ASSERT_VK_SUCCESS(err);
+        pass = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+        ASSERT_TRUE(pass);
 
         err = vkAllocMemory(device(), &mem_info, &image_mem);
         ASSERT_VK_SUCCESS(err);

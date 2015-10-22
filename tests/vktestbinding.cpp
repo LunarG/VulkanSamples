@@ -207,7 +207,7 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
     return exts;
 }
 
-VkResult PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties, const VkFlags forbid) const
+bool PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties, const VkFlags forbid) const
 {
      uint32_t type_mask = type_bits;
      // Search memtypes to find first index with those properties
@@ -217,13 +217,13 @@ VkResult PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAlloc
              if ((memory_properties_.memoryTypes[i].propertyFlags & properties) == properties &&
                  (memory_properties_.memoryTypes[i].propertyFlags & forbid) == 0) {
                  info->memoryTypeIndex = i;
-                 return VK_SUCCESS;
+                 return true;
              }
          }
          type_mask >>= 1;
      }
      // No memory types matched, return failure
-     return VK_UNSUPPORTED;
+     return false;
 }
 
 /*

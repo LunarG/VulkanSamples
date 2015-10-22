@@ -250,11 +250,6 @@ std::string EnumeratorString(VkResult const& enumerator)
             return "VK_EVENT_RESET";
             break;
         }
-        case VK_UNSUPPORTED:
-        {
-            return "VK_UNSUPPORTED";
-            break;
-        }
         case VK_SUCCESS:
         {
             return "VK_SUCCESS";

@@ -495,6 +495,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -539,8 +540,8 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    if(err != VK_SUCCESS) { // If we can't find any unmappable memory this test doesn't make sense
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    if(!pass) { // If we can't find any unmappable memory this test doesn't make sense
         vkDestroyImage(m_device->device(), image);
         return;
     }
@@ -642,6 +643,7 @@ TEST_F(VkLayerTest, RebindMemory)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -687,8 +689,8 @@ TEST_F(VkLayerTest, RebindMemory)
                           &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
 
     // allocate 2 memory objects
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem1);
@@ -910,6 +912,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -953,8 +956,8 @@ TEST_F(VkLayerTest, BindInvalidMemory)
 
     mem_alloc.allocationSize = mem_reqs.size;
 
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
 
     // allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -982,6 +985,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -1024,8 +1028,8 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
                           &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
-    err = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(mem_reqs.memoryTypeBits, &mem_alloc, 0);
+    ASSERT_TRUE(pass);
 
     // Allocate memory
     err = vkAllocMemory(m_device->device(), &mem_alloc, &mem);
@@ -4358,6 +4362,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4402,14 +4407,14 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
@@ -4463,6 +4468,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4507,15 +4513,15 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
 
@@ -4563,6 +4569,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4607,15 +4614,15 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
 
@@ -4666,6 +4673,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4710,15 +4718,15 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
 
@@ -4769,6 +4777,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4814,15 +4823,15 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
 
@@ -4873,6 +4882,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
+    bool            pass;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -4918,15 +4928,15 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
 
     vkGetImageMemoryRequirements(m_device->device(), srcImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
     vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
-    err = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
     err = vkAllocMemory(m_device->device(), &memAlloc, &destMem);
     ASSERT_VK_SUCCESS(err);
 

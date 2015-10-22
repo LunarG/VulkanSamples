@@ -247,7 +247,7 @@ struct demo {
     uint32_t queue_count;
 };
 
-static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
+static bool memory_type_from_properties(struct demo *demo, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
@@ -255,13 +255,13 @@ static VkResult memory_type_from_properties(struct demo *demo, uint32_t typeBits
              // Type is available, does it match user properties?
              if ((demo->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
-                 return VK_SUCCESS;
+                 return true;
              }
          }
          typeBits >>= 1;
      }
      // No memory types matched, return failure
-     return VK_UNSUPPORTED;
+     return false;
 }
 
 static void demo_flush_init_cmd(struct demo *demo)
@@ -693,6 +693,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     VkMemoryRequirements mem_reqs;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
 
     demo->depth.format = depth_format;
 
@@ -707,11 +708,11 @@ static void demo_prepare_depth(struct demo *demo)
 
     /* select memory size and type */
     mem_alloc.allocationSize = mem_reqs.size;
-    err = memory_type_from_properties(demo,
+    pass = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       0, /* No requirements */
                                       &mem_alloc.memoryTypeIndex);
-    assert(!err);
+    assert(pass);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &mem_alloc, &demo->depth.mem);
@@ -744,6 +745,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     const int32_t tex_width = 2;
     const int32_t tex_height = 2;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
 
     tex_obj->tex_width = tex_width;
     tex_obj->tex_height = tex_height;
@@ -777,8 +779,8 @@ static void demo_prepare_texture_image(struct demo *demo,
     vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
 
     mem_alloc.allocationSize  = mem_reqs.size;
-    err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &mem_alloc.memoryTypeIndex);
-    assert(!err);
+    pass = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &mem_alloc.memoryTypeIndex);
+    assert(pass);
 
     /* allocate memory */
     err = vkAllocMemory(demo->device, &mem_alloc, &tex_obj->mem);
@@ -960,6 +962,7 @@ static void demo_prepare_vertices(struct demo *demo)
     };
     VkMemoryRequirements mem_reqs;
     VkResult U_ASSERT_ONLY err;
+    bool U_ASSERT_ONLY pass;
     void *data;
 
     memset(&demo->vertices, 0, sizeof(demo->vertices));
@@ -972,11 +975,11 @@ static void demo_prepare_vertices(struct demo *demo)
     assert(!err);
 
     mem_alloc.allocationSize  = mem_reqs.size;
-    err = memory_type_from_properties(demo,
+    pass = memory_type_from_properties(demo,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &mem_alloc.memoryTypeIndex);
-    assert(!err);
+    assert(pass);
 
     err = vkAllocMemory(demo->device, &mem_alloc, &demo->vertices.mem);
     assert(!err);

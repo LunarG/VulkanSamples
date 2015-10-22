@@ -125,6 +125,7 @@ protected:
 void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 {
     VkResult err;
+    bool pass;
     uint32_t mipCount;
     VkFormat fmt;
     VkFormatProperties image_fmt;
@@ -226,8 +227,8 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     mem_info.allocationSize = mem_req.size;
     mem_info.memoryTypeIndex = 0;
 
-    err = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
-    ASSERT_VK_SUCCESS(err);
+    pass = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
+    ASSERT_TRUE(pass);
 
     /* allocate memory */
     err = vkAllocMemory(device(), &mem_info, &m_image_mem);

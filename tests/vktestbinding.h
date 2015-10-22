@@ -124,7 +124,7 @@ public:
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkQueueFamilyProperties> queue_properties() const;
 
-    VkResult set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties,
+    bool set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties,
                              const VkMemoryPropertyFlags forbid = 0) const;
 
     // vkEnumerateDeviceExtensionProperties()
