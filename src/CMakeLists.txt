@@ -217,7 +217,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     drawcube drawtexturedcube dynamicuniform
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
-    enable_validation_with_callback)
+    enable_validation_with_callback multiple_sets)
 sampleWithSingleFile()
 
 # simple one file sample targets, no additional files
