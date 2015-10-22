@@ -1434,7 +1434,7 @@ void init_pipeline_cache(struct sample_info &info)
     assert(res == VK_SUCCESS);
 }
 
-void init_pipeline(struct sample_info &info)
+void init_pipeline(struct sample_info &info, VkBool32 include_depth)
 {
     VkResult U_ASSERT_ONLY res;
 
@@ -1466,7 +1466,7 @@ void init_pipeline(struct sample_info &info)
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
-    rs.depthClipEnable = VK_TRUE;
+    rs.depthClipEnable = include_depth;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
     rs.depthBias = 0;
@@ -1508,8 +1508,8 @@ void init_pipeline(struct sample_info &info)
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
-    ds.depthTestEnable = VK_TRUE;
-    ds.depthWriteEnable = VK_TRUE;
+    ds.depthTestEnable = include_depth;
+    ds.depthWriteEnable = include_depth;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;

@@ -69,8 +69,8 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture);
 void init_descriptor_set(struct sample_info &info, bool use_texture);
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
 void init_pipeline_cache(struct sample_info &info);
-void init_pipeline(struct sample_info &info);
-void init_texture(struct sample_info &info, const char* textureName = nullptr);
+void init_pipeline(struct sample_info &info, VkBool32 include_depth);
+void init_texture(struct sample_info &info,  const char* textureName = nullptr);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);

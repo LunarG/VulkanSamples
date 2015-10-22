@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
 
     init_pipeline_cache(info);
-    init_pipeline(info);
+    init_pipeline(info, DEPTH_PRESENT);
 
     VkClearValue clear_values[2];
     clear_values[0].color.float32[0] = 0.2f;
