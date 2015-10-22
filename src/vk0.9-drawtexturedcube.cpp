@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info);
+    init_framebuffers(info, true);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);

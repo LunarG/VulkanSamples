@@ -1122,7 +1122,7 @@ void init_renderpass(struct sample_info &info)
     assert(res == VK_SUCCESS);
 }
 
-void init_framebuffers(struct sample_info &info)
+void init_framebuffers(struct sample_info &info, bool include_depth)
 {
     /* DEPENDS on init_depth_buffer(), init_renderpass() and init_swapchain_extension() */
 
@@ -1134,7 +1134,7 @@ void init_framebuffers(struct sample_info &info)
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
     fb_info.renderPass = info.render_pass;
-    fb_info.attachmentCount = 2;
+    fb_info.attachmentCount = include_depth?2:1;
     fb_info.pAttachments = attachments;
     fb_info.width  = info.width;
     fb_info.height = info.height;
