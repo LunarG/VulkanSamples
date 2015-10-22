@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     init_descriptor_and_pipeline_layouts(info, false);
     init_renderpass(info);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info);
+    init_framebuffers(info, true);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_set(info, false);
@@ -981,7 +981,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     finalize_glslang();
 }
 
-void init_framebuffers(struct sample_info &info)
+void init_framebuffers(struct sample_info &info, bool include_depth)
 {
     /* DEPENDS on init_depth_buffer(), init_renderpass() and init_wsi() */
 

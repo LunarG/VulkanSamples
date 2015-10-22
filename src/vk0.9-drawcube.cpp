@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     init_descriptor_and_pipeline_layouts(info, false);
     init_renderpass(info);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info);
+    init_framebuffers(info, true);
     init_vertex_buffer(info, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                sizeof(g_vb_solid_face_colors_Data[0]), false);
     init_descriptor_pool(info, false);

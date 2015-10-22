@@ -56,7 +56,7 @@ int main(int argc, char **argv)
     init_swap_chain(info);
     init_depth_buffer(info);
     init_renderpass(info);
-    init_framebuffers(info);
+    init_framebuffers(info, true);
 
     /* VULKAN_KEY_START */
     /*
