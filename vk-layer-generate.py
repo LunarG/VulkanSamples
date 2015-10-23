@@ -1572,8 +1572,6 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
                                    'QueueSubmit' : ['fence'],
                                   }
-        # TODO : A few of the skipped types are just "hard" cases that need some more work to support
-        #   Need to handle NULL fences on queue submit, binding null memory, and WSI Image objects
         param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:
             base_type = p.ty.replace('const ', '').strip('*')
@@ -1590,18 +1588,28 @@ class ObjectTrackerSubcommand(Subcommand):
                 struct_type = base_type
                 if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
                     struct_type = vk_helper.typedef_rev_dict[struct_type]
+                # Parse elements of this struct param to identify objects and/or arrays of objects
                 for m in sorted(vk_helper.struct_dict[struct_type]):
                     if vk_helper.struct_dict[struct_type][m]['type'] in vulkan.core.objects and vk_helper.struct_dict[struct_type][m]['type'] not in ['VkPhysicalDevice', 'VkQueue', 'VkFence', 'VkImage', 'VkDeviceMemory']:
                         if proto.name not in valid_null_object_names or vk_helper.struct_dict[struct_type][m]['name'] not in valid_null_object_names[proto.name]:
-                            # If we have a count and this param is a ptr w/ last letter 's', then this is a dynamically sized array param
-                            #  This is not great, but gets the job done for now
-                            if param_count != 'NONE' and '*' in p.ty and 's' == p.name[-1]:
+                            # This is not great, but gets the job done for now, but If we have a count and this param is a ptr w/
+                            #  last letter 's' OR non-'count' string of count is in the param name, then this is a dynamically sized array param
+                            param_array = False
+                            if param_count != 'NONE':
+                                if '*' in p.ty:
+                                    if 's' == p.name[-1] or param_count.lower().replace('count', '') in p.name.lower():
+                                        param_array = True
+                            if param_array:
                                 param_name = '%s[i].%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
                             else:
                                 param_name = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['name'])
                             if vk_helper.struct_dict[struct_type][m]['dyn_array']:
-                                loop_count = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
-                                loop_params[loop_count].append(param_name)
+                                if param_count != 'NONE': # this will be a double-embedded loop, use comma delineated 'count,name' for param_name
+                                    loop_count = '%s[i].%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                                    loop_params[param_count].append('%s,%s' % (loop_count, param_name))
+                                else:
+                                    loop_count = '%s->%s' % (p.name, vk_helper.struct_dict[struct_type][m]['array_size'])
+                                    loop_params[loop_count].append(param_name)
                             else:
                                 if '[' in param_name: # dynamic array param, set size
                                     loop_params[param_count].append(param_name)
@@ -1657,7 +1665,14 @@ class ObjectTrackerSubcommand(Subcommand):
                         using_line += '    if (%s) {\n' % base_param
                         using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
                         for opn in loop_params[lc]:
-                            if '[' in opn: # API func param is array
+                            if ',' in opn: # double-embedded loop
+                                (inner_lc, inner_param) = opn.split(',')
+                                using_line += '            if (%s) {\n' % inner_param
+                                using_line += '                for (uint32_t j=0; j<%s; j++) {\n' % inner_lc
+                                using_line += '                    skipCall |= validate_object(%s, %s[j]);\n' % (param0_name, inner_param)
+                                using_line += '                }\n'
+                                using_line += '            }\n'
+                            elif '[' in opn: # API func param is array
                                 using_line += '            skipCall |= validate_object(%s, %s);\n' % (param0_name, opn)
                             else: # struct element is array
                                 using_line += '            skipCall |= validate_object(%s, %s[i]);\n' % (param0_name, opn)
