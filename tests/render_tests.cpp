@@ -298,7 +298,6 @@ public:
 protected:
     VkImage m_texture;
     VkImageView m_textureView;
-    VkDescriptorInfo m_descriptorInfo;
     VkDeviceMemory m_textureMem;
 
     VkSampler m_sampler;
@@ -313,8 +312,6 @@ protected:
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
-
-        memset(&m_descriptorInfo, 0, sizeof(m_descriptorInfo));
 
         InitFramework();
     }
