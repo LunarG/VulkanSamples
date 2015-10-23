@@ -49,6 +49,7 @@
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_layer_utils.h"
 
 struct devExts {
     bool debug_marker_enabled;
@@ -64,7 +65,9 @@ struct layer_data {
     // Layer specific data
     unordered_map<uint64_t, unique_ptr<SAMPLER_NODE>> sampleMap;
     unordered_map<uint64_t, unique_ptr<VkImageViewCreateInfo>> imageViewMap;
-    unordered_map<uint64_t, unique_ptr<BUFFER_NODE>> bufferViewMap;
+    unordered_map<uint64_t, unique_ptr<VkImageCreateInfo>> imageMap;
+    unordered_map<uint64_t, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
+    unordered_map<uint64_t, unique_ptr<VkBufferCreateInfo>> bufferMap;
     unordered_map<uint64_t, PIPELINE_NODE*> pipelineMap;
     unordered_map<uint64_t, POOL_NODE*> poolMap;
     unordered_map<uint64_t, SET_NODE*> setMap;
@@ -879,38 +882,176 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
     (*pNewNode)->pNext = NULL;
     return skipCall;
 }
+// Verify that given sampler is valid
+static VkBool32 validateSampler(const layer_data* my_data, const VkSampler* pSampler, const VkBool32 immutable)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto sampIt = my_data->sampleMap.find(pSampler->handle);
+    if (sampIt == my_data->sampleMap.end()) {
+        if (!immutable) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SAMPLER, pSampler->handle, 0, DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid sampler %#" PRIxLEAST64, pSampler->handle);
+        } else { // immutable
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SAMPLER, pSampler->handle, 0, DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor whose binding has an invalid immutable sampler %#" PRIxLEAST64, pSampler->handle);
+        }
+    } else {
+        // TODO : Any further checks we want to do on the sampler?
+    }
+    return skipCall;
+}
+// Verify that given imageView is valid
+static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* pImageView, const VkImageLayout imageLayout)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto ivIt = my_data->imageViewMap.find(pImageView->handle);
+    if (ivIt == my_data->imageViewMap.end()) {
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid imageView %#" PRIxLEAST64, pImageView->handle);
+    } else {
+        // Validate that imageLayout is compatible with aspectMask and image format
+        VkImageAspectFlags aspectMask = ivIt->second->subresourceRange.aspectMask;
+        uint64_t imageHandle = ivIt->second->image.handle;
+        // TODO : Check here in case we have a bad image handle
+        auto imgIt = my_data->imageMap.find(imageHandle);
+        if (imgIt == my_data->imageMap.end()) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, imageHandle, 0, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image handle %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, imageHandle, pImageView->handle);
+        } else {
+            VkFormat format = (*imgIt).second->format;
+            bool ds = vk_format_is_depth_or_stencil(format);
+            switch (imageLayout) {
+                case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                    // Only Color bit must be set
+                    if ((aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) != VK_IMAGE_ASPECT_COLOR_BIT) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0,
+                            DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: Updating descriptor with layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and imageView %#" PRIxLEAST64 ""
+                                    " that does not have VK_IMAGE_ASPECT_COLOR_BIT set.", pImageView->handle);
+                    }
+                    // format must NOT be DS
+                    if (ds) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0,
+                            DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS", "vkUpdateDescriptorSets: Updating descriptor with layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL and imageView %#" PRIxLEAST64 ""
+                                    " but the image format is %s which is not a color format.", pImageView->handle, string_VkFormat(format));
+                    }
+                    break;
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+                    // Depth or stencil bit must be set, but both must NOT be set
+                    if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+                        if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                            // both  must NOT be set
+                            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0,
+                            DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: Updating descriptor with imageView %#" PRIxLEAST64 ""
+                                    " that has both STENCIL and DEPTH aspects set", pImageView->handle);
+                        }
+                    } else if (!(aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+                        // Neither were set
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0,
+                            DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: Updating descriptor with layout %s and imageView %#" PRIxLEAST64 ""
+                                    " that does not have STENCIL or DEPTH aspect set.", string_VkImageLayout(imageLayout), pImageView->handle);
+                    }
+                    // format must be DS
+                    if (!ds) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, pImageView->handle, 0,
+                            DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS", "vkUpdateDescriptorSets: Updating descriptor with layout %s and imageView %#" PRIxLEAST64 ""
+                                    " but the image format is %s which is not a depth/stencil format.", string_VkImageLayout(imageLayout), pImageView->handle, string_VkFormat(format));
+                    }
+                    break;
+                default:
+                    // anything to check for other layouts?
+                    break;
+            }
+        }
+    }
+    return skipCall;
+}
+// Verify that given bufferView is valid
+static VkBool32 validateBufferView(const layer_data* my_data, const VkBufferView* pBufferView)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto sampIt = my_data->bufferViewMap.find(pBufferView->handle);
+    if (sampIt == my_data->bufferViewMap.end()) {
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_BUFFER_VIEW, pBufferView->handle, 0, DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid bufferView %#" PRIxLEAST64, pBufferView->handle);
+    } else {
+        // TODO : Any further checks we want to do on the bufferView?
+    }
+    return skipCall;
+}
+// Verify that given bufferInfo is valid
+static VkBool32 validateBufferInfo(const layer_data* my_data, const VkDescriptorBufferInfo* pBufferInfo)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto sampIt = my_data->bufferMap.find(pBufferInfo->buffer.handle);
+    if (sampIt == my_data->bufferMap.end()) {
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_BUFFER, pBufferInfo->buffer.handle, 0, DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR, "DS",
+                "vkUpdateDescriptorSets: Attempt to update descriptor where bufferInfo has invalid buffer %#" PRIxLEAST64, pBufferInfo->buffer.handle);
+    } else {
+        // TODO : Any further checks we want to do on the bufferView?
+    }
+    return skipCall;
+}
+static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteDescriptorSet *pWDS, const VkDescriptorSetLayoutBinding* pLayoutBinding)
+{
+    VkBool32 skipCall = VK_FALSE;
+    // First verify that for the given Descriptor type, the correct DescriptorInfo data is supplied
+    VkBufferView* pBufferView = NULL;
+    const VkSampler* pSampler = NULL;
+    VkImageView* pImageView = NULL;
+    VkImageLayout* pImageLayout = NULL;
+    VkDescriptorBufferInfo* pBufferInfo = NULL;
+    VkBool32 immutable = VK_FALSE;
+    // TODO : Can refactor this to only switch once and then have loop inside of switch case
+    for (uint32_t i=0; i<pWDS->count; ++i) {
+        switch (pWDS->descriptorType) {
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+                skipCall |= validateSampler(my_data, &(pWDS->pImageInfo[i].sampler), immutable);
+                break;
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                if (NULL == pLayoutBinding->pImmutableSamplers) {
+                    pSampler = &(pWDS->pImageInfo[i].sampler);
+                } else {
+                    immutable = VK_TRUE;
+                    pSampler = &(pLayoutBinding->pImmutableSamplers[i]);
+                }
+                skipCall |= validateSampler(my_data, pSampler, immutable);
+                // Intentionally fall through here to also validate image stuff
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                skipCall |= validateImageView(my_data, &(pWDS->pImageInfo[i].imageView), pWDS->pImageInfo[i].imageLayout);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                skipCall |= validateBufferView(my_data, &(pWDS->pTexelBufferView[i]));
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                skipCall |= validateBufferInfo(my_data, &(pWDS->pBufferInfo[i]));
+                break;
+        }
+    }
+    return skipCall;
+}
 
-// update DS mappings based on ppUpdateArray
-// TODO : copy updates are completely broken
-// TODO : Validate that actual VkDescriptorImageInfo, VkDescriptorBufferInfo
-//        and VkBufferView in VkWriteDescriptorSet matches type:
-//   pImageInfo array should be used for each descriptor if type is:
-//    VK_DESCRIPTOR_TYPE_SAMPLER:
-//      - uses sampler field of VkDescriptorImageInfo,
-//    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-//       - uses sampler if binding doesn't use immutable sampler,
-//       - uses imageView & imageLayout
-//    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-//    VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
-//       - all use imageView & imageLayout
-//   pTexelBuffer array should be used for each descriptor if type is:
-//    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
-//   pBufferInfo array should be used for each descriptor if type is:
-//    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-//    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
+// update DS mappings based on pUpdateArray
 // TODO : Verify we validate this spec req: All consecutive bindings updated via a single
 //  VkWriteDescriptorSet structure must have identical descriptorType and stageFlags,
 //  and must all either use immutable samplers or none must use immutable samplers.
 static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType type, uint32_t updateCount, const void* pUpdateArray)
 {
     const VkWriteDescriptorSet *pWDS = NULL;
-    const VkCopyDescriptorSet *pCDS = NULL;
     VkBool32 skipCall = VK_FALSE;
 
     if (type == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET) {
         pWDS = (const VkWriteDescriptorSet *)pUpdateArray;
     } else {
-        pCDS = (const VkCopyDescriptorSet *)pUpdateArray;
+        // TODO : copy update validation is completely broken so just skip it for now
+        //  Need to add separate loop to verify copy array
+        return VK_FALSE;
     }
 
     loader_platform_thread_lock_mutex(&globalLock);
@@ -919,10 +1060,10 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
     // TODO : If pCIList is NULL, flag error
     // Perform all updates
     for (uint32_t i = 0; i < updateCount; i++) {
-        VkDescriptorSet ds = (pWDS) ? pWDS[i].destSet : pCDS[i].destSet;
+        VkDescriptorSet ds = pWDS[i].destSet;
         SET_NODE* pSet = my_data->setMap[ds.handle]; // getSetNode() without locking
         g_lastBoundDescriptorSet = pSet->set;
-        GENERIC_HEADER* pUpdate = (pWDS) ? (GENERIC_HEADER*) &pWDS[i] : (GENERIC_HEADER*) &pCDS[i];
+        GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
         if ((skipCall = validUpdateStruct(my_data, device, pUpdate)) == VK_TRUE) {
@@ -936,7 +1077,6 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
                     "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
-            skipCall |= getUpdateBinding(my_data, device, pUpdate, &binding);
             skipCall |= getUpdateEndIndex(my_data, device, pLayout, pUpdate, &endIndex);
             if (getBindingEndIndex(pLayout, binding) < endIndex) {
                 // TODO : Keep count of layout CI structs and size this string dynamically based on that count
@@ -947,25 +1087,27 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
             } else { // TODO : should we skip update on a type mismatch or force it?
                 // Layout bindings match w/ update ok, now verify that update is of the right type
                 if ((skipCall = validateUpdateType(my_data, device, pLayout, pUpdate)) == VK_FALSE) {
-                    // Save the update info
-                    // TODO : Info message that update successful
-                    // Create new update struct for this set's shadow copy
-                    GENERIC_HEADER* pNewNode = NULL;
-                    skipCall |= shadowUpdateNode(my_data, device, pUpdate, &pNewNode);
-                    if (NULL == pNewNode) {
-                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                                "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
-                    } else {
-                        // Insert shadow node into LL of updates for this set
-                        pNewNode->pNext = pSet->pUpdateStructs;
-                        pSet->pUpdateStructs = pNewNode;
-                        // Now update appropriate descriptor(s) to point to new Update node
-                        skipCall |= getUpdateEndIndex(my_data, device, pLayout, pUpdate, &endIndex);
-                        uint32_t startIndex;
-                        skipCall |= getUpdateStartIndex(my_data, device, pLayout, pUpdate, &startIndex);
-                        for (uint32_t j = startIndex; j <= endIndex; j++) {
-                            assert(j<pSet->descriptorCount);
-                            pSet->ppDescriptors[j] = pNewNode;
+                    // The update matches the layout, but need to make sure it's self-consistent as well
+                    if ((skipCall = validateUpdateContents(my_data, &pWDS[i], &pLayout->createInfo.pBinding[binding])) == VK_FALSE) {
+                        // Update is good. Save the update info
+                        // Create new update struct for this set's shadow copy
+                        GENERIC_HEADER* pNewNode = NULL;
+                        skipCall |= shadowUpdateNode(my_data, device, pUpdate, &pNewNode);
+                        if (NULL == pNewNode) {
+                            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, ds.handle, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
+                                    "Out of memory while attempting to allocate UPDATE struct in vkUpdateDescriptors()");
+                        } else {
+                            // Insert shadow node into LL of updates for this set
+                            pNewNode->pNext = pSet->pUpdateStructs;
+                            pSet->pUpdateStructs = pNewNode;
+                            // Now update appropriate descriptor(s) to point to new Update node
+                            skipCall |= getUpdateEndIndex(my_data, device, pLayout, pUpdate, &endIndex);
+                            uint32_t startIndex;
+                            skipCall |= getUpdateStartIndex(my_data, device, pLayout, pUpdate, &startIndex);
+                            for (uint32_t j = startIndex; j <= endIndex; j++) {
+                                assert(j<pSet->descriptorCount);
+                                pSet->ppDescriptors[j] = pNewNode;
+                            }
                         }
                     }
                 }
@@ -1485,6 +1627,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
     deleteCmdBuffers(dev_data);
     deletePools(dev_data);
     deleteLayouts(dev_data);
+    dev_data->imageViewMap.clear();
+    dev_data->imageMap.clear();
+    dev_data->bufferViewMap.clear();
+    dev_data->bufferMap.clear();
     loader_platform_thread_unlock_mutex(&globalLock);
 
     dev_data->device_dispatch_table->DestroyDevice(device);
@@ -1615,20 +1761,26 @@ VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool query
 
 VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyBuffer(device, buffer);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint64_t handle = buffer.handle;
+    dev_data->device_dispatch_table->DestroyBuffer(device, buffer);
+    dev_data->bufferMap.erase(handle);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyBufferView(device, bufferView);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint64_t handle = bufferView.handle;
+    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView);
+    dev_data->bufferViewMap.erase(handle);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImage(device, image);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint64_t handle = image.handle;
+    dev_data->device_dispatch_table->DestroyImage(device, image);
+    dev_data->imageMap.erase(handle);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
@@ -1697,13 +1849,38 @@ VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass ren
     // TODO : Clean up any internal data structures using this obj.
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pBuffer);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
+        dev_data->bufferMap[pBuffer->handle] = unique_ptr<VkBufferCreateInfo>(new VkBufferCreateInfo(*pCreateInfo));
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->bufferViewMap[pView->handle] = unique_ptr<BUFFER_NODE>(new BUFFER_NODE(pView, pCreateInfo));
+        dev_data->bufferViewMap[pView->handle] = unique_ptr<VkBufferViewCreateInfo>(new VkBufferViewCreateInfo(*pCreateInfo));
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->imageMap[pImage->handle] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -3524,8 +3701,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyFramebuffer;
     if (!strcmp(funcName, "vkDestroyRenderPass"))
         return (PFN_vkVoidFunction) vkDestroyRenderPass;
+    if (!strcmp(funcName, "vkCreateBuffer"))
+        return (PFN_vkVoidFunction) vkCreateBuffer;
     if (!strcmp(funcName, "vkCreateBufferView"))
         return (PFN_vkVoidFunction) vkCreateBufferView;
+    if (!strcmp(funcName, "vkCreateImage"))
+        return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "CreatePipelineCache"))

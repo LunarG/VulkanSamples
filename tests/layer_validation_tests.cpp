@@ -1056,6 +1056,78 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
 
     vkFreeMemory(m_device->device(), mem);
 }
+
+TEST_F(VkLayerTest, InvalidBufferViewObject)
+{
+    // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkBufferView view;
+    view.handle = 0xbaadbeef; // invalid bufferView object
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destBinding = 0;
+    descriptor_write.count = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+    descriptor_write.pTexelBufferView = &view;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ invalid VkDescriptorBufferInfo.";
+    if (!strstr(msgString.c_str(),"Invalid VkBufferView Object 0xbaadbeef")) {
+        FAIL() << "Error received was not 'Invalid VkBufferView Object 0xbaadbeef' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
 #endif // OBJ_TRACKER_TESTS
 
 #if DRAW_STATE_TESTS
@@ -3072,7 +3144,6 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    //VkDescriptorSetObj descriptorSet(m_device);
 
     VkDescriptorTypeCount ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -3153,6 +3224,183 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ invalid struct type.";
     if (!strstr(msgString.c_str(),"Unexpected UPDATE struct of type ")) {
         FAIL() << "Error received was not 'Unexpected UPDATE struct of type '";
+    }
+
+    vkDestroySampler(m_device->device(), sampler);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
+TEST_F(VkLayerTest, SampleDescriptorUpdateError)
+{
+    // Create a single Sampler descriptor and send it an invalid Sampler
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    // TODO : Farm Descriptor setup code to helper function(s) to reduce copied code
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSampler sampler;
+    sampler.handle = 0xbaadbeef; // Sampler with invalid handle
+
+    VkDescriptorImageInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));
+    descriptor_info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destBinding = 0;
+    descriptor_write.count = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pImageInfo = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ invalid VkSampler.";
+    if (!strstr(msgString.c_str(),"Attempt to update descriptor with invalid sampler 0xbaadbeef")) {
+        FAIL() << "Error received was not 'Attempt to update descriptor with invalid sampler...' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
+TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
+{
+    // Create a single combined Image/Sampler descriptor and send it an invalid imageView
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressModeU = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.addressModeV = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.addressModeW = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+    VkSampler sampler;
+    err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageView view;
+    view.handle = 0xbaadbeef; // invalid imageView object
+
+    VkDescriptorImageInfo descriptor_info;
+    memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));
+    descriptor_info.sampler = sampler;
+    descriptor_info.imageView = view;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destBinding = 0;
+    descriptor_write.count = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_write.pImageInfo = &descriptor_info;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating Descriptor w/ invalid VkImageView.";
+    if (!strstr(msgString.c_str(),"Attempt to update descriptor with invalid imageView 0xbaadbeef")) {
+        FAIL() << "Error received was not 'Attempt to update descriptor with invalid imageView...' but instead '" << msgString.c_str() << "'";
     }
 
     vkDestroySampler(m_device->device(), sampler);
@@ -5101,6 +5349,114 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     vkFreeMemory(m_device->device(), srcMem);
     vkFreeMemory(m_device->device(), destMem);
 }
+
+TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
+{
+    // Create a single Image descriptor and cause it to first hit an error due
+    //  to using a DS format, then cause it to hit error due to COLOR_BIT not set in aspect
+    // The image format check comes 2nd in validation so we trigger it first,
+    //  then when we cause aspect fail next, bad format check will be preempted
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    VkDescriptorTypeCount ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        ds_type_count.count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 1;
+        ds_pool_ci.pTypeCount = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImage               image_bad;
+    VkImage               image_good;
+    // One bad format and one good format for Color attachment
+    const VkFormat tex_format_bad  = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    const VkFormat tex_format_good = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format_bad;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = 1;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        image_create_info.flags = 0;
+
+    err = vkCreateImage(m_device->device(), &image_create_info, &image_bad);
+    ASSERT_VK_SUCCESS(err);
+    image_create_info.format = tex_format_good;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    err = vkCreateImage(m_device->device(), &image_create_info, &image_good);
+    ASSERT_VK_SUCCESS(err);
+
+    VkImageViewCreateInfo image_view_create_info = {};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_view_create_info.image = image_bad;
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = tex_format_bad;
+        image_view_create_info.subresourceRange.baseArrayLayer = 0;
+        image_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_view_create_info.subresourceRange.numLayers = 1;
+        image_view_create_info.subresourceRange.numLevels = 1;
+        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &image_view_create_info, &view);
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after creating ImageView for DS image w/ COLOR aspect bit set.";
+    if (!strstr(msgString.c_str(),"Combination depth/stencil image formats can have only the ")) {
+        FAIL() << "Error received was not 'Combination depth/stencil image formats can have only the....' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroyImage(m_device->device(), image_bad);
+    vkDestroyImage(m_device->device(), image_good);
+    vkDestroyImageView(m_device->device(), view);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
 #endif // IMAGE_TESTS
 
 int main(int argc, char **argv) {

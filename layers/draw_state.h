@@ -74,6 +74,10 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
     DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,     // Attachment reference must be present in active subpass
     DRAWSTATE_INVALID_EXTENSION,
+    DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,         // A Descriptor of *_SAMPLER type is being updated with an invalid or bad Sampler
+    DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,       // A Descriptor of *_IMAGE or *_ATTACHMENT type is being updated with an invalid or bad ImageView
+    DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,      // A Descriptor of *_TEXEL_BUFFER type is being updated with an invalid or bad BufferView
+    DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
 } DRAW_STATE_ERROR;
 
 typedef enum _DRAW_TYPE
@@ -133,14 +137,6 @@ typedef struct _SAMPLER_NODE {
 
     _SAMPLER_NODE(const VkSampler* ps, const VkSamplerCreateInfo* pci) : sampler(*ps), createInfo(*pci) {};
 } SAMPLER_NODE;
-
-typedef struct _BUFFER_NODE {
-    VkBufferView           buffer;
-    VkBufferViewCreateInfo createInfo;
-
-    _BUFFER_NODE(const VkBufferView* pbv, const VkBufferViewCreateInfo* pci) : buffer(*pbv), createInfo(*pci) {};
-} BUFFER_NODE;
-
 // Descriptor Data structures
 // Layout Node has the core layout data
 typedef struct _LAYOUT_NODE {
