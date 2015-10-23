@@ -12,3 +12,7 @@ ShaderCheckerReportFlags = error
 ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DeviceLimitsReportFlags = error
 DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+SwapchainReportFlags = error
+SwapchainDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
+ImageReportFlags = error
+ImageDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
