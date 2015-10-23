@@ -172,6 +172,9 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         dbg->create_info_size = size;
 
         size += sizeof(src->pRequestedQueues[0]) * src->requestedQueueCount;
+        for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
+            size += src->pRequestedQueues[i].queueCount * sizeof(float);
+        }
         size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
         for (uint32_t i = 0; i < src->extensionCount; i++) {
             size += strlen(src->ppEnabledExtensionNames[i]) + 1;
@@ -190,6 +193,12 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         memcpy(d, src->pRequestedQueues, size);
         dst->pRequestedQueues = (const VkDeviceQueueCreateInfo *) d;
         d += size;
+        for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
+            size = sizeof(float) * dst->pRequestedQueues[i].queueCount;
+            memcpy(d, src->pRequestedQueues[i].pQueuePriorities, size);
+            *((float **) &dst->pRequestedQueues[i].pQueuePriorities) = (float *) d;
+            d += size;
+        }
 
         size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
         dst->ppEnabledExtensionNames = (const char **) d;

@@ -259,6 +259,9 @@ void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
     pLimits->maxDescriptorSetSampledImages       = 128;
 
     // storage images and buffers not implemented; left at zero
+
+    // required to support at least two queue priorities
+    pLimits->discreteQueuePriorities = 2;
 }
 
 void intel_gpu_get_props(const struct intel_gpu *gpu,

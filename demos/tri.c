@@ -1814,11 +1814,13 @@ static void demo_init_vk(struct demo *demo)
         .extensionCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
+    float queue_priorities[1] = { 0.0 };
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = 0,
         .queueCount = 1,
+        .pQueuePriorities = queue_priorities
     };
     uint32_t gpu_count;
 

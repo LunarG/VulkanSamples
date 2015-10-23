@@ -1276,6 +1276,7 @@ typedef struct {
     uint32_t                                    maxClipDistances;
     uint32_t                                    maxCullDistances;
     uint32_t                                    maxCombinedClipAndCullDistances;
+    uint32_t                                    discreteQueuePriorities;
     float                                       pointSizeRange[2];
     float                                       lineWidthRange[2];
     float                                       pointSizeGranularity;
@@ -1331,6 +1332,7 @@ typedef struct {
     const void*                                 pNext;
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
+    const float*                                pQueuePriorities;
 } VkDeviceQueueCreateInfo;
 
 typedef struct {

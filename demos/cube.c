@@ -2304,11 +2304,13 @@ static void demo_init_vk(struct demo *demo)
     VkPhysicalDeviceFeatures physDevFeatures;
     vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
 
+    float queue_priorities[1] = { 0.0 };
     const VkDeviceQueueCreateInfo queue = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = gfx_queue_idx,
         .queueCount = 1,
+        .pQueuePriorities = queue_priorities
     };
 
     VkDeviceCreateInfo device = {

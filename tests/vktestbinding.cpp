@@ -275,6 +275,8 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
         qi.pNext = NULL;
         qi.queueFamilyIndex = i;
         qi.queueCount = queue_props[i].queueCount;
+        std::vector<float> queue_priorities (qi.queueCount, 0.0);
+        qi.pQueuePriorities = queue_priorities.data();
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;
         }

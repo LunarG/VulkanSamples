@@ -108,6 +108,8 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
     VkDeviceQueueCreateInfo dqci = {};
     dqci.queueCount = 1;
     dqci.queueType = VK_QUEUE_UNIVERSAL;
+    std::vector<float> queue_priorities (dqci.queueCount, 0.0);
+    dqci.pQueuePriorities = queue_priorities.data();
     // create the device enabling validation level 4
     const char * const * extNames = &m_extensions[0];
     VkDeviceCreateInfo info = {};

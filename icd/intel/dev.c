@@ -77,6 +77,8 @@ static VkResult dev_create_queues(struct intel_dev *dev,
 
         assert((q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
             q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
+        /* Help catch places where we forgot to initialize pQueuePriorities */
+        assert(q->pQueuePriorities);
         ret = intel_queue_create(dev, q->queueFamilyIndex,
                     &dev->queues[q->queueFamilyIndex]);
 

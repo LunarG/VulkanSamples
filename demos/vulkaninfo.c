@@ -655,10 +655,13 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
     if (!gpu->queue_reqs)
         ERR_EXIT(VK_ERROR_OUT_OF_HOST_MEMORY);
     for (i = 0; i < gpu->queue_count; i++) {
+        float *queue_priorities = malloc(gpu->queue_props[i].queueCount * sizeof(float));
+        memset(queue_priorities, 0, gpu->queue_props[i].queueCount * sizeof(float));
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
         gpu->queue_reqs[i].queueFamilyIndex = i;
         gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
+        gpu->queue_reqs[i].pQueuePriorities = queue_priorities;
     }
 
     vkGetPhysicalDeviceMemoryProperties(gpu->obj, &gpu->memory_props);
@@ -674,6 +677,9 @@ static void app_gpu_destroy(struct app_gpu *gpu)
     app_dev_destroy(&gpu->dev);
     free(gpu->device_extensions);
     free(gpu->queue_reqs);
+    for (uint32_t i = 0; i < gpu->queue_count; i++) {
+        free((void *) gpu->queue_reqs[i].pQueuePriorities);
+    }
     free(gpu->queue_props);
 }
 
