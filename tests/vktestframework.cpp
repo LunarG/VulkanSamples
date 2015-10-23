@@ -540,6 +540,7 @@ void  TestFrameworkVkPresent::Display()
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
     vkQueueWaitSemaphore(m_queue.handle(), presentCompleteSemaphore);
+    vkDestroySemaphore(m_device.handle(), presentCompleteSemaphore);
 
     VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     buf.init_as_src(m_device, (VkDeviceSize)m_display_image->m_data_size, flags);
@@ -1079,6 +1080,10 @@ void  TestFrameworkVkPresent::CreateMyWindow()
 void TestFrameworkVkPresent::TearDown()
 {
     m_fpDestroySwapchainKHR(m_device.handle(), m_swap_chain);
+
+    for (uint32_t i = 0; i < m_swapchainImageCount; i++) {
+        vkDestroyImageView(m_device.handle(), m_buffers[i].view);
+    }
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);
