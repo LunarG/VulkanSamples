@@ -1655,10 +1655,7 @@ class ObjectTrackerSubcommand(Subcommand):
                     else:
                         base_param = loop_params[lc][0].split('-')[0].split('[')[0]
                         using_line += '    if (%s) {\n' % base_param
-                        if 'setCount' == lc: # TODO : Hacky. This is one case where loop doesn't start from 0
-                            using_line += '        for (uint32_t i=firstSet; i<%s; i++) {\n' % lc
-                        else:
-                            using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
+                        using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
                         for opn in loop_params[lc]:
                             if '[' in opn: # API func param is array
                                 using_line += '            skipCall |= validate_object(%s, %s);\n' % (param0_name, opn)
