@@ -1823,16 +1823,6 @@ typedef struct {
     VkDeviceSize                                range;
 } VkDescriptorBufferInfo;
 
-/* TODO: this should be union, except that causes a compiler error:
- * error: member 'VkDescriptorImageInfo <anonymous union>::imageInfo' with constructor not allowed in union
- * This issue should go away when the change to remove the constructor lands.
- */
-typedef struct {
-    VkDescriptorImageInfo                       imageInfo;
-    VkDescriptorBufferInfo                      bufferInfo;
-    VkBufferView                                texelBufferView;
-} VkDescriptorInfo;
-
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1841,7 +1831,9 @@ typedef struct {
     uint32_t                                    destArrayElement;
     uint32_t                                    count;
     VkDescriptorType                            descriptorType;
-    const VkDescriptorInfo*                     pDescriptors;
+    const VkDescriptorImageInfo*                pImageInfo;
+    const VkDescriptorBufferInfo*               pBufferInfo;
+    const VkBufferView*                         pTexelBufferView;
 } VkWriteDescriptorSet;
 
 typedef struct {

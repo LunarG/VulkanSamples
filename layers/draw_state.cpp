@@ -830,11 +830,40 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
             pWDS = new VkWriteDescriptorSet;
             *pNewNode = (GENERIC_HEADER*)pWDS;
             memcpy(pWDS, pUpdate, sizeof(VkWriteDescriptorSet));
-            /* TODO: restore new once constructors have been removed from vulkan.h */
-//            pWDS->pDescriptors = new VkDescriptorInfo[pWDS->count];
-            pWDS->pDescriptors = (VkDescriptorInfo *) malloc(sizeof(VkDescriptorInfo) * pWDS->count);
-            array_size = sizeof(VkDescriptorInfo) * pWDS->count;
-            memcpy((void*)pWDS->pDescriptors, ((VkWriteDescriptorSet*)pUpdate)->pDescriptors, array_size);
+
+            switch (pWDS->descriptorType) {
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                {
+                    VkDescriptorImageInfo *info = new VkDescriptorImageInfo[pWDS->count];
+                    memcpy(info, pWDS->pImageInfo, pWDS->count * sizeof(VkDescriptorImageInfo));
+                    pWDS->pImageInfo = info;
+            }
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                {
+                    VkBufferView *info = new VkBufferView[pWDS->count];
+                    memcpy(info, pWDS->pTexelBufferView, pWDS->count * sizeof(VkBufferView));
+                    pWDS->pTexelBufferView = info;
+                }
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                {
+                    VkDescriptorBufferInfo *info = new VkDescriptorBufferInfo[pWDS->count];
+                    memcpy(info, pWDS->pBufferInfo, pWDS->count * sizeof(VkDescriptorBufferInfo));
+                    pWDS->pBufferInfo = info;
+                }
+                break;
+            default:
+                return VK_ERROR_VALIDATION_FAILED;
+                break;
+            }
             break;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             pCDS = new VkCopyDescriptorSet;
@@ -859,13 +888,13 @@ static VkBool32 validateDescriptorSetImageView(const layer_data* my_data, VkDevi
     // Check ImageAspects of each descriptorSet in each writeDescriptorSet array
     for (uint32_t i = 0; i < writeDsCount; i++) {
         for (uint32_t j = 0; j < pWDS[i].count; j++) {
-            const VkDescriptorInfo *dInfo = &pWDS[i].pDescriptors[j];
-            auto imageViewItem = dev_data->imageViewMap.find(dInfo->imageInfo.imageView.handle);
+            const VkDescriptorImageInfo *dInfo = &pWDS[i].pImageInfo[j];
+            auto imageViewItem = dev_data->imageViewMap.find(dInfo->imageView.handle);
             if (imageViewItem != dev_data->imageViewMap.end()) {
                 VkImageAspectFlags flags = ((*imageViewItem).second)->subresourceRange.aspectMask;
                 if ((flags & VK_IMAGE_ASPECT_DEPTH_BIT) &&
                     (flags & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageInfo.imageView.handle, 0,
+                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageView.handle, 0,
                         DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: DesriptorSet[%d] in WriteDesriptorSet[%d] "
                         "has ImageView with both STENCIL and DEPTH aspects set", j, i);
                 }
@@ -877,7 +906,8 @@ static VkBool32 validateDescriptorSetImageView(const layer_data* my_data, VkDevi
 
 // update DS mappings based on ppUpdateArray
 // TODO : copy updates are completely broken
-// TODO : Validate that actual VkDescriptorInfo in pDescriptors matches type:
+// TODO : Validate that actual VkDescriptorImageInfo, VkDescriptorBufferInfo
+//        and VkBufferView in VkWriteDescriptorSet matches type:
 //   pImageInfo array should be used for each descriptor if type is:
 //    VK_DESCRIPTOR_TYPE_SAMPLER:
 //      - uses sampler field of VkDescriptorImageInfo,
@@ -1017,9 +1047,14 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         {
             case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
                 pWDS = (VkWriteDescriptorSet*)pFreeUpdate;
-                if (pWDS->pDescriptors) {
-//                    delete[] pWDS->pDescriptors;
-                    free((void *) pWDS->pDescriptors);
+                if (pWDS->pImageInfo) {
+                    delete[] pWDS->pImageInfo;
+                }
+                if (pWDS->pBufferInfo) {
+                    delete[] pWDS->pBufferInfo;
+                }
+                if (pWDS->pTexelBufferView) {
+                    delete[] pWDS->pTexelBufferView;
                 }
                 break;
             case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:

@@ -884,9 +884,9 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         switch (write->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
             for (j = 0; j < write->count; j++) {
-                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_sampler *sampler =
-                    intel_sampler(info->imageInfo.sampler);
+                    intel_sampler(info->sampler);
 
                 desc_set_write_sampler(set, &iter, sampler);
 
@@ -915,16 +915,16 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             }
 
             for (j = 0; j < write->count; j++) {
-                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_img_view *img_view =
-                    intel_img_view(info->imageInfo.imageView);
+                    intel_img_view(info->imageView);
                 const struct intel_sampler *sampler =
                     (binding->immutable_samplers) ?
                     binding->immutable_samplers[write->destArrayElement + j] :
-                    intel_sampler(info->imageInfo.sampler);
+                    intel_sampler(info->sampler);
 
                 desc_set_write_combined_image_sampler(set, &iter,
-                        img_view, info->imageInfo.imageLayout, sampler);
+                        img_view, info->imageLayout, sampler);
 
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
@@ -936,11 +936,11 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
             for (j = 0; j < write->count; j++) {
-                const VkDescriptorInfo *info = &write->pDescriptors[j];
+                const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_img_view *img_view =
-                    intel_img_view(info->imageInfo.imageView);
+                    intel_img_view(info->imageView);
 
-                desc_set_write_image(set, &iter, img_view, info->imageInfo.imageLayout);
+                desc_set_write_image(set, &iter, img_view, info->imageLayout);
 
                 if (!intel_desc_iter_advance(&iter)) {
                     /* TODOVV: Move test to validation */
@@ -952,9 +952,8 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             for (j = 0; j < write->count; j++) {
-                const VkDescriptorInfo *info = &write->pDescriptors[j];
                 const struct intel_buf_view *buf_view =
-                    intel_buf_view(info->texelBufferView);
+                    intel_buf_view(write->pTexelBufferView[j]);
 
                 desc_set_write_buffer(set, &iter, buf_view);
 
@@ -976,12 +975,12 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                 view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 
                 for (j = 0; j < write->count; j++) {
-                    const VkDescriptorInfo *info = &write->pDescriptors[j];
+                    const VkDescriptorBufferInfo *info = &write->pBufferInfo[j];
                     struct intel_buf_view buf_view;
 
-                    view_info.buffer = info->bufferInfo.buffer;
-                    view_info.offset = info->bufferInfo.offset;
-                    view_info.range = info->bufferInfo.range;
+                    view_info.buffer = info->buffer;
+                    view_info.offset = info->offset;
+                    view_info.range = info->range;
 
                     intel_buf_view_init(dev, &view_info, &buf_view, true);
 

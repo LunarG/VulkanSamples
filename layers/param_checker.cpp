@@ -4783,10 +4783,12 @@ bool PreUpdateDescriptorSets(
         "vkUpdateDescriptorSets parameter, VkDescriptorType pDescriptorWrites->descriptorType, is an unrecognized enumerator");
         return false;
     }
-    if(pDescriptorWrites->pDescriptors != nullptr)
+    /* TODO: Validate other parts of pImageInfo, pBufferInfo, pTexelBufferView? */
+    /* TODO: This test should probably only be done if descriptorType is correct type of descriptor */
+    if(pDescriptorWrites->pImageInfo != nullptr)
     {
-    if(pDescriptorWrites->pDescriptors->imageInfo.imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pDescriptorWrites->pDescriptors->imageInfo.imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pDescriptorWrites->pImageInfo->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        pDescriptorWrites->pImageInfo->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an unrecognized enumerator");

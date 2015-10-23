@@ -884,17 +884,16 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             return;
         }
 
-        pRemappedWrites[i].pDescriptors = VKTRACE_NEW_ARRAY(VkDescriptorInfo, pPacket->pDescriptorWrites[i].count);
-        memcpy((void*)pRemappedWrites[i].pDescriptors, pPacket->pDescriptorWrites[i].pDescriptors, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorInfo));
-
         for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
         {
             switch (pPacket->pDescriptorWrites[i].descriptorType) {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.sampler.handle != 0)
+                pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].pImageInfo);
+                memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
+                if (pPacket->pDescriptorWrites[i].pImageInfo[j].sampler.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].imageInfo.sampler.handle = m_objMapper.remap_samplers(pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.sampler.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].imageInfo.sampler.handle == 0)
+                    const_cast<VkDescriptorImageInfo*>(pRemappedWrites[i].pImageInfo)[j].sampler.handle = m_objMapper.remap_samplers(pPacket->pDescriptorWrites[i].pImageInfo[j].sampler.handle);
+                    if (pRemappedWrites[i].pImageInfo[j].sampler.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkSampler.");
                         VKTRACE_DELETE(pRemappedWrites);
@@ -906,10 +905,12 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
             case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.imageView.handle != 0)
+                pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].pImageInfo);
+                memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
+                if (pPacket->pDescriptorWrites[i].pImageInfo[j].imageView.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].imageInfo.imageView.handle = m_objMapper.remap_imageviews(pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.imageView.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].imageInfo.imageView.handle == 0)
+                    const_cast<VkDescriptorImageInfo*>(pRemappedWrites[i].pImageInfo)[j].imageView.handle = m_objMapper.remap_imageviews(pPacket->pDescriptorWrites[i].pImageInfo[j].imageView.handle);
+                    if (pRemappedWrites[i].pImageInfo[j].imageView.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkImageView.");
                         VKTRACE_DELETE(pRemappedWrites);
@@ -919,10 +920,12 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
                 }
                 break;
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.sampler.handle != 0)
+                pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].pImageInfo);
+                memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
+                if (pPacket->pDescriptorWrites[i].pImageInfo[j].sampler.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].imageInfo.sampler.handle = m_objMapper.remap_samplers(pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.sampler.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].imageInfo.sampler.handle == 0)
+                    const_cast<VkDescriptorImageInfo*>(pRemappedWrites[i].pImageInfo)[j].sampler.handle = m_objMapper.remap_samplers(pPacket->pDescriptorWrites[i].pImageInfo[j].sampler.handle);
+                    if (pRemappedWrites[i].pImageInfo[j].sampler.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkSampler.");
                         VKTRACE_DELETE(pRemappedWrites);
@@ -930,10 +933,10 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
                         return;
                     }
                 }
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.imageView.handle != 0)
+                if (pPacket->pDescriptorWrites[i].pImageInfo[j].imageView.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].imageInfo.imageView.handle = m_objMapper.remap_imageviews(pPacket->pDescriptorWrites[i].pDescriptors[j].imageInfo.imageView.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].imageInfo.imageView.handle == 0)
+                    const_cast<VkDescriptorImageInfo*>(pRemappedWrites[i].pImageInfo)[j].imageView.handle = m_objMapper.remap_imageviews(pPacket->pDescriptorWrites[i].pImageInfo[j].imageView.handle);
+                    if (pRemappedWrites[i].pImageInfo[j].imageView.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkImageView.");
                         VKTRACE_DELETE(pRemappedWrites);
@@ -944,10 +947,12 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].texelBufferView.handle != 0)
+                pRemappedWrites[i].pTexelBufferView = VKTRACE_NEW_ARRAY(VkBufferView, pPacket->pDescriptorWrites[i].pTexelBufferView);
+                memcpy((void*)pRemappedWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].count * sizeof(VkBufferView));
+                if (pPacket->pDescriptorWrites[i].pTexelBufferView[j].texelBufferView.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].texelBufferView.handle = m_objMapper.remap_bufferviews(pPacket->pDescriptorWrites[i].pDescriptors[j].texelBufferView.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].texelBufferView.handle == 0)
+                    const_cast<VkBufferView*>(pRemappedWrites[i].pTexelBufferView)[j].handle = m_objMapper.remap_bufferviews(pPacket->pDescriptorWrites[i].pTexelBufferView[j].handle);
+                    if (pRemappedWrites[i].pTexelBufferView[j].handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkBufferView.");
                         VKTRACE_DELETE(pRemappedWrites);
@@ -960,10 +965,12 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                if (pPacket->pDescriptorWrites[i].pDescriptors[j].bufferInfo.buffer.handle != 0)
+                pRemappedWrites[i].pBufferInfo = VKTRACE_NEW_ARRAY(VkDescriptorBufferInfo, pPacket->pDescriptorWrites[i].pBufferInfo);
+                memcpy((void*)pRemappedWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorBufferInfo));
+                if (pPacket->pDescriptorWrites[i].pBufferInfo[j].buffer.handle != 0)
                 {
-                    const_cast<VkDescriptorInfo*>(pRemappedWrites[i].pDescriptors)[j].bufferInfo.buffer.handle = m_objMapper.remap_buffers(pPacket->pDescriptorWrites[i].pDescriptors[j].bufferInfo.buffer.handle);
-                    if (pRemappedWrites[i].pDescriptors[j].bufferInfo.buffer.handle == 0)
+                    const_cast<VkDescriptorBufferInfo*>(pRemappedWrites[i].pBufferInfo)[j].bufferInfo.handle = m_objMapper.remap_buffers(pPacket->pDescriptorWrites[i].pBufferInfo[j].buffer.handle);
+                    if (pRemappedWrites[i].pBufferInfo[j].buffer.handle == 0)
                     {
                         vktrace_LogError("Skipping vkUpdateDescriptorSets() due to invalid remapped VkBufferView.");
                         VKTRACE_DELETE(pRemappedWrites);

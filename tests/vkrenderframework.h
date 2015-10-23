@@ -233,7 +233,7 @@ public:
 
     void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding);
 
-    VkDescriptorInfo                    m_descriptorInfo;
+    VkDescriptorBufferInfo              m_descriptorBufferInfo;
 
 protected:
     VkDeviceObj                        *m_device;
@@ -273,7 +273,7 @@ public:
 
     void layout( VkImageLayout layout )
     {
-        m_descriptorInfo.imageInfo.imageLayout = layout;
+        m_descriptorImageInfo.imageLayout = layout;
     }
 
     VkDeviceMemory memory() const
@@ -329,7 +329,7 @@ public:
 
     VkImageLayout layout() const
     {
-        return m_descriptorInfo.imageInfo.imageLayout;
+        return m_descriptorImageInfo.imageLayout;
     }
     uint32_t width() const
     {
@@ -348,7 +348,7 @@ protected:
     VkDeviceObj                        *m_device;
 
     vk_testing::ImageView               m_targetView;
-    VkDescriptorInfo                    m_descriptorInfo;
+    VkDescriptorImageInfo               m_descriptorImageInfo;
 };
 
 class VkTextureObj : public VkImageObj
@@ -356,7 +356,7 @@ class VkTextureObj : public VkImageObj
 public:
     VkTextureObj(VkDeviceObj *device, uint32_t *colors = NULL);
 
-    VkDescriptorInfo                    m_descriptorInfo;
+    VkDescriptorImageInfo               m_imageInfo;
 
 protected:
     VkDeviceObj                        *m_device;
@@ -393,7 +393,7 @@ protected:
     vector<VkDescriptorTypeCount>       m_type_counts;
     int                                 m_nextSlot;
 
-    vector<VkDescriptorInfo>            m_imageSamplerDescriptors;
+    vector<VkDescriptorImageInfo>       m_imageSamplerDescriptors;
     vector<VkWriteDescriptorSet>        m_writes;
 
     vk_testing::DescriptorSetLayout     m_layout;

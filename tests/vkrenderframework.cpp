@@ -462,7 +462,7 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
     m_type_counts.push_back(tc);
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(vk_testing::DescriptorSet(),
-                m_nextSlot, 0, type, 1, &constantBuffer.m_descriptorInfo));
+                m_nextSlot, 0, type, 1, &constantBuffer.m_descriptorBufferInfo));
 
     return m_nextSlot++;
 }
@@ -474,12 +474,12 @@ int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureOb
     tc.count = 1;
     m_type_counts.push_back(tc);
 
-    VkDescriptorInfo tmp = texture->m_descriptorInfo;
-    tmp.imageInfo.sampler = sampler->handle();
+    VkDescriptorImageInfo tmp = texture->m_imageInfo;
+    tmp.sampler = sampler->handle();
     m_imageSamplerDescriptors.push_back(tmp);
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(vk_testing::DescriptorSet(),
-                m_nextSlot, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, NULL));
+                m_nextSlot, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &tmp));
 
     return m_nextSlot++;
 }
@@ -541,7 +541,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
          it != m_writes.end(); it++) {
         it->destSet = m_set->handle();
         if (it->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            it->pDescriptors = &m_imageSamplerDescriptors[imageSamplerCount++];
+            it->pImageInfo = &m_imageSamplerDescriptors[imageSamplerCount++];
     }
 
     // do the updates
@@ -551,8 +551,8 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
 VkImageObj::VkImageObj(VkDeviceObj *dev)
 {
     m_device = dev;
-    m_descriptorInfo.imageInfo.imageView = VK_NULL_HANDLE;
-    m_descriptorInfo.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    m_descriptorImageInfo.imageView = VK_NULL_HANDLE;
+    m_descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void VkImageObj::ImageMemoryBarrier(
@@ -612,7 +612,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_TRANSFER_BIT;
 
-    if (image_layout == m_descriptorInfo.imageInfo.imageLayout) {
+    if (image_layout == m_descriptorImageInfo.imageLayout) {
         return;
     }
 
@@ -639,7 +639,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
     }
 
     ImageMemoryBarrier(cmd_buf, aspect, output_mask, input_mask, image_layout);
-    m_descriptorInfo.imageInfo.imageLayout = image_layout;
+    m_descriptorImageInfo.imageLayout = image_layout;
 }
 
 void VkImageObj::SetLayout(VkImageAspectFlagBits aspect,
@@ -647,7 +647,7 @@ void VkImageObj::SetLayout(VkImageAspectFlagBits aspect,
 {
     VkResult U_ASSERT_ONLY err;
 
-    if (image_layout == m_descriptorInfo.imageInfo.imageLayout) {
+    if (image_layout == m_descriptorImageInfo.imageLayout) {
         return;
     }
 
@@ -810,7 +810,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     if (colors == NULL)
         colors = tex_colors;
 
-    memset(&m_descriptorInfo,0,sizeof(m_descriptorInfo));
+    memset(&m_imageInfo,0,sizeof(m_imageInfo));
 
     VkImageViewCreateInfo view = {};
     view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -834,7 +834,7 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     /* create image view */
     view.image = handle();
     m_textureView.init(*m_device, view);
-    m_descriptorInfo.imageInfo.imageView = m_textureView.handle();
+    m_imageInfo.imageView = m_textureView.handle();
 
     data = stagingImage.MapMemory();
 
@@ -879,7 +879,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device)
     m_device = device;
     m_commandBuffer = 0;
 
-    memset(&m_descriptorInfo,0,sizeof(m_descriptorInfo));
+    memset(&m_descriptorBufferInfo,0,sizeof(m_descriptorBufferInfo));
 }
 
 VkConstantBufferObj::~VkConstantBufferObj()
@@ -896,7 +896,7 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
     m_device = device;
     m_commandBuffer = 0;
 
-    memset(&m_descriptorInfo,0,sizeof(m_descriptorInfo));
+    memset(&m_descriptorBufferInfo,0,sizeof(m_descriptorBufferInfo));
     m_numVertices = constantCount;
     m_stride = constantSize;
 
@@ -913,9 +913,9 @@ VkConstantBufferObj::VkConstantBufferObj(VkDeviceObj *device, int constantCount,
      * or as shader uniform buffers. So, we'll create the shaderbuffer
      * descriptor here so it's ready if needed.
      */
-    this->m_descriptorInfo.bufferInfo.buffer = handle();
-    this->m_descriptorInfo.bufferInfo.offset = 0;
-    this->m_descriptorInfo.bufferInfo.range = allocationSize;
+    this->m_descriptorBufferInfo.buffer = handle();
+    this->m_descriptorBufferInfo.offset = 0;
+    this->m_descriptorBufferInfo.range = allocationSize;
 }
 
 void VkConstantBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding)
@@ -1034,9 +1034,9 @@ void VkIndexBufferObj::CreateAndInitBuffer(int numIndexes, VkIndexType indexType
     memory().unmap();
 
     // set up the descriptor for the constant buffer
-    this->m_descriptorInfo.bufferInfo.buffer = handle();
-    this->m_descriptorInfo.bufferInfo.offset = 0;
-    this->m_descriptorInfo.bufferInfo.range = allocationSize;
+    this->m_descriptorBufferInfo.buffer = handle();
+    this->m_descriptorBufferInfo.offset = 0;
+    this->m_descriptorBufferInfo.range = allocationSize;
 }
 
 void VkIndexBufferObj::Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset)

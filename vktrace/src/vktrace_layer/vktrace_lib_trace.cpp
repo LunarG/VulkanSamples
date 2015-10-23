@@ -679,8 +679,41 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites), writeCount * sizeof(VkWriteDescriptorSet), pDescriptorWrites);
     for (i = 0; i < writeCount; i++)
     {
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pDescriptors), pDescriptorWrites[i].count * sizeof(VkDescriptorInfo), pDescriptorWrites[i].pDescriptors);
-        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pDescriptors));
+        switch (pPacket->pDescriptorWrites[i].descriptorType) {
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            {
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pImageInfo),
+                                                   pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo),
+                                                   pDescriptorWrites[i].pImageInfo);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pImageInfo));
+            }
+            break;
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            {
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pTexelBufferView),
+                                                   pDescriptorWrites[i].count * sizeof(VkBufferView),
+                                                   pDescriptorWrites[i].pTexelBufferView);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pTexelBufferView));
+            }
+            break;
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+            {
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pBufferInfo),
+                                                   pDescriptorWrites[i].count * sizeof(VkDescriptorBufferInfo),
+                                                   pDescriptorWrites[i].pBufferInfo);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites[i].pBufferInfo));
+            }
+            break;
+        default:
+            break;
+        }
     }
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites));
 

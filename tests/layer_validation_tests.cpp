@@ -2843,9 +2843,8 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkDescriptorInfo descriptor_info;
-    memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.imageInfo.sampler = sampler;
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -2854,7 +2853,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     descriptor_write.count = 1;
     // This is a mismatched type for the layout which expects BUFFER
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    descriptor_write.pDescriptors = &descriptor_info;
+    descriptor_write.pImageInfo = &info;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -2941,9 +2940,8 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkDescriptorInfo descriptor_info;
-    memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.imageInfo.sampler = sampler;
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -2953,7 +2951,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    descriptor_write.pDescriptors = &descriptor_info;
+    descriptor_write.pImageInfo = &info;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -3039,9 +3037,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkDescriptorInfo descriptor_info;
-    memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.imageInfo.sampler = sampler;
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -3051,7 +3048,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    descriptor_write.pDescriptors = &descriptor_info;
+    descriptor_write.pImageInfo = &info;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
@@ -3138,9 +3135,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_VK_SUCCESS(err);
 
 
-    VkDescriptorInfo descriptor_info;
-    memset(&descriptor_info, 0, sizeof(descriptor_info));
-    descriptor_info.imageInfo.sampler = sampler;
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -3149,7 +3145,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     descriptor_write.count = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    descriptor_write.pDescriptors = &descriptor_info;
+    descriptor_write.pImageInfo = &info;
 
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 

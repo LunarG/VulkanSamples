@@ -367,7 +367,7 @@ struct demo {
         VkBuffer buf;
         VkMemoryAllocInfo mem_alloc;
         VkDeviceMemory mem;
-        VkDescriptorInfo desc;
+        VkDescriptorBufferInfo buffer_info;
     } uniform_data;
 
     VkCmdBuffer cmd;  // Buffer for initialization commands
@@ -1234,9 +1234,9 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
             demo->uniform_data.mem, 0);
     assert(!err);
 
-    demo->uniform_data.desc.bufferInfo.buffer = demo->uniform_data.buf;
-    demo->uniform_data.desc.bufferInfo.offset = 0;
-    demo->uniform_data.desc.bufferInfo.range = sizeof(data);
+    demo->uniform_data.buffer_info.buffer = demo->uniform_data.buf;
+    demo->uniform_data.buffer_info.offset = 0;
+    demo->uniform_data.buffer_info.range = sizeof(data);
 }
 
 static void demo_prepare_descriptor_layout(struct demo *demo)
@@ -1643,7 +1643,7 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
 
 static void demo_prepare_descriptor_set(struct demo *demo)
 {
-    VkDescriptorInfo tex_descs[DEMO_TEXTURE_COUNT];
+    VkDescriptorImageInfo tex_descs[DEMO_TEXTURE_COUNT];
     VkWriteDescriptorSet writes[2];
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
@@ -1660,9 +1660,9 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
     memset(&tex_descs, 0, sizeof(tex_descs));
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        tex_descs[i].imageInfo.sampler = demo->textures[i].sampler;
-        tex_descs[i].imageInfo.imageView = demo->textures[i].view;
-        tex_descs[i].imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        tex_descs[i].sampler = demo->textures[i].sampler;
+        tex_descs[i].imageView = demo->textures[i].view;
+        tex_descs[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     }
 
     memset(&writes, 0, sizeof(writes));
@@ -1671,14 +1671,14 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     writes[0].destSet = demo->desc_set;
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writes[0].pDescriptors = &demo->uniform_data.desc;
+    writes[0].pBufferInfo = &demo->uniform_data.buffer_info;
 
     writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[1].destSet = demo->desc_set;
     writes[1].destBinding = 1;
     writes[1].count = DEMO_TEXTURE_COUNT;
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writes[1].pDescriptors = tex_descs;
+    writes[1].pImageInfo = tex_descs;
 
     vkUpdateDescriptorSets(demo->device, 2, writes, 0, NULL);
 }
