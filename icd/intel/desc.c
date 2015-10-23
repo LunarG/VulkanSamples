@@ -436,10 +436,9 @@ static void desc_set_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_desc_set_create(struct intel_dev *dev,
-                                 struct intel_desc_pool *pool,
-                                 VkDescriptorSetUsage usage,
-                                 const struct intel_desc_layout *layout,
-                                 struct intel_desc_set **set_ret)
+                               struct intel_desc_pool *pool,
+                               const struct intel_desc_layout *layout,
+                               struct intel_desc_set **set_ret)
 {
     struct intel_desc_set *set;
     VkResult ret;
@@ -811,7 +810,8 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
     VkDevice                                  device,
-    VkDescriptorPool                          descriptorPool)
+    VkDescriptorPool                          descriptorPool,
+    VkDescriptorPoolResetFlags                flags)
 {
     struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
 
@@ -821,23 +821,20 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
 }
 
 ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
-    VkDevice                                  device,
-    VkDescriptorPool                          descriptorPool,
-    VkDescriptorSetUsage                     setUsage,
-    uint32_t                                     count,
-    const VkDescriptorSetLayout*             pSetLayouts,
-    VkDescriptorSet*                          pDescriptorSets)
+    VkDevice                                    device,
+    const VkDescriptorSetAllocInfo*             pAllocInfo,
+    VkDescriptorSet*                            pDescriptorSets)
 {
-    struct intel_desc_pool *pool = intel_desc_pool(descriptorPool);
+    struct intel_desc_pool *pool = intel_desc_pool(pAllocInfo->descriptorPool);
     struct intel_dev *dev = pool->dev;
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < pAllocInfo->count; i++) {
         const struct intel_desc_layout *layout =
-            intel_desc_layout((VkDescriptorSetLayout) pSetLayouts[i]);
+            intel_desc_layout((VkDescriptorSetLayout) pAllocInfo->pSetLayouts[i]);
 
-        ret = intel_desc_set_create(dev, pool, setUsage, layout,
+        ret = intel_desc_set_create(dev, pool, layout,
                 (struct intel_desc_set **) &pDescriptorSets[i]);
         if (ret != VK_SUCCESS)
             break;

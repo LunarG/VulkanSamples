@@ -1088,13 +1088,14 @@ static void clearDescriptorSet(layer_data* my_data, VkDescriptorSet set)
     }
 }
 
-static void clearDescriptorPool(layer_data* my_data, const VkDevice device, const VkDescriptorPool pool)
+static void clearDescriptorPool(layer_data* my_data, const VkDevice device, const VkDescriptorPool pool, VkDescriptorPoolResetFlags flags)
 {
     POOL_NODE* pPool = getPoolNode(my_data, pool);
     if (!pPool) {
         log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, pool.handle, 0, DRAWSTATE_INVALID_POOL, "DS",
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkResetDescriptorPool() call", pool.handle);
     } else {
+        // TODO: validate flags
         // For every set off of this pool, clear it
         SET_NODE* pSet = pPool->pSets;
         while (pSet) {
@@ -1171,7 +1172,7 @@ static void resetCB(layer_data* my_data, const VkCmdBuffer cb)
         }
         pCB->pCmds.clear();
         // Reset CB state (need to save createInfo)
-        VkCmdBufferCreateInfo saveCBCI = pCB->createInfo;
+        VkCmdBufferAllocInfo saveCBCI = pCB->createInfo;
         memset(pCB, 0, sizeof(GLOBAL_CB_NODE));
         pCB->cmdBuffer = cb;
         pCB->createInfo = saveCBCI;
@@ -1668,9 +1669,9 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptor
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
+VK_LAYER_EXPORT void VKAPI vkFreeCommandBuffers(VkDevice device, VkCmdPool cmdPool, uint32_t count, const VkCmdBuffer *pCommandBuffers)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyCommandBuffer(device, commandBuffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->FreeCommandBuffers(device, cmdPool, count, pCommandBuffers);
     // TODO : Clean up any internal data structures using this obj.
 }
 
@@ -1905,39 +1906,39 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkD
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->ResetDescriptorPool(device, descriptorPool);
+    VkResult result = dev_data->device_dispatch_table->ResetDescriptorPool(device, descriptorPool, flags);
     if (VK_SUCCESS == result) {
-        clearDescriptorPool(dev_data, device, descriptorPool);
+        clearDescriptorPool(dev_data, device, descriptorPool, flags);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, const VkDescriptorSetAllocInfo* pAllocInfo, VkDescriptorSet* pDescriptorSets)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Verify that requested descriptorSets are available in pool
-    POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
+    POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocInfo->descriptorPool);
     if (!pPoolNode) {
-        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, descriptorPool.handle, 0, DRAWSTATE_INVALID_POOL, "DS",
-                "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", descriptorPool.handle);
+        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, pAllocInfo->descriptorPool.handle, 0, DRAWSTATE_INVALID_POOL, "DS",
+                "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pAllocInfo->descriptorPool.handle);
     } else { // Make sure pool has all the available descriptors before calling down chain
-        skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, count, pSetLayouts);
+        skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocInfo->count, pAllocInfo->pSetLayouts);
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
-    VkResult result = dev_data->device_dispatch_table->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    VkResult result = dev_data->device_dispatch_table->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
     if (VK_SUCCESS == result) {
-        POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
+        POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocInfo->descriptorPool);
         if (pPoolNode) {
-            if (count == 0) {
-                log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, count, 0, DRAWSTATE_NONE, "DS",
+            if (pAllocInfo->count == 0) {
+                log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pAllocInfo->count, 0, DRAWSTATE_NONE, "DS",
                         "AllocDescriptorSets called with 0 count");
             }
-            for (uint32_t i = 0; i < count; i++) {
+            for (uint32_t i = 0; i < pAllocInfo->count; i++) {
                 log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_NONE, "DS",
                         "Created Descriptor Set %#" PRIxLEAST64, pDescriptorSets[i].handle);
                 // Create new set node and add to head of pool nodes
@@ -1954,16 +1955,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescript
                     // Insert set at head of Set LL for this pool
                     pNewNode->pNext = pPoolNode->pSets;
                     pPoolNode->pSets = pNewNode;
-                    LAYOUT_NODE* pLayout = getLayoutNode(dev_data, pSetLayouts[i]);
+                    LAYOUT_NODE* pLayout = getLayoutNode(dev_data, pAllocInfo->pSetLayouts[i]);
                     if (NULL == pLayout) {
-                        if (log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pSetLayouts[i].handle, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
-                                "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pSetLayouts[i].handle))
+                        if (log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, pAllocInfo->pSetLayouts[i].handle, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
+                                "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", pAllocInfo->pSetLayouts[i].handle))
                             return VK_ERROR_VALIDATION_FAILED;
                     }
                     pNewNode->pLayout = pLayout;
-                    pNewNode->pool = descriptorPool;
+                    pNewNode->pool = pAllocInfo->descriptorPool;
                     pNewNode->set = pDescriptorSets[i];
-                    pNewNode->setUsage = setUsage;
                     pNewNode->descriptorCount = pLayout->endIndex + 1;
                     if (pNewNode->descriptorCount) {
                         size_t descriptorArraySize = sizeof(GENERIC_HEADER*)*pNewNode->descriptorCount;
@@ -1983,10 +1983,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
-    if (pPoolNode && (VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT == pPoolNode->createInfo.poolUsage)) {
-        // Can't Free from a ONE_SHOT pool
-        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL, "DS",
-                    "It is invalid to call vkFreeDescriptorSets() with a pool created with usage type VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT.");
+    if (pPoolNode && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pPoolNode->createInfo.flags)) {
+        // Can't Free from a NON_FREE pool
+        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL, "DS",
+                    "It is invalid to call vkFreeDescriptorSets() with a pool created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
@@ -2018,10 +2018,10 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writ
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(VkDevice device, const VkCmdBufferAllocInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = dev_data->device_dispatch_table->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
@@ -2048,13 +2048,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const
             if (pBeginInfo->renderPass.handle || pBeginInfo->framebuffer.handle) {
                 // These should be NULL for a Primary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkCreateCommandBuffer():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)cmdBuffer);
+                    "vkAllocCommandBuffers():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)cmdBuffer);
             }
         } else {
             if (!pBeginInfo->renderPass.handle || !pBeginInfo->framebuffer.handle) {
                 // These should NOT be null for an Secondary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkCreateCommandBuffer():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)cmdBuffer);
+                    "vkAllocCommandBuffers():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)cmdBuffer);
             }
         }
         pCB->beginInfo = *pBeginInfo;
@@ -3508,8 +3508,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyDescriptorSetLayout;
     if (!strcmp(funcName, "vkDestroyDescriptorPool"))
         return (PFN_vkVoidFunction) vkDestroyDescriptorPool;
-    if (!strcmp(funcName, "vkDestroyCommandBuffer"))
-        return (PFN_vkVoidFunction) vkDestroyCommandBuffer;
+    if (!strcmp(funcName, "vkFreeCommandBuffers"))
+        return (PFN_vkVoidFunction) vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkDestroyFramebuffer"))
         return (PFN_vkVoidFunction) vkDestroyFramebuffer;
     if (!strcmp(funcName, "vkDestroyRenderPass"))
@@ -3546,8 +3546,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkFreeDescriptorSets;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
-    if (!strcmp(funcName, "vkCreateCommandBuffer"))
-        return (PFN_vkVoidFunction) vkCreateCommandBuffer;
+    if (!strcmp(funcName, "vkAllocCommandBuffers"))
+        return (PFN_vkVoidFunction) vkAllocCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))

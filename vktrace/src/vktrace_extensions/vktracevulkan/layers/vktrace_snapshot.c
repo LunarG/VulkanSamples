@@ -1212,12 +1212,12 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptors(VkDevice device, VkDescriptorSet 
     nextTable.UpdateDescriptors(device, descriptorSet, updateCount, ppUpdateArray);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(VkDevice device, const VkCmdBufferAllocInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = nextTable.AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
     if (result == VK_SUCCESS)
     {
         loader_platform_thread_lock_mutex(&objLock);

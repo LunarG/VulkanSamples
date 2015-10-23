@@ -255,6 +255,11 @@ VkResult intel_cmd_pool_create(struct intel_dev *dev,
                             struct intel_cmd_pool **cmd_pool_ret);
 void intel_cmd_pool_destroy(struct intel_cmd_pool *pool);
 
+void intel_free_cmd_buffers(
+        struct intel_cmd_pool              *cmd_pool,
+        uint32_t                            count,
+        const VkCmdBuffer                  *cmd_bufs);
+
 struct intel_cmd {
     struct intel_obj obj;
 
@@ -287,7 +292,7 @@ static inline struct intel_cmd *intel_cmd_from_obj(struct intel_obj *obj)
 }
 
 VkResult intel_cmd_create(struct intel_dev *dev,
-                            const VkCmdBufferCreateInfo *info,
+                            const VkCmdBufferAllocInfo *info,
                             struct intel_cmd **cmd_ret);
 void intel_cmd_destroy(struct intel_cmd *cmd);
 

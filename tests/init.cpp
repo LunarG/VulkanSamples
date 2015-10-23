@@ -487,17 +487,17 @@ TEST_F(VkTest, CreateImage) {
 void VkTest::CreateCommandBufferTest()
 {
     VkResult err;
-    VkCmdBufferCreateInfo info = {};
+    VkCmdBufferAllocInfo info = {};
     VkCmdPool cmdPool;
     VkCmdBuffer cmdBuffer;
 
 //    typedef struct VkCmdBufferCreateInfo_
 //    {
-//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO
+//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO
 //        const void*                             pNext;
 //        VK_QUEUE_TYPE                          queueType;
 //        VkFlags                               flags;
-//    } VkCmdBufferCreateInfo;
+//    } VkCmdBufferAllocInfo;
 
     VkCmdPoolCreateInfo cmd_pool_info;
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
@@ -507,12 +507,14 @@ void VkTest::CreateCommandBufferTest()
     err = vkCreateCommandPool(device(), &cmd_pool_info, &cmdPool);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandPool failed";
 
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
     info.cmdPool = cmdPool;
-    err = vkCreateCommandBuffer(device(), &info, &cmdBuffer);
-    ASSERT_VK_SUCCESS(err) << "vkCreateCommandBuffer failed";
+    info.count = 1;
+    info.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
+    err = vkAllocCommandBuffers(device(), &info, &cmdBuffer);
+    ASSERT_VK_SUCCESS(err) << "vkAllocCommandBuffers failed";
 
-    vkDestroyCommandBuffer(device(), cmdBuffer);
+    vkFreeCommandBuffers(device(), cmdPool, 1, &cmdBuffer);
     vkDestroyCommandPool(device(), cmdPool);
 }
 

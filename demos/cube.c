@@ -451,7 +451,7 @@ static void demo_flush_init_cmd(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(!err);
 
-    vkDestroyCommandBuffer(demo->device, demo->cmd);
+    vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, cmd_bufs);
     demo->cmd = VK_NULL_HANDLE;
 }
 
@@ -465,15 +465,15 @@ static void demo_set_image_layout(
     VkResult U_ASSERT_ONLY err;
 
     if (demo->cmd == VK_NULL_HANDLE) {
-        const VkCmdBufferCreateInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+        const VkCmdBufferAllocInfo cmd = {
+            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
             .pNext = NULL,
             .cmdPool = demo->cmd_pool,
             .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
-            .flags = 0,
+            .count = 1,
         };
 
-        err = vkCreateCommandBuffer(demo->device, &cmd, &demo->cmd);
+        err = vkAllocCommandBuffers(demo->device, &cmd, &demo->cmd);
         assert(!err);
 
         VkCmdBufferBeginInfo cmd_buf_info = {
@@ -1630,7 +1630,6 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
     const VkDescriptorPoolCreateInfo descriptor_pool = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
-        .poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT,
         .maxSets = 1,
         .count = 2,
         .pTypeCount = type_counts,
@@ -1649,10 +1648,14 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    err = vkAllocDescriptorSets(demo->device, demo->desc_pool,
-            VK_DESCRIPTOR_SET_USAGE_STATIC,
-            1, &demo->desc_layout,
-            &demo->desc_set);
+    VkDescriptorSetAllocInfo alloc_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
+        .pNext = NULL,
+        .descriptorPool = demo->desc_pool,
+        .count = 1,
+        .pSetLayouts = &demo->desc_layout
+    };
+    err = vkAllocDescriptorSets(demo->device, &alloc_info, &demo->desc_set);
     assert(!err);
 
     memset(&tex_descs, 0, sizeof(tex_descs));
@@ -1721,12 +1724,12 @@ static void demo_prepare(struct demo *demo)
     err = vkCreateCommandPool(demo->device, &cmd_pool_info, &demo->cmd_pool);
     assert(!err);
 
-    const VkCmdBufferCreateInfo cmd = {
-        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+    const VkCmdBufferAllocInfo cmd = {
+        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
         .pNext = NULL,
         .cmdPool = demo->cmd_pool,
         .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
-        .flags = 0,
+        .count = 1,
     };
 
     demo_prepare_buffers(demo);
@@ -1739,7 +1742,7 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_pipeline(demo);
 
     for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
-        err = vkCreateCommandBuffer(demo->device, &cmd, &demo->buffers[i].cmd);
+        err = vkAllocCommandBuffers(demo->device, &cmd, &demo->buffers[i].cmd);
         assert(!err);
     }
 
@@ -1798,7 +1801,7 @@ static void demo_cleanup(struct demo *demo)
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyImageView(demo->device, demo->buffers[i].view);
-        vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
+        vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->buffers[i].cmd);
     }
     free(demo->buffers);
 

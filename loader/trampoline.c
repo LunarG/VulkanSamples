@@ -929,22 +929,22 @@ LOADER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPo
 }
 
 
-LOADER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+LOADER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->ResetDescriptorPool(device, descriptorPool);
+    return disp->ResetDescriptorPool(device, descriptorPool, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets)
+LOADER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, const VkDescriptorSetAllocInfo* pAllocInfo, VkDescriptorSet* pDescriptorSets)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    return disp->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
 }
 
 LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
@@ -1037,28 +1037,39 @@ LOADER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCmdPool cmdPo
     return disp->ResetCommandPool(device, cmdPool, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
+LOADER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
+        VkDevice device,
+        const VkCmdBufferAllocInfo* pAllocInfo,
+        VkCmdBuffer* pCmdBuffers)
 {
     const VkLayerDispatchTable *disp;
     VkResult res;
 
     disp = loader_get_dispatch(device);
 
-    res = disp->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    res = disp->AllocCommandBuffers(device, pAllocInfo, pCmdBuffers);
     if (res == VK_SUCCESS) {
-        loader_init_dispatch(*pCmdBuffer, disp);
+        for (uint32_t i =0; i < pAllocInfo->count; i++) {
+            if (pCmdBuffers[i]) {
+                loader_init_dispatch(pCmdBuffers[i], disp);
+            }
+        }
     }
 
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer cmdBuffer)
+LOADER_EXPORT void VKAPI vkFreeCommandBuffers(
+        VkDevice                                device,
+        VkCmdPool                               cmdPool,
+        uint32_t                                count,
+        const VkCmdBuffer*                      pCommandBuffers)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    disp->DestroyCommandBuffer(device, cmdBuffer);
+    disp->FreeCommandBuffers(device, cmdPool, count, pCommandBuffers);
 }
 
 LOADER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)

@@ -4606,19 +4606,10 @@ bool PreCreateDescriptorPool(
 
 bool PostCreateDescriptorPool(
     VkDevice device,
-    VkDescriptorPoolUsage poolUsage,
     uint32_t maxSets,
     VkDescriptorPool* pDescriptorPool,
     VkResult result)
 {
-
-    if(poolUsage < VK_DESCRIPTOR_POOL_USAGE_BEGIN_RANGE ||
-        poolUsage > VK_DESCRIPTOR_POOL_USAGE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateDescriptorPool parameter, VkDescriptorPoolUsage poolUsage, is an unrecognized enumerator");
-        return false;
-    }
 
     /* TODOVV: How do we validate maxSets? Probably belongs in the limits layer? */
 
@@ -4645,7 +4636,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 
     VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
 
-    PostCreateDescriptorPool(device, pCreateInfo->poolUsage, pCreateInfo->maxSets, pDescriptorPool, result);
+    PostCreateDescriptorPool(device, pCreateInfo->maxSets, pDescriptorPool, result);
 
     return result;
 }
@@ -4669,9 +4660,10 @@ bool PostResetDescriptorPool(
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(
     VkDevice device,
-    VkDescriptorPool descriptorPool)
+    VkDescriptorPool descriptorPool,
+    VkDescriptorPoolResetFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetDescriptorPool(device, descriptorPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetDescriptorPool(device, descriptorPool, flags);
 
     PostResetDescriptorPool(device, descriptorPool, result);
 
@@ -4692,20 +4684,10 @@ bool PreAllocDescriptorSets(
 bool PostAllocDescriptorSets(
     VkDevice device,
     VkDescriptorPool descriptorPool,
-    VkDescriptorSetUsage setUsage,
     uint32_t count,
     VkDescriptorSet* pDescriptorSets,
     VkResult result)
 {
-
-
-    if(setUsage < VK_DESCRIPTOR_SET_USAGE_BEGIN_RANGE ||
-        setUsage > VK_DESCRIPTOR_SET_USAGE_END_RANGE)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocDescriptorSets parameter, VkDescriptorSetUsage setUsage, is an unrecognized enumerator");
-        return false;
-    }
 
 
     if(pDescriptorSets != nullptr)
@@ -4724,17 +4706,14 @@ bool PostAllocDescriptorSets(
 
 VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkDevice device,
-    VkDescriptorPool descriptorPool,
-    VkDescriptorSetUsage setUsage,
-    uint32_t count,
-    const VkDescriptorSetLayout* pSetLayouts,
+    const VkDescriptorSetAllocInfo* pAllocInfo,
     VkDescriptorSet* pDescriptorSets)
 {
-    PreAllocDescriptorSets(device, pSetLayouts);
+    PreAllocDescriptorSets(device, pAllocInfo->pSetLayouts);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
 
-    PostAllocDescriptorSets(device, descriptorPool, setUsage, count, pDescriptorSets, result);
+    PostAllocDescriptorSets(device, pAllocInfo->descriptorPool, pAllocInfo->count, pDescriptorSets, result);
 
     return result;
 }
@@ -5184,21 +5163,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(
 
 bool PreCreateCommandBuffer(
     VkDevice device,
-    const VkCmdBufferCreateInfo* pCreateInfo)
+    const VkCmdBufferAllocInfo* pCreateInfo)
 {
     if(pCreateInfo != nullptr)
     {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        "vkAllocCommandBuffers parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->level < VK_CMD_BUFFER_LEVEL_BEGIN_RANGE ||
         pCreateInfo->level > VK_CMD_BUFFER_LEVEL_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateCommandBuffer parameter, VkCmdBufferLevel pCreateInfo->level, is an unrecognized enumerator");
+        "vkAllocCommandBuffers parameter, VkCmdBufferLevel pCreateInfo->level, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5218,7 +5197,7 @@ bool PostCreateCommandBuffer(
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkCreateCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkAllocCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -5226,14 +5205,14 @@ bool PostCreateCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(
+VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     VkDevice device,
-    const VkCmdBufferCreateInfo* pCreateInfo,
+    const VkCmdBufferAllocInfo* pCreateInfo,
     VkCmdBuffer* pCmdBuffer)
 {
     PreCreateCommandBuffer(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
 
     PostCreateCommandBuffer(device, pCmdBuffer, result);
 
@@ -6804,8 +6783,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCmdSetStencilWriteMask;
     if (!strcmp(funcName, "vkCmdSetStencilReference"))
         return (PFN_vkVoidFunction) vkCmdSetStencilReference;
-    if (!strcmp(funcName, "vkCreateCommandBuffer"))
-        return (PFN_vkVoidFunction) vkCreateCommandBuffer;
+    if (!strcmp(funcName, "vkAllocCommandBuffers"))
+        return (PFN_vkVoidFunction) vkAllocCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))

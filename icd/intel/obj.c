@@ -102,8 +102,8 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         shallow_copy = sizeof(VkCmdPoolCreateInfo);
         break;
     case VK_OBJECT_TYPE_COMMAND_BUFFER:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO);
-        shallow_copy = sizeof(VkCmdBufferCreateInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO);
+        shallow_copy = sizeof(VkCmdBufferAllocInfo);
         break;
     case VK_OBJECT_TYPE_PIPELINE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);

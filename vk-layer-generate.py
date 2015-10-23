@@ -1625,13 +1625,18 @@ class ObjectTrackerSubcommand(Subcommand):
                 create_line += '        create_obj(%s, *%s, %s);\n' % (param0_name, proto.params[-1].name, obj_type_mapping[proto.params[-1].ty.strip('*').replace('const ', '')])
                 create_line += '    }\n'
                 create_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
+            if 'FreeCommandBuffers' in proto.name:
+                funcs.append('%s\n' % self.lineinfo.get())
+                destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
+                destroy_line += '    for (uint32_t i = 0; i < count; i++) {\n'
+                destroy_line += '        destroy_obj(%s[i], %s[i]);\n' % (proto.params[-1].name, proto.params[-1].name)
+                destroy_line += '    }\n'
+                destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if 'Destroy' in proto.name:
+                funcs.append('%s\n' % self.lineinfo.get())
                 destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
 #                destroy_line += '    if (result == VK_SUCCESS) {\n'
-                if 'DestroyCommandBuffer' in proto.name:
-                    destroy_line += '    destroy_obj(%s, %s);\n' % (proto.params[-1].name, proto.params[-1].name)
-                else:
-                    destroy_line += '    destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
+                destroy_line += '    destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
 #                destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if len(loop_params) > 0:

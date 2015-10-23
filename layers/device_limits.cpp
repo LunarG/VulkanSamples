@@ -458,15 +458,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCmdPool cmd
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(VkDevice device, const VkCmdBufferAllocInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer)
 {
-    VkResult result = get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyCommandBuffer(VkDevice device, VkCmdBuffer commandBuffer)
+VK_LAYER_EXPORT void VKAPI vkFreeCommandBuffers(VkDevice device, VkCmdPool cmdPool, uint32_t count, const VkCmdBuffer* pCommandBuffers)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyCommandBuffer(device, commandBuffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->FreeCommandBuffers(device, cmdPool, count, pCommandBuffers);
 }
 
 VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue)
@@ -655,10 +655,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyCommandPool;
     if (!strcmp(funcName, "ResetCommandPool"))
         return (PFN_vkVoidFunction) vkResetCommandPool;
-    if (!strcmp(funcName, "vkCreateCommandBuffer"))
-        return (PFN_vkVoidFunction) vkCreateCommandBuffer;
-    if (!strcmp(funcName, "vkDestroyCommandBuffer"))
-        return (PFN_vkVoidFunction) vkDestroyCommandBuffer;
+    if (!strcmp(funcName, "vkAllocCommandBuffers"))
+        return (PFN_vkVoidFunction) vkAllocCommandBuffers;
+    if (!strcmp(funcName, "vkFreeCommandBuffers"))
+        return (PFN_vkVoidFunction) vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkCmdUpdateBuffer"))
         return (PFN_vkVoidFunction) vkCmdUpdateBuffer;
     if (!strcmp(funcName, "vkCmdFillBuffer"))

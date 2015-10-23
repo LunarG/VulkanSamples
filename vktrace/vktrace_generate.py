@@ -1462,7 +1462,7 @@ class Subcommand(object):
                                  'WaitForFences',
                                  'DbgCreateMsgCallback',
                                  'DbgDestroyMsgCallback',
-                                 'CreateCommandBuffer',
+                                 'AllocCommandBuffers',
                                  ]
 
         # validate the manually_replay_funcs list

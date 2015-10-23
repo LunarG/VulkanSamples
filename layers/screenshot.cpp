@@ -168,12 +168,12 @@ static void writePPM( const char *filename, VkImage image1)
         0,     // allocationSize, queried later
         0      // memoryTypeIndex, queried later
     };
-    const VkCmdBufferCreateInfo createCommandBufferInfo = {
-        VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
+    const VkCmdBufferAllocInfo allocCommandBufferInfo = {
+        VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
         NULL,
         deviceMap[device]->cmdPool,
         VK_CMD_BUFFER_LEVEL_PRIMARY,
-        0
+        1
     };
     const VkCmdBufferBeginInfo cmdBufferBeginInfo = {
         VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
@@ -228,7 +228,7 @@ static void writePPM( const char *filename, VkImage image1)
     err = pTableQueue->BindImageMemory(device, image2, mem2, 0);
     assert(!err);
 
-    err = pTableDevice->CreateCommandBuffer(device, &createCommandBufferInfo,  &cmdBuffer);
+    err = pTableDevice->AllocCommandBuffers(device, &allocCommandBufferInfo,  &cmdBuffer);
     assert(!err);
 
     screenshot_device_table_map.emplace(cmdBuffer, pTableDevice);
@@ -308,7 +308,7 @@ static void writePPM( const char *filename, VkImage image1)
     // Clean up
     pTableDevice->UnmapMemory(device, mem2);
     pTableDevice->FreeMemory(device, mem2);
-    pTableDevice->DestroyCommandBuffer(device, cmdBuffer);
+    pTableDevice->FreeCommandBuffers(device, deviceMap[device]->cmdPool, 1, &cmdBuffer);
 }
 
 

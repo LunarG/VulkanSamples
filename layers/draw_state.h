@@ -47,7 +47,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
     DRAWSTATE_DESCRIPTOR_POOL_EMPTY,            // Attempt to allocate descriptor from a pool with no more descriptors of that type available
-    DRAWSTATE_CANT_FREE_FROM_ONE_SHOT_POOL,     // Invalid to call vkFreeDescriptorSets on Sets allocated from a ONE_SHOT Pool
+    DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL,     // Invalid to call vkFreeDescriptorSets on Sets allocated from a NON_FREE Pool
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
@@ -159,7 +159,6 @@ struct PIPELINE_LAYOUT_NODE {
 typedef struct _SET_NODE {
     VkDescriptorSet      set;
     VkDescriptorPool     pool;
-    VkDescriptorSetUsage setUsage;
     // Head of LL of all Update structs for this set
     GENERIC_HEADER*      pUpdateStructs;
     // Total num of descriptors in this set (count of its layout plus all prior layouts)
@@ -171,13 +170,14 @@ typedef struct _SET_NODE {
 
 typedef struct _POOL_NODE {
     VkDescriptorPool           pool;
+    uint32_t                   maxSets;
     VkDescriptorPoolCreateInfo createInfo;
     SET_NODE*                  pSets; // Head of LL of sets for this Pool
     vector<uint32_t>           maxDescriptorTypeCount; // max # of descriptors of each type in this pool
     vector<uint32_t>           availableDescriptorTypeCount; // available # of descriptors of each type in this pool
 
     _POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo* pCreateInfo) :
-    pool(pool), createInfo(*pCreateInfo), pSets(NULL),
+    pool(pool), createInfo(*pCreateInfo), maxSets(pCreateInfo->maxSets), pSets(NULL),
     maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         if (createInfo.count) { // Shadow type struct from ptr into local struct
@@ -305,7 +305,7 @@ typedef struct stencil_data {
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCmdBuffer                  cmdBuffer;
-    VkCmdBufferCreateInfo        createInfo;
+    VkCmdBufferAllocInfo        createInfo;
     VkCmdBufferBeginInfo         beginInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB

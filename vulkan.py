@@ -622,14 +622,12 @@ core = Extension(
 
         Proto("VkResult", "ResetDescriptorPool",
             [Param("VkDevice", "device"),
-             Param("VkDescriptorPool", "descriptorPool")]),
+             Param("VkDescriptorPool", "descriptorPool"),
+             Param("VkDescriptorPoolResetFlags", "flags")]),
 
         Proto("VkResult", "AllocDescriptorSets",
             [Param("VkDevice", "device"),
-             Param("VkDescriptorPool", "descriptorPool"),
-             Param("VkDescriptorSetUsage", "setUsage"),
-             Param("uint32_t", "count"),
-             Param("const VkDescriptorSetLayout*", "pSetLayouts"),
+             Param("const VkDescriptorSetAllocInfo*", "pAllocInfo"),
              Param("VkDescriptorSet*", "pDescriptorSets")]),
 
         Proto("VkResult", "FreeDescriptorSets",
@@ -659,14 +657,16 @@ core = Extension(
              Param("VkCmdPool", "cmdPool"),
              Param("VkCmdPoolResetFlags", "flags")]),
 
-        Proto("VkResult", "CreateCommandBuffer",
+        Proto("VkResult", "AllocCommandBuffers",
             [Param("VkDevice", "device"),
-             Param("const VkCmdBufferCreateInfo*", "pCreateInfo"),
-             Param("VkCmdBuffer*", "pCmdBuffer")]),
+             Param("const VkCmdBufferAllocInfo*", "pAllocInfo"),
+             Param("VkCmdBuffer*", "pCmdBuffers")]),
 
-        Proto("void", "DestroyCommandBuffer",
+        Proto("void", "FreeCommandBuffers",
             [Param("VkDevice", "device"),
-             Param("VkCmdBuffer", "commandBuffer")]),
+             Param("VkCmdPool", "cmdPool"),
+             Param("uint32_t", "count"),
+             Param("const VkCmdBuffer*", "pCommandBuffers")]),
 
         Proto("VkResult", "BeginCommandBuffer",
             [Param("VkCmdBuffer", "cmdBuffer"),

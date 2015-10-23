@@ -116,8 +116,8 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateCommandPool = (PFN_vkCreateCommandPool) gpa(dev, "vkCreateCommandPool");
     table->DestroyCommandPool = (PFN_vkDestroyCommandPool) gpa(dev, "vkDestroyCommandPool");
     table->ResetCommandPool = (PFN_vkResetCommandPool) gpa(dev, "vkResetCommandPool");
-    table->CreateCommandBuffer = (PFN_vkCreateCommandBuffer) gpa(dev, "vkCreateCommandBuffer");
-    table->DestroyCommandBuffer = (PFN_vkDestroyCommandBuffer) gpa(dev, "vkDestroyCommandBuffer");
+    table->AllocCommandBuffers = (PFN_vkAllocCommandBuffers) gpa(dev, "vkAllocCommandBuffers");
+    table->FreeCommandBuffers = (PFN_vkFreeCommandBuffers) gpa(dev, "vkFreeCommandBuffers");
     table->BeginCommandBuffer = (PFN_vkBeginCommandBuffer) gpa(dev, "vkBeginCommandBuffer");
     table->EndCommandBuffer = (PFN_vkEndCommandBuffer) gpa(dev, "vkEndCommandBuffer");
     table->ResetCommandBuffer = (PFN_vkResetCommandBuffer) gpa(dev, "vkResetCommandBuffer");
@@ -346,10 +346,10 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->DestroyCommandPool;
     if (!strcmp(name, "ResetCommandPool"))
         return (void *) table->ResetCommandPool;
-    if (!strcmp(name, "CreateCommandBuffer"))
-        return (void *) table->CreateCommandBuffer;
-    if (!strcmp(name, "DestroyCommandBuffer"))
-        return (void *) table->DestroyCommandBuffer;
+    if (!strcmp(name, "AllocCommandBuffers"))
+        return (void *) table->AllocCommandBuffers;
+    if (!strcmp(name, "FreeCommandBuffers"))
+        return (void *) table->FreeCommandBuffers;
     if (!strcmp(name, "BeginCommandBuffer"))
         return (void *) table->BeginCommandBuffer;
     if (!strcmp(name, "EndCommandBuffer"))

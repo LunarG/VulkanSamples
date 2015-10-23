@@ -500,7 +500,6 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     VkDescriptorPoolCreateInfo pool = {};
     pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool.count = m_type_counts.size();
-    pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
     pool.maxSets = 1;
     pool.pTypeCount = m_type_counts.data();
     init(*m_device, pool);
@@ -534,7 +533,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     m_pipeline_layout.init(*m_device, pipeline_layout, layouts);
 
     // create VkDescriptorSet
-    m_set = alloc_sets(*m_device, VK_DESCRIPTOR_SET_USAGE_STATIC, m_layout);
+    m_set = alloc_sets(*m_device, m_layout);
 
     // build the update array
     size_t imageSamplerCount = 0;

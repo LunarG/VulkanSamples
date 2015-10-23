@@ -535,9 +535,9 @@ public:
     bool getDynamicUsage() { return dynamic_usage_; }
 
     // vkAllocDescriptorSets()
-    std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts);
-    std::vector<DescriptorSet *> alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count);
-    DescriptorSet *alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout);
+    std::vector<DescriptorSet *> alloc_sets(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
+    std::vector<DescriptorSet *> alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count);
+    DescriptorSet *alloc_sets(const Device &dev, const DescriptorSetLayout &layout);
 
 private:
     VkDescriptorPool pool_;
@@ -582,10 +582,10 @@ public:
     ~CmdBuffer();
 
     explicit CmdBuffer() : Handle() {}
-    explicit CmdBuffer(const Device &dev, const VkCmdBufferCreateInfo &info) { init(dev, info); }
+    explicit CmdBuffer(const Device &dev, const VkCmdBufferAllocInfo &info) { init(dev, info); }
 
-    // vkCreateCommandBuffer()
-    void init(const Device &dev, const VkCmdBufferCreateInfo &info);
+    // vkAllocCommandBuffers()
+    void init(const Device &dev, const VkCmdBufferAllocInfo &info);
 
     // vkBeginCommandBuffer()
     void begin(const VkCmdBufferBeginInfo *info);
@@ -597,10 +597,11 @@ public:
     void reset(VkCmdBufferResetFlags flags);
     void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT); }
 
-    static VkCmdBufferCreateInfo create_info(VkCmdPool const &pool);
+    static VkCmdBufferAllocInfo create_info(VkCmdPool const &pool);
 
 private:
     VkDevice dev_handle_;
+    VkCmdPool cmd_pool_;
 };
 
 inline VkMemoryAllocInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
@@ -841,11 +842,12 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     return copy;
 }
 
-inline VkCmdBufferCreateInfo CmdBuffer::create_info(VkCmdPool const &pool)
+inline VkCmdBufferAllocInfo CmdBuffer::create_info(VkCmdPool const &pool)
 {
-    VkCmdBufferCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    VkCmdBufferAllocInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
     info.cmdPool = pool;
+    info.count = 1;
     return info;
 }
 

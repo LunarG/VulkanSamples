@@ -125,7 +125,7 @@ private:
     VkResult manually_replay_vkCreateRenderPass(packet_vkCreateRenderPass* pPacket);
     void manually_replay_vkCmdBeginRenderPass(packet_vkCmdBeginRenderPass* pPacket);
     VkResult manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuffer* pPacket);
-    VkResult manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandBuffer* pPacket);
+    VkResult manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBuffers* pPacket);
     VkResult manually_replay_vkWaitForFences(packet_vkWaitForFences* pPacket);
     VkResult manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket);
     void manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket);

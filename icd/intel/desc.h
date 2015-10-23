@@ -273,7 +273,6 @@ void intel_desc_pool_reset(struct intel_desc_pool *pool);
 
 VkResult intel_desc_set_create(struct intel_dev *dev,
                                  struct intel_desc_pool *pool,
-                                 VkDescriptorSetUsage usage,
                                  const struct intel_desc_layout *layout,
                                  struct intel_desc_set **set_ret);
 void intel_desc_set_destroy(struct intel_desc_set *set);

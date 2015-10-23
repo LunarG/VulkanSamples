@@ -606,10 +606,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     VkDevice device,
-    VkDescriptorPool descriptorPool,
-    VkDescriptorSetUsage setUsage,
-    uint32_t count,
-    const VkDescriptorSetLayout* pSetLayouts,
+    const VkDescriptorSetAllocInfo* pAllocInfo,
     VkDescriptorSet* pDescriptorSets)
 {
     vktrace_trace_packet_header* pHeader;
@@ -620,21 +617,20 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
     uint64_t vktraceStartTime = vktrace_get_time();
     SEND_ENTRYPOINT_ID(vkAllocDescriptorSets);
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.AllocDescriptorSets(device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+    result = mdd(device)->devTable.AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
     endTime = vktrace_get_time();
-    CREATE_TRACE_PACKET(vkAllocDescriptorSets, (count * sizeof(VkDescriptorSetLayout)) + (count * sizeof(VkDescriptorSet)));
+    CREATE_TRACE_PACKET(vkAllocDescriptorSets, (pAllocInfo->count * sizeof(VkDescriptorSetLayout)) + (pAllocInfo->count * sizeof(VkDescriptorSet)));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
     pPacket = interpret_body_as_vkAllocDescriptorSets(pHeader);
     pPacket->device = device;
-    pPacket->descriptorPool = descriptorPool;
-    pPacket->setUsage = setUsage;
-    pPacket->count = count;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSetLayouts), count * sizeof(VkDescriptorSetLayout), pSetLayouts);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), count * sizeof(VkDescriptorSet), pDescriptorSets);
+    pPacket->pAllocInfo->count = pAllocInfo->count;
+    pPacket->pAllocInfo->descriptorPool = pAllocInfo->descriptorPool;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pSetLayouts), pPacket->pAllocInfo->count * sizeof(VkDescriptorSetLayout), pAllocInfo->pSetLayouts);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorSets), pPacket->pAllocInfo->count * sizeof(VkDescriptorSet), pDescriptorSets);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSetLayouts));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo->pSetLayouts));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorSets));
     FINISH_TRACE_PACKET();
     return result;
@@ -1286,10 +1282,10 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkDestroyCommandPool;
     if (!strcmp(name, "ResetCommandPool"))
         return (PFN_vkVoidFunction) __HOOKED_vkResetCommandPool;
-    if (!strcmp(name, "CreateCommandBuffer"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateCommandBuffer;
-    if (!strcmp(name, "DestroyCommandBuffer"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyCommandBuffer;
+    if (!strcmp(name, "AllocCommandBuffers"))
+        return (PFN_vkVoidFunction) __HOOKED_vkAllocCommandBuffers;
+    if (!strcmp(name, "FreeCommandBuffers"))
+        return (PFN_vkVoidFunction) __HOOKED_vkFreeCommandBuffers;
     if (!strcmp(name, "BeginCommandBuffer"))
         return (PFN_vkVoidFunction) __HOOKED_vkBeginCommandBuffer;
     if (!strcmp(name, "EndCommandBuffer"))

@@ -819,28 +819,25 @@ explicit_QueueBindSparseImageOpaqueMemory(
 VkResult
 explicit_AllocDescriptorSets(
     VkDevice                     device,
-    VkDescriptorPool             descriptorPool,
-    VkDescriptorSetUsage         setUsage,
-    uint32_t                     count,
-    const VkDescriptorSetLayout *pSetLayouts,
+    const VkDescriptorSetAllocInfo *pAllocInfo,
     VkDescriptorSet             *pDescriptorSets)
 {
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&objLock);
     skipCall |= validate_object(device, device);
-    skipCall |= validate_object(device, descriptorPool);
-    for (uint32_t i = 0; i < count; i++) {
-        skipCall |= validate_object(device, pSetLayouts[i]);
+    skipCall |= validate_object(device, pAllocInfo->descriptorPool);
+    for (uint32_t i = 0; i < pAllocInfo->count; i++) {
+        skipCall |= validate_object(device, pAllocInfo->pSetLayouts[i]);
     }
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocDescriptorSets(
-        device, descriptorPool, setUsage, count, pSetLayouts, pDescriptorSets);
+        device, pAllocInfo, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
-    for (uint32_t i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < pAllocInfo->count; i++) {
         create_obj(device, pDescriptorSets[i], VK_OBJECT_TYPE_DESCRIPTOR_SET);
     }
     loader_platform_thread_unlock_mutex(&objLock);

@@ -748,24 +748,28 @@ NON_DISPATCHABLE_HANDLE_DTOR(DescriptorPool, vkDestroyDescriptorPool)
 
 void DescriptorPool::init(const Device &dev, const VkDescriptorPoolCreateInfo &info)
 {
-    setDynamicUsage(info.poolUsage == VK_DESCRIPTOR_POOL_USAGE_DYNAMIC);
-
+    setDynamicUsage(info.flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateDescriptorPool, dev, &info);
 }
 
 void DescriptorPool::reset()
 {
-    EXPECT(vkResetDescriptorPool(device(), handle()) == VK_SUCCESS);
+    EXPECT(vkResetDescriptorPool(device(), handle(), 0) == VK_SUCCESS);
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const std::vector<const DescriptorSetLayout *> &layouts)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts)
 {
     const std::vector<VkDescriptorSetLayout> layout_handles = make_handles<VkDescriptorSetLayout>(layouts);
 
     std::vector<VkDescriptorSet> set_handles;
     set_handles.resize(layout_handles.size());
 
-    VkResult err = vkAllocDescriptorSets(device(), handle(), usage, layout_handles.size(), layout_handles.data(), set_handles.data());
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = layout_handles.size();
+    alloc_info.descriptorPool = handle();
+    alloc_info.pSetLayouts = layout_handles.data();
+    VkResult err = vkAllocDescriptorSets(device(), &alloc_info, set_handles.data());
     EXPECT(err == VK_SUCCESS);
 
     std::vector<DescriptorSet *> sets;
@@ -777,14 +781,14 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDes
     return sets;
 }
 
-std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout, uint32_t count)
+std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count)
 {
-    return alloc_sets(dev, usage, std::vector<const DescriptorSetLayout *>(count, &layout));
+    return alloc_sets(dev, std::vector<const DescriptorSetLayout *>(count, &layout));
 }
 
-DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, VkDescriptorSetUsage usage, const DescriptorSetLayout &layout)
+DescriptorSet *DescriptorPool::alloc_sets(const Device &dev, const DescriptorSetLayout &layout)
 {
-    std::vector<DescriptorSet *> set = alloc_sets(dev, usage, layout, 1);
+    std::vector<DescriptorSet *> set = alloc_sets(dev, layout, 1);
     return (set.empty()) ? NULL : set[0];
 }
 
@@ -809,20 +813,23 @@ void CmdPool::init(const Device &dev, const VkCmdPoolCreateInfo &info)
 
 CmdBuffer::~CmdBuffer()
 {
-    if (initialized())
-        vkDestroyCommandBuffer(dev_handle_, handle());
+    if (initialized()) {
+        VkCmdBuffer cmds[] = { handle() };
+        vkFreeCommandBuffers(dev_handle_, cmd_pool_, 1, cmds);
+    }
 }
 
-void CmdBuffer::init(const Device &dev, const VkCmdBufferCreateInfo &info)
+void CmdBuffer::init(const Device &dev, const VkCmdBufferAllocInfo &info)
 {
     VkCmdBuffer cmd;
 
     // Make sure cmdPool is set
     assert(info.cmdPool);
 
-    if (EXPECT(vkCreateCommandBuffer(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
+    if (EXPECT(vkAllocCommandBuffers(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
         Handle::init(cmd);
         dev_handle_ = dev.handle();
+        cmd_pool_ = info.cmdPool;
     }
 }
 

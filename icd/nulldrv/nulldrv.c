@@ -481,17 +481,24 @@ static VkResult graphics_pipeline_create(struct nulldrv_dev *dev,
 }
 
 static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
-                            const VkCmdBufferCreateInfo *info,
+                            const VkCmdBufferAllocInfo *info,
                             struct nulldrv_cmd **cmd_ret)
 {
     struct nulldrv_cmd *cmd;
+    uint32_t num_allocated = 0;
 
-    cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
-            VK_OBJECT_TYPE_COMMAND_BUFFER);
-    if (!cmd)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *cmd_ret = cmd;
+    for (uint32_t i = 0; i < info->count; i++) {
+        cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
+                VK_OBJECT_TYPE_COMMAND_BUFFER);
+        if (!cmd) {
+            for (uint32_t j = 0; j < num_allocated; j++) {
+                free(cmd_ret[j]);
+            }
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
+        num_allocated++;
+        cmd_ret[i] = cmd;
+    }
 
     return VK_SUCCESS;
 }
@@ -517,7 +524,6 @@ static VkResult nulldrv_desc_pool_create(struct nulldrv_dev *dev,
 
 static VkResult nulldrv_desc_set_create(struct nulldrv_dev *dev,
                                  struct nulldrv_desc_pool *pool,
-                                 VkDescriptorSetUsage usage,
                                  const struct nulldrv_desc_layout *layout,
                                  struct nulldrv_desc_set **set_ret)
 {
@@ -645,23 +651,28 @@ ICD_EXPORT VkResult VKAPI vkResetCommandPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateCommandBuffer(
+ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     VkDevice                                  device,
-    const VkCmdBufferCreateInfo*           pCreateInfo,
-    VkCmdBuffer*                             pCmdBuffer)
+    const VkCmdBufferAllocInfo*               pAllocInfo,
+    VkCmdBuffer*                              pCmdBuffers)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_dev *dev = nulldrv_dev(device);
 
-    return nulldrv_cmd_create(dev, pCreateInfo,
-            (struct nulldrv_cmd **) pCmdBuffer);
+    return nulldrv_cmd_create(dev, pAllocInfo,
+            (struct nulldrv_cmd **) pCmdBuffers);
 }
 
-ICD_EXPORT void VKAPI vkDestroyCommandBuffer(
+ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     VkDevice                                  device,
-    VkCmdBuffer                               cmdBuffer)
+    VkCmdPool                                 cmdPool,
+    uint32_t                                  count,
+    const VkCmdBuffer*                        pCmdBuffers)
 {
     NULLDRV_LOG_FUNC;
+    for (uint32_t i = 0; i < count; i++) {
+        free(pCmdBuffers[i]);
+    }
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
@@ -2011,7 +2022,8 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
 
 ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
     VkDevice                                device,
-    VkDescriptorPool                        descriptorPool)
+    VkDescriptorPool                        descriptorPool,
+    VkDescriptorPoolResetFlags              flags)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
@@ -2019,23 +2031,20 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
 
 ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkDevice                                device,
-    VkDescriptorPool                        descriptorPool,
-    VkDescriptorSetUsage                     setUsage,
-    uint32_t                                     count,
-    const VkDescriptorSetLayout*             pSetLayouts,
-    VkDescriptorSet*                          pDescriptorSets)
+    const VkDescriptorSetAllocInfo*         pAllocInfo,
+    VkDescriptorSet*                        pDescriptorSets)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_desc_pool *pool = nulldrv_desc_pool(descriptorPool);
+    struct nulldrv_desc_pool *pool = nulldrv_desc_pool(pAllocInfo->descriptorPool);
     struct nulldrv_dev *dev = pool->dev;
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < pAllocInfo->count; i++) {
         const struct nulldrv_desc_layout *layout =
-            nulldrv_desc_layout(pSetLayouts[i]);
+            nulldrv_desc_layout(pAllocInfo->pSetLayouts[i]);
 
-        ret = nulldrv_desc_set_create(dev, pool, setUsage, layout,
+        ret = nulldrv_desc_set_create(dev, pool, layout,
                 (struct nulldrv_desc_set **) &pDescriptorSets[i]);
         if (ret != VK_SUCCESS)
             break;

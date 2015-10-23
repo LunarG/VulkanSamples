@@ -1571,12 +1571,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandBuffer(
+VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     VkDevice                     device,
-    const VkCmdBufferCreateInfo *pCreateInfo,
+    const VkCmdBufferAllocInfo *pCreateInfo,
     VkCmdBuffer                 *pCmdBuffer)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateCommandBuffer(device, pCreateInfo, pCmdBuffer);
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
     // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
@@ -2461,8 +2461,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateCommandBuffer"))
-        return (PFN_vkVoidFunction) vkCreateCommandBuffer;
+    if (!strcmp(funcName, "vkAllocCommandBuffers"))
+        return (PFN_vkVoidFunction) vkAllocCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))

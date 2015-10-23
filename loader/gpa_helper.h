@@ -221,10 +221,10 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyCommandPool;
     if (!strcmp(name, "ResetCommandPool"))
         return (void*) vkResetCommandPool;
-    if (!strcmp(name, "CreateCommandBuffer"))
-        return (void*) vkCreateCommandBuffer;
-    if (!strcmp(name, "DestroyCommandBuffer"))
-        return (void*) vkDestroyCommandBuffer;
+    if (!strcmp(name, "AllocCommandBuffers"))
+        return (void*) vkAllocCommandBuffers;
+    if (!strcmp(name, "FreeCommandBuffers"))
+        return (void*) vkFreeCommandBuffers;
     if (!strcmp(name, "BeginCommandBuffer"))
         return (void*) vkBeginCommandBuffer;
     if (!strcmp(name, "EndCommandBuffer"))
@@ -366,8 +366,8 @@ static inline void *loader_non_passthrough_gdpa(const char *name)
         return (void*) vkDestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(name, "CreateCommandBuffer"))
-        return (void*) vkCreateCommandBuffer;
+    if (!strcmp(name, "AllocCommandBuffers"))
+        return (void*) vkAllocCommandBuffers;
 
     return NULL;
 }

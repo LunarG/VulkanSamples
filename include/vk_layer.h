@@ -108,8 +108,8 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateCommandPool CreateCommandPool;
     PFN_vkDestroyCommandPool DestroyCommandPool;
     PFN_vkResetCommandPool ResetCommandPool;
-    PFN_vkCreateCommandBuffer CreateCommandBuffer;
-    PFN_vkDestroyCommandBuffer DestroyCommandBuffer;
+    PFN_vkAllocCommandBuffers AllocCommandBuffers;
+    PFN_vkFreeCommandBuffers FreeCommandBuffers;
     PFN_vkBeginCommandBuffer BeginCommandBuffer;
     PFN_vkEndCommandBuffer EndCommandBuffer;
     PFN_vkResetCommandBuffer ResetCommandBuffer;

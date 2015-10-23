@@ -1064,11 +1064,13 @@ VkResult vkReplay::manually_replay_vkAllocDescriptorSets(packet_vkAllocDescripto
     // descriptorPool.handle = remap_descriptorpools(pPacket->descriptorPool.handle);
 
     VkDescriptorSet* pDescriptorSets = NULL;
-    replayResult = m_vkFuncs.real_vkAllocDescriptorSets(remappedDevice, descriptorPool, pPacket->setUsage, pPacket->count,
-        pPacket->pSetLayouts, pDescriptorSets);
+    replayResult = m_vkFuncs.real_vkAllocDescriptorSets(
+                       remappedDevice,
+                       pPacket->pAllocInfo,
+                       pDescriptorSets);
     if(replayResult == VK_SUCCESS)
     {
-        for(uint32_t i = 0; i < pPacket->count; ++i)
+        for(uint32_t i = 0; i < pPacket->pAllocInfo->count; ++i)
         {
            m_objMapper.add_to_descriptorsets_map(pPacket->pDescriptorSets[i].handle, pDescriptorSets[i].handle);
         }
@@ -1943,7 +1945,7 @@ VkResult vkReplay::manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMs
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandBuffer* pPacket)
+VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBuffers* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
@@ -1953,17 +1955,19 @@ VkResult vkReplay::manually_replay_vkCreateCommandBuffer(packet_vkCreateCommandB
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    VkCmdBuffer local_pCmdBuffer;
+    VkCmdBuffer local_pCmdBuffers[pPacket->pAllocInfo->count];
     VkCmdPool local_CmdPool;
-    local_CmdPool.handle = pPacket->pCreateInfo->cmdPool.handle;
-    uint64_t remappedCmdPoolHandle = m_objMapper.remap_cmdpools(pPacket->pCreateInfo->cmdPool.handle);
-    memcpy((void*)&(pPacket->pCreateInfo->cmdPool.handle), (void*)&(remappedCmdPoolHandle), sizeof(uint64_t));
+    local_CmdPool.handle = pPacket->pAllocInfo->cmdPool.handle;
+    uint64_t remappedCmdPoolHandle = m_objMapper.remap_cmdpools(pPacket->pAllocInfo->cmdPool.handle);
+    memcpy((void*)&(pPacket->pAllocInfo->cmdPool.handle), (void*)&(remappedCmdPoolHandle), sizeof(uint64_t));
 
-    replayResult = m_vkFuncs.real_vkCreateCommandBuffer(remappeddevice, pPacket->pCreateInfo, &local_pCmdBuffer);
-    memcpy((void*)&(pPacket->pCreateInfo->cmdPool.handle), (void*)&(local_CmdPool.handle), sizeof(uint64_t));
+    replayResult = m_vkFuncs.real_vkAllocCommandBuffers(remappeddevice, pPacket->pAllocInfo, &local_pCmdBuffers);
+    memcpy((void*)&(pPacket->pAllocInfo->cmdPool.handle), (void*)&(local_CmdPool.handle), sizeof(uint64_t));
     if (replayResult == VK_SUCCESS)
     {
-        m_objMapper.add_to_cmdbuffers_map(*(pPacket->pCmdBuffer), local_pCmdBuffer);
+        for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++) {
+            m_objMapper.add_to_cmdbuffers_map(*(pPacket->pCmdBuffers[i]), local_pCmdBuffers[i]);
+        }
     }
     return replayResult;
 }
