@@ -1158,6 +1158,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     m_ms_state.pSampleMask = NULL;
     m_ms_state.alphaToCoverageEnable = VK_FALSE;
+    m_ms_state.alphaToOneEnable = VK_FALSE;
     m_ms_state.rasterSamples = 1;
     m_ms_state.minSampleShading = 0;
     m_ms_state.sampleShadingEnable = 0;

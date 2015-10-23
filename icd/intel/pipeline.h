@@ -209,6 +209,7 @@ struct intel_pipeline {
     bool depthBiasEnable;
 
     bool alphaToCoverageEnable;
+    bool alphaToOneEnable;
 
     VkPipelineTessellationStateCreateInfo tess_state;
 

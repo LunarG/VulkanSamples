@@ -959,6 +959,7 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
     pipeline->sample_count = (info->ms.rasterSamples <= 1) ? 1 : info->ms.rasterSamples;
 
     pipeline->alphaToCoverageEnable = info->ms.alphaToCoverageEnable;
+    pipeline->alphaToOneEnable = info->ms.alphaToOneEnable;
 
     /* 3DSTATE_SAMPLE_MASK */
     cmd = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK);
