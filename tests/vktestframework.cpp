@@ -104,6 +104,8 @@ public:
     void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn, VkInstance inst);
     void CreateMyWindow();
     void CreateSwapchain();
+    void SetImageLayout(VkImage image, VkImageAspectFlags aspectMask,
+                        VkImageLayout old_image_layout, VkImageLayout new_image_layout);
     void TearDown();
 #ifdef _WIN32
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -549,6 +551,24 @@ void  TestFrameworkVkPresent::Display()
     buf.memory().unmap();
 
     m_cmdbuf.begin();
+    VkImageMemoryBarrier memoryBarrier = {};
+    memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    memoryBarrier.pNext = NULL;
+    memoryBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
+    memoryBarrier.inputMask = 0;
+    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    memoryBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    memoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    memoryBarrier.subresourceRange.baseMipLevel = 0;
+    memoryBarrier.subresourceRange.mipLevels = 1;
+    memoryBarrier.subresourceRange.baseArrayLayer = 0;
+    memoryBarrier.subresourceRange.arraySize = 1;
+    memoryBarrier.image = m_buffers[m_current_buffer].image;
+    VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferImageCopy region = {};
     region.imageExtent.height = m_display_image->m_height;
@@ -559,6 +579,11 @@ void  TestFrameworkVkPresent::Display()
         buf.handle(),
         m_buffers[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
         1, &region);
+
+    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
     m_cmdbuf.end();
 
     VkCmdBuffer cmdBufs[1];
@@ -937,7 +962,74 @@ void TestFrameworkVkPresent::CreateSwapchain()
         err = vkCreateImageView(m_device.handle(),
                 &color_image_view, &m_buffers[i].view);
         assert(!err);
+
+        /* Set image layout to PRESENT_SOURCE_KHR so that before the copy, it can be set to */
+        /* TRANSFER_DESTINATION_OPTIMAL                                                     */
+        SetImageLayout(m_buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
+                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR);
+
     }
+}
+void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags aspectMask,
+                    VkImageLayout old_image_layout, VkImageLayout new_image_layout)
+{
+    VkResult U_ASSERT_ONLY err;
+
+    VkCmdBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
+            VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.renderPass = { VK_NULL_HANDLE };
+    cmd_buf_info.subpass = 0;
+    cmd_buf_info.framebuffer = { VK_NULL_HANDLE };
+
+    err = vkBeginCommandBuffer(m_cmdbuf.handle(), &cmd_buf_info);
+    assert(!err);
+
+    VkImageMemoryBarrier image_memory_barrier = {};
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = NULL;
+    image_memory_barrier.outputMask = 0;
+    image_memory_barrier.inputMask = 0;
+    image_memory_barrier.oldLayout = old_image_layout;
+    image_memory_barrier.newLayout = new_image_layout;
+    image_memory_barrier.image = image;
+    image_memory_barrier.subresourceRange.aspectMask = aspectMask;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.mipLevels = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.arraySize = 1;
+
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
+        /* Make sure anything that was copying from this image has completed */
+        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
+    }
+
+    if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        /* Make sure any Copy or CPU writes to image are flushed */
+        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_HOST_WRITE_BIT | VK_MEMORY_OUTPUT_TRANSFER_BIT;
+    }
+
+    VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
+
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
+
+    err = vkEndCommandBuffer(m_cmdbuf.handle());
+    assert(!err);
+
+    const VkCmdBuffer cmd_bufs[] = { m_cmdbuf.handle() };
+    VkFence nullFence = { VK_NULL_HANDLE };
+
+    err = vkQueueSubmit(m_queue.handle(), 1, cmd_bufs, nullFence);
+    assert(!err);
+
+    err = vkQueueWaitIdle(m_queue.handle());
+    assert(!err);
+
 }
 
 void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn, VkInstance inst)
