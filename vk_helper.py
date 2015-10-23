@@ -868,11 +868,7 @@ class StructWrapperGen:
                         else:
                             sh_funcs.append('%s' % lineinfo.get())
                             addr_char = ''
-                            if stp_list[index]['type'] in vulkan.object_dispatch_list:
-                                sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
-                                sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "] = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
-                            elif stp_list[index]['type'] in vulkan.object_non_dispatch_list:
-                                sh_funcs.append('%sss[%u] << %spStruct->%s[i].handle;' % (indent, index, addr_char, stp_list[index]['name']))
+                            if stp_list[index]['type'] in vulkan.core.objects:
                                 sh_funcs.append('%sstp_strs[%u] += " " + prefix + "%s[" + index_ss.str() + "].handle = " + ss[%u].str() + "\\n";' % (indent, index, stp_list[index]['name'], index))
                             else:
                                 sh_funcs.append('%sss[%u] << %spStruct->%s[i];' % (indent, index, addr_char, stp_list[index]['name']))
