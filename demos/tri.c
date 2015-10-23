@@ -318,6 +318,7 @@ static void demo_set_image_layout(
             .framebuffer = { VK_NULL_HANDLE },
         };
         err = vkBeginCommandBuffer(demo->setup_cmd, &cmd_buf_info);
+        assert(!err);
     }
 
     VkImageMemoryBarrier image_memory_barrier = {
@@ -759,6 +760,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(!err);
 
     err = vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
+    assert(!err);
 
     mem_alloc.allocationSize  = mem_reqs.size;
     err = memory_type_from_properties(demo, mem_reqs.memoryTypeBits, required_props, &mem_alloc.memoryTypeIndex);
@@ -955,6 +957,7 @@ static void demo_prepare_vertices(struct demo *demo)
 
     err = vkGetBufferMemoryRequirements(demo->device,
             demo->vertices.buf, &mem_reqs);
+    assert(!err);
 
     mem_alloc.allocationSize  = mem_reqs.size;
     err = memory_type_from_properties(demo,
@@ -1942,6 +1945,7 @@ static void demo_init_vk(struct demo *demo)
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
 
     err = vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
+    assert(!err);
 
     // Query with NULL data to get count
     err = vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_count, NULL);

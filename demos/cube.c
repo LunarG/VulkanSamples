@@ -478,6 +478,7 @@ static void demo_set_image_layout(
             .framebuffer = { VK_NULL_HANDLE },
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
+        assert(!err);
     }
 
     VkImageMemoryBarrier image_memory_barrier = {
@@ -874,6 +875,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     err = vkGetImageMemoryRequirements(demo->device,
                     demo->depth.image, &mem_reqs);
+    assert(!err);
 
     demo->depth.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     demo->depth.mem_alloc.pNext = NULL;
@@ -1362,6 +1364,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         shaderCreateInfo.pName = "main";
         shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        assert(!err);
     } else {
         // Create fake SPV structure to feed GLSL
         // to the driver "under the covers"
@@ -1385,6 +1388,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         shaderCreateInfo.pName = "main";
         shaderCreateInfo.stage = stage;
         err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        assert(!err);
         free((void *) moduleCreateInfo.pCode);
     }
     return shader;
