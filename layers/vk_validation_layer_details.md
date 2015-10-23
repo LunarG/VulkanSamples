@@ -112,11 +112,11 @@ Additional work to be done
 
 ## Image
 
-### Image Overview
+### Image Layer Overview
 
 The Image layer is responsible for validating format-related information and enforcing format restrictions.
 
-### Image Details Table
+### Image Layer Details Table
 
 DETAILS TABLE PENDING
 
@@ -126,11 +126,13 @@ DETAILS TABLE PENDING
 | RenderPass Attachments | Validates that attachment image layouts, loadOps, and storeOps are valid Vulkan values | RENDERPASS_INVALID_ATTACHMENT | vkCreateRenderPass | TBD | NA |
 | Subpass DS Settings | Verifies that if there is no depth attachment then the subpass attachment is set to VK_ATTACHMENT_UNUSED | RENDERPASS_INVALID_DS_ATTACHMENT | vkCreateRenderPass | TBD | NA |
 | View Creation | Verify that requested Image View Creation parameters are reasonable for the image that the view is being created for | VIEW_CREATE_ERROR | vkCreateImageView | TBD | NA |
-| Image Aspects | Verify that Image commands are using valid Image Aspect flags | INVALID_IMAGE_ASPECT | vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdCopyBufferToImage vkCmdResolveImage | TBD | NA |
+| Image Aspects | Verify that Image commands are using valid Image Aspect flags | INVALID_IMAGE_ASPECT | vkCreateImageView vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdCopyBufferToImage vkCmdResolveImage vkCmdBlitImage | InvalidImageViewAspect | NA |
 | Image Aspect Mismatch | Verify that Image commands with source and dest images use matching aspect flags | MISMATCHED_IMAGE_ASPECT | vkCmdCopyImage | TBD | NA |
 | Image Type Mismatch | Verify that Image commands with source and dest images use matching types | MISMATCHED_IMAGE_TYPE | vkCmdCopyImage vkCmdResolveImage | CopyImageTypeMismatch ResolveImageTypeMismatch | NA |
 | Image Format Mismatch | Verify that Image commands with source and dest images use matching formats | MISMATCHED_IMAGE_FORMAT | vkCmdCopyImage vkCmdResolveImage | CopyImageDepthStencilFormatMismatch ResolveImageFormatMismatch | NA |
 | Resolve Sample Count | Verifies that source and dest images sample counts are valid | INVALID_RESOLVE_SAMPLES | vkCmdResolveImage | ResolveImageHighSampleCount ResolveImageLowSampleCount | NA |
+| Verify Format | Verifies the formats are valid for this image operation | INVALID_FORMAT | vkCreateImageView vkCmdBlitImage | TBD | NA |
+| Verify Correct Image Filter| Verifies that specified filter is valid | INVALID_FILTER | vkCmdBlitImage | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
 ### Image Pending Work

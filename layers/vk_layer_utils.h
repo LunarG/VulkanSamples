@@ -37,15 +37,20 @@ static inline bool vk_format_is_undef(VkFormat format)
     return (format == VK_FORMAT_UNDEFINED);
 }
 
-bool vk_format_is_ds(VkFormat format);
+bool vk_format_is_depth_or_stencil(VkFormat format);
+bool vk_format_is_depth_and_stencil(VkFormat format);
+bool vk_format_is_depth_only(VkFormat format);
+bool vk_format_is_stencil_only(VkFormat format);
 
 static inline bool vk_format_is_color(VkFormat format)
 {
-    return !(vk_format_is_undef(format) || vk_format_is_ds(format));
+    return !(vk_format_is_undef(format) || vk_format_is_depth_or_stencil(format));
 }
 
 bool   vk_format_is_norm(VkFormat format);
 bool   vk_format_is_int(VkFormat format);
+bool   vk_format_is_sint(VkFormat format);
+bool   vk_format_is_uint(VkFormat format);
 bool   vk_format_is_float(VkFormat format);
 bool   vk_format_is_srgb(VkFormat format);
 bool   vk_format_is_compressed(VkFormat format);

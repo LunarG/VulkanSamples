@@ -40,22 +40,26 @@ typedef enum _IMAGE_ERROR
     IMAGE_MISMATCHED_IMAGE_TYPE,            // Image types for source and dest images do not match
     IMAGE_MISMATCHED_IMAGE_FORMAT,          // Image formats for source and dest images do not match
     IMAGE_INVALID_RESOLVE_SAMPLES,          // Image resolve source samples less than two or dest samples greater than one
+    IMAGE_INVALID_FORMAT,                   // Operation specifies an invalid format, or there is a format mismatch
+    IMAGE_INVALID_FILTER,                   // Operation specifies an invalid filter setting
 } IMAGE_ERROR;
 
 typedef struct _IMAGE_STATE
 {
-    uint32_t mipLevels;
-    uint32_t arraySize;
-    VkFormat format;
-    uint32_t samples;
+    uint32_t    mipLevels;
+    uint32_t    arraySize;
+    VkFormat    format;
+    uint32_t    samples;
     VkImageType imageType;
-    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(0), imageType(VK_IMAGE_TYPE_NUM) {};
+    VkExtent3D  extent;
+    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(0), imageType(VK_IMAGE_TYPE_NUM), extent{0} {};
     _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):
         mipLevels(pCreateInfo->mipLevels),
         arraySize(pCreateInfo->arrayLayers),
         format(pCreateInfo->format),
         samples(pCreateInfo->samples),
-        imageType(pCreateInfo->imageType)
+        imageType(pCreateInfo->imageType),
+        extent(pCreateInfo->extent)
         {};
 } IMAGE_STATE;
 

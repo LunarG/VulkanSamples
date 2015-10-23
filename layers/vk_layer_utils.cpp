@@ -210,16 +210,20 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_NUM] = {
     { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_SINT]
 };
 
-// Return true if format is a depth-stencil format
-bool vk_format_is_ds(VkFormat format)
+// Return true if format is a depth or stencil format
+bool vk_format_is_depth_or_stencil(VkFormat format)
+{
+    return (vk_format_is_depth_and_stencil(format) ||
+            vk_format_is_depth_only(format)        ||
+            vk_format_is_stencil_only(format));
+}
+
+// Return true if format contains depth and stencil information
+bool vk_format_is_depth_and_stencil(VkFormat format)
 {
     bool is_ds = false;
 
     switch (format) {
-    case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM_X8:
-    case VK_FORMAT_D32_SFLOAT:
-    case VK_FORMAT_S8_UINT:
     case VK_FORMAT_D16_UNORM_S8_UINT:
     case VK_FORMAT_D24_UNORM_S8_UINT:
     case VK_FORMAT_D32_SFLOAT_S8_UINT:
@@ -228,8 +232,31 @@ bool vk_format_is_ds(VkFormat format)
     default:
         break;
     }
-
     return is_ds;
+}
+
+// Return true if format is a stencil-only format
+bool vk_format_is_stencil_only(VkFormat format)
+{
+    return (format == VK_FORMAT_S8_UINT);
+}
+
+// Return true if format is a depth-only format
+bool vk_format_is_depth_only(VkFormat format)
+{
+    bool is_depth = false;
+
+    switch (format) {
+    case VK_FORMAT_D16_UNORM:
+    case VK_FORMAT_D24_UNORM_X8:
+    case VK_FORMAT_D32_SFLOAT:
+        is_depth = true;
+        break;
+    default:
+        break;
+    }
+
+    return is_depth;
 }
 
 // Return true if format is of time UNORM
@@ -305,51 +332,73 @@ bool vk_format_is_norm(VkFormat format)
     return is_norm;
 };
 
+
 // Return true if format is an integer format
 bool vk_format_is_int(VkFormat format)
 {
-    bool is_int = false;
+    return (vk_format_is_sint(format) || vk_format_is_uint(format));
+}
+
+// Return true if format is an unsigned integer format
+bool vk_format_is_uint(VkFormat format)
+{
+    bool is_uint = false;
 
     switch (format) {
     case VK_FORMAT_R8_UINT:
-    case VK_FORMAT_R8_SINT:
     case VK_FORMAT_R8G8_UINT:
-    case VK_FORMAT_R8G8_SINT:
     case VK_FORMAT_R8G8B8_UINT:
-    case VK_FORMAT_R8G8B8_SINT:
     case VK_FORMAT_R8G8B8A8_UINT:
-    case VK_FORMAT_R8G8B8A8_SINT:
     case VK_FORMAT_R10G10B10A2_UINT:
-    case VK_FORMAT_R10G10B10A2_SINT:
     case VK_FORMAT_R16_UINT:
-    case VK_FORMAT_R16_SINT:
     case VK_FORMAT_R16G16_UINT:
-    case VK_FORMAT_R16G16_SINT:
     case VK_FORMAT_R16G16B16_UINT:
-    case VK_FORMAT_R16G16B16_SINT:
     case VK_FORMAT_R16G16B16A16_UINT:
-    case VK_FORMAT_R16G16B16A16_SINT:
     case VK_FORMAT_R32_UINT:
-    case VK_FORMAT_R32_SINT:
     case VK_FORMAT_R32G32_UINT:
-    case VK_FORMAT_R32G32_SINT:
     case VK_FORMAT_R32G32B32_UINT:
-    case VK_FORMAT_R32G32B32_SINT:
     case VK_FORMAT_R32G32B32A32_UINT:
-    case VK_FORMAT_R32G32B32A32_SINT:
     case VK_FORMAT_B8G8R8_UINT:
-    case VK_FORMAT_B8G8R8_SINT:
     case VK_FORMAT_B8G8R8A8_UINT:
-    case VK_FORMAT_B8G8R8A8_SINT:
     case VK_FORMAT_B10G10R10A2_UINT:
-    case VK_FORMAT_B10G10R10A2_SINT:
-        is_int = true;
+        is_uint = true;
         break;
     default:
         break;
     }
 
-    return is_int;
+    return is_uint;
+}
+
+// Return true if format is a signed integer format
+bool vk_format_is_sint(VkFormat format)
+{
+    bool is_sint = false;
+
+    switch (format) {
+    case VK_FORMAT_R8_SINT:
+    case VK_FORMAT_R8G8_SINT:
+    case VK_FORMAT_R8G8B8_SINT:
+    case VK_FORMAT_R8G8B8A8_SINT:
+    case VK_FORMAT_R10G10B10A2_SINT:
+    case VK_FORMAT_R16_SINT:
+    case VK_FORMAT_R16G16_SINT:
+    case VK_FORMAT_R16G16B16_SINT:
+    case VK_FORMAT_R16G16B16A16_SINT:
+    case VK_FORMAT_R32_SINT:
+    case VK_FORMAT_R32G32_SINT:
+    case VK_FORMAT_R32G32B32_SINT:
+    case VK_FORMAT_R32G32B32A32_SINT:
+    case VK_FORMAT_B8G8R8_SINT:
+    case VK_FORMAT_B8G8R8A8_SINT:
+    case VK_FORMAT_B10G10R10A2_SINT:
+        is_sint = true;
+        break;
+    default:
+        break;
+    }
+
+    return is_sint;
 }
 
 // Return true if format is a floating-point format
