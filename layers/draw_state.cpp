@@ -75,6 +75,7 @@ struct layer_data {
     unordered_map<VkDescriptorSet, SET_NODE*> setMap;
     unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*> layoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
+    unordered_map<VkDeviceMemory, VkImage> memImageMap;
     // Map for layout chains
     unordered_map<void*, GLOBAL_CB_NODE*> commandBufferMap;
     unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
@@ -867,11 +868,11 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
         // Validate that imageLayout is compatible with aspectMask and image format
         VkImageAspectFlags aspectMask = ivIt->second->subresourceRange.aspectMask;
         VkImage image = ivIt->second->image;
-        // TODO : Check here in case we have a bad image handle
+        // TODO : Check here in case we have a bad image
         auto imgIt = my_data->imageMap.find(image);
         if (imgIt == my_data->imageMap.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t) image, 0, DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR, "DS",
-                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image handle %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
+                "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
         } else {
             VkFormat format = (*imgIt).second->format;
             VkBool32 ds = vk_format_is_depth_or_stencil(format);
@@ -3790,7 +3791,6 @@ bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRe
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->createInfo;
     const VkFramebufferCreateInfo* pFramebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer];
-
     if (pRenderPassInfo->attachmentCount != pFramebufferInfo->attachmentCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
                              "You cannot start a render pass using a framebuffer with a different number of attachments.");
@@ -3973,6 +3973,53 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCommandBuffer commandBuffer, u
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
+}
+
+bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
+    bool skip_call = false;
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    auto mem_data = dev_data->memImageMap.find(mem);
+    if (mem_data != dev_data->memImageMap.end()) {
+        auto image_data = dev_data->imageLayoutMap.find(mem_data->second);
+        if (image_data != dev_data->imageLayoutMap.end()) {
+            if (image_data->second->layout != VK_IMAGE_LAYOUT_PREINITIALIZED && image_data->second->layout != VK_IMAGE_LAYOUT_GENERAL) {
+                skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
+                    "Cannot map an image with layout %d. Only GENERAL or PREINITIALIZED are supported.", image_data->second->layout);
+            }
+        }
+    }
+    return skip_call;
+}
+
+// clang-format off
+VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
+    VkDevice         device,
+    VkDeviceMemory   mem,
+    VkDeviceSize     offset,
+    VkDeviceSize     size,
+    VkFlags          flags,
+    void           **ppData)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip_call = ValidateMapImageLayouts(device, mem);
+    if (VK_FALSE == skip_call) {
+        return dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+
+VkResult VKAPI vkBindImageMemory(
+    VkDevice                                    device,
+    VkImage                                     image,
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                memOffset)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->BindImageMemory(device, image, mem, memOffset);
+    loader_platform_thread_lock_mutex(&globalLock);
+    dev_data->memImageMap[mem] = image;
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return result;
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
@@ -4316,6 +4363,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCmdEndRenderPass;
     if (!strcmp(funcName, "vkCmdExecuteCommands"))
         return (PFN_vkVoidFunction) vkCmdExecuteCommands;
+    if (!strcmp(funcName, "vkMapMemory"))
+        return (PFN_vkVoidFunction) vkMapMemory;
 
     if (dev_data->device_extensions.wsi_enabled)
     {
