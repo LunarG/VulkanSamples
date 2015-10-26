@@ -6435,33 +6435,25 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
 
 bool PostCmdWriteTimestamp(
     VkCmdBuffer cmdBuffer,
-    VkTimestampType timestampType,
+    VkPipelineStageFlagBits pipelineStage,
     VkBuffer destBuffer,
     VkDeviceSize destOffset)
 {
 
-    if(timestampType < VK_TIMESTAMP_TYPE_BEGIN_RANGE ||
-        timestampType > VK_TIMESTAMP_TYPE_END_RANGE)
-    {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdWriteTimestamp parameter, VkTimestampType timestampType, is an unrecognized enumerator");
-        return false;
-    }
-
-
+    ValidateEnumerator(pipelineStage);
 
     return true;
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer cmdBuffer,
-    VkTimestampType timestampType,
+    VkPipelineStageFlagBits pipelineStage,
     VkBuffer destBuffer,
     VkDeviceSize destOffset)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, pipelineStage, destBuffer, destOffset);
 
-    PostCmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+    PostCmdWriteTimestamp(cmdBuffer, pipelineStage, destBuffer, destOffset);
 }
 
 bool PostCmdCopyQueryPoolResults(

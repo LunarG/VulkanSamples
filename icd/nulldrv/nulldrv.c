@@ -1061,7 +1061,7 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
 
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
-    VkTimestampType                          timestampType,
+    VkPipelineStageFlagBits                     pipelineStage,
     VkBuffer                                  destBuffer,
     VkDeviceSize                                destOffset)
 {

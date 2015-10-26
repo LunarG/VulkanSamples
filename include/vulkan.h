@@ -772,15 +772,6 @@ typedef enum {
 } VkIndexType;
 
 typedef enum {
-    VK_TIMESTAMP_TYPE_TOP = 0,
-    VK_TIMESTAMP_TYPE_BOTTOM = 1,
-    VK_TIMESTAMP_TYPE_BEGIN_RANGE = VK_TIMESTAMP_TYPE_TOP,
-    VK_TIMESTAMP_TYPE_END_RANGE = VK_TIMESTAMP_TYPE_BOTTOM,
-    VK_TIMESTAMP_TYPE_NUM = (VK_TIMESTAMP_TYPE_BOTTOM - VK_TIMESTAMP_TYPE_TOP + 1),
-    VK_TIMESTAMP_TYPE_MAX_ENUM = 0x7FFFFFFF
-} VkTimestampType;
-
-typedef enum {
     VK_RENDER_PASS_CONTENTS_INLINE = 0,
     VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS = 1,
     VK_RENDER_PASS_CONTENTS_BEGIN_RANGE = VK_RENDER_PASS_CONTENTS_INLINE,
@@ -2218,7 +2209,7 @@ typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipeline
 typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
-typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
+typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkPipelineStageFlagBits pipelineStage, VkBuffer destBuffer, VkDeviceSize destOffset);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
@@ -2961,7 +2952,7 @@ void VKAPI vkCmdResetQueryPool(
 
 void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                                 cmdBuffer,
-    VkTimestampType                             timestampType,
+    VkPipelineStageFlagBits                     pipelineStage,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset);
 

@@ -219,27 +219,21 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
 
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
-    VkTimestampType                          timestampType,
+    VkPipelineStageFlagBits                     pipelineStage,
     VkBuffer                                  destBuffer,
     VkDeviceSize                                destOffset)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
     struct intel_buf *buf = intel_buf(destBuffer);
 
-    switch (timestampType) {
-    case VK_TIMESTAMP_TYPE_TOP:
+    if ((pipelineStage & VK_PIPELINE_STAGE_ALL_GPU_COMMANDS) &&
+        pipelineStage != VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) {
+        cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
+    } else {
         /* XXX we are not supposed to use two commands... */
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset, GEN6_REG_TIMESTAMP);
         gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
                 destOffset + 4, GEN6_REG_TIMESTAMP + 4);
-        break;
-    case VK_TIMESTAMP_TYPE_BOTTOM:
-        cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
-        break;
-    default:
-        /* TODOVV: This should be covered by validation error */
-        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
-        break;
     }
 }

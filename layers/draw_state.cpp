@@ -3217,7 +3217,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQu
                            startQuery, queryCount, destBuffer, destOffset, stride, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)
+VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkPipelineStageFlagBits pipelineStage, VkBuffer destBuffer, VkDeviceSize destOffset)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -3231,7 +3231,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestam
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdWriteTimestamp(cmdBuffer, timestampType, destBuffer, destOffset);
+        dev_data->device_dispatch_table->CmdWriteTimestamp(cmdBuffer, pipelineStage, destBuffer, destOffset);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)

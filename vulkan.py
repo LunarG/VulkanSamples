@@ -945,7 +945,7 @@ core = Extension(
 
         Proto("void", "CmdWriteTimestamp",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkTimestampType", "timestampType"),
+             Param("VkPipelineStageFlagBits", "pipelineStage"),
              Param("VkBuffer", "destBuffer"),
              Param("VkDeviceSize", "destOffset")]),
 
