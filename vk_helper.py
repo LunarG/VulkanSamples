@@ -575,6 +575,9 @@ class StructWrapperGen:
             if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
+                    if struct_name not in self.struct_dict:
+                        continue
+
                     class_name = self.get_class_name(struct_name)
                     instance_name = "swc%i" % class_num
                     dp_funcs.append("        case %s:\n        {" % (v))
@@ -772,6 +775,8 @@ class StructWrapperGen:
             if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
+                    if struct_name not in self.struct_dict:
+                        continue
                     print_func_name = self._get_sh_func_name(struct_name)
                     sh_funcs.append('        case %s:\n        {' % (v))
                     sh_funcs.append('            return %s((%s*)pStruct, indent);' % (print_func_name, struct_name))
@@ -1029,6 +1034,8 @@ class StructWrapperGen:
             if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
+                    if struct_name not in self.struct_dict:
+                        continue
                     print_func_name = self._get_sh_func_name(struct_name)
                     #sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
                     sh_funcs.append('        case %s:\n        {' % (v))
@@ -1299,6 +1306,9 @@ class StructWrapperGen:
                     if 'StructureType' in e:
                         for v in sorted(enum_type_dict[e]):
                             struct_name = get_struct_name_from_struct_type(v)
+                            if struct_name not in self.struct_dict:
+                                continue
+
                             sh_funcs.append('%scase %s:' % (indent, v))
                             sh_funcs.append('%s{' % (indent))
                             indent += '    '
@@ -1714,6 +1724,9 @@ class GraphVizGen:
             if "StructureType" in e:
                 for v in sorted(enum_type_dict[e]):
                     struct_name = get_struct_name_from_struct_type(v)
+                    if struct_name not in self.struct_dict:
+                        continue
+
                     print_func_name = self._get_gv_func_name(struct_name)
                     # TODO : Hand-coded fixes for some exceptions
                     #if 'VkPipelineCbStateCreateInfo' in struct_name:
