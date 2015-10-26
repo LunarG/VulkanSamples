@@ -87,6 +87,10 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
+    if (info.gpu_props.limits.maxDescriptorSetUniformBuffersDynamic < 1) {
+        std::cout << "No dynamic uniform buffers supported\n";
+        exit(-1);
+    }
     info.width = info.height = 500;
     init_connection(info);
     init_window(info);
