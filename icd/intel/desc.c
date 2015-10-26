@@ -47,7 +47,7 @@ struct intel_desc_surface {
     enum intel_desc_surface_type type;
     union {
         const void *unused;
-        const struct intel_buf_view buf;
+        struct intel_buf_view buf;
         const struct intel_img_view *img;
     } u;
 };
@@ -948,7 +948,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
             {
-                const struct intel_dev *dev = intel_dev(device);
+                struct intel_dev *dev = intel_dev(device);
                 VkBufferViewCreateInfo view_info;
                 memset(&view_info, 0, sizeof(view_info));
                 view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
