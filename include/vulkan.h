@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 183, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 184, 0)
 
 
 #if defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
@@ -1270,6 +1270,8 @@ typedef struct {
     float                                       lineWidthRange[2];
     float                                       pointSizeGranularity;
     float                                       lineWidthGranularity;
+    uint32_t                                    recommendedBufferCopyOffsetAlignment;
+    uint32_t                                    recommendedBufferCopyRowPitchAlignment;
 } VkPhysicalDeviceLimits;
 
 typedef struct {

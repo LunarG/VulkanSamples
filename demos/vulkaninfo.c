@@ -923,6 +923,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tlineWidthRange[1]                       = %f\n",                 limits->lineWidthRange[1]                      );
     printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
     printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
+    printf("\t\trecommendedBufferCopyOffsetAlignment    = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyOffsetAlignment   );
+    printf("\t\trecommendedBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyRowPitchAlignment );
 }
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
