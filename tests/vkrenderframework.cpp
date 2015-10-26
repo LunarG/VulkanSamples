@@ -99,9 +99,9 @@ void VkRenderFramework::InitFramework(
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
     instInfo.pAllocCb = NULL;
-    instInfo.layerCount = instance_layer_names.size();
+    instInfo.enabledLayerNameCount = instance_layer_names.size();
     instInfo.ppEnabledLayerNames = instance_layer_names.data();
-    instInfo.extensionCount = instance_extension_names.size();
+    instInfo.enabledExtensionNameCount = instance_extension_names.size();
     instInfo.ppEnabledExtensionNames = instance_extension_names.data();
     err = vkCreateInstance(&instInfo, &this->inst);
     ASSERT_VK_SUCCESS(err);
@@ -339,9 +339,9 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     subpass.pNext = NULL;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
-    subpass.inputCount = 0;
+    subpass.inputAttachmentCount = 0;
     subpass.pInputAttachments = NULL;
-    subpass.colorCount = targets;
+    subpass.colorAttachmentCount = targets;
     subpass.pColorAttachments = color_references.data();
     subpass.pResolveAttachments = NULL;
 
@@ -367,7 +367,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
         subpass.depthStencilAttachment.attachment = VK_ATTACHMENT_UNUSED;
     }
 
-    subpass.preserveCount = 0;
+    subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
@@ -444,7 +444,7 @@ int VkDescriptorSetObj::AppendDummy()
     /* request a descriptor but do not update it */
     VkDescriptorTypeCount tc = {};
     tc.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    tc.count = 1;
+    tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
 
     return m_nextSlot++;
@@ -458,7 +458,7 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
     VkDescriptorTypeCount tc = {};
     tc.type = type;
-    tc.count = 1;
+    tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
 
     m_writes.push_back(vk_testing::Device::write_descriptor_set(vk_testing::DescriptorSet(),
@@ -471,7 +471,7 @@ int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureOb
 {
     VkDescriptorTypeCount tc = {};
     tc.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    tc.count = 1;
+    tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
 
     VkDescriptorImageInfo tmp = texture->m_imageInfo;
@@ -499,9 +499,9 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     // create VkDescriptorPool
     VkDescriptorPoolCreateInfo pool = {};
     pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool.count = m_type_counts.size();
+    pool.typeCount = m_type_counts.size();
     pool.maxSets = 1;
-    pool.pTypeCount = m_type_counts.data();
+    pool.pTypeCounts = m_type_counts.data();
     init(*m_device, pool);
 
     // create VkDescriptorSetLayout
@@ -509,7 +509,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     bindings.resize(m_type_counts.size());
     for (int i = 0; i < m_type_counts.size(); i++) {
         bindings[i].descriptorType = m_type_counts[i].type;
-        bindings[i].arraySize = m_type_counts[i].count;
+        bindings[i].arraySize = m_type_counts[i].descriptorCount;
         bindings[i].stageFlags = VK_SHADER_STAGE_ALL;
         bindings[i].pImmutableSamplers = NULL;
     }
@@ -517,8 +517,8 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     // create VkDescriptorSetLayout
     VkDescriptorSetLayoutCreateInfo layout = {};
     layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout.count = bindings.size();
-    layout.pBinding = bindings.data();
+    layout.bindingCount = bindings.size();
+    layout.pBindings = bindings.data();
 
     m_layout.init(*m_device, layout);
     vector<const vk_testing::DescriptorSetLayout *> layouts;
@@ -527,7 +527,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer)
     // create VkPipelineLayout
     VkPipelineLayoutCreateInfo pipeline_layout = {};
     pipeline_layout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout.descriptorSetCount = layouts.size();
+    pipeline_layout.setLayoutCount = layouts.size();
     pipeline_layout.pSetLayouts = NULL;
 
     m_pipeline_layout.init(*m_device, pipeline_layout, layouts);
@@ -992,11 +992,11 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 0;
+    submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
-    submit_info.cmdBufferCount = 1;
+    submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = bufferArray;
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, m_fence.handle());
@@ -1119,9 +1119,9 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_device = device;
 
     m_vi_state.pNext                        = VK_NULL_HANDLE;
-    m_vi_state.bindingCount                 = 0;
+    m_vi_state.vertexBindingDescriptionCount = 0;
     m_vi_state.pVertexBindingDescriptions   = VK_NULL_HANDLE;
-    m_vi_state.attributeCount               = 0;
+    m_vi_state.vertexAttributeDescriptionCount = 0;
     m_vi_state.pVertexAttributeDescriptions = VK_NULL_HANDLE;
 
     m_vertexBufferCount = 0;
@@ -1197,13 +1197,13 @@ void VkPipelineObj::AddShader(VkShaderObj* shader)
 void VkPipelineObj::AddVertexInputAttribs(VkVertexInputAttributeDescription* vi_attrib, int count)
 {
     m_vi_state.pVertexAttributeDescriptions = vi_attrib;
-    m_vi_state.attributeCount = count;
+    m_vi_state.vertexAttributeDescriptionCount = count;
 }
 
 void VkPipelineObj::AddVertexInputBindings(VkVertexInputBindingDescription* vi_binding, int count)
 {
     m_vi_state.pVertexBindingDescriptions = vi_binding;
-    m_vi_state.bindingCount = count;
+    m_vi_state.vertexBindingDescriptionCount = count;
 }
 
 void VkPipelineObj::AddColorAttachment(uint32_t binding, const VkPipelineColorBlendAttachmentState *att)
@@ -1276,7 +1276,7 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
         memcpy((void*)&info.pStages[i], shaderCreateInfo, sizeof(VkPipelineShaderStageCreateInfo));
     }
 
-    if (m_vi_state.attributeCount && m_vi_state.bindingCount) {
+    if (m_vi_state.vertexAttributeDescriptionCount && m_vi_state.vertexBindingDescriptionCount) {
         m_vi_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         info.pVertexInputState = &m_vi_state;
     } else {
@@ -1606,11 +1606,11 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 0;
+    submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
-    submit_info.cmdBufferCount = 1;
+    submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &handle();
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, fence );
@@ -1684,7 +1684,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.queueFamilyCount = 0;
+    image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     init(*m_device, image_info);
 

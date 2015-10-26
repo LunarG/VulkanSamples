@@ -816,7 +816,7 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     write.destSet = set.handle();
     write.destBinding = binding;
     write.destArrayElement = array_element;
-    write.count = count;
+    write.descriptorCount = count;
     write.descriptorType = type;
     write.pImageInfo = image_info;
     return write;
@@ -830,7 +830,7 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     write.destSet = set.handle();
     write.destBinding = binding;
     write.destArrayElement = array_element;
-    write.count = count;
+    write.descriptorCount = count;
     write.descriptorType = type;
     write.pBufferInfo = buffer_info;
     return write;
@@ -844,7 +844,7 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
     write.destSet = set.handle();
     write.destBinding = binding;
     write.destArrayElement = array_element;
-    write.count = count;
+    write.descriptorCount = count;
     write.descriptorType = type;
     write.pTexelBufferView = buffer_views;
     return write;
@@ -880,7 +880,7 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     copy.destSet = dst_set.handle();
     copy.destBinding = dst_binding;
     copy.destArrayElement = dst_array_element;
-    copy.count = count;
+    copy.descriptorCount = count;
 
     return copy;
 }
@@ -890,7 +890,7 @@ inline VkCmdBufferAllocInfo CmdBuffer::create_info(VkCmdPool const &pool)
     VkCmdBufferAllocInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
     info.cmdPool = pool;
-    info.count = 1;
+    info.bufferCount = 1;
     return info;
 }
 

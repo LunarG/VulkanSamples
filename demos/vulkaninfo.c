@@ -390,9 +390,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         .pNext = NULL,
         .requestedQueueCount = 0,
         .pRequestedQueues = NULL,
-        .layerCount = 0,
+        .enabledLayerNameCount = 0,
         .ppEnabledLayerNames = NULL,
-        .extensionCount = 0,
+        .enabledExtensionNameCount = 0,
         .ppEnabledExtensionNames = NULL,
     };
     VkResult U_ASSERT_ONLY err;
@@ -475,9 +475,9 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.requestedQueueCount = gpu->queue_count;
     info.pRequestedQueues = gpu->queue_reqs;
 
-    info.layerCount = 0;
+    info.enabledLayerNameCount = 0;
     info.ppEnabledLayerNames = NULL;
-    info.extensionCount = enabled_extension_count;
+    info.enabledExtensionNameCount = enabled_extension_count;
     info.ppEnabledExtensionNames = (const char*const*) known_extensions;
     dev->gpu = gpu;
     err = vkCreateDevice(gpu->obj, &info, &dev->obj);
@@ -533,9 +533,9 @@ static void app_create_instance(struct app_instance *inst)
         .pNext = NULL,
         .pAppInfo = &app_info,
         .pAllocCb = NULL,
-        .layerCount = 0,
+        .enabledLayerNameCount = 0,
         .ppEnabledLayerNames = NULL,
-        .extensionCount = 0,
+        .enabledExtensionNameCount = 0,
         .ppEnabledExtensionNames = NULL,
     };
     VkResult U_ASSERT_ONLY err;
@@ -610,7 +610,7 @@ static void app_create_instance(struct app_instance *inst)
         }
     }
 
-    inst_info.extensionCount = global_extension_count;
+    inst_info.enabledExtensionNameCount = global_extension_count;
     inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
 
     err = vkCreateInstance(&inst_info, &inst->instance);
@@ -660,7 +660,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
         gpu->queue_reqs[i].queueFamilyIndex = i;
-        gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
+        gpu->queue_reqs[i].queuePriorityCount = gpu->queue_props[i].queueCount;
         gpu->queue_reqs[i].pQueuePriorities = queue_priorities;
     }
 

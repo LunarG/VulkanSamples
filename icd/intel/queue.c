@@ -384,20 +384,20 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 
         const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
 
-        for (i = 0; i < submit->waitSemCount; i++) {
+        for (i = 0; i < submit->waitSemaphoreCount; i++) {
             struct intel_semaphore *pSemaphore = intel_semaphore(submit->pWaitSemaphores[i]);
             intel_wait_queue_semaphore(queue, pSemaphore);
         }
 
         if (unlikely(intel_debug)) {
-            for (i = 0; i < submit->cmdBufferCount; i++) {
+            for (i = 0; i < submit->commandBufferCount; i++) {
                 struct intel_cmd *cmd = intel_cmd(submit->pCommandBuffers[i]);
                 ret = queue_submit_cmd_debug(queue, cmd);
                 if (ret != VK_SUCCESS)
                     break;
             }
         } else {
-            for (i = 0; i < submit->cmdBufferCount; i++) {
+            for (i = 0; i < submit->commandBufferCount; i++) {
                 struct intel_cmd *cmd = intel_cmd(submit->pCommandBuffers[i]);
                 ret = queue_submit_cmd(queue, cmd);
                 if (ret != VK_SUCCESS)
@@ -427,7 +427,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
             intel_bo_wait(last_bo, -1);
         }
 
-        for (i = 0; i < submit->signalSemCount; i++) {
+        for (i = 0; i < submit->signalSemaphoreCount; i++) {
             struct intel_semaphore *pSemaphore = intel_semaphore(submit->pSignalSemaphores[i]);
             intel_signal_queue_semaphore(queue, pSemaphore);
         }

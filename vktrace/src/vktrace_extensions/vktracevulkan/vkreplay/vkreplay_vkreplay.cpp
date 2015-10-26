@@ -221,7 +221,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                 //                    // Third, check extensions requested by the application
                 //                    if (bCheckIfNeeded)
                 //                    {
-                //                        for (uint32_t j = 0; j < pPacket->pCreateInfo->extensionCount; j++)
+                //                        for (uint32_t j = 0; j < pPacket->pCreateInfo->enabledExtensionNameCount; j++)
                 //                        {
                 //                            if (memcmp(&pPacket->pCreateInfo->pEnabledExtensions[j], &extProp, sizeof(VkExtensionProperties)) == 0)
                 //                            {
@@ -244,9 +244,9 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             createInfo.pNext = NULL;
             createInfo.pAppInfo = pPacket->pCreateInfo->pAppInfo;
             createInfo.pAllocCb = NULL;
-            createInfo.layerCount = 0;
+            createInfo.enabledLayerNameCount = 0;
             createInfo.ppEnabledLayerNames = NULL;
-            createInfo.extensionCount = instance_extension_count;
+            createInfo.enabledExtensionNameCount = instance_extension_count;
             //                createInfo.ppEnabledExtensionNames = requiredLayerNames;
 
             // make the call
@@ -262,7 +262,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             if (g_pReplaySettings->screenshotList != NULL) {
                 // enable screenshot layer if it is available and not already in list
                 bool found_ss = false;
-                for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
+                for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount; i++) {
                     if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
                         found_ss = true;
                         break;
@@ -284,12 +284,12 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                     }
                     if (found_ss) {
                         // screenshot layer is available so enable it
-                        ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->layerCount + 1) * sizeof (char *));
-                        for (uint32_t i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++) {
+                        ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerNameCount + 1) * sizeof (char *));
+                        for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount && ppEnabledLayerNames; i++) {
                             ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
                         }
-                        ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
-                        strcpy(ppEnabledLayerNames[pCreateInfo->layerCount++], strScreenShot);
+                        ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
+                        strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount++], strScreenShot);
                         saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
                         pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
                     }
@@ -299,7 +299,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
             if (ppEnabledLayerNames) {
                 // restore the packets CreateInfo struct
-                vktrace_free(ppEnabledLayerNames[pCreateInfo->layerCount - 1]);
+                vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount - 1]);
                 vktrace_free(ppEnabledLayerNames);
                 pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
             }
@@ -335,7 +335,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         if (g_pReplaySettings->screenshotList != NULL) {
             // enable screenshot layer if it is available and not already in list
             bool found_ss = false;
-            for (uint32_t i = 0; i < pCreateInfo->layerCount; i++) {
+            for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount; i++) {
                 if (!strcmp(pCreateInfo->ppEnabledLayerNames[i], strScreenShot)) {
                     found_ss = true;
                     break;
@@ -357,13 +357,13 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
                 }
                 if (found_ss) {
                     // screenshot layer is available so enable it
-                    ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->layerCount+1) * sizeof(char *));
-                    for (uint32_t i = 0; i < pCreateInfo->layerCount && ppEnabledLayerNames; i++)
+                    ppEnabledLayerNames = (char **) vktrace_malloc((pCreateInfo->enabledLayerNameCount+1) * sizeof(char *));
+                    for (uint32_t i = 0; i < pCreateInfo->enabledLayerNameCount && ppEnabledLayerNames; i++)
                     {
                         ppEnabledLayerNames[i] = (char *) pCreateInfo->ppEnabledLayerNames[i];
                     }
-                    ppEnabledLayerNames[pCreateInfo->layerCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
-                    strcpy(ppEnabledLayerNames[pCreateInfo->layerCount++], strScreenShot);
+                    ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount] = (char *) vktrace_malloc(strlen(strScreenShot) + 1);
+                    strcpy(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount++], strScreenShot);
                     saved_ppLayers = (char **) pCreateInfo->ppEnabledLayerNames;
                     pCreateInfo->ppEnabledLayerNames = ppEnabledLayerNames;
                 }
@@ -374,7 +374,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         if (ppEnabledLayerNames)
         {
             // restore the packets CreateInfo struct
-            vktrace_free(ppEnabledLayerNames[pCreateInfo->layerCount-1]);
+            vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount-1]);
             vktrace_free(ppEnabledLayerNames);
             pCreateInfo->ppEnabledLayerNames = saved_ppLayers;
         }
@@ -664,10 +664,10 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
         // Remap Semaphores & CmdBuffers for this submit
         uint32_t i = 0;
         if (submit->pCommandBuffers != NULL) {
-            pRemappedBuffers = VKTRACE_NEW_ARRAY( VkCmdBuffer, submit->cmdBufferCount);
+            pRemappedBuffers = VKTRACE_NEW_ARRAY( VkCmdBuffer, submit->commandBufferCount);
             remappedSubmit->pCommandBuffers = pRemappedBuffers;
-            remappedSubmit->cmdBufferCount = submit->cmdBufferCount;
-            for (i = 0; i < submit->cmdBufferCount; i++) {
+            remappedSubmit->commandBufferCount = submit->commandBufferCount;
+            for (i = 0; i < submit->commandBufferCount; i++) {
                 *(pRemappedBuffers + i) = m_objMapper.remap_cmdbuffers(*(submit->pCommandBuffers + i));
                 if (*(pRemappedBuffers + i) == VK_NULL_HANDLE) {
                     VKTRACE_DELETE(remappedSubmitInfo);
@@ -677,10 +677,10 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
             }
         }
         if (submit->pWaitSemaphores != NULL) {
-            pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->waitSemCount);
+            pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->waitSemaphoreCount);
             remappedSubmit->pWaitSemaphores = pRemappedWaitSems;
-            remappedSubmit->waitSemCount = submit->waitSemCount;
-            for (i = 0; i < submit->waitSemCount; i++) {
+            remappedSubmit->waitSemaphoreCount = submit->waitSemaphoreCount;
+            for (i = 0; i < submit->waitSemaphoreCount; i++) {
                 //*(pRemappedWaitSems + i)->handle = m_objMapper.remap_semaphores(*(submit->pWaitSemaphores + i));
                 (*(pRemappedWaitSems + i)) = m_objMapper.remap_semaphores((*(submit->pWaitSemaphores + i)));
                 if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
@@ -691,10 +691,10 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
             }
         }
         if (submit->pSignalSemaphores != NULL) {
-            pRemappedSignalSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->signalSemCount);
+            pRemappedSignalSems = VKTRACE_NEW_ARRAY(VkSemaphore, submit->signalSemaphoreCount);
             remappedSubmit->pSignalSemaphores = pRemappedSignalSems;
-            remappedSubmit->signalSemCount = submit->signalSemCount;
-            for (i = 0; i < submit->signalSemCount; i++) {
+            remappedSubmit->signalSemaphoreCount = submit->signalSemaphoreCount;
+            for (i = 0; i < submit->signalSemaphoreCount; i++) {
                 (*(pRemappedSignalSems + i)) = m_objMapper.remap_semaphores((*(submit->pSignalSemaphores + i)));
                 if (*(pRemappedSignalSems + i) == VK_NULL_HANDLE) {
                     VKTRACE_DELETE(remappedSubmitInfo);
@@ -881,9 +881,9 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
 
         switch (pPacket->pDescriptorWrites[i].descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
-            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].count);
-            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
-            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
+            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].descriptorCount);
+            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].descriptorCount * sizeof(VkDescriptorImageInfo));
+            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].descriptorCount; j++)
             {
                 if (pPacket->pDescriptorWrites[i].pImageInfo[j].sampler != VK_NULL_HANDLE)
                 {
@@ -901,9 +901,9 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].count);
-            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
-            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
+            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].descriptorCount);
+            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].descriptorCount * sizeof(VkDescriptorImageInfo));
+            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].descriptorCount; j++)
             {
                 if (pPacket->pDescriptorWrites[i].pImageInfo[j].imageView != VK_NULL_HANDLE)
                 {
@@ -919,9 +919,9 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             }
             break;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].count);
-            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorImageInfo));
-            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
+            pRemappedWrites[i].pImageInfo = VKTRACE_NEW_ARRAY(VkDescriptorImageInfo, pPacket->pDescriptorWrites[i].descriptorCount);
+            memcpy((void*)pRemappedWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].pImageInfo, pPacket->pDescriptorWrites[i].descriptorCount * sizeof(VkDescriptorImageInfo));
+            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].descriptorCount; j++)
             {
                 if (pPacket->pDescriptorWrites[i].pImageInfo[j].sampler != VK_NULL_HANDLE)
                 {
@@ -949,9 +949,9 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            pRemappedWrites[i].pTexelBufferView = VKTRACE_NEW_ARRAY(VkBufferView, pPacket->pDescriptorWrites[i].count);
-            memcpy((void*)pRemappedWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].count * sizeof(VkBufferView));
-            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
+            pRemappedWrites[i].pTexelBufferView = VKTRACE_NEW_ARRAY(VkBufferView, pPacket->pDescriptorWrites[i].descriptorCount);
+            memcpy((void*)pRemappedWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].pTexelBufferView, pPacket->pDescriptorWrites[i].descriptorCount * sizeof(VkBufferView));
+            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].descriptorCount; j++)
             {
                 if (pPacket->pDescriptorWrites[i].pTexelBufferView[j] != VK_NULL_HANDLE)
                 {
@@ -970,9 +970,9 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            pRemappedWrites[i].pBufferInfo = VKTRACE_NEW_ARRAY(VkDescriptorBufferInfo, pPacket->pDescriptorWrites[i].count);
-            memcpy((void*)pRemappedWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].count * sizeof(VkDescriptorBufferInfo));
-            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].count; j++)
+            pRemappedWrites[i].pBufferInfo = VKTRACE_NEW_ARRAY(VkDescriptorBufferInfo, pPacket->pDescriptorWrites[i].descriptorCount);
+            memcpy((void*)pRemappedWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].pBufferInfo, pPacket->pDescriptorWrites[i].descriptorCount * sizeof(VkDescriptorBufferInfo));
+            for (uint32_t j = 0; j < pPacket->pDescriptorWrites[i].descriptorCount; j++)
             {
                 if (pPacket->pDescriptorWrites[i].pBufferInfo[j].buffer != VK_NULL_HANDLE)
                 {
@@ -1028,17 +1028,17 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
     VkDescriptorSetLayoutCreateInfo *pInfo = (VkDescriptorSetLayoutCreateInfo*) pPacket->pCreateInfo;
     while (pInfo != NULL)
     {
-        if (pInfo->pBinding != NULL)
+        if (pInfo->pBindings != NULL)
         {
-            for (unsigned int i = 0; i < pInfo->count; i++)
+            for (unsigned int i = 0; i < pInfo->bindingCount; i++)
             {
-                VkDescriptorSetLayoutBinding *pBinding = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
-                if (pBinding->pImmutableSamplers != NULL)
+                VkDescriptorSetLayoutBinding *pBindings = (VkDescriptorSetLayoutBinding *) &pInfo->pBindings[i];
+                if (pBindings->pImmutableSamplers != NULL)
                 {
-                    for (unsigned int j = 0; j < pBinding->arraySize; j++)
+                    for (unsigned int j = 0; j < pBindings->arraySize; j++)
                     {
-                        VkSampler* pSampler = (VkSampler*)&pBinding->pImmutableSamplers[j];
-                        *pSampler = m_objMapper.remap_samplers(pBinding->pImmutableSamplers[j]);
+                        VkSampler* pSampler = (VkSampler*)&pBindings->pImmutableSamplers[j];
+                        *pSampler = m_objMapper.remap_samplers(pBindings->pImmutableSamplers[j]);
                     }
                 }
             }
@@ -1084,7 +1084,7 @@ VkResult vkReplay::manually_replay_vkAllocDescriptorSets(packet_vkAllocDescripto
                        pDescriptorSets);
     if(replayResult == VK_SUCCESS)
     {
-        for(uint32_t i = 0; i < pPacket->pAllocInfo->count; ++i)
+        for(uint32_t i = 0; i < pPacket->pAllocInfo->setLayoutCount; ++i)
         {
            m_objMapper.add_to_descriptorsets_map(pPacket->pDescriptorSets[i], pDescriptorSets[i]);
         }
@@ -1102,16 +1102,16 @@ VkResult vkReplay::manually_replay_vkFreeDescriptorSets(packet_vkFreeDescriptorS
 
     VkDescriptorPool descriptorPool;
     descriptorPool = m_objMapper.remap_descriptorpools(pPacket->descriptorPool);
-    VkDescriptorSet* localDSs = VKTRACE_NEW_ARRAY(VkDescriptorSet, pPacket->count);
+    VkDescriptorSet* localDSs = VKTRACE_NEW_ARRAY(VkDescriptorSet, pPacket->descriptorSetCount);
     uint32_t i;
-    for (i = 0; i < pPacket->count; ++i) {
+    for (i = 0; i < pPacket->descriptorSetCount; ++i) {
        localDSs[i] = m_objMapper.remap_descriptorsets(pPacket->pDescriptorSets[i]);
     }
 
-    replayResult = m_vkFuncs.real_vkFreeDescriptorSets(remappedDevice, descriptorPool, pPacket->count, localDSs);
+    replayResult = m_vkFuncs.real_vkFreeDescriptorSets(remappedDevice, descriptorPool, pPacket->descriptorSetCount, localDSs);
     if(replayResult == VK_SUCCESS)
     {
-        for (i = 0; i < pPacket->count; ++i) {
+        for (i = 0; i < pPacket->descriptorSetCount; ++i) {
            m_objMapper.rm_from_descriptorsets_map(pPacket->pDescriptorSets[i]);
         }
     }
@@ -1134,19 +1134,19 @@ void vkReplay::manually_replay_vkCmdBindDescriptorSets(packet_vkCmdBindDescripto
         return;
     }
 
-    VkDescriptorSet* pRemappedSets = (VkDescriptorSet *) vktrace_malloc(sizeof(VkDescriptorSet) * pPacket->setCount);
+    VkDescriptorSet* pRemappedSets = (VkDescriptorSet *) vktrace_malloc(sizeof(VkDescriptorSet) * pPacket->descriptorSetCount);
     if (pRemappedSets == NULL)
     {
         vktrace_LogError("Replay of CmdBindDescriptorSets out of memory.");
         return;
     }
 
-    for (uint32_t idx = 0; idx < pPacket->setCount && pPacket->pDescriptorSets != NULL; idx++)
+    for (uint32_t idx = 0; idx < pPacket->descriptorSetCount && pPacket->pDescriptorSets != NULL; idx++)
     {
         pRemappedSets[idx] = m_objMapper.remap_descriptorsets(pPacket->pDescriptorSets[idx]);
     }
 
-    m_vkFuncs.real_vkCmdBindDescriptorSets(remappedCmdBuffer, pPacket->pipelineBindPoint, remappedLayout, pPacket->firstSet, pPacket->setCount, pRemappedSets, pPacket->dynamicOffsetCount, pPacket->pDynamicOffsets);
+    m_vkFuncs.real_vkCmdBindDescriptorSets(remappedCmdBuffer, pPacket->pipelineBindPoint, remappedLayout, pPacket->firstSet, pPacket->descriptorSetCount, pRemappedSets, pPacket->dynamicOffsetCount, pPacket->pDynamicOffsets);
     vktrace_free(pRemappedSets);
     return;
 }
@@ -1250,9 +1250,9 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
     VkPipelineShaderStageCreateInfo* pRemappedStages = VKTRACE_NEW_ARRAY(VkPipelineShaderStageCreateInfo, pPacket->pCreateInfos->stageCount);
     memcpy(pRemappedStages, pPacket->pCreateInfos->pStages, sizeof(VkPipelineShaderStageCreateInfo) * pPacket->pCreateInfos->stageCount);
 
-    VkGraphicsPipelineCreateInfo* pLocalCIs = VKTRACE_NEW_ARRAY(VkGraphicsPipelineCreateInfo, pPacket->count);
+    VkGraphicsPipelineCreateInfo* pLocalCIs = VKTRACE_NEW_ARRAY(VkGraphicsPipelineCreateInfo, pPacket->createInfoCount);
     uint32_t i, j;
-    for (i=0; i<pPacket->count; i++) {
+    for (i=0; i<pPacket->createInfoCount; i++) {
         memcpy((void*)&(pLocalCIs[i]), (void*)&(pPacket->pCreateInfos[i]), sizeof(VkGraphicsPipelineCreateInfo));
         for (j=0; j < pPacket->pCreateInfos[i].stageCount; j++)
         {
@@ -1270,15 +1270,15 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
 
     VkPipelineCache pipelineCache;
     pipelineCache = m_objMapper.remap_pipelinecaches(pPacket->pipelineCache);
-    uint32_t count = pPacket->count;
+    uint32_t createInfoCount = pPacket->createInfoCount;
 
-    VkPipeline *local_pPipelines = VKTRACE_NEW_ARRAY(VkPipeline, pPacket->count);
+    VkPipeline *local_pPipelines = VKTRACE_NEW_ARRAY(VkPipeline, pPacket->createInfoCount);
 
-    replayResult = m_vkFuncs.real_vkCreateGraphicsPipelines(remappedDevice, pipelineCache, count, pLocalCIs, local_pPipelines);
+    replayResult = m_vkFuncs.real_vkCreateGraphicsPipelines(remappedDevice, pipelineCache, createInfoCount, pLocalCIs, local_pPipelines);
 
     if (replayResult == VK_SUCCESS)
     {
-        for (i = 0; i < pPacket->count; i++) {
+        for (i = 0; i < pPacket->createInfoCount; i++) {
             m_objMapper.add_to_pipelines_map(pPacket->pPipelines[i], local_pPipelines[i]);
         }
     }
@@ -1300,12 +1300,12 @@ VkResult vkReplay::manually_replay_vkCreatePipelineLayout(packet_vkCreatePipelin
 
     // array to store the original trace-time layouts, so that we can remap them inside the packet and then
     // restore them after replaying the API call.
-    VkDescriptorSetLayout* pSaveLayouts = (VkDescriptorSetLayout*) vktrace_malloc(sizeof(VkDescriptorSetLayout) * pPacket->pCreateInfo->descriptorSetCount);
+    VkDescriptorSetLayout* pSaveLayouts = (VkDescriptorSetLayout*) vktrace_malloc(sizeof(VkDescriptorSetLayout) * pPacket->pCreateInfo->setLayoutCount);
     if (!pSaveLayouts) {
         vktrace_LogError("Replay of CreatePipelineLayout out of memory.");
     }
     uint32_t i = 0;
-    for (i = 0; (i < pPacket->pCreateInfo->descriptorSetCount) && (pPacket->pCreateInfo->pSetLayouts != NULL); i++) {
+    for (i = 0; (i < pPacket->pCreateInfo->setLayoutCount) && (pPacket->pCreateInfo->pSetLayouts != NULL); i++) {
         VkDescriptorSetLayout* pSL = (VkDescriptorSetLayout*) &(pPacket->pCreateInfo->pSetLayouts[i]);
         pSaveLayouts[i] = pPacket->pCreateInfo->pSetLayouts[i];
         *pSL = m_objMapper.remap_descriptorsetlayouts(pPacket->pCreateInfo->pSetLayouts[i]);
@@ -1963,7 +1963,7 @@ VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBu
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    VkCmdBuffer *local_pCmdBuffers = new VkCmdBuffer[pPacket->pAllocInfo->count];
+    VkCmdBuffer *local_pCmdBuffers = new VkCmdBuffer[pPacket->pAllocInfo->bufferCount];
     VkCmdPool local_CmdPool;
     local_CmdPool = pPacket->pAllocInfo->cmdPool;
     ((VkCmdBufferAllocInfo *) pPacket->pAllocInfo)->cmdPool = m_objMapper.remap_cmdpools(pPacket->pAllocInfo->cmdPool);
@@ -1973,7 +1973,7 @@ VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBu
 
     if (replayResult == VK_SUCCESS)
     {
-        for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++) {
+        for (uint32_t i = 0; i < pPacket->pAllocInfo->bufferCount; i++) {
             m_objMapper.add_to_cmdbuffers_map(pPacket->pCmdBuffers[i], local_pCmdBuffers[i]);
         }
     }

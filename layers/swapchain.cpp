@@ -77,7 +77,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     // Record whether the WSI device extension was enabled for this VkDevice.
     // No need to check if the extension was advertised by
     // vkEnumerateDeviceExtensionProperties(), since the loader handles that.
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0) {
 
             my_data->deviceMap[device].deviceSwapchainExtensionEnabled = true;
@@ -101,7 +101,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     // Record whether the WSI instance extension was enabled for this
     // VkInstance.  No need to check if the extension was advertised by
     // vkEnumerateInstanceExtensionProperties(), since the loader handles that.
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].swapchainExtensionEnabled = true;
@@ -209,7 +209,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->extensionCount,
+                                   pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
         // Call the following function after my_data is initialized:
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);
@@ -793,7 +793,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
 
     // TODO: Validate the following values:
     // - pCreateInfo->sharingMode
-    // - pCreateInfo->queueFamilyCount
+    // - pCreateInfo->queueFamilyIndexCount
     // - pCreateInfo->pQueueFamilyIndices
     // - pCreateInfo->oldSwapchain
 

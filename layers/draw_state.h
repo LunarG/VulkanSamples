@@ -179,15 +179,15 @@ typedef struct _POOL_NODE {
     pool(pool), createInfo(*pCreateInfo), maxSets(pCreateInfo->maxSets), pSets(NULL),
     maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE)
     {
-        if (createInfo.count) { // Shadow type struct from ptr into local struct
-            size_t typeCountSize = createInfo.count * sizeof(VkDescriptorTypeCount);
-            createInfo.pTypeCount = new VkDescriptorTypeCount[typeCountSize];
-            memcpy((void*)createInfo.pTypeCount, pCreateInfo->pTypeCount, typeCountSize);
+        if (createInfo.typeCount) { // Shadow type struct from ptr into local struct
+            size_t typeCountSize = createInfo.typeCount * sizeof(VkDescriptorTypeCount);
+            createInfo.pTypeCounts = new VkDescriptorTypeCount[typeCountSize];
+            memcpy((void*)createInfo.pTypeCounts, pCreateInfo->pTypeCounts, typeCountSize);
             // Now set max counts for each descriptor type based on count of that type times maxSets
             int32_t i=0;
-            for (i=0; i<createInfo.count; ++i) {
-                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pTypeCount[i].type);
-                uint32_t typeCount = createInfo.pTypeCount[i].count;
+            for (i=0; i<createInfo.typeCount; ++i) {
+                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pTypeCounts[i].type);
+                uint32_t typeCount = createInfo.pTypeCounts[i].descriptorCount;
                 maxDescriptorTypeCount[typeIndex] += typeCount;
             }
             for (i=0; i<maxDescriptorTypeCount.size(); ++i) {
@@ -196,12 +196,12 @@ typedef struct _POOL_NODE {
                 availableDescriptorTypeCount[i] = maxDescriptorTypeCount[i];
             }
         } else {
-            createInfo.pTypeCount = NULL; // Make sure this is NULL so we don't try to clean it up
+            createInfo.pTypeCounts = NULL; // Make sure this is NULL so we don't try to clean it up
         }
     }
     ~_POOL_NODE() {
-        if (createInfo.pTypeCount) {
-            delete[] createInfo.pTypeCount;
+        if (createInfo.pTypeCounts) {
+            delete[] createInfo.pTypeCounts;
         }
         // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
         //  need to migrate that struct to smart ptrs for auto-cleanup

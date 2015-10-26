@@ -307,8 +307,8 @@ static void add_create_ds_layout_to_trace_packet(vktrace_trace_packet_header* pH
         ppOutNext = NULL;
         vktrace_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkDescriptorSetLayoutCreateInfo), pInNow);
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(VkDescriptorSetLayoutBinding) * pInNow->count, pInNow->pBinding);
-        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBindings), sizeof(VkDescriptorSetLayoutBinding) * pInNow->bindingCount, pInNow->pBindings);
+        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBindings));
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
         pInNow = (VkDescriptorSetLayoutCreateInfo*)pInNow->pNext;
         vktrace_finalize_buffer_address(pHeader, (void**)(ppOutNow));
@@ -335,9 +335,9 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_pack
             // Vertex Input State
             if (pParam[i].pVertexInputState) {
                 vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState), sizeof(VkPipelineVertexInputStateCreateInfo), pParam[i].pVertexInputState);
-                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i].pVertexInputState->bindingCount * sizeof(VkVertexInputBindingDescription), pParam[i].pVertexInputState->pVertexBindingDescriptions);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions), pParam[i].pVertexInputState->vertexBindingDescriptionCount * sizeof(VkVertexInputBindingDescription), pParam[i].pVertexInputState->pVertexBindingDescriptions);
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexBindingDescriptions));
-                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i].pVertexInputState->attributeCount * sizeof(VkVertexInputAttributeDescription), pParam[i].pVertexInputState->pVertexAttributeDescriptions);
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions), pParam[i].pVertexInputState->vertexAttributeDescriptionCount * sizeof(VkVertexInputAttributeDescription), pParam[i].pVertexInputState->pVertexAttributeDescriptions);
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState->pVertexAttributeDescriptions));
                 vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pVertexInputState));
             }

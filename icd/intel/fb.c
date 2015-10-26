@@ -152,9 +152,9 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
         uint32_t j;
 
         // TODO: Add support for Input Attachment References
-        assert(!(subpass_info->inputCount) && "No ICD support for Input Attachments");
+        assert(!(subpass_info->inputAttachmentCount) && "No ICD support for Input Attachments");
 
-        for (j = 0; j < subpass_info->colorCount; j++) {
+        for (j = 0; j < subpass_info->colorAttachmentCount; j++) {
             const VkAttachmentReference *color_ref =
                 &subpass_info->pColorAttachments[j];
             const VkAttachmentReference *resolve_ref =
@@ -167,7 +167,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
             subpass->color_layouts[j] = color_ref->layout;
         }
 
-        subpass->color_count = subpass_info->colorCount;
+        subpass->color_count = subpass_info->colorAttachmentCount;
 
         subpass->ds_index = subpass_info->depthStencilAttachment.attachment;
         subpass->ds_layout = subpass_info->depthStencilAttachment.layout;

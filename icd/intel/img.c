@@ -184,8 +184,8 @@ ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
 void VKAPI vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
-    uint32_t*                                   pNumRequirements,
+    uint32_t*                                   pSparseMemoryRequirementCount,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
-    *pNumRequirements = 0;
+    *pSparseMemoryRequirementCount = 0;
 }

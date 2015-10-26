@@ -962,7 +962,7 @@ VkResult VKAPI vkCreateInstance(
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->extensionCount,
+                                   pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
         init_mem_tracker(my_data);
@@ -984,7 +984,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     my_device_data->wsi_enabled = false;
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             my_device_data->wsi_enabled = true;
     }
@@ -1137,14 +1137,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     printCBList(my_data, queue);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
-        for (uint32_t i = 0; i < submit->cmdBufferCount; i++) {
+        for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             pCBInfo = get_cmd_buf_info(my_data, submit->pCommandBuffers[i]);
             pCBInfo->fenceId = fenceId;
             pCBInfo->lastSubmittedFence = fence;
             pCBInfo->lastSubmittedQueue = queue;
         }
 
-        for (uint32_t i = 0; i < submit->waitSemCount; i++) {
+        for (uint32_t i = 0; i < submit->waitSemaphoreCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
@@ -1156,7 +1156,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
                 my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_WAIT;
             }
         }
-        for (uint32_t i = 0; i < submit->signalSemCount; i++) {
+        for (uint32_t i = 0; i < submit->signalSemaphoreCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
@@ -1179,7 +1179,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
-        for (uint32_t i = 0; i < submit->waitSemCount; i++) {
+        for (uint32_t i = 0; i < submit->waitSemaphoreCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {

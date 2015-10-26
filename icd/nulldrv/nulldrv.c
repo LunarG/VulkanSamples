@@ -135,7 +135,7 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
 
-        if (q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) {
+        if (q->queuePriorityCount == 1 && !dev->queues[q->queueFamilyIndex]) {
             ret = nulldrv_queue_create(dev, q->queueFamilyIndex,
                     &dev->queues[q->queueFamilyIndex]);
         }
@@ -196,7 +196,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    for (i = 0; i < info->extensionCount; i++) {
+    for (i = 0; i < info->enabledExtensionNameCount; i++) {
         const enum nulldrv_ext_type ext = nulldrv_gpu_lookup_extension(
                     gpu,
                     info->ppEnabledExtensionNames[i]);
@@ -487,7 +487,7 @@ static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
     struct nulldrv_cmd *cmd;
     uint32_t num_allocated = 0;
 
-    for (uint32_t i = 0; i < info->count; i++) {
+    for (uint32_t i = 0; i < info->bufferCount; i++) {
         cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
                 VK_OBJECT_TYPE_COMMAND_BUFFER);
         if (!cmd) {
@@ -666,11 +666,11 @@ ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
 ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     VkDevice                                  device,
     VkCmdPool                                 cmdPool,
-    uint32_t                                  count,
+    uint32_t                                  commandBufferCount,
     const VkCmdBuffer*                        pCmdBuffers)
 {
     NULLDRV_LOG_FUNC;
-    for (uint32_t i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < commandBufferCount; i++) {
         free(pCmdBuffers[i]);
     }
 }
@@ -1126,7 +1126,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipelineLayout                        layout,
     uint32_t                                firstSet,
-    uint32_t                                setCount,
+    uint32_t                                descriptorSetCount,
     const VkDescriptorSet*                  pDescriptorSets,
     uint32_t                                dynamicOffsetCount,
     const uint32_t*                         pDynamicOffsets)
@@ -1178,7 +1178,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
     NULLDRV_LOG_FUNC;
@@ -1188,7 +1188,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
     NULLDRV_LOG_FUNC;
@@ -1397,11 +1397,11 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
 
 ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                             gpu_,
-    uint32_t*                                    pCount,
+    uint32_t*                                    pQueueFamilyPropertyCount,
     VkQueueFamilyProperties*                     pProperties)
  {
     if (pProperties == NULL) {
-        *pCount = 1;
+        *pQueueFamilyPropertyCount = 1;
         return;
     }
     pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
@@ -1418,7 +1418,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
 
 ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
     // TODO: Fill in with real data
@@ -1427,26 +1427,26 @@ ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
 
 ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
     uint32_t copy_size;
 
     if (pProperties == NULL) {
-        *pCount = NULLDRV_EXT_COUNT;
+        *pPropertyCount = NULLDRV_EXT_COUNT;
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < NULLDRV_EXT_COUNT ? *pCount : NULLDRV_EXT_COUNT;
+    copy_size = *pPropertyCount < NULLDRV_EXT_COUNT ? *pPropertyCount : NULLDRV_EXT_COUNT;
     memcpy(pProperties, intel_gpu_exts, copy_size * sizeof(VkExtensionProperties));
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
     if (copy_size < NULLDRV_EXT_COUNT) {
         return VK_INCOMPLETE;
     }
     return VK_SUCCESS;
 }
 ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
     // TODO: Fill in with real data
@@ -1456,11 +1456,11 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
 VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
 
-    *pCount = 0;
+    *pPropertyCount = 0;
 
     return VK_SUCCESS;
 }
@@ -1661,7 +1661,7 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
 ICD_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
-    uint32_t*                                   pNumRequirements,
+    uint32_t*                                   pSparseMemoryRequirementCount,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
     NULLDRV_LOG_FUNC;
@@ -1674,7 +1674,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     uint32_t                                    samples,
     VkImageUsageFlags                           usage,
     VkImageTiling                               tiling,
-    uint32_t*                                   pNumProperties,
+    uint32_t*                                   pPropertyCount,
     VkSparseImageFormatProperties*              pProperties)
 {
     NULLDRV_LOG_FUNC;
@@ -1683,7 +1683,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
     NULLDRV_LOG_FUNC;
@@ -1693,7 +1693,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
     NULLDRV_LOG_FUNC;
@@ -1703,7 +1703,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
     NULLDRV_LOG_FUNC;
@@ -1755,7 +1755,7 @@ ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
 ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
-    uint32_t                                  count,
+    uint32_t                                  createInfoCount,
     const VkGraphicsPipelineCreateInfo*    pCreateInfo,
     VkPipeline*                               pPipeline)
 {
@@ -1771,7 +1771,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
 ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
-    uint32_t                                  count,
+    uint32_t                                  createInfoCount,
     const VkComputePipelineCreateInfo*     pCreateInfo,
     VkPipeline*                               pPipeline)
 {
@@ -2017,7 +2017,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < pAllocInfo->count; i++) {
+    for (i = 0; i < pAllocInfo->setLayoutCount; i++) {
         const struct nulldrv_desc_layout *layout =
             nulldrv_desc_layout(pAllocInfo->pSetLayouts[i]);
 
@@ -2033,7 +2033,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool,
-    uint32_t                                    count,
+    uint32_t                                    descriptorSetCount,
     const VkDescriptorSet*                      pDescriptorSets)
 {
     NULLDRV_LOG_FUNC;

@@ -1829,7 +1829,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
 
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->extensionCount,
+        data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
             pCreateInfo->ppEnabledExtensionNames);
 
         InitParamChecker(data);
@@ -2167,7 +2167,7 @@ bool PreQueueSubmit(
 
 bool PostQueueSubmit(
     VkQueue queue,
-    uint32_t cmdBufferCount,
+    uint32_t commandBufferCount,
     VkFence fence,
     VkResult result)
 {
@@ -4435,16 +4435,16 @@ bool PreCreateDescriptorSetLayout(
         "vkCreateDescriptorSetLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->pBinding != nullptr)
+    if(pCreateInfo->pBindings != nullptr)
     {
-    if(pCreateInfo->pBinding->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pBinding->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
+    if(pCreateInfo->pBindings->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pBindings->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBinding->descriptorType, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pBinding->pImmutableSamplers != nullptr)
+    if(pCreateInfo->pBindings->pImmutableSamplers != nullptr)
     {
     }
     }
@@ -4499,10 +4499,10 @@ bool PreCreateDescriptorPool(
         "vkCreateDescriptorPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->pTypeCount != nullptr)
+    if(pCreateInfo->pTypeCounts != nullptr)
     {
-    if(pCreateInfo->pTypeCount->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pTypeCount->type > VK_DESCRIPTOR_TYPE_END_RANGE)
+    if(pCreateInfo->pTypeCounts->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pTypeCounts->type > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is an unrecognized enumerator");
@@ -4623,7 +4623,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 
     VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
 
-    PostAllocDescriptorSets(device, pAllocInfo->descriptorPool, pAllocInfo->count, pDescriptorSets, result);
+    PostAllocDescriptorSets(device, pAllocInfo->descriptorPool, pAllocInfo->setLayoutCount, pDescriptorSets, result);
 
     return result;
 }

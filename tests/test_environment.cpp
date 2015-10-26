@@ -88,9 +88,9 @@ void Environment::SetUp()
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
     inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = instance_extension_names.size();
+    inst_info.enabledExtensionNameCount = instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
-    inst_info.layerCount = 0;
+    inst_info.enabledLayerNameCount = 0;
     inst_info.ppEnabledLayerNames = NULL;
     err = vkCreateInstance(&inst_info, &inst);
     ASSERT_EQ(VK_SUCCESS, err);

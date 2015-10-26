@@ -587,11 +587,11 @@ void  TestFrameworkVkPresent::Display()
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 1;
+    submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &presentCompleteSemaphore,
-    submit_info.cmdBufferCount = 1;
+    submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = cmdBufs;
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);
@@ -1031,11 +1031,11 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 0;
+    submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
-    submit_info.cmdBufferCount = 1;
+    submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = cmd_bufs;
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);

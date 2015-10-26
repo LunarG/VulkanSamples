@@ -209,8 +209,8 @@ VkResult intel_desc_region_alloc(struct intel_desc_region *region,
     uint32_t i;
 
     /* calculate sizes needed */
-    for (i = 0; i < info->count; i++) {
-        const VkDescriptorTypeCount *tc = &info->pTypeCount[i];
+    for (i = 0; i < info->typeCount; i++) {
+        const VkDescriptorTypeCount *tc = &info->pTypeCounts[i];
         struct intel_desc_offset size;
         VkResult ret;
 
@@ -218,8 +218,8 @@ VkResult intel_desc_region_alloc(struct intel_desc_region *region,
         if (ret != VK_SUCCESS)
             return ret;
 
-        surface_size += size.surface * tc->count;
-        sampler_size += size.sampler * tc->count;
+        surface_size += size.surface * tc->descriptorCount;
+        sampler_size += size.sampler * tc->descriptorCount;
     }
 
     surface_size *= max_sets;
@@ -562,16 +562,17 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->count, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            info->bindingCount, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
     if (!layout->bindings)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    memset(layout->bindings, 0, sizeof(layout->bindings[0]) * info->count);
-    layout->binding_count = info->count;
+    memset(layout->bindings, 0,
+            sizeof(layout->bindings[0]) * info->bindingCount);
+    layout->binding_count = info->bindingCount;
 
     /* initialize bindings */
-    for (i = 0; i < info->count; i++) {
-        const VkDescriptorSetLayoutBinding *lb = &info->pBinding[i];
+    for (i = 0; i < info->bindingCount; i++) {
+        const VkDescriptorSetLayoutBinding *lb = &info->pBindings[i];
         struct intel_desc_layout_binding *binding = &layout->bindings[i];
         struct intel_desc_offset size;
 
@@ -692,7 +693,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
                                       struct intel_pipeline_layout      **pipeline_layout_ret)
 {
     struct intel_pipeline_layout *pipeline_layout;
-    uint32_t count = pPipelineCreateInfo->descriptorSetCount;
+    uint32_t count = pPipelineCreateInfo->setLayoutCount;
     uint32_t i;
 
     pipeline_layout = (struct intel_pipeline_layout *) intel_base_create(
@@ -830,7 +831,7 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < pAllocInfo->count; i++) {
+    for (i = 0; i < pAllocInfo->setLayoutCount; i++) {
         const struct intel_desc_layout *layout =
             intel_desc_layout((VkDescriptorSetLayout) pAllocInfo->pSetLayouts[i]);
 
@@ -846,12 +847,12 @@ ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
 ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool,
-    uint32_t                                    count,
+    uint32_t                                    descriptorSetCount,
     const VkDescriptorSet*                      pDescriptorSets)
 {
     uint32_t i;
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < descriptorSetCount; i++) {
         intel_desc_set_destroy(
            *(struct intel_desc_set **) &pDescriptorSets[i]);
     }
@@ -878,7 +879,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
         switch (write->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
-            for (j = 0; j < write->count; j++) {
+            for (j = 0; j < write->descriptorCount; j++) {
                 const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_sampler *sampler =
                     intel_sampler(info->sampler);
@@ -905,7 +906,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                         NULL, &sampler_desc);
             }
 
-            for (j = 0; j < write->count; j++) {
+            for (j = 0; j < write->descriptorCount; j++) {
                 const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_img_view *img_view =
                     intel_img_view(info->imageView);
@@ -922,7 +923,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             break;
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-            for (j = 0; j < write->count; j++) {
+            for (j = 0; j < write->descriptorCount; j++) {
                 const VkDescriptorImageInfo *info = &write->pImageInfo[j];
                 const struct intel_img_view *img_view =
                     intel_img_view(info->imageView);
@@ -934,7 +935,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            for (j = 0; j < write->count; j++) {
+            for (j = 0; j < write->descriptorCount; j++) {
                 const struct intel_buf_view *buf_view =
                     intel_buf_view(write->pTexelBufferView[j]);
 
@@ -953,7 +954,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                 memset(&view_info, 0, sizeof(view_info));
                 view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 
-                for (j = 0; j < write->count; j++) {
+                for (j = 0; j < write->descriptorCount; j++) {
                     const VkDescriptorBufferInfo *info = &write->pBufferInfo[j];
                     struct intel_buf_view buf_view;
 

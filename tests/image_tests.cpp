@@ -98,9 +98,9 @@ protected:
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
         inst_info.pAllocCb = NULL;
-        inst_info.layerCount = 0;
+        inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
-        inst_info.extensionCount = 0;
+        inst_info.enabledExtensionNameCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, &this->inst);
         ASSERT_VK_SUCCESS(err);

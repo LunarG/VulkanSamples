@@ -77,10 +77,10 @@ VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo
                                        pSrcCreateInfo->pRequestedQueues[i].pQueuePriorities);
         }
 
-        if (pSrcCreateInfo->extensionCount > 0)
+        if (pSrcCreateInfo->enabledExtensionNameCount > 0)
         {
-            vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames, pSrcCreateInfo->extensionCount * sizeof(char *), pSrcCreateInfo->ppEnabledExtensionNames);
-            for (i = 0; i < pSrcCreateInfo->extensionCount; i++)
+            vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames, pSrcCreateInfo->enabledExtensionNameCount * sizeof(char *), pSrcCreateInfo->ppEnabledExtensionNames);
+            for (i = 0; i < pSrcCreateInfo->enabledExtensionNameCount; i++)
             {
                 vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->ppEnabledExtensionNames[i], strlen(pSrcCreateInfo->ppEnabledExtensionNames[i]) + 1, pSrcCreateInfo->ppEnabledExtensionNames[i]);
             }
@@ -89,11 +89,11 @@ VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo
         VkLayerCreateInfo **ppDstNext = ( VkLayerCreateInfo **) &pDestCreateInfo->pNext;
         while (pSrcNext != NULL)
         {
-            if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
+            if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->enabledLayerNameCount > 0)
             {
                 vktrace_vk_malloc_and_copy((void**)ppDstNext, sizeof(VkLayerCreateInfo), pSrcNext);
-                vktrace_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->layerCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
-                for (i = 0; i < pSrcNext->layerCount; i++)
+                vktrace_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames, pSrcNext->enabledLayerNameCount * sizeof(char*), pSrcNext->ppActiveLayerNames);
+                for (i = 0; i < pSrcNext->enabledLayerNameCount; i++)
                 {
                     vktrace_vk_malloc_and_copy((void**)&(*ppDstNext)->ppActiveLayerNames[i], strlen(pSrcNext->ppActiveLayerNames[i]) + 1, pSrcNext->ppActiveLayerNames[i]);
                 }
@@ -117,7 +117,7 @@ void vktrace_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
 
     if (pCreateInfo->ppEnabledExtensionNames != NULL)
     {
-        for (i = 0; i < pCreateInfo->extensionCount; i++)
+        for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++)
         {
             free((void*)pCreateInfo->ppEnabledExtensionNames[i]);
         }
@@ -128,9 +128,9 @@ void vktrace_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
     while (pSrcNext != NULL)
     {
         VkLayerCreateInfo* pTmp = (VkLayerCreateInfo*)pSrcNext->pNext;
-        if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->layerCount > 0)
+        if ((pSrcNext->sType == VK_STRUCTURE_TYPE_LAYER_CREATE_INFO) && pSrcNext->enabledLayerNameCount > 0)
         {
-            for (i = 0; i < pSrcNext->layerCount; i++)
+            for (i = 0; i < pSrcNext->enabledLayerNameCount; i++)
             {
                 free((void*)pSrcNext->ppActiveLayerNames[i]);
             }
@@ -617,10 +617,10 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeI
     nextTable.GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t commandBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence)
 {
     set_status(fence, VK_OBJECT_TYPE_FENCE, OBJSTATUS_FENCE_IS_SUBMITTED);
-    VkResult result = nextTable.QueueSubmit(queue, cmdBufferCount, pCmdBuffers, fence);
+    VkResult result = nextTable.QueueSubmit(queue, commandBufferCount, pCmdBuffers, fence);
     return result;
 }
 

@@ -274,8 +274,8 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
         qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         qi.pNext = NULL;
         qi.queueFamilyIndex = i;
-        qi.queueCount = queue_props[i].queueCount;
-        std::vector<float> queue_priorities (qi.queueCount, 0.0);
+        qi.queuePriorityCount = queue_props[i].queueCount;
+        std::vector<float> queue_priorities (qi.queuePriorityCount, 0.0);
         qi.pQueuePriorities = queue_priorities.data();
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;
@@ -288,9 +288,9 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     dev_info.pNext = NULL;
     dev_info.requestedQueueCount = queue_info.size();
     dev_info.pRequestedQueues = queue_info.data();
-    dev_info.layerCount = layers.size();
+    dev_info.enabledLayerNameCount = layers.size();
     dev_info.ppEnabledLayerNames = layers.data();
-    dev_info.extensionCount = extensions.size();
+    dev_info.enabledExtensionNameCount = extensions.size();
     dev_info.ppEnabledExtensionNames = extensions.data();
 
     init(dev_info);
@@ -398,11 +398,11 @@ void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 0;
+    submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
-    submit_info.cmdBufferCount = (uint32_t)cmd_handles.size();
+    submit_info.commandBufferCount = (uint32_t)cmd_handles.size();
     submit_info.pCommandBuffers = cmd_handles.data();
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     EXPECT(vkQueueSubmit(handle(), 1, &submit_info, fence.handle()) == VK_SUCCESS);
@@ -751,7 +751,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const
 
     VkDescriptorSetAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
-    alloc_info.count = layout_handles.size();
+    alloc_info.setLayoutCount = layout_handles.size();
     alloc_info.descriptorPool = handle();
     alloc_info.pSetLayouts = layout_handles.data();
     VkResult err = vkAllocDescriptorSets(device(), &alloc_info, set_handles.data());

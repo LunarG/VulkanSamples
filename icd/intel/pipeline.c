@@ -664,7 +664,7 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
          * to find the corresponding attribute record and then
          * set up the next HW vertex element based on that attribute.
          */
-        for (j = 0; j < info->vi.attributeCount; j++) {
+        for (j = 0; j < info->vi.vertexAttributeDescriptionCount; j++) {
             if (info->vi.pVertexAttributeDescriptions[j].location == i) {
                 attr = (VkVertexInputAttributeDescription *) &info->vi.pVertexAttributeDescriptions[j];
                 attrs_processed++;
@@ -1140,12 +1140,12 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
      *  to API-defined maxVertexInputBindings setting and then
      *  this check can be in DeviceLimits layer
      */
-    if (info->vi.bindingCount > ARRAY_SIZE(pipeline->vb) ||
-        info->vi.attributeCount > ARRAY_SIZE(pipeline->vb)) {
+    if (info->vi.vertexBindingDescriptionCount > ARRAY_SIZE(pipeline->vb) ||
+        info->vi.vertexAttributeDescriptionCount > ARRAY_SIZE(pipeline->vb)) {
         return VK_ERROR_VALIDATION_FAILED;
     }
 
-    pipeline->vb_count = info->vi.bindingCount;
+    pipeline->vb_count = info->vi.vertexBindingDescriptionCount;
     memcpy(pipeline->vb, info->vi.pVertexBindingDescriptions,
             sizeof(pipeline->vb[0]) * pipeline->vb_count);
 
@@ -1385,7 +1385,7 @@ ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
 ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
-    uint32_t                                  count,
+    uint32_t                                  createInfoCount,
     const VkGraphicsPipelineCreateInfo*       pCreateInfos,
     VkPipeline*                               pPipelines)
 {
@@ -1394,7 +1394,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkResult res = VK_SUCCESS;
     bool one_succeeded = false;
 
-    for (i = 0; i < count; i++) {
+    for (i = 0; i < createInfoCount; i++) {
         res =  graphics_pipeline_create(dev, &(pCreateInfos[i]),
             (struct intel_pipeline **) &(pPipelines[i]));
         //return NULL handle for unsuccessful creates
@@ -1413,7 +1413,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
 ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
-    uint32_t                                  count,
+    uint32_t                                  createInfoCount,
     const VkComputePipelineCreateInfo*        pCreateInfos,
     VkPipeline*                               pPipelines)
 {

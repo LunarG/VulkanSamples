@@ -104,9 +104,9 @@ protected:
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
         inst_info.pAllocCb = NULL;
-        inst_info.layerCount = 0;
+        inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
-        inst_info.extensionCount = 0;
+        inst_info.enabledExtensionNameCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
         err = vkCreateInstance(&inst_info, &inst);
         ASSERT_VK_SUCCESS(err);
@@ -507,7 +507,7 @@ void VkTest::CreateCommandBufferTest()
 
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
     info.cmdPool = cmdPool;
-    info.count = 1;
+    info.bufferCount = 1;
     info.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
     err = vkAllocCommandBuffers(device(), &info, &cmdBuffer);
     ASSERT_VK_SUCCESS(err) << "vkAllocCommandBuffers failed";

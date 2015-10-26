@@ -2262,7 +2262,7 @@ VkResult loader_enable_instance_layers(
     err = loader_add_layer_names_to_list(
                 inst,
                 &inst->activated_layer_list,
-                pCreateInfo->layerCount,
+                pCreateInfo->enabledLayerNameCount,
                 pCreateInfo->ppEnabledLayerNames,
                 instance_layers);
 
@@ -2398,7 +2398,7 @@ static VkResult loader_enable_device_layers(
     err = loader_add_layer_names_to_list(
                 inst,
                 &dev->activated_layer_list,
-                pCreateInfo->layerCount,
+                pCreateInfo->enabledLayerNameCount,
                 pCreateInfo->ppEnabledLayerNames,
                 device_layers);
 
@@ -2526,7 +2526,7 @@ VkResult loader_validate_instance_extensions(
     VkExtensionProperties *extension_prop;
     struct loader_layer_properties *layer_prop;
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         extension_prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
                                                 icd_exts);
 
@@ -2537,7 +2537,7 @@ VkResult loader_validate_instance_extensions(
         extension_prop = NULL;
 
         /* Not in global list, search layer extension lists */
-        for (uint32_t j = 0; j < pCreateInfo->layerCount; j++) {
+        for (uint32_t j = 0; j < pCreateInfo->enabledLayerNameCount; j++) {
             layer_prop = loader_get_layer_property(pCreateInfo->ppEnabledLayerNames[i],
                                             instance_layer);
             if (!layer_prop) {
@@ -2572,7 +2572,7 @@ VkResult loader_validate_device_extensions(
     VkExtensionProperties *extension_prop;
     struct loader_layer_properties *layer_prop;
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
         extension_prop = get_extension_property(extension_name,
                                                 &icd->device_extension_cache[gpu_index]);
@@ -2582,7 +2582,7 @@ VkResult loader_validate_device_extensions(
         }
 
         /* Not in global list, search layer extension lists */
-        for (uint32_t j = 0; j < pCreateInfo->layerCount; j++) {
+        for (uint32_t j = 0; j < pCreateInfo->enabledLayerNameCount; j++) {
             const char *layer_name = pCreateInfo->ppEnabledLayerNames[j];
             layer_prop = loader_get_layer_property(layer_name,
                                   device_layer);
@@ -2623,7 +2623,7 @@ VkResult VKAPI loader_CreateInstance(
     bool success;
 
     icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    icd_create_info.layerCount = 0;
+    icd_create_info.enabledLayerNameCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
     icd_create_info.pAllocCb = pCreateInfo->pAllocCb;
     icd_create_info.pAppInfo = pCreateInfo->pAppInfo;
@@ -2636,7 +2636,7 @@ VkResult VKAPI loader_CreateInstance(
      * library could support a layer, but it would be
      * independent of the actual ICD, just in the same library.
      */
-    filtered_extension_names = loader_stack_alloc(pCreateInfo->extensionCount * sizeof(char *));
+    filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionNameCount * sizeof(char *));
     if (!filtered_extension_names) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -2645,13 +2645,13 @@ VkResult VKAPI loader_CreateInstance(
     for (uint32_t i = 0; i < ptr_instance->icd_libs.count; i++) {
         icd = loader_icd_add(ptr_instance, &ptr_instance->icd_libs.list[i]);
         if (icd) {
-            icd_create_info.extensionCount = 0;
-            for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+            icd_create_info.enabledExtensionNameCount = 0;
+            for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
                 prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
                                               &ptr_instance->ext_list);
                 if (prop) {
-                    filtered_extension_names[icd_create_info.extensionCount] = (char *) pCreateInfo->ppEnabledExtensionNames[i];
-                    icd_create_info.extensionCount++;
+                    filtered_extension_names[icd_create_info.enabledExtensionNameCount] = (char *) pCreateInfo->ppEnabledExtensionNames[i];
+                    icd_create_info.enabledExtensionNameCount++;
                 }
             }
 
@@ -2846,14 +2846,14 @@ void VKAPI loader_GetPhysicalDeviceProperties(
 
 void VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
         VkPhysicalDevice                        gpu,
-        uint32_t*                               pCount,
+        uint32_t*                               pQueueFamilyPropertyCount,
         VkQueueFamilyProperties*                pProperties)
 {
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
 
     if (icd->GetPhysicalDeviceQueueFamilyProperties)
-        icd->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
+        icd->GetPhysicalDeviceQueueFamilyProperties(gpu, pQueueFamilyPropertyCount, pProperties);
 }
 
 void VKAPI loader_GetPhysicalDeviceMemoryProperties (
@@ -2949,8 +2949,8 @@ VkResult VKAPI loader_CreateDevice(
     }
 
     /* validate any app enabled layers are available */
-    if (pCreateInfo->layerCount > 0) {
-        res = loader_validate_layers(pCreateInfo->layerCount,
+    if (pCreateInfo->enabledLayerNameCount > 0) {
+        res = loader_validate_layers(pCreateInfo->enabledLayerNameCount,
                 pCreateInfo->ppEnabledLayerNames,
                 &inst->device_layer_list);
         if (res != VK_SUCCESS) {
@@ -2970,7 +2970,7 @@ VkResult VKAPI loader_CreateDevice(
      * library could support a layer, but it would be
      * independent of the actual ICD, just in the same library.
      */
-    filtered_extension_names = loader_stack_alloc(pCreateInfo->extensionCount * sizeof(char *));
+    filtered_extension_names = loader_stack_alloc(pCreateInfo->enabledExtensionNameCount * sizeof(char *));
     if (!filtered_extension_names) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -2979,19 +2979,19 @@ VkResult VKAPI loader_CreateDevice(
     memcpy(&device_create_info, pCreateInfo, sizeof(VkDeviceCreateInfo));
 
     /* ICD's do not use layers */
-    device_create_info.layerCount = 0;
+    device_create_info.enabledLayerNameCount = 0;
     device_create_info.ppEnabledLayerNames = NULL;
 
-    device_create_info.extensionCount = 0;
+    device_create_info.enabledExtensionNameCount = 0;
     device_create_info.ppEnabledExtensionNames = (const char * const *) filtered_extension_names;
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         const char *extension_name = pCreateInfo->ppEnabledExtensionNames[i];
         VkExtensionProperties *prop = get_extension_property(extension_name,
                                       &icd->device_extension_cache[gpu_index]);
         if (prop) {
-            filtered_extension_names[device_create_info.extensionCount] = (char *) extension_name;
-            device_create_info.extensionCount++;
+            filtered_extension_names[device_create_info.enabledExtensionNameCount] = (char *) extension_name;
+            device_create_info.enabledExtensionNameCount++;
         }
     }
 
@@ -3126,7 +3126,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, cons
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
     struct loader_extension_list *global_ext_list=NULL;
@@ -3166,19 +3166,19 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     }
 
     if (pProperties == NULL) {
-	*pCount = global_ext_list->count;
+	*pPropertyCount = global_ext_list->count;
 	loader_destroy_layer_list(NULL, &instance_layers);
         loader_destroy_ext_list(NULL, &icd_extensions);
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < global_ext_list->count ? *pCount : global_ext_list->count;
+    copy_size = *pPropertyCount < global_ext_list->count ? *pPropertyCount : global_ext_list->count;
     for (uint32_t i = 0; i < copy_size; i++) {
         memcpy(&pProperties[i],
                &global_ext_list->list[i],
                sizeof(VkExtensionProperties));
     }
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
     loader_destroy_ext_list(NULL, &icd_extensions);
 
     if (copy_size < global_ext_list->count) {
@@ -3191,7 +3191,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
 {
 
@@ -3207,16 +3207,16 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     loader_layer_scan(NULL, &instance_layer_list, NULL);
 
     if (pProperties == NULL) {
-        *pCount = instance_layer_list.count;
+        *pPropertyCount = instance_layer_list.count;
         loader_destroy_layer_list(NULL, &instance_layer_list);
         return VK_SUCCESS;
     }
 
-    copy_size = (*pCount < instance_layer_list.count) ? *pCount : instance_layer_list.count;
+    copy_size = (*pPropertyCount < instance_layer_list.count) ? *pPropertyCount : instance_layer_list.count;
     for (uint32_t i = 0; i < copy_size; i++) {
         memcpy(&pProperties[i], &instance_layer_list.list[i].info, sizeof(VkLayerProperties));
     }
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
     loader_destroy_layer_list(NULL, &instance_layer_list);
 
     if (copy_size < instance_layer_list.count) {
@@ -3229,7 +3229,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
 VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
         VkPhysicalDevice                        gpu,
         const char*                             pLayerName,
-        uint32_t*                               pCount,
+        uint32_t*                               pPropertyCount,
         VkExtensionProperties*                  pProperties)
 {
     uint32_t gpu_index;
@@ -3254,17 +3254,17 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
 
     count = (dev_ext_list == NULL) ? 0: dev_ext_list->count;
     if (pProperties == NULL) {
-        *pCount = count;
+        *pPropertyCount = count;
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < count ? *pCount : count;
+    copy_size = *pPropertyCount < count ? *pPropertyCount : count;
     for (uint32_t i = 0; i < copy_size; i++) {
         memcpy(&pProperties[i],
                &dev_ext_list->list[i],
                sizeof(VkExtensionProperties));
     }
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
 
     if (copy_size < count) {
         return VK_INCOMPLETE;
@@ -3275,7 +3275,7 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
 
 VkResult VKAPI loader_EnumerateDeviceLayerProperties(
         VkPhysicalDevice                        gpu,
-        uint32_t*                               pCount,
+        uint32_t*                               pPropertyCount,
         VkLayerProperties*                      pProperties)
 {
     uint32_t copy_size;
@@ -3285,15 +3285,15 @@ VkResult VKAPI loader_EnumerateDeviceLayerProperties(
     uint32_t count = icd->this_instance->device_layer_list.count;
 
     if (pProperties == NULL) {
-        *pCount = count;
+        *pPropertyCount = count;
         return VK_SUCCESS;
     }
 
-    copy_size = (*pCount < count) ? *pCount : count;
+    copy_size = (*pPropertyCount < count) ? *pPropertyCount : count;
     for (uint32_t i = 0; i < copy_size; i++) {
         memcpy(&pProperties[i], &(icd->this_instance->device_layer_list.list[i].info), sizeof(VkLayerProperties));
     }
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
 
     if (copy_size < count) {
         return VK_INCOMPLETE;

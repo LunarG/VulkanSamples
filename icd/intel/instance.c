@@ -170,8 +170,10 @@ static VkResult intel_instance_create(
 
     instance->icd = icd;
 
-    for (i = 0; i < info->extensionCount; i++) {
-        const enum intel_global_ext_type ext = intel_gpu_lookup_global_extension(info->ppEnabledExtensionNames[i]);
+    for (i = 0; i < info->enabledExtensionNameCount; i++) {
+        const enum intel_global_ext_type ext =
+            intel_gpu_lookup_global_extension(
+                    info->ppEnabledExtensionNames[i]);
 
         if (ext != INTEL_GLOBAL_EXT_INVALID) {
             instance->global_exts[ext] = true;
@@ -189,7 +191,7 @@ static VkResult intel_instance_create(
     /*
      * This ICD does not support any layers.
      */
-    if (info->layerCount > 0) {
+    if (info->enabledLayerNameCount > 0) {
         icd_instance_destroy(icd);
         intel_instance_destroy(instance);
         return VK_ERROR_LAYER_NOT_PRESENT;
@@ -232,19 +234,19 @@ ICD_EXPORT void VKAPI vkDestroyInstance(
 
 ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
         const char*                                 pLayerName,
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkExtensionProperties*                      pProperties)
 {
     uint32_t copy_size;
 
     if (pProperties == NULL) {
-        *pCount = INTEL_GLOBAL_EXT_COUNT;
+        *pPropertyCount = INTEL_GLOBAL_EXT_COUNT;
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < INTEL_GLOBAL_EXT_COUNT ? *pCount : INTEL_GLOBAL_EXT_COUNT;
+    copy_size = *pPropertyCount < INTEL_GLOBAL_EXT_COUNT ? *pPropertyCount : INTEL_GLOBAL_EXT_COUNT;
     memcpy(pProperties, intel_global_exts, copy_size * sizeof(VkExtensionProperties));
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
     if (copy_size < INTEL_GLOBAL_EXT_COUNT) {
         return VK_INCOMPLETE;
     }
@@ -253,10 +255,10 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
 }
 
 ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
-    *pCount = 0;
+    *pPropertyCount = 0;
     return VK_SUCCESS;
 }
 

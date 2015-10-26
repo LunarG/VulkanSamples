@@ -171,12 +171,14 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         size = sizeof(*src);
         dbg->create_info_size = size;
 
-        size += sizeof(src->pRequestedQueues[0]) * src->requestedQueueCount;
+        size += sizeof(src->pRequestedQueues[0]) *
+            src->requestedQueueCount;
         for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
-            size += src->pRequestedQueues[i].queueCount * sizeof(float);
+            size += src->pRequestedQueues[i].queuePriorityCount * sizeof(float);
         }
-        size += sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
-        for (uint32_t i = 0; i < src->extensionCount; i++) {
+        size += sizeof(src->ppEnabledExtensionNames[0]) *
+            src->enabledExtensionNameCount;
+        for (uint32_t i = 0; i < src->enabledExtensionNameCount; i++) {
             size += strlen(src->ppEnabledExtensionNames[i]) + 1;
         }
 
@@ -194,17 +196,19 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         dst->pRequestedQueues = (const VkDeviceQueueCreateInfo *) d;
         d += size;
         for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
-            size = sizeof(float) * dst->pRequestedQueues[i].queueCount;
+            size = sizeof(float) *
+                dst->pRequestedQueues[i].queuePriorityCount;
             memcpy(d, src->pRequestedQueues[i].pQueuePriorities, size);
             *((float **) &dst->pRequestedQueues[i].pQueuePriorities) = (float *) d;
             d += size;
         }
 
-        size = sizeof(src->ppEnabledExtensionNames[0]) * src->extensionCount;
+        size = sizeof(src->ppEnabledExtensionNames[0]) *
+            src->enabledExtensionNameCount;
         dst->ppEnabledExtensionNames = (const char **) d;
         memcpy(d, src->ppEnabledExtensionNames, size);
         d += size;
-        for (uint32_t i = 0; i < src->extensionCount; i++) {
+        for (uint32_t i = 0; i < src->enabledExtensionNameCount; i++) {
             char **ptr = (char **) &dst->ppEnabledExtensionNames[i];
             strcpy((char *) d, src->ppEnabledExtensionNames[i]);
             *ptr = (char *) d;
@@ -359,7 +363,7 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
     assert(0 && "vkQueueBindSparseBufferMemory not supported");
@@ -369,7 +373,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
     assert(0 && "vkQueueBindSparseImageOpaqueMemory not supported");
@@ -380,7 +384,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
 ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    uint32_t                                    numBindings,
+    uint32_t                                    bindInfoCount,
     const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
     assert(0 && "vkQueueBindSparseImageMemory not supported");

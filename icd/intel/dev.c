@@ -76,7 +76,7 @@ static VkResult dev_create_queues(struct intel_dev *dev,
         VkResult ret = VK_SUCCESS;
 
         assert((q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
-            q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
+            q->queuePriorityCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
         /* Help catch places where we forgot to initialize pQueuePriorities */
         assert(q->pQueuePriorities);
         ret = intel_queue_create(dev, q->queueFamilyIndex,
@@ -112,9 +112,10 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    for (i = 0; i < info->extensionCount; i++) {
-        const enum intel_phy_dev_ext_type ext = intel_gpu_lookup_phy_dev_extension(gpu,
-                info->ppEnabledExtensionNames[i]);
+    for (i = 0; i < info->enabledExtensionNameCount; i++) {
+        const enum intel_phy_dev_ext_type ext =
+            intel_gpu_lookup_phy_dev_extension(gpu,
+                    info->ppEnabledExtensionNames[i]);
 
         if (ext != INTEL_PHY_DEV_EXT_INVALID)
             dev->phy_dev_exts[ext] = true;

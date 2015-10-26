@@ -69,7 +69,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     }
 
     /* Due to implicit layers need to get layer list even if
-     * layerCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
+     * enabledLayerNameCount == 0 and VK_INSTANCE_LAYERS is unset. For now always
      * get layer list (both instance and device) via loader_layer_scan(). */
     memset(&ptr_instance->instance_layer_list, 0, sizeof(ptr_instance->instance_layer_list));
     memset(&ptr_instance->device_layer_list, 0, sizeof(ptr_instance->device_layer_list));
@@ -80,8 +80,8 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
                       &ptr_instance->device_layer_list);
 
     /* validate the app requested layers to be enabled */
-    if (pCreateInfo->layerCount > 0) {
-        res = loader_validate_layers(pCreateInfo->layerCount,
+    if (pCreateInfo->enabledLayerNameCount > 0) {
+        res = loader_validate_layers(pCreateInfo->enabledLayerNameCount,
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
@@ -255,13 +255,13 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
 
 LOADER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
                                             VkPhysicalDevice gpu,
-                                            uint32_t* pCount,
+                                            uint32_t* pQueueFamilyPropertyCount,
                                             VkQueueFamilyProperties* pQueueProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
     disp = loader_get_instance_dispatch(gpu);
-    disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pQueueProperties);
+    disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pQueueFamilyPropertyCount, pQueueProperties);
 }
 
 LOADER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
@@ -306,28 +306,28 @@ LOADER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
     //TODO convert over to using instance chain dispatch
-    res = loader_EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pCount, pProperties);
+    res = loader_EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pPropertyCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
 {
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
     //TODO convert over to using instance chain dispatch
-    res = loader_EnumerateDeviceLayerProperties(physicalDevice, pCount, pProperties);
+    res = loader_EnumerateDeviceLayerProperties(physicalDevice, pPropertyCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
@@ -468,49 +468,49 @@ LOADER_EXPORT void VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage i
     disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-LOADER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
+LOADER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pSparseMemoryRequirementCount, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    disp->GetImageSparseMemoryRequirements(device, image, pNumRequirements, pSparseMemoryRequirements);
+    disp->GetImageSparseMemoryRequirements(device, image, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
+LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
     disp = loader_get_instance_dispatch(physicalDevice);
 
-    disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
+    disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pPropertyCount, pProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseBufferMemory(queue, buffer, numBindings, pBindInfo);
+    return disp->QueueBindSparseBufferMemory(queue, buffer, bindInfoCount, pBindInfo);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseMemoryBindInfo* pBindInfo)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
+    return disp->QueueBindSparseImageOpaqueMemory(queue, image, bindInfoCount, pBindInfo);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t numBindings, const VkSparseImageMemoryBindInfo* pBindInfo)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseImageMemoryBindInfo* pBindInfo)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseImageMemory(queue, image, numBindings, pBindInfo);
+    return disp->QueueBindSparseImageMemory(queue, image, bindInfoCount, pBindInfo);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence)
@@ -801,22 +801,22 @@ LOADER_EXPORT VkResult VKAPI vkMergePipelineCaches(VkDevice device, VkPipelineCa
     return disp->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
+LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    return disp->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pPipelines);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
+LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    return disp->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pPipelines);
 }
 
 LOADER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
@@ -920,13 +920,13 @@ LOADER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, const VkDesc
     return disp->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
 }
 
-LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    return disp->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    return disp->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 }
 
 LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
@@ -1022,7 +1022,7 @@ LOADER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
 
     res = disp->AllocCommandBuffers(device, pAllocInfo, pCmdBuffers);
     if (res == VK_SUCCESS) {
-        for (uint32_t i =0; i < pAllocInfo->count; i++) {
+        for (uint32_t i =0; i < pAllocInfo->bufferCount; i++) {
             if (pCmdBuffers[i]) {
                 loader_init_dispatch(pCmdBuffers[i], disp);
             }
@@ -1035,14 +1035,14 @@ LOADER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
 LOADER_EXPORT void VKAPI vkFreeCommandBuffers(
         VkDevice                                device,
         VkCmdPool                               cmdPool,
-        uint32_t                                count,
+        uint32_t                                commandBufferCount,
         const VkCmdBuffer*                      pCommandBuffers)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    disp->FreeCommandBuffers(device, cmdPool, count, pCommandBuffers);
+    disp->FreeCommandBuffers(device, cmdPool, commandBufferCount, pCommandBuffers);
 }
 
 LOADER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo)
@@ -1162,13 +1162,13 @@ LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCmdBuffer cmdBuffer, VkStenc
     disp->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
+LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+    disp->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
@@ -1207,22 +1207,22 @@ LOADER_EXPORT void VKAPI vkCmdDrawIndexed(VkCmdBuffer cmdBuffer, uint32_t indexC
     disp->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
+LOADER_EXPORT void VKAPI vkCmdDrawIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    disp->CmdDrawIndirect(cmdBuffer, buffer, offset, drawCount, stride);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
+LOADER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    disp->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, drawCount, stride);
 }
 
 LOADER_EXPORT void VKAPI vkCmdDispatch(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z)

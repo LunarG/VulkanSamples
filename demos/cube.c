@@ -442,11 +442,11 @@ static void demo_flush_init_cmd(struct demo *demo)
     VkSubmitInfo submit_info = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = NULL,
-        .waitSemCount = 0,
+        .waitSemaphoreCount = 0,
         .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
+        .commandBufferCount = 1,
         .pCommandBuffers = cmd_bufs,
-        .signalSemCount = 0,
+        .signalSemaphoreCount = 0,
         .pSignalSemaphores = NULL
     };
 
@@ -475,7 +475,7 @@ static void demo_set_image_layout(
             .pNext = NULL,
             .cmdPool = demo->cmd_pool,
             .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
-            .count = 1,
+            .bufferCount = 1,
         };
 
         err = vkAllocCommandBuffers(demo->device, &cmd, &demo->cmd);
@@ -676,11 +676,11 @@ static void demo_draw(struct demo *demo)
     VkSubmitInfo submit_info = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = NULL,
-        .waitSemCount = 1,
+        .waitSemaphoreCount = 1,
         .pWaitSemaphores = &presentCompleteSemaphore,
-        .cmdBufferCount = 1,
+        .commandBufferCount = 1,
         .pCommandBuffers = &demo->buffers[demo->current_buffer].cmd,
-        .signalSemCount = 0,
+        .signalSemaphoreCount = 0,
         .pSignalSemaphores = NULL
     };
 
@@ -1301,8 +1301,8 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     const VkDescriptorSetLayoutCreateInfo descriptor_layout = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = NULL,
-        .count = 2,
-        .pBinding = layout_bindings,
+        .bindingCount = 2,
+        .pBindings = layout_bindings,
     };
     VkResult U_ASSERT_ONLY err;
 
@@ -1313,7 +1313,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     const VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {
         .sType              = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .pNext              = NULL,
-        .descriptorSetCount = 1,
+        .setLayoutCount = 1,
         .pSetLayouts        = &demo->desc_layout,
     };
 
@@ -1360,16 +1360,16 @@ static void demo_prepare_render_pass(struct demo *demo)
         .pNext = NULL,
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .flags = 0,
-        .inputCount = 0,
+        .inputAttachmentCount = 0,
         .pInputAttachments = NULL,
-        .colorCount = 1,
+        .colorAttachmentCount = 1,
         .pColorAttachments = &color_reference,
         .pResolveAttachments = NULL,
         .depthStencilAttachment = {
             .attachment = 1,
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         },
-        .preserveCount = 0,
+        .preserveAttachmentCount = 0,
         .pPreserveAttachments = NULL,
     };
     const VkRenderPassCreateInfo rp_info = {
@@ -1666,19 +1666,19 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
     const VkDescriptorTypeCount type_counts[2] = {
         [0] = {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .count = 1,
+            .descriptorCount = 1,
         },
         [1] = {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .count = DEMO_TEXTURE_COUNT,
+            .descriptorCount = DEMO_TEXTURE_COUNT,
         },
     };
     const VkDescriptorPoolCreateInfo descriptor_pool = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
         .maxSets = 1,
-        .count = 2,
-        .pTypeCount = type_counts,
+        .typeCount = 2,
+        .pTypeCounts = type_counts,
     };
     VkResult U_ASSERT_ONLY err;
 
@@ -1698,7 +1698,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
         .pNext = NULL,
         .descriptorPool = demo->desc_pool,
-        .count = 1,
+        .setLayoutCount = 1,
         .pSetLayouts = &demo->desc_layout
     };
     err = vkAllocDescriptorSets(demo->device, &alloc_info, &demo->desc_set);
@@ -1715,14 +1715,14 @@ static void demo_prepare_descriptor_set(struct demo *demo)
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].destSet = demo->desc_set;
-    writes[0].count = 1;
+    writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &demo->uniform_data.buffer_info;
 
     writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[1].destSet = demo->desc_set;
     writes[1].destBinding = 1;
-    writes[1].count = DEMO_TEXTURE_COUNT;
+    writes[1].descriptorCount = DEMO_TEXTURE_COUNT;
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     writes[1].pImageInfo = tex_descs;
 
@@ -1775,7 +1775,7 @@ static void demo_prepare(struct demo *demo)
         .pNext = NULL,
         .cmdPool = demo->cmd_pool,
         .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
-        .count = 1,
+        .bufferCount = 1,
     };
 
     demo_prepare_buffers(demo);
@@ -2269,9 +2269,9 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .pAppInfo = &app,
         .pAllocCb = NULL,
-        .layerCount = enabled_layer_count,
+        .enabledLayerNameCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? instance_validation_layers : NULL),
-        .extensionCount = enabled_extension_count,
+        .enabledExtensionNameCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
     };
 
@@ -2428,7 +2428,7 @@ static void demo_init_vk(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = gfx_queue_idx,
-        .queueCount = 1,
+        .queuePriorityCount = 1,
         .pQueuePriorities = queue_priorities
     };
 
@@ -2437,9 +2437,9 @@ static void demo_init_vk(struct demo *demo)
         .pNext = NULL,
         .requestedQueueCount = 1,
         .pRequestedQueues = &queue,
-        .layerCount = enabled_layer_count,
+        .enabledLayerNameCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
-        .extensionCount = enabled_extension_count,
+        .enabledExtensionNameCount = enabled_extension_count,
         .ppEnabledExtensionNames = (const char *const*) extension_names,
         .pEnabledFeatures = NULL, // If specific features are required, pass them in here
     };

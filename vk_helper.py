@@ -252,6 +252,11 @@ class HeaderFileParser:
             if 'const' in full_type and '*' in full_type:
                 if name.endswith('s') or self.last_struct_count_name.lower().replace('count', '') in name.lower():
                     return True
+
+                # VkWriteDescriptorSet
+                if self.last_struct_count_name == "descriptorCount":
+                    return True
+
         return False
 
     # populate struct dicts based on struct lines

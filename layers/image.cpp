@@ -119,7 +119,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
-        my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->extensionCount,
+        my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
             pCreateInfo->ppEnabledExtensionNames);
 
         InitImage(my_data);

@@ -115,7 +115,7 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
     VkDeviceCreateInfo info = {};
     info.requestedQueueCount = 1;
     info.pRequestedQueues = &dqci;
-    info.extensionCount = static_cast <uint32_t> (m_extensions.size());
+    info.enabledExtensionNameCount = static_cast <uint32_t> (m_extensions.size());
     info.ppEnabledExtensionNames = extNames;
     info.flags = VK_DEVICE_CREATE_VALIDATION;
     info.maxValidationLevel = VK_VALIDATION_LEVEL_4;

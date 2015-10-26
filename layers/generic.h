@@ -86,7 +86,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
 
     deviceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
 
@@ -100,7 +100,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
     instanceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
 

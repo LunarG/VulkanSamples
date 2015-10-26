@@ -248,11 +248,11 @@ static void writePPM( const char *filename, VkImage image1)
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
-    submit_info.waitSemCount = 0;
+    submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
-    submit_info.cmdBufferCount = 1;
+    submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &cmdBuffer;
-    submit_info.signalSemCount = 0;
+    submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
     err = pTableQueue->QueueSubmit(queue, 1, &submit_info, nullFence);
@@ -327,7 +327,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     deviceExtMap[pDisp].wsi_enabled = false;
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
     }

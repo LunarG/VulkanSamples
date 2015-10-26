@@ -247,7 +247,7 @@ core = Extension(
 
         Proto("void", "GetPhysicalDeviceQueueFamilyProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t*", "pCount"),
+             Param("uint32_t*", "pQueueFamilyPropertyCount"),
              Param("VkQueueFamilyProperties*", "pQueueFamilyProperties")]),
 
         Proto("void", "GetPhysicalDeviceMemoryProperties",
@@ -272,22 +272,22 @@ core = Extension(
 
         Proto("VkResult", "EnumerateInstanceExtensionProperties",
             [Param("const char*", "pLayerName"),
-             Param("uint32_t*", "pCount"),
+             Param("uint32_t*", "pPropertyCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
         Proto("VkResult", "EnumerateDeviceExtensionProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("const char*", "pLayerName"),
-             Param("uint32_t*", "pCount"),
+             Param("uint32_t*", "pPropertyCount"),
              Param("VkExtensionProperties*", "pProperties")]),
 
         Proto("VkResult", "EnumerateInstanceLayerProperties",
-            [Param("uint32_t*", "pCount"),
+            [Param("uint32_t*", "pPropertyCount"),
              Param("VkLayerProperties*", "pProperties")]),
 
         Proto("VkResult", "EnumerateDeviceLayerProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t*", "pCount"),
+             Param("uint32_t*", "pPropertyCount"),
              Param("VkLayerProperties*", "pProperties")]),
 
         Proto("void", "GetDeviceQueue",
@@ -369,7 +369,7 @@ core = Extension(
         Proto("void", "GetImageSparseMemoryRequirements",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
-             Param("uint32_t*", "pNumRequirements"),
+             Param("uint32_t*", "pSparseMemoryRequirementCount"),
              Param("VkSparseImageMemoryRequirements*", "pSparseMemoryRequirements")]),
 
         Proto("void", "GetPhysicalDeviceSparseImageFormatProperties",
@@ -379,25 +379,25 @@ core = Extension(
              Param("uint32_t", "samples"),
              Param("VkImageUsageFlags", "usage"),
              Param("VkImageTiling", "tiling"),
-             Param("uint32_t*", "pNumProperties"),
+             Param("uint32_t*", "pPropertyCount"),
              Param("VkSparseImageFormatProperties*", "pProperties")]),
 
         Proto("VkResult", "QueueBindSparseBufferMemory",
             [Param("VkQueue", "queue"),
              Param("VkBuffer", "buffer"),
-             Param("uint32_t", "numBindings"),
+             Param("uint32_t", "bindInfoCount"),
              Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "QueueBindSparseImageOpaqueMemory",
             [Param("VkQueue", "queue"),
              Param("VkImage", "image"),
-             Param("uint32_t", "numBindings"),
+             Param("uint32_t", "bindInfoCount"),
              Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "QueueBindSparseImageMemory",
             [Param("VkQueue", "queue"),
              Param("VkImage", "image"),
-             Param("uint32_t", "numBindings"),
+             Param("uint32_t", "bindInfoCount"),
              Param("const VkSparseImageMemoryBindInfo*", "pBindInfo")]),
 
         Proto("VkResult", "CreateFence",
@@ -558,14 +558,14 @@ core = Extension(
         Proto("VkResult", "CreateGraphicsPipelines",
             [Param("VkDevice", "device"),
              Param("VkPipelineCache", "pipelineCache"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "createInfoCount"),
              Param("const VkGraphicsPipelineCreateInfo*", "pCreateInfos"),
              Param("VkPipeline*", "pPipelines")]),
 
         Proto("VkResult", "CreateComputePipelines",
             [Param("VkDevice", "device"),
              Param("VkPipelineCache", "pipelineCache"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "createInfoCount"),
              Param("const VkComputePipelineCreateInfo*", "pCreateInfos"),
              Param("VkPipeline*", "pPipelines")]),
 
@@ -622,7 +622,7 @@ core = Extension(
         Proto("VkResult", "FreeDescriptorSets",
             [Param("VkDevice", "device"),
              Param("VkDescriptorPool", "descriptorPool"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "descriptorSetCount"),
              Param("const VkDescriptorSet*", "pDescriptorSets")]),
 
         Proto("void", "UpdateDescriptorSets",
@@ -677,7 +677,7 @@ core = Extension(
         Proto("void", "FreeCommandBuffers",
             [Param("VkDevice", "device"),
              Param("VkCmdPool", "cmdPool"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "commandBufferCount"),
              Param("const VkCmdBuffer*", "pCommandBuffers")]),
 
         Proto("VkResult", "BeginCommandBuffer",
@@ -745,7 +745,7 @@ core = Extension(
              Param("VkPipelineBindPoint", "pipelineBindPoint"),
              Param("VkPipelineLayout", "layout"),
              Param("uint32_t", "firstSet"),
-             Param("uint32_t", "setCount"),
+             Param("uint32_t", "descriptorSetCount"),
              Param("const VkDescriptorSet*", "pDescriptorSets"),
              Param("uint32_t", "dynamicOffsetCount"),
              Param("const uint32_t*", "pDynamicOffsets")]),
@@ -782,14 +782,14 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkBuffer", "buffer"),
              Param("VkDeviceSize", "offset"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "drawCount"),
              Param("uint32_t", "stride")]),
 
         Proto("void", "CmdDrawIndexedIndirect",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkBuffer", "buffer"),
              Param("VkDeviceSize", "offset"),
-             Param("uint32_t", "count"),
+             Param("uint32_t", "drawCount"),
              Param("uint32_t", "stride")]),
 
         Proto("void", "CmdDispatch",

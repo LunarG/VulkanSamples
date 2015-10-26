@@ -111,8 +111,8 @@ struct render_pass {
             std::vector<VkFormat> color_formats;
             uint32_t j;
 
-            color_formats.reserve(subpass->colorCount);
-            for (j = 0; j < subpass->colorCount; j++) {
+            color_formats.reserve(subpass->colorAttachmentCount);
+            for (j = 0; j < subpass->colorAttachmentCount; j++) {
                 const uint32_t att = subpass->pColorAttachments[j].attachment;
                 const VkFormat format = pCreateInfo->pAttachments[att].format;
 
@@ -148,7 +148,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
         loader_platform_thread_lock_mutex(&globalLock);
         auto& bindings = my_data->descriptor_set_layout_map[*pSetLayout];
         bindings = new std::vector<VkDescriptorSetLayoutBinding>(
-                pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->count);
+                pCreateInfo->pBindings, pCreateInfo->pBindings + pCreateInfo->bindingCount);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -167,8 +167,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
         loader_platform_thread_lock_mutex(&globalLock);
         auto& layouts = my_data->pipeline_layout_map[*pPipelineLayout];
         layouts = new std::vector<std::vector<VkDescriptorSetLayoutBinding>*>();
-        layouts->reserve(pCreateInfo->descriptorSetCount);
-        for (unsigned i = 0; i < pCreateInfo->descriptorSetCount; i++) {
+        layouts->reserve(pCreateInfo->setLayoutCount);
+        for (unsigned i = 0; i < pCreateInfo->setLayoutCount; i++) {
             layouts->push_back(my_data->descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
         }
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -810,7 +810,7 @@ validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInput
     std::unordered_map<uint32_t, VkVertexInputBindingDescription const *> bindings;
     bool pass = true;
 
-    for (unsigned i = 0; i < vi->bindingCount; i++) {
+    for (unsigned i = 0; i < vi->vertexBindingDescriptionCount; i++) {
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto & binding = bindings[desc->binding];
         if (binding) {
@@ -843,7 +843,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
     if (vi) {
-        for (unsigned i = 0; i < vi->attributeCount; i++)
+        for (unsigned i = 0; i < vi->vertexAttributeDescriptionCount; i++)
             attribs[vi->pVertexAttributeDescriptions[i].location] = &vi->pVertexAttributeDescriptions[i];
     }
 
@@ -1184,7 +1184,7 @@ VkResult VKAPI vkCreateInstance(
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->extensionCount,
+                                   pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
         init_shader_checker(my_data);

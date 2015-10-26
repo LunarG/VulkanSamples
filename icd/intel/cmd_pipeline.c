@@ -3662,7 +3662,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipelineLayout                        layout,
     uint32_t                                firstSet,
-    uint32_t                                setCount,
+    uint32_t                                descriptorSetCount,
     const VkDescriptorSet*                  pDescriptorSets,
     uint32_t                                dynamicOffsetCount,
     const uint32_t*                         pDynamicOffsets)
@@ -3687,7 +3687,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
         break;
     }
 
-    for (i = 0; i < setCount; i++) {
+    for (i = 0; i < descriptorSetCount; i++) {
         struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);
 
         offset_count += pipeline_layout->layouts[firstSet + i]->dynamic_desc_count;
@@ -3758,7 +3758,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
     assert(0 && "vkCmdDrawIndirect not implemented");
@@ -3768,7 +3768,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
     assert(0 && "vkCmdDrawIndexedIndirect not implemented");

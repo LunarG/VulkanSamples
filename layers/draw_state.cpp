@@ -492,13 +492,13 @@ static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelin
         memcpy((void*)&pPipeline->vertexInputCI, pCreateInfo->pVertexInputState , sizeof(VkPipelineVertexInputStateCreateInfo));
         // Copy embedded ptrs
         pVICI = pCreateInfo->pVertexInputState;
-        pPipeline->vtxBindingCount = pVICI->bindingCount;
+        pPipeline->vtxBindingCount = pVICI->vertexBindingDescriptionCount;
         if (pPipeline->vtxBindingCount) {
             pPipeline->pVertexBindingDescriptions = new VkVertexInputBindingDescription[pPipeline->vtxBindingCount];
             bufferSize = pPipeline->vtxBindingCount * sizeof(VkVertexInputBindingDescription);
             memcpy((void*)pPipeline->pVertexBindingDescriptions, pVICI->pVertexBindingDescriptions, bufferSize);
         }
-        pPipeline->vtxAttributeCount = pVICI->attributeCount;
+        pPipeline->vtxAttributeCount = pVICI->vertexAttributeDescriptionCount;
         if (pPipeline->vtxAttributeCount) {
             pPipeline->pVertexAttributeDescriptions = new VkVertexInputAttributeDescription[pPipeline->vtxAttributeCount];
             bufferSize = pPipeline->vtxAttributeCount * sizeof(VkVertexInputAttributeDescription);
@@ -600,7 +600,7 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
             int subpassNumSamples = 0;
             uint32_t i;
 
-            for (i = 0; i < pSD->colorCount; i++) {
+            for (i = 0; i < pSD->colorAttachmentCount; i++) {
                 uint32_t samples;
 
                 if (pSD->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
@@ -692,10 +692,10 @@ static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->count;
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->descriptorCount;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->descriptorCount;
     }
 }
 // For given Layout Node and binding, return index where that binding begins
@@ -703,7 +703,7 @@ static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t 
 {
     uint32_t offsetIndex = 0;
     for (uint32_t i = 0; i<binding; i++) {
-        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
+        offsetIndex += pLayout->createInfo.pBindings[i].arraySize;
     }
     return offsetIndex;
 }
@@ -712,7 +712,7 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
 {
     uint32_t offsetIndex = 0;
     for (uint32_t i = 0; i<=binding; i++) {
-        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
+        offsetIndex += pLayout->createInfo.pBindings[i].arraySize;
     }
     return offsetIndex-1;
 }
@@ -790,16 +790,16 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
                 {
-                    VkDescriptorImageInfo *info = new VkDescriptorImageInfo[pWDS->count];
-                    memcpy(info, pWDS->pImageInfo, pWDS->count * sizeof(VkDescriptorImageInfo));
+                    VkDescriptorImageInfo *info = new VkDescriptorImageInfo[pWDS->descriptorCount];
+                    memcpy(info, pWDS->pImageInfo, pWDS->descriptorCount * sizeof(VkDescriptorImageInfo));
                     pWDS->pImageInfo = info;
             }
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                 {
-                    VkBufferView *info = new VkBufferView[pWDS->count];
-                    memcpy(info, pWDS->pTexelBufferView, pWDS->count * sizeof(VkBufferView));
+                    VkBufferView *info = new VkBufferView[pWDS->descriptorCount];
+                    memcpy(info, pWDS->pTexelBufferView, pWDS->descriptorCount * sizeof(VkBufferView));
                     pWDS->pTexelBufferView = info;
                 }
                 break;
@@ -808,8 +808,8 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
                 {
-                    VkDescriptorBufferInfo *info = new VkDescriptorBufferInfo[pWDS->count];
-                    memcpy(info, pWDS->pBufferInfo, pWDS->count * sizeof(VkDescriptorBufferInfo));
+                    VkDescriptorBufferInfo *info = new VkDescriptorBufferInfo[pWDS->descriptorCount];
+                    memcpy(info, pWDS->pBufferInfo, pWDS->descriptorCount * sizeof(VkDescriptorBufferInfo));
                     pWDS->pBufferInfo = info;
                 }
                 break;
@@ -956,12 +956,12 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
     // For given update type, verify that update contents are correct
     switch (pWDS->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
-            for (i=0; i<pWDS->count; ++i) {
+            for (i=0; i<pWDS->descriptorCount; ++i) {
                 skipCall |= validateSampler(my_data, &(pWDS->pImageInfo[i].sampler), immutable);
             }
             break;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            for (i=0; i<pWDS->count; ++i) {
+            for (i=0; i<pWDS->descriptorCount; ++i) {
                 if (NULL == pLayoutBinding->pImmutableSamplers) {
                     pSampler = &(pWDS->pImageInfo[i].sampler);
                     if (immutable) {
@@ -986,13 +986,13 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
         case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            for (i=0; i<pWDS->count; ++i) {
+            for (i=0; i<pWDS->descriptorCount; ++i) {
                 skipCall |= validateImageView(my_data, &(pWDS->pImageInfo[i].imageView), pWDS->pImageInfo[i].imageLayout);
             }
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-            for (i=0; i<pWDS->count; ++i) {
+            for (i=0; i<pWDS->descriptorCount; ++i) {
                 skipCall |= validateBufferView(my_data, &(pWDS->pTexelBufferView[i]));
             }
             break;
@@ -1000,7 +1000,7 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            for (i=0; i<pWDS->count; ++i) {
+            for (i=0; i<pWDS->descriptorCount; ++i) {
                 skipCall |= validateBufferInfo(my_data, &(pWDS->pBufferInfo[i]));
             }
             break;
@@ -1029,7 +1029,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
         uint32_t binding = 0, endIndex = 0;
         binding = pWDS[i].destBinding;
         // Make sure that layout being updated has the binding being updated
-        if (pLayout->createInfo.count < binding) {
+        if (pLayout->createInfo.bindingCount < binding) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                     "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
@@ -1046,7 +1046,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                 // Layout bindings match w/ update, now verify that update type & stageFlags are the same for entire update
                 if ((skipCall = validateUpdateConsistency(my_data, device, pLayout, pUpdate, startIndex, endIndex)) == VK_FALSE) {
                     // The update is within bounds and consistent, but need to make sure contents make sense as well
-                    if ((skipCall = validateUpdateContents(my_data, &pWDS[i], &pLayout->createInfo.pBinding[binding])) == VK_FALSE) {
+                    if ((skipCall = validateUpdateContents(my_data, &pWDS[i], &pLayout->createInfo.pBindings[binding])) == VK_FALSE) {
                         // Update is good. Save the update info
                         // Create new update struct for this set's shadow copy
                         GENERIC_HEADER* pNewNode = NULL;
@@ -1080,14 +1080,14 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
         pSrcLayout = pSrcSet->pLayout;
         pDstLayout = pDstSet->pLayout;
         // Validate that src binding is valid for src set layout
-        if (pSrcLayout->createInfo.count < pCDS[i].srcBinding) {
+        if (pSrcLayout->createInfo.bindingCount < pCDS[i].srcBinding) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pSrcSet->set, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                 "Copy descriptor update %u has srcBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
-                i, pCDS[i].srcBinding, (uint64_t) pSrcLayout->layout, pSrcLayout->createInfo.count-1);
-        } else if (pDstLayout->createInfo.count < pCDS[i].destBinding) {
+                i, pCDS[i].srcBinding, (uint64_t) pSrcLayout->layout, pSrcLayout->createInfo.bindingCount-1);
+        } else if (pDstLayout->createInfo.bindingCount < pCDS[i].destBinding) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDstSet->set, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                 "Copy descriptor update %u has destBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
-                i, pCDS[i].destBinding, (uint64_t) pDstLayout->layout, pDstLayout->createInfo.count-1);
+                i, pCDS[i].destBinding, (uint64_t) pDstLayout->layout, pDstLayout->createInfo.bindingCount-1);
         } else {
             // Proceed with validation. Bindings are ok, but make sure update is within bounds of given layout
             srcEndIndex = getUpdateEndIndex(my_data, device, pSrcLayout, pCDS[i].srcBinding, pCDS[i].srcArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
@@ -1105,7 +1105,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
             } else {
                 srcStartIndex = getUpdateStartIndex(my_data, device, pSrcLayout, pCDS[i].srcBinding, pCDS[i].srcArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
                 dstStartIndex = getUpdateStartIndex(my_data, device, pDstLayout, pCDS[i].destBinding, pCDS[i].destArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
-                for (uint32_t j=0; j<pCDS[i].count; ++j) {
+                for (uint32_t j=0; j<pCDS[i].descriptorCount; ++j) {
                     // For copy just make sure that the types match and then perform the update
                     if (pSrcLayout->descriptorTypes[srcStartIndex+j] != pDstLayout->descriptorTypes[dstStartIndex+j]) {
                         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
@@ -1134,13 +1134,13 @@ static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, P
                     "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", (uint64_t) pSetLayouts[i]);
         } else {
             uint32_t typeIndex = 0, typeCount = 0;
-            for (j=0; j<pLayout->createInfo.count; ++j) {
-                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
-                typeCount = pLayout->createInfo.pBinding[j].arraySize;
+            for (j=0; j<pLayout->createInfo.bindingCount; ++j) {
+                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBindings[j].descriptorType);
+                typeCount = pLayout->createInfo.pBindings[j].arraySize;
                 if (typeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) pLayout->layout, 0, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                         "Unable to allocate %u descriptors of type %s from pool %#" PRIxLEAST64 ". This pool only has %u descriptors of this type remaining.",
-                            typeCount, string_VkDescriptorType(pLayout->createInfo.pBinding[j].descriptorType), (uint64_t) pPoolNode->pool, pPoolNode->availableDescriptorTypeCount[typeIndex]);
+                            typeCount, string_VkDescriptorType(pLayout->createInfo.pBindings[j].descriptorType), (uint64_t) pPoolNode->pool, pPoolNode->availableDescriptorTypeCount[typeIndex]);
                 } else { // Decrement available descriptors of this type
                     pPoolNode->availableDescriptorTypeCount[typeIndex] -= typeCount;
                 }
@@ -1237,12 +1237,12 @@ static void deleteLayouts(layer_data* my_data)
         return;
     for (auto ii=my_data->layoutMap.begin(); ii!=my_data->layoutMap.end(); ++ii) {
         LAYOUT_NODE* pLayout = (*ii).second;
-        if (pLayout->createInfo.pBinding) {
-            for (uint32_t i=0; i<pLayout->createInfo.count; i++) {
-                if (pLayout->createInfo.pBinding[i].pImmutableSamplers)
-                    delete[] pLayout->createInfo.pBinding[i].pImmutableSamplers;
+        if (pLayout->createInfo.pBindings) {
+            for (uint32_t i=0; i<pLayout->createInfo.bindingCount; i++) {
+                if (pLayout->createInfo.pBindings[i].pImmutableSamplers)
+                    delete[] pLayout->createInfo.pBindings[i].pImmutableSamplers;
             }
-            delete[] pLayout->createInfo.pBinding;
+            delete[] pLayout->createInfo.pBindings;
         }
         delete pLayout;
     }
@@ -1576,7 +1576,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
-                                   pCreateInfo->extensionCount,
+                                   pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
         init_draw_state(my_data);
@@ -1616,7 +1616,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_extensions.debug_marker_enabled = false;
 
-    for (i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
             initDebugMarkerTable(device);
@@ -1732,7 +1732,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
-        for (uint32_t i=0; i < submit->cmdBufferCount; i++) {
+        for (uint32_t i=0; i < submit->commandBufferCount; i++) {
             // Validate that cmd buffers have been updated
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
             loader_platform_thread_lock_mutex(&globalLock);
@@ -2043,15 +2043,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
         }
         memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
-        pNewNode->createInfo.pBinding = new VkDescriptorSetLayoutBinding[pCreateInfo->count];
-        memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->count);
+        pNewNode->createInfo.pBindings = new VkDescriptorSetLayoutBinding[pCreateInfo->bindingCount];
+        memcpy((void*)pNewNode->createInfo.pBindings, pCreateInfo->pBindings, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->bindingCount);
         uint32_t totalCount = 0;
-        for (uint32_t i=0; i<pCreateInfo->count; i++) {
-            totalCount += pCreateInfo->pBinding[i].arraySize;
-            if (pCreateInfo->pBinding[i].pImmutableSamplers) {
-                VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
-                *ppIS = new VkSampler[pCreateInfo->pBinding[i].arraySize];
-                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].arraySize*sizeof(VkSampler));
+        for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
+            totalCount += pCreateInfo->pBindings[i].arraySize;
+            if (pCreateInfo->pBindings[i].pImmutableSamplers) {
+                VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBindings[i].pImmutableSamplers;
+                *ppIS = new VkSampler[pCreateInfo->pBindings[i].arraySize];
+                memcpy(*ppIS, pCreateInfo->pBindings[i].pImmutableSamplers, pCreateInfo->pBindings[i].arraySize*sizeof(VkSampler));
             }
         }
         if (totalCount > 0) {
@@ -2059,10 +2059,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
             pNewNode->stageFlags.resize(totalCount);
             uint32_t offset = 0;
             uint32_t j = 0;
-            for (uint32_t i=0; i<pCreateInfo->count; i++) {
-                for (j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
-                    pNewNode->descriptorTypes[offset + j] = pCreateInfo->pBinding[i].descriptorType;
-                    pNewNode->stageFlags[offset + j] = pCreateInfo->pBinding[i].stageFlags;
+            for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
+                for (j = 0; j < pCreateInfo->pBindings[i].arraySize; j++) {
+                    pNewNode->descriptorTypes[offset + j] = pCreateInfo->pBindings[i].descriptorType;
+                    pNewNode->stageFlags[offset + j] = pCreateInfo->pBindings[i].stageFlags;
                 }
                 offset += j;
             }
@@ -2085,9 +2085,9 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
         PIPELINE_LAYOUT_NODE plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
-        plNode.descriptorSetLayouts.resize(pCreateInfo->descriptorSetCount);
+        plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
         uint32_t i = 0;
-        for (i=0; i<pCreateInfo->descriptorSetCount; ++i) {
+        for (i=0; i<pCreateInfo->setLayoutCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
         }
         plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
@@ -2143,7 +2143,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, const VkDe
         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t) pAllocInfo->descriptorPool, 0, DRAWSTATE_INVALID_POOL, "DS",
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocDescriptorSets() call", (uint64_t) pAllocInfo->descriptorPool);
     } else { // Make sure pool has all the available descriptors before calling down chain
-        skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocInfo->count, pAllocInfo->pSetLayouts);
+        skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocInfo->setLayoutCount, pAllocInfo->pSetLayouts);
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
@@ -2151,11 +2151,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(VkDevice device, const VkDe
     if (VK_SUCCESS == result) {
         POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocInfo->descriptorPool);
         if (pPoolNode) {
-            if (pAllocInfo->count == 0) {
-                log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pAllocInfo->count, 0, DRAWSTATE_NONE, "DS",
+            if (pAllocInfo->setLayoutCount == 0) {
+                log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pAllocInfo->setLayoutCount, 0, DRAWSTATE_NONE, "DS",
                         "AllocDescriptorSets called with 0 count");
             }
-            for (uint32_t i = 0; i < pAllocInfo->count; i++) {
+            for (uint32_t i = 0; i < pAllocInfo->setLayoutCount; i++) {
                 log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                         "Created Descriptor Set %#" PRIxLEAST64, (uint64_t) pDescriptorSets[i]);
                 // Create new set node and add to head of pool nodes
@@ -2214,9 +2214,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
             SET_NODE* pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             LAYOUT_NODE* pLayout = pSet->pLayout;
             uint32_t typeIndex = 0, typeCount = 0;
-            for (uint32_t j=0; j<pLayout->createInfo.count; ++j) {
-                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
-                typeCount = pLayout->createInfo.pBinding[j].arraySize;
+            for (uint32_t j=0; j<pLayout->createInfo.bindingCount; ++j) {
+                typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBindings[j].descriptorType);
+                typeCount = pLayout->createInfo.pBindings[j].arraySize;
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += typeCount;
             }
         }
@@ -3017,7 +3017,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
             const VkClearAttachment *attachment = &pAttachments[attachment_idx];
             if (attachment->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
                 VkBool32 found = VK_FALSE;
-                for (uint32_t i = 0; i < pSD->colorCount; i++) {
+                for (uint32_t i = 0; i < pSD->colorAttachmentCount; i++) {
                     if (attachment->colorAttachment == pSD->pColorAttachments[i].attachment) {
                         found = VK_TRUE;
                         break;
@@ -3344,7 +3344,7 @@ bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPa
     const DAGNode& node = subpass_to_node[index];
     // If this node writes to the attachment return true as next nodes need to preserve the attachment.
     const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
-    for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+    for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
         if (attachment == subpass.pColorAttachments[j].attachment)
             return true;
     }
@@ -3361,7 +3361,7 @@ bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPa
     if (result && depth > 0) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
         bool has_preserved = false;
-        for (uint32_t j = 0; j < subpass.preserveCount; ++j) {
+        for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
             if (subpass.pPreserveAttachments[j].attachment == attachment) {
                 has_preserved = true;
                 break;
@@ -3397,10 +3397,10 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
     // Find for each attachment the subpasses that use them.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
-        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             input_attachment_to_subpass[subpass.pInputAttachments[j].attachment].push_back(i);
         }
-        for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             output_attachment_to_subpass[subpass.pColorAttachments[j].attachment].push_back(i);
         }
         if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
@@ -3411,12 +3411,12 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
         // If the attachment is an input then all subpasses that output must have a dependency relationship
-        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             const uint32_t& attachment = subpass.pInputAttachments[j].attachment;
             CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
         // If the attachment is an output then all subpasses that use the attachment must have a dependency relationship
-        for (uint32_t j = 0; j < subpass.colorCount; ++j) {
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             const uint32_t& attachment = subpass.pColorAttachments[j].attachment;
             CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
             CheckDependencyExists(my_data, device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
@@ -3430,7 +3430,7 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
     // Loop through implicit dependencies, if this pass reads make sure the attachment is preserved for all passes after it was written.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
-        for (uint32_t j = 0; j < subpass.inputCount; ++j) {
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             CheckPreserved(my_data, device, pCreateInfo, i, subpass.pInputAttachments[j].attachment, subpass_to_node, 0, skip_call);
         }
     }
@@ -3457,30 +3457,30 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
 
             for (uint32_t i = 0; i < localRPCI->subpassCount; i++) {
                 VkSubpassDescription *subpass = (VkSubpassDescription *) &localRPCI->pSubpasses[i];
-                const uint32_t attachmentCount = subpass->inputCount +
-                    subpass->colorCount * (1 + (subpass->pResolveAttachments?1:0)) +
-                    subpass->preserveCount;
+                const uint32_t attachmentCount = subpass->inputAttachmentCount +
+                    subpass->colorAttachmentCount * (1 + (subpass->pResolveAttachments?1:0)) +
+                    subpass->preserveAttachmentCount;
                 VkAttachmentReference *attachments = new VkAttachmentReference[attachmentCount];
 
                 memcpy(attachments, subpass->pInputAttachments,
-                        sizeof(attachments[0]) * subpass->inputCount);
+                        sizeof(attachments[0]) * subpass->inputAttachmentCount);
                 subpass->pInputAttachments = attachments;
-                attachments += subpass->inputCount;
+                attachments += subpass->inputAttachmentCount;
 
                 memcpy(attachments, subpass->pColorAttachments,
-                        sizeof(attachments[0]) * subpass->colorCount);
+                        sizeof(attachments[0]) * subpass->colorAttachmentCount);
                 subpass->pColorAttachments = attachments;
-                attachments += subpass->colorCount;
+                attachments += subpass->colorAttachmentCount;
 
                 if (subpass->pResolveAttachments) {
                     memcpy(attachments, subpass->pResolveAttachments,
-                            sizeof(attachments[0]) * subpass->colorCount);
+                            sizeof(attachments[0]) * subpass->colorAttachmentCount);
                     subpass->pResolveAttachments = attachments;
-                    attachments += subpass->colorCount;
+                    attachments += subpass->colorAttachmentCount;
                 }
 
                 memcpy(attachments, subpass->pPreserveAttachments,
-                        sizeof(attachments[0]) * subpass->preserveCount);
+                        sizeof(attachments[0]) * subpass->preserveAttachmentCount);
                 subpass->pPreserveAttachments = attachments;
             }
         }

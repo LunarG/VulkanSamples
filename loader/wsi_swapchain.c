@@ -53,7 +53,7 @@ void wsi_swapchain_create_instance(
 {
     ptr_instance->wsi_swapchain_enabled = false;
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_swapchain_enabled = true;
             return;

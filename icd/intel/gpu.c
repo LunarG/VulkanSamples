@@ -456,18 +456,18 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
 
 ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice gpu_,
-    uint32_t* pCount,
+    uint32_t* pQueueFamilyPropertyCount,
     VkQueueFamilyProperties* pProperties)
 {
    struct intel_gpu *gpu = intel_gpu(gpu_);
    int engine;
 
    if (pProperties == NULL) {
-       *pCount = INTEL_GPU_ENGINE_COUNT;
+       *pQueueFamilyPropertyCount = INTEL_GPU_ENGINE_COUNT;
        return;
    }
 
-   for (engine = 0; engine < *pCount; engine++) {
+   for (engine = 0; engine < *pQueueFamilyPropertyCount; engine++) {
        intel_gpu_get_queue_props(gpu, engine, pProperties);
        pProperties++;
    }
@@ -499,20 +499,20 @@ void intel_gpu_get_sparse_properties(VkPhysicalDeviceSparseProperties *pProps)
 ICD_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkExtensionProperties*                      pProperties)
 {
     uint32_t copy_size;
     uint32_t extension_count = ARRAY_SIZE(intel_phy_dev_gpu_exts);
 
     if (pProperties == NULL) {
-        *pCount = INTEL_PHY_DEV_EXT_COUNT;
+        *pPropertyCount = INTEL_PHY_DEV_EXT_COUNT;
         return VK_SUCCESS;
     }
 
-    copy_size = *pCount < extension_count ? *pCount : extension_count;
+    copy_size = *pPropertyCount < extension_count ? *pPropertyCount : extension_count;
     memcpy(pProperties, intel_phy_dev_gpu_exts, copy_size * sizeof(VkExtensionProperties));
-    *pCount = copy_size;
+    *pPropertyCount = copy_size;
     if (copy_size < extension_count) {
         return VK_INCOMPLETE;
     }
@@ -522,10 +522,10 @@ ICD_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
 
 ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
-        uint32_t*                                   pCount,
+        uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
-    *pCount = 0;
+    *pPropertyCount = 0;
     return VK_SUCCESS;
 }
 
@@ -536,9 +536,9 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     uint32_t                                    samples,
     VkImageUsageFlags                           usage,
     VkImageTiling                               tiling,
-    uint32_t*                                   pNumProperties,
+    uint32_t*                                   pPropertyCount,
     VkSparseImageFormatProperties*              pProperties)
 {
-    *pNumProperties = 0;
+    *pPropertyCount = 0;
 }
 

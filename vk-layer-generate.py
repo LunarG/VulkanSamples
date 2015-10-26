@@ -721,7 +721,7 @@ class GenericLayerSubcommand(Subcommand):
                          '        my_data->report_data = debug_report_create_instance(\n'
                          '                                   instance_dispatch_table(*pInstance),\n'
                          '                                   *pInstance,\n'
-                         '                                   pCreateInfo->extensionCount,\n'
+                         '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        initGeneric(my_data);\n'
                          '        sprintf(str, "Completed Generic layered %s\\n");\n'
@@ -1577,7 +1577,7 @@ class ObjectTrackerSubcommand(Subcommand):
             if 'FreeCommandBuffers' in proto.name:
                 funcs.append('%s\n' % self.lineinfo.get())
                 destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-                destroy_line += '    for (uint32_t i = 0; i < count; i++) {\n'
+                destroy_line += '    for (uint32_t i = 0; i < commandBufferCount; i++) {\n'
                 destroy_line += '        destroy_obj(%s[i], %s[i]);\n' % (proto.params[-1].name, proto.params[-1].name)
                 destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
@@ -1911,7 +1911,7 @@ class ThreadingSubcommand(Subcommand):
                          '        my_data->report_data = debug_report_create_instance(\n'
                          '                                   pInstanceTable,\n'
                          '                                   *pInstance,\n'
-                         '                                   pCreateInfo->extensionCount,\n'
+                         '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        initThreading(my_data);\n'
                          '    }\n'

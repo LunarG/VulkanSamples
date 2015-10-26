@@ -517,7 +517,7 @@ ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     uint32_t num_allocated = 0;
     VkResult res;
 
-    for (uint32_t i = 0; i < pAllocInfo->count; i++) {
+    for (uint32_t i = 0; i < pAllocInfo->bufferCount; i++) {
         res = intel_cmd_create(dev, pAllocInfo,
             (struct intel_cmd **) &pCmdBuffers[i]);
         if (res != VK_SUCCESS) {
@@ -535,10 +535,10 @@ ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
 ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     VkDevice                            device,
     VkCmdPool                           cmdPool,
-    uint32_t                            count,
+    uint32_t                            commandBufferCount,
     const VkCmdBuffer*                  pCmdBuffers)
 {
-    intel_free_cmd_buffers(intel_cmd_pool(cmdPool), count, pCmdBuffers);
+    intel_free_cmd_buffers(intel_cmd_pool(cmdPool), commandBufferCount, pCmdBuffers);
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(

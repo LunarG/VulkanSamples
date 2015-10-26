@@ -59,7 +59,7 @@ void debug_report_create_instance(
 {
     ptr_instance->debug_report_enabled = false;
 
-    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             ptr_instance->debug_report_enabled = true;
             return;
