@@ -1623,11 +1623,9 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
     shaderStages[0].shader = demo_prepare_vs(demo);
 
     shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     shaderStages[1].shader = demo_prepare_fs(demo);
 
     memset(&pipelineCache, 0, sizeof(pipelineCache));

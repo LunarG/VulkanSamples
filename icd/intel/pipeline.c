@@ -245,25 +245,25 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
                                         const VkPipelineShaderStageCreateInfo *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
+    const struct intel_shader *ir = intel_shader(sh_info->shader);
     VkResult ret;
 
-    const struct intel_ir* ir = intel_shader(sh_info->shader)->ir;
 
     ret = intel_pipeline_shader_compile(sh,
-            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info, ir);
+            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info, ir->ir);
 
     if (ret != VK_SUCCESS)
         return ret;
 
     sh->max_threads =
-        intel_gpu_get_max_threads(pipeline->dev->gpu, sh_info->stage);
+        intel_gpu_get_max_threads(pipeline->dev->gpu, ir->stage);
 
     /* 1KB aligned */
     sh->scratch_offset = u_align(pipeline->scratch_size, 1024);
     pipeline->scratch_size = sh->scratch_offset +
         sh->per_thread_scratch_size * sh->max_threads;
 
-    pipeline->active_shaders |= sh_info->stage;
+    pipeline->active_shaders |= ir->stage;
 
     return VK_SUCCESS;
 }
@@ -1204,7 +1204,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     void *dst;
     for (uint32_t i = 0; i < vkinfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *thisStage = &vkinfo->pStages[i];
-        switch (thisStage->stage) {
+        switch (intel_shader(thisStage->shader)->stage) {
             case VK_SHADER_STAGE_VERTEX_BIT:
                 dst = &info->vs;
                 break;

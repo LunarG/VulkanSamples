@@ -108,6 +108,7 @@ static VkResult shader_create(struct intel_dev *dev,
 
     struct intel_shader_module *sm = intel_shader_module(info->module);
 
+    sh->stage = info->stage;
     sh->ir = shader_create_ir(dev->gpu, sm->code, sm->code_size, info->stage);
     if (!sh->ir) {
         shader_destroy(&sh->obj);

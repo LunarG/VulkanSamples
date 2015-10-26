@@ -73,6 +73,7 @@ struct layer_data {
     unordered_map<uint64_t, SET_NODE*> setMap;
     unordered_map<uint64_t, LAYOUT_NODE*> layoutMap;
     unordered_map<uint64_t, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
+    unordered_map<uint64_t, VkShaderStageFlagBits> shaderStageMap;
     // Map for layout chains
     unordered_map<void*, GLOBAL_CB_NODE*> cmdBufferMap;
     unordered_map<uint64_t, VkRenderPassCreateInfo*> renderPassMap;
@@ -430,7 +431,7 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 }
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
-static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
+static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
 {
     PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
     if (pBasePipeline) {
@@ -448,7 +449,10 @@ static PIPELINE_NODE* initPipeline(const VkGraphicsPipelineCreateInfo* pCreateIn
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
 
-        switch (pPSSCI->stage) {
+        if (dev_data->shaderStageMap.find(pPSSCI->shader.handle) == dev_data->shaderStageMap.end())
+            continue;
+
+        switch (dev_data->shaderStageMap[pPSSCI->shader.handle]) {
             case VK_SHADER_STAGE_VERTEX_BIT:
                 memcpy(&pPipeline->vsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -1798,8 +1802,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule
 
 VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShader(device, shader);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    uint64_t handle = shader.handle;
+    dev_data->device_dispatch_table->DestroyShader(device, shader);
+    dev_data->shaderStageMap.erase(handle);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
@@ -1899,6 +1905,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
+        VkDevice device,
+        const VkShaderCreateInfo *pCreateInfo,
+        VkShader *pShader)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateShader(device, pCreateInfo, pShader);
+
+    if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        dev_data->shaderStageMap[pShader->handle] = pCreateInfo->stage;
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+
+    return result;
+}
+
 //TODO handle pipeline caches
 VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
@@ -1955,7 +1978,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
     for (i=0; i<count; i++) {
-        pPipeNode[i] = initPipeline(&pCreateInfos[i], NULL);
+        pPipeNode[i] = initPipeline(dev_data, &pCreateInfos[i], NULL);
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -3701,6 +3724,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
+    if (!strcmp(funcName, "vkCreateShader"))
+        return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "CreatePipelineCache"))
         return (PFN_vkVoidFunction) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))

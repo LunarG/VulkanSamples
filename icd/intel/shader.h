@@ -37,6 +37,7 @@ struct intel_ir;
 struct intel_shader {
     struct intel_obj obj;
 
+    VkShaderStageFlagBits stage;
     struct intel_ir *ir;
 };
 

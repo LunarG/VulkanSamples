@@ -214,10 +214,12 @@ static std::unordered_map<uint64_t, shader_module *> shader_module_map;
 struct shader_object {
     std::string name;
     struct shader_module *module;
+    VkShaderStageFlagBits stage;
 
     shader_object(VkShaderCreateInfo const *pCreateInfo)
     {
         module = shader_module_map[pCreateInfo->module.handle];
+        stage = pCreateInfo->stage;
         name = pCreateInfo->pName;
     }
 };
@@ -1068,16 +1070,18 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
         if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 
-            if ((pStage->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+            // always true; pStage->stage may be revived in a later revision and
+            // this will make sense again
+            if ((VK_SHADER_STAGE_VERTEX_BIT & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                                   | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
                 if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
-                        "Unknown shader stage %d", pStage->stage)) {
+                        "Unknown shader stage %d", VK_SHADER_STAGE_VERTEX_BIT)) {
                     pass = false;
                 }
             }
             else {
                 struct shader_object *shader = shader_object_map[pStage->shader.handle];
-                shaders[get_shader_stage_id(pStage->stage)] = shader->module;
+                shaders[get_shader_stage_id(shader->stage)] = shader->module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;

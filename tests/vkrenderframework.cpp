@@ -1052,7 +1052,6 @@ VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
 {
     VkPipelineShaderStageCreateInfo *stageInfo = (VkPipelineShaderStageCreateInfo*) calloc( 1,sizeof(VkPipelineShaderStageCreateInfo) );
     stageInfo->sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo->stage                = m_stage;
     stageInfo->shader               = handle();
 
     return stageInfo;
