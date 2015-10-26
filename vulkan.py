@@ -1158,6 +1158,9 @@ def parse_vk_h(filename):
                 # extract the object type
                 object_lines.append(line[begin:end])
             if line.startswith("typedef") and line.endswith(");"):
+                if "*PFN_vkVoidFunction" in line:
+                    continue
+
                 # drop leading "typedef " and trailing ");"
                 proto_lines.append(line[8:-2])
 
@@ -1202,7 +1205,7 @@ def parse_vk_h(filename):
     print("typedef struct VkLayerDispatchTable_")
     print("{")
     for proto in ext.protos:
-        print("    vk%sType %s;" % (proto.name, proto.name))
+        print("    PFN_vk%s %s;" % (proto.name, proto.name))
     print("} VkLayerDispatchTable;")
 
 if __name__ == "__main__":
