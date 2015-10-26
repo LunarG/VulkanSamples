@@ -68,6 +68,7 @@
 
 // Private includes
 #include <map>
+#include <iostream>
 
 void emit_function(_mesa_glsl_parse_state *state, ir_function *f);
 
@@ -457,6 +458,14 @@ void MesaGlassTranslator::error(const char* msg) const
 }
 
 
+void null_unsupported_functionality(const std::string& message, gla::EAbortType at) {
+   if (at == gla::EATAbort) {
+      std::cerr << std::endl << message << std::endl;
+      exit(1);
+   }
+}
+
+
 /**
  * -----------------------------------------------------------------------------
  * initialize translation state
@@ -547,6 +556,11 @@ void MesaGlassTranslator::start(llvm::Module& module)
        assert(0 && "Unsupported stage");
        break;
    }
+
+#ifndef DEBUG
+   gla::RegisterUnsupportedFunctionalityHandler((gla::UnsupportedFunctionalityHandler) null_unsupported_functionality);
+#endif
+
 }
 
 
