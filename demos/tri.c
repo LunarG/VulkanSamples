@@ -280,6 +280,8 @@ static void demo_flush_init_cmd(struct demo *demo)
     const VkCmdBuffer cmd_bufs[] = { demo->setup_cmd };
     VkFence nullFence = {VK_NULL_HANDLE};
     VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = NULL,
         .waitSemCount = 0,
         .pWaitSemaphores = NULL,
         .cmdBufferCount = 1,
@@ -492,6 +494,8 @@ static void demo_draw(struct demo *demo)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext = NULL,
         .waitSemCount = 1,
         .pWaitSemaphores = &presentCompleteSemaphore,
         .cmdBufferCount = 1,

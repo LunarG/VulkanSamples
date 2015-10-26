@@ -585,6 +585,8 @@ void  TestFrameworkVkPresent::Display()
     // okay to render to the image.
     VkFence nullFence = { VK_NULL_HANDLE };
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 1;
     submit_info.pWaitSemaphores = &presentCompleteSemaphore,
     submit_info.cmdBufferCount = 1;
@@ -1027,6 +1029,8 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     const VkCmdBuffer cmd_bufs[] = { m_cmdbuf.handle() };
     VkFence nullFence = { VK_NULL_HANDLE };
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;

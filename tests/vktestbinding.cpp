@@ -396,6 +396,8 @@ void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_handles = make_handles<VkCmdBuffer>(cmds);
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = (uint32_t)cmd_handles.size();

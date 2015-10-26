@@ -2150,9 +2150,15 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
 
 bool PreQueueSubmit(
     VkQueue queue,
-    const VkCmdBuffer* pCmdBuffers)
+    const VkSubmitInfo* submit)
 {
-    if(pCmdBuffers != nullptr)
+    if(submit->sType != VK_STRUCTURE_TYPE_SUBMIT_INFO) {
+        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkQueueSubmit parameter, VkStructureType pSubmitInfo->sType, is an invalid enumerator");
+        return false;
+    }
+
+    if(submit->pCommandBuffers != nullptr)
     {
     }
 
@@ -2185,7 +2191,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkFence fence)
 {
     for (uint32_t i = 0; i < submitCount; i++) {
-        PreQueueSubmit(queue, pSubmitInfo[i].pCommandBuffers);
+        PreQueueSubmit(queue, &pSubmitInfo[i]);
     }
 
     VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmitInfo, fence);

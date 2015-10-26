@@ -179,9 +179,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 45,
     VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO = 46,
     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO = 47,
+    VK_STRUCTURE_TYPE_SUBMIT_INFO = 48,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_SUBMIT_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -1313,6 +1314,8 @@ typedef struct {
 } VkLayerProperties;
 
 typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
     uint32_t                                    waitSemCount;
     const VkSemaphore*                          pWaitSemaphores;
     uint32_t                                    cmdBufferCount;

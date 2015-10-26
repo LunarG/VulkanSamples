@@ -246,6 +246,8 @@ static void writePPM( const char *filename, VkImage image1)
 
     VkFence nullFence = { VK_NULL_HANDLE };
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;

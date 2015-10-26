@@ -990,6 +990,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     VkCmdBuffer bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;
@@ -1602,6 +1604,8 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
 
     // submit the command buffer to the universal queue
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;

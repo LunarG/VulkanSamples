@@ -414,6 +414,8 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;
@@ -459,6 +461,8 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;
@@ -737,6 +741,8 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     m_errorMonitor->ClearState();
 
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;
@@ -1302,6 +1308,8 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
     VkSubmitInfo submit_info;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = NULL;
     submit_info.waitSemCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.cmdBufferCount = 1;
