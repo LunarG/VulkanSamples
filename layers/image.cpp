@@ -336,7 +336,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     if (depthFormatPresent == VK_FALSE) {
         // No depth attachment is present, validate that subpasses set depthStencilAttachment to VK_ATTACHMENT_UNUSED;
         for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
-            if (pCreateInfo->pSubpasses[i].depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
+            if (pCreateInfo->pSubpasses[i].pDepthStencilAttachment &&
+                pCreateInfo->pSubpasses[i].pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
                 skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", ss.str().c_str());

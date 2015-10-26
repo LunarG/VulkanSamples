@@ -1178,9 +1178,9 @@ static void demo_prepare_textures(struct demo *demo)
             .magFilter = VK_FILTER_NEAREST,
             .minFilter = VK_FILTER_NEAREST,
             .mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP,
-            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP,
+            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             .mipLodBias = 0.0f,
             .maxAnisotropy = 1,
             .compareOp = VK_COMPARE_OP_NEVER,
@@ -1332,8 +1332,6 @@ static void demo_prepare_render_pass(struct demo *demo)
 {
     const VkAttachmentDescription attachments[2] = {
         [0] = {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .pNext = NULL,
             .format = demo->format,
             .samples = 1,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -1344,8 +1342,6 @@ static void demo_prepare_render_pass(struct demo *demo)
             .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         },
         [1] = {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .pNext = NULL,
             .format = demo->depth.format,
             .samples = 1,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -1360,9 +1356,11 @@ static void demo_prepare_render_pass(struct demo *demo)
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
+    const VkAttachmentReference depth_reference = {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
     const VkSubpassDescription subpass = {
-        .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
-        .pNext = NULL,
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
         .flags = 0,
         .inputAttachmentCount = 0,
@@ -1370,10 +1368,7 @@ static void demo_prepare_render_pass(struct demo *demo)
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_reference,
         .pResolveAttachments = NULL,
-        .depthStencilAttachment = {
-            .attachment = 1,
-            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        },
+        .pDepthStencilAttachment = &depth_reference,
         .preserveAttachmentCount = 0,
         .pPreserveAttachments = NULL,
     };
@@ -1587,7 +1582,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&rs, 0, sizeof(rs));
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs.fillMode = VK_FILL_MODE_SOLID;
-    rs.cullMode = VK_CULL_MODE_BACK;
+    rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CCW;
     rs.depthClampEnable = VK_FALSE;
     rs.rasterizerDiscardEnable = VK_FALSE;

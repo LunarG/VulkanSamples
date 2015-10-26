@@ -280,8 +280,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     bindings.reserve(targets + 1);     // +1 for dsBinding
 
     VkAttachmentDescription att = {};
-    att.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
-    att.pNext = NULL;
     att.format = m_render_target_fmt;
     att.samples = 1;
     att.loadOp = (m_clear_via_load_op) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -334,8 +332,6 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     }
 
     VkSubpassDescription subpass = {};
-    subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION;
-    subpass.pNext = NULL;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputAttachmentCount = 0;
@@ -344,6 +340,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     subpass.pColorAttachments = color_references.data();
     subpass.pResolveAttachments = NULL;
 
+    VkAttachmentReference ds_reference;
     if (dsBinding) {
         att.format = m_depth_stencil_fmt;
         att.loadOp = (m_clear_via_load_op) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;;
@@ -360,10 +357,11 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
 
         bindings.push_back(*dsBinding);
 
-        subpass.depthStencilAttachment.attachment = targets;
-        subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        ds_reference.attachment = targets;
+        ds_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        subpass.pDepthStencilAttachment = &ds_reference;
     } else {
-        subpass.depthStencilAttachment.attachment = VK_ATTACHMENT_UNUSED;
+        subpass.pDepthStencilAttachment = NULL;
     }
 
     subpass.preserveAttachmentCount = 0;
@@ -856,9 +854,9 @@ VkSamplerObj::VkSamplerObj(VkDeviceObj *device)
     samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
     samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_WRAP;
-    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_WRAP;
-    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_WRAP;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
@@ -1135,7 +1133,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.depthClampEnable = VK_TRUE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
     m_rs_state.fillMode = VK_FILL_MODE_SOLID;
-    m_rs_state.cullMode = VK_CULL_MODE_BACK;
+    m_rs_state.cullMode = VK_CULL_MODE_BACK_BIT;
     m_rs_state.frontFace = VK_FRONT_FACE_CW;
     m_rs_state.depthBiasEnable = VK_FALSE;
     m_rs_state.lineWidth = 1.0f;

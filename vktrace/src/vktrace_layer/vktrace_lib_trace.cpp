@@ -451,6 +451,8 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
         vktrace_finalize_buffer_address(pHeader, (void**)&(pSubpass->pColorAttachments));
         vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pResolveAttachments), pSubpass->colorAttachmentCount * sizeof(VkAttachmentReference), pSp->pResolveAttachments);
         vktrace_finalize_buffer_address(pHeader, (void**)&(pSubpass->pResolveAttachments));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pDepthStencilAttachment), 1 * sizeof(VkAttachmentReference), pSp->pDepthStencilAttachment);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pSubpass->pDepthStencilAttachment));
         vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pSubpass->pPreserveAttachments), pSubpass->preserveAttachmentCount * sizeof(VkAttachmentReference), pSp->pPreserveAttachments);
         vktrace_finalize_buffer_address(pHeader, (void**)&(pSubpass->pPreserveAttachments));
     }

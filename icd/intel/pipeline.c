@@ -397,11 +397,11 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_NONE;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_NONE;
         break;
-    case VK_CULL_MODE_FRONT:
+    case VK_CULL_MODE_FRONT_BIT:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_FRONT;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_FRONT;
         break;
-    case VK_CULL_MODE_BACK:
+    case VK_CULL_MODE_BACK_BIT:
         pipeline->cmd_sf_cull |= GEN7_SF_DW2_CULLMODE_BACK;
         pipeline->cmd_clip_cull |= GEN7_CLIP_DW1_CULLMODE_BACK;
         break;

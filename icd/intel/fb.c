@@ -171,8 +171,15 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
         subpass->color_count = subpass_info->colorAttachmentCount;
 
-        subpass->ds_index = subpass_info->depthStencilAttachment.attachment;
-        subpass->ds_layout = subpass_info->depthStencilAttachment.layout;
+        if (subpass_info->pDepthStencilAttachment) {
+            subpass->ds_index =
+                subpass_info->pDepthStencilAttachment->attachment;
+            subpass->ds_layout =
+                subpass_info->pDepthStencilAttachment->layout;
+        } else {
+            subpass->ds_index = VK_ATTACHMENT_UNUSED;
+            subpass->ds_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        }
 
         switch (subpass->ds_layout) {
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:

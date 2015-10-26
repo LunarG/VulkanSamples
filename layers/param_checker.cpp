@@ -3855,8 +3855,7 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkFillMode pCreateInfos->pRasterState->fillMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterState->cullMode < VK_CULL_MODE_BEGIN_RANGE ||
-        pCreateInfos->pRasterState->cullMode > VK_CULL_MODE_END_RANGE)
+    if(pCreateInfos->pRasterState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterState->cullMode, is an unrecognized enumerator");
@@ -4683,12 +4682,6 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pAttachments != nullptr)
     {
-    if(pCreateInfo->pAttachments->sType != VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pAttachments->sType, is an invalid enumerator");
-        return false;
-    }
     if(pCreateInfo->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->pAttachments->format > VK_FORMAT_END_RANGE)
     {
@@ -4741,12 +4734,6 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pSubpasses != nullptr)
     {
-    if(pCreateInfo->pSubpasses->sType != VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pSubpasses->sType, is an invalid enumerator");
-        return false;
-    }
     if(pCreateInfo->pSubpasses->pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
@@ -4784,11 +4771,12 @@ bool PreCreateRenderPass(
         return false;
     }
     }
-    if(pCreateInfo->pSubpasses->depthStencilAttachment.layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        pCreateInfo->pSubpasses->depthStencilAttachment.layout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(pCreateInfo->pSubpasses->pDepthStencilAttachment &&
+        (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+         pCreateInfo->pSubpasses->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE))
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->depthStencilAttachment.layout, is an unrecognized enumerator");
+        "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pDepthStencilAttachment->layout, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pSubpasses->pPreserveAttachments != nullptr)
@@ -4804,12 +4792,6 @@ bool PreCreateRenderPass(
     }
     if(pCreateInfo->pDependencies != nullptr)
     {
-    if(pCreateInfo->pDependencies->sType != VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateRenderPass parameter, VkStructureType pCreateInfo->pDependencies->sType, is an invalid enumerator");
-        return false;
-    }
     }
     }
 

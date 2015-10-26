@@ -614,8 +614,8 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
                     break;
                 }
             }
-            if (pSD->depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
-                const uint32_t samples = pRPCI->pAttachments[pSD->depthStencilAttachment.attachment].samples;
+            if (pSD->pDepthStencilAttachment && pSD->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+                const uint32_t samples = pRPCI->pAttachments[pSD->pDepthStencilAttachment->attachment].samples;
                 if (subpassNumSamples == 0)
                     subpassNumSamples = samples;
                 else if (subpassNumSamples != samples)
@@ -3034,11 +3034,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
                 }
             } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 /* TODO: Is this a good test for depth/stencil? */
-                if (pSD->depthStencilAttachment.attachment != attachment->colorAttachment) {
+                if (!pSD->pDepthStencilAttachment || pSD->pDepthStencilAttachment->attachment != attachment->colorAttachment) {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                             (uint64_t)cmdBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
                             "vkCmdClearAttachments() attachment index %d does not match depthStencilAttachment.attachment (%d) found in active subpass %d",
-                            attachment->colorAttachment, pSD->depthStencilAttachment.attachment, pCB->activeSubpass);
+                            attachment->colorAttachment,
+                            (pSD->pDepthStencilAttachment) ? pSD->pDepthStencilAttachment->attachment : VK_ATTACHMENT_UNUSED,
+                            pCB->activeSubpass);
                 }
             }
         }
@@ -3351,8 +3353,9 @@ bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPa
         if (attachment == subpass.pColorAttachments[j].attachment)
             return true;
     }
-    if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
-        if (attachment == subpass.depthStencilAttachment.attachment)
+    if (subpass.pDepthStencilAttachment &&
+        subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+        if (attachment == subpass.pDepthStencilAttachment->attachment)
             return true;
     }
     bool result = false;
@@ -3406,8 +3409,8 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             output_attachment_to_subpass[subpass.pColorAttachments[j].attachment].push_back(i);
         }
-        if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
-            output_attachment_to_subpass[subpass.depthStencilAttachment.attachment].push_back(i);
+        if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            output_attachment_to_subpass[subpass.pDepthStencilAttachment->attachment].push_back(i);
         }
     }
     // If there is a dependency needed make sure one exists
@@ -3424,8 +3427,8 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
             CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
             CheckDependencyExists(my_data, device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
-        if (subpass.depthStencilAttachment.attachment != VK_ATTACHMENT_UNUSED) {
-            const uint32_t& attachment = subpass.depthStencilAttachment.attachment;
+        if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            const uint32_t& attachment = subpass.pDepthStencilAttachment->attachment;
             CheckDependencyExists(my_data, device, i, output_attachment_to_subpass[attachment], subpass_to_node, skip_call);
             CheckDependencyExists(my_data, device, i, input_attachment_to_subpass[attachment], subpass_to_node, skip_call);
         }
@@ -3462,7 +3465,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
                 VkSubpassDescription *subpass = (VkSubpassDescription *) &localRPCI->pSubpasses[i];
                 const uint32_t attachmentCount = subpass->inputAttachmentCount +
                     subpass->colorAttachmentCount * (1 + (subpass->pResolveAttachments?1:0)) +
-                    subpass->preserveAttachmentCount;
+                    ((subpass->pDepthStencilAttachment) ? 1 : 0) + subpass->preserveAttachmentCount;
                 VkAttachmentReference *attachments = new VkAttachmentReference[attachmentCount];
 
                 memcpy(attachments, subpass->pInputAttachments,
@@ -3480,6 +3483,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
                             sizeof(attachments[0]) * subpass->colorAttachmentCount);
                     subpass->pResolveAttachments = attachments;
                     attachments += subpass->colorAttachmentCount;
+                }
+
+                if (subpass->pDepthStencilAttachment) {
+                    memcpy(attachments, subpass->pDepthStencilAttachment,
+                            sizeof(attachments[0]) * 1);
+                    subpass->pDepthStencilAttachment = attachments;
+                    attachments += 1;
                 }
 
                 memcpy(attachments, subpass->pPreserveAttachments,
