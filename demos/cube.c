@@ -519,7 +519,7 @@ static void demo_set_image_layout(
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(demo->cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(demo->cmd, src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 }
 
 static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
@@ -594,7 +594,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
     prePresentBarrier.image = demo->buffers[demo->current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(cmd_buf, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+                         0, 1, (const void * const*)&pmemory_barrier);
 
 
     err = vkEndCommandBuffer(cmd_buf);

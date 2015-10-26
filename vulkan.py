@@ -947,7 +947,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineStageFlags", "srcStageMask"),
              Param("VkPipelineStageFlags", "destStageMask"),
-             Param("VkBool32", "byRegion"),
+             Param("VkDependencyFlags", "dependencyFlags"),
              Param("uint32_t", "memBarrierCount"),
              Param("const void* const*", "ppMemBarriers")]),
 

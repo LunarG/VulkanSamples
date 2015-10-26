@@ -1018,6 +1018,11 @@ typedef enum {
 typedef VkFlags VkMemoryInputFlags;
 
 typedef enum {
+    VK_DEPENDENCY_BY_REGION_BIT = 0x00000001,
+} VkDependencyFlagBits;
+typedef VkFlags VkDependencyFlags;
+
+typedef enum {
     VK_CMD_POOL_CREATE_TRANSIENT_BIT = 0x00000001,
     VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002,
 } VkCmdPoolCreateFlagBits;
@@ -1250,10 +1255,10 @@ typedef struct {
     uint32_t                                    maxViewportDimensions[2];
     float                                       viewportBoundsRange[2];
     uint32_t                                    viewportSubPixelBits;
-    uint32_t                                    minMemoryMapAlignment;
-    uint32_t                                    minTexelBufferOffsetAlignment;
-    uint32_t                                    minUniformBufferOffsetAlignment;
-    uint32_t                                    minStorageBufferOffsetAlignment;
+    size_t                                      minMemoryMapAlignment;
+    VkDeviceSize                                minTexelBufferOffsetAlignment;
+    VkDeviceSize                                minUniformBufferOffsetAlignment;
+    VkDeviceSize                                minStorageBufferOffsetAlignment;
     int32_t                                     minTexelOffset;
     uint32_t                                    maxTexelOffset;
     int32_t                                     minTexelGatherOffset;
@@ -1283,8 +1288,8 @@ typedef struct {
     float                                       pointSizeGranularity;
     float                                       lineWidthGranularity;
     VkBool32                                    strictLines;
-    uint32_t                                    recommendedBufferCopyOffsetAlignment;
-    uint32_t                                    recommendedBufferCopyRowPitchAlignment;
+    VkDeviceSize                                recommendedBufferCopyOffsetAlignment;
+    VkDeviceSize                                recommendedBufferCopyRowPitchAlignment;
 } VkPhysicalDeviceLimits;
 
 typedef struct {
@@ -1971,7 +1976,7 @@ typedef struct {
     VkPipelineStageFlags                        destStageMask;
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
-    VkBool32                                    byRegion;
+    VkDependencyFlags                           dependencyFlags;
 } VkSubpassDependency;
 
 typedef struct {
@@ -2277,7 +2282,7 @@ typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcIm
 typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
-typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkDependencyFlags dependencyFlags, uint32_t memBarrierCount, const void* const* ppMemBarriers);
 typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
@@ -3026,7 +3031,7 @@ void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
-    VkBool32                                    byRegion,
+    VkDependencyFlags                           dependencyFlags,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers);
 

@@ -1407,7 +1407,7 @@ void vkReplay::manually_replay_vkCmdPipelineBarrier(packet_vkCmdPipelineBarrier*
             pNextImg->image = m_objMapper.remap_images(pNextImg->image);
         }
     }
-    m_vkFuncs.real_vkCmdPipelineBarrier(remappedCmdBuffer, pPacket->srcStageMask, pPacket->destStageMask, pPacket->byRegion, pPacket->memBarrierCount, pPacket->ppMemBarriers);
+    m_vkFuncs.real_vkCmdPipelineBarrier(remappedCmdBuffer, pPacket->srcStageMask, pPacket->destStageMask, pPacket->dependencyFlags, pPacket->memBarrierCount, pPacket->ppMemBarriers);
     for (idx = 0; idx < pPacket->memBarrierCount; idx++) {
         VkMemoryBarrier *pNext = (VkMemoryBarrier *) pPacket->ppMemBarriers[idx];
         if (pNext->sType == VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER) {

@@ -6196,7 +6196,7 @@ bool PostCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlags srcStageMask,
     VkPipelineStageFlags destStageMask,
-    VkBool32 byRegion,
+    VkDependencyFlags dependencyFlags,
     uint32_t memBarrierCount)
 {
 
@@ -6211,15 +6211,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlags srcStageMask,
     VkPipelineStageFlags destStageMask,
-    VkBool32 byRegion,
+    VkDependencyFlags dependencyFlags,
     uint32_t memBarrierCount,
     const void* const* ppMemBarriers)
 {
     PreCmdPipelineBarrier(cmdBuffer, ppMemBarriers);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, dependencyFlags, memBarrierCount, ppMemBarriers);
 
-    PostCmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount);
+    PostCmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, dependencyFlags, memBarrierCount);
 }
 
 bool PostCmdBeginQuery(

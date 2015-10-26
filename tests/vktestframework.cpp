@@ -558,7 +558,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.image = m_buffers[m_current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+                         0, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferImageCopy region = {};
     region.imageExtent.height = m_display_image->m_height;
@@ -573,7 +573,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+                         0, 1, (const void * const*)&pmemory_barrier);
     m_cmdbuf.end();
 
     VkCmdBuffer cmdBufs[1];
@@ -1021,7 +1021,7 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(m_cmdbuf.handle(), src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 
     err = vkEndCommandBuffer(m_cmdbuf.handle());
     assert(!err);

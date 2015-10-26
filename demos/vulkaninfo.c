@@ -884,10 +884,10 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tviewportBoundsRange[0]                  = %f\n",                 limits->viewportBoundsRange[0]                 );
     printf("\t\tviewportBoundsRange[1]                  = %f\n",                 limits->viewportBoundsRange[1]                 );
     printf("\t\tviewportSubPixelBits                    = 0x%" PRIxLEAST32 "\n", limits->viewportSubPixelBits                   );
-    printf("\t\tminMemoryMapAlignment                   = 0x%" PRIxLEAST32 "\n", limits->minMemoryMapAlignment                  );
-    printf("\t\tminTexelBufferOffsetAlignment           = 0x%" PRIxLEAST32 "\n", limits->minTexelBufferOffsetAlignment          );
-    printf("\t\tminUniformBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minUniformBufferOffsetAlignment        );
-    printf("\t\tminStorageBufferOffsetAlignment         = 0x%" PRIxLEAST32 "\n", limits->minStorageBufferOffsetAlignment        );
+    printf("\t\tminMemoryMapAlignment                   = " PRINTF_SIZE_T_SPECIFIER "\n", limits->minMemoryMapAlignment         );
+    printf("\t\tminTexelBufferOffsetAlignment           = 0x%" PRIxLEAST64 "\n", limits->minTexelBufferOffsetAlignment          );
+    printf("\t\tminUniformBufferOffsetAlignment         = 0x%" PRIxLEAST64 "\n", limits->minUniformBufferOffsetAlignment        );
+    printf("\t\tminStorageBufferOffsetAlignment         = 0x%" PRIxLEAST64 "\n", limits->minStorageBufferOffsetAlignment        );
     printf("\t\tminTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->minTexelOffset                         );
     printf("\t\tmaxTexelOffset                          = 0x%" PRIxLEAST32 "\n", limits->maxTexelOffset                         );
     printf("\t\tminTexelGatherOffset                    = 0x%" PRIxLEAST32 "\n", limits->minTexelGatherOffset                   );
@@ -918,8 +918,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
     printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
     printf("\t\tstrictLines                             = %u\n",                 limits->strictLines                            );
-    printf("\t\trecommendedBufferCopyOffsetAlignment    = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyOffsetAlignment   );
-    printf("\t\trecommendedBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyRowPitchAlignment );
+    printf("\t\trecommendedBufferCopyOffsetAlignment    = 0x%" PRIxLEAST64 "\n", limits->recommendedBufferCopyOffsetAlignment   );
+    printf("\t\trecommendedBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST64 "\n", limits->recommendedBufferCopyRowPitchAlignment );
 }
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)

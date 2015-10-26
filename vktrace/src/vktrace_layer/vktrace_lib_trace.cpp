@@ -834,7 +834,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
-    VkBool32                                    byRegion,
+    VkDependencyFlags                           dependencyFlags,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
@@ -843,13 +843,13 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
     size_t customSize;
     customSize = (memBarrierCount * sizeof(void*)) + calculate_memory_barrier_size(memBarrierCount, ppMemBarriers);
     CREATE_TRACE_PACKET(vkCmdPipelineBarrier, customSize);
-    mdd(cmdBuffer)->devTable.CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, byRegion, memBarrierCount, ppMemBarriers);
+    mdd(cmdBuffer)->devTable.CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, dependencyFlags, memBarrierCount, ppMemBarriers);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkCmdPipelineBarrier(pHeader);
     pPacket->cmdBuffer = cmdBuffer;
     pPacket->srcStageMask = srcStageMask;
     pPacket->destStageMask = destStageMask;
-    pPacket->byRegion = byRegion;
+    pPacket->dependencyFlags = dependencyFlags;
     pPacket->memBarrierCount = memBarrierCount;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->ppMemBarriers), memBarrierCount * sizeof(void*), ppMemBarriers);
     uint32_t i, siz;

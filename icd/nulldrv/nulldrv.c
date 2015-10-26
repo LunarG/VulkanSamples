@@ -1231,7 +1231,7 @@ void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
-    VkBool32                                    byRegion,
+    VkDependencyFlags                           dependencyFlags,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
