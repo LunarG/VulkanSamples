@@ -32,37 +32,37 @@
 /**
  * Translate a pipe texture filter to the matching hardware mapfilter.
  */
-static int translate_tex_filter(VkTexFilter filter)
+static int translate_tex_filter(VkFilter filter)
 {
    switch (filter) {
-   case VK_TEX_FILTER_NEAREST: return GEN6_MAPFILTER_NEAREST;
-   case VK_TEX_FILTER_LINEAR:  return GEN6_MAPFILTER_LINEAR;
+   case VK_FILTER_NEAREST: return GEN6_MAPFILTER_NEAREST;
+   case VK_FILTER_LINEAR:  return GEN6_MAPFILTER_LINEAR;
    default:
       assert(!"unknown tex filter");
       return GEN6_MAPFILTER_NEAREST;
    }
 }
 
-static int translate_tex_mipmap_mode(VkTexMipmapMode mode)
+static int translate_tex_mipmap_mode(VkSamplerMipmapMode mode)
 {
    switch (mode) {
-   case VK_TEX_MIPMAP_MODE_NEAREST: return GEN6_MIPFILTER_NEAREST;
-   case VK_TEX_MIPMAP_MODE_LINEAR:  return GEN6_MIPFILTER_LINEAR;
-   case VK_TEX_MIPMAP_MODE_BASE:    return GEN6_MIPFILTER_NONE;
+   case VK_SAMPLER_MIPMAP_MODE_NEAREST: return GEN6_MIPFILTER_NEAREST;
+   case VK_SAMPLER_MIPMAP_MODE_LINEAR:  return GEN6_MIPFILTER_LINEAR;
+   case VK_SAMPLER_MIPMAP_MODE_BASE:    return GEN6_MIPFILTER_NONE;
    default:
       assert(!"unknown tex mipmap mode");
       return GEN6_MIPFILTER_NONE;
    }
 }
 
-static int translate_tex_addr(VkTexAddressMode addr)
+static int translate_tex_addr(VkSamplerAddressMode addr)
 {
    switch (addr) {
-   case VK_TEX_ADDRESS_MODE_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
-   case VK_TEX_ADDRESS_MODE_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
-   case VK_TEX_ADDRESS_MODE_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
-   case VK_TEX_ADDRESS_MODE_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
-   case VK_TEX_ADDRESS_MODE_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
+   case VK_SAMPLER_ADDRESS_MODE_WRAP:         return GEN6_TEXCOORDMODE_WRAP;
+   case VK_SAMPLER_ADDRESS_MODE_MIRROR:       return GEN6_TEXCOORDMODE_MIRROR;
+   case VK_SAMPLER_ADDRESS_MODE_CLAMP:        return GEN6_TEXCOORDMODE_CLAMP;
+   case VK_SAMPLER_ADDRESS_MODE_MIRROR_ONCE:  return GEN6_TEXCOORDMODE_MIRROR_ONCE;
+   case VK_SAMPLER_ADDRESS_MODE_CLAMP_BORDER: return GEN6_TEXCOORDMODE_CLAMP_BORDER;
    default:
       assert(!"unknown tex address");
       return GEN6_TEXCOORDMODE_WRAP;
@@ -191,7 +191,7 @@ sampler_init(struct intel_sampler *sampler,
    INTEL_GPU_ASSERT(gpu, 6, 7.5);
    STATIC_ASSERT(ARRAY_SIZE(sampler->cmd) >= 15);
 
-   mip_filter = translate_tex_mipmap_mode(info->mipMode);
+   mip_filter = translate_tex_mipmap_mode(info->mipmapMode);
    min_filter = translate_tex_filter(info->minFilter);
    mag_filter = translate_tex_filter(info->magFilter);
 
@@ -256,7 +256,7 @@ sampler_init(struct intel_sampler *sampler,
     * To achieve our goal, we just need to set MinLod to zero and set
     * MagFilter to MinFilter when mipmapping is disabled.
     */
-   if (info->mipMode == VK_TEX_MIPMAP_MODE_BASE && min_lod) {
+   if (info->mipmapMode == VK_SAMPLER_MIPMAP_MODE_BASE && min_lod) {
       min_lod = 0;
       mag_filter = min_filter;
    }

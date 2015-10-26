@@ -2087,7 +2087,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkImageLayout      destImageLayout,
     uint32_t           regionCount,
     const VkImageBlit *pRegions,
-    VkTexFilter        filter)
+    VkFilter        filter)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;

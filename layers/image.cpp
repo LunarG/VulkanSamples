@@ -712,7 +712,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkImageLayout      destImageLayout,
     uint32_t           regionCount,
     const VkImageBlit *pRegions,
-    VkTexFilter        filter)
+    VkFilter        filter)
 {
     VkBool32    skipCall    = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -811,10 +811,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
         // Validate filter
         if (vk_format_is_depth_or_stencil(srcFormat) ||
             vk_format_is_int(srcFormat)) {
-            if (filter != VK_TEX_FILTER_NEAREST) {
+            if (filter != VK_FILTER_NEAREST) {
                 std::stringstream ss;
                 ss << "vkCmdBlitImage: If the format of srcImage is a depth, stencil, depth stencil or integer-based format "
-                   << "then filter must be VK_TEX_FILTER_NEAREST.";
+                   << "then filter must be VK_FILTER_NEAREST.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                    (uint64_t)cmdBuffer, 0, IMAGE_INVALID_FILTER, "IMAGE", ss.str().c_str());
             }

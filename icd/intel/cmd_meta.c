@@ -559,7 +559,7 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
     VkImageLayout                            destImageLayout,
     uint32_t                                 regionCount,
     const VkImageBlit*                       pRegions,
-    VkTexFilter                              filter)
+    VkFilter                                 filter)
 {
     /*
      * TODO: Implement actual blit function.

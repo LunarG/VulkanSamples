@@ -2888,7 +2888,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCmdBuffer cmdBuffer,
                                              VkImage srcImage, VkImageLayout srcImageLayout,
                                              VkImage destImage, VkImageLayout destImageLayout,
                                              uint32_t regionCount, const VkImageBlit* pRegions,
-                                             VkTexFilter filter)
+                                             VkFilter filter)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);

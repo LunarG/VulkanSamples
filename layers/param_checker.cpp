@@ -4347,43 +4347,43 @@ bool PreCreateSampler(
         "vkCreateSampler parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->magFilter < VK_TEX_FILTER_BEGIN_RANGE ||
-        pCreateInfo->magFilter > VK_TEX_FILTER_END_RANGE)
+    if(pCreateInfo->magFilter < VK_FILTER_BEGIN_RANGE ||
+        pCreateInfo->magFilter > VK_FILTER_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexFilter pCreateInfo->magFilter, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkFilter pCreateInfo->magFilter, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->minFilter < VK_TEX_FILTER_BEGIN_RANGE ||
-        pCreateInfo->minFilter > VK_TEX_FILTER_END_RANGE)
+    if(pCreateInfo->minFilter < VK_FILTER_BEGIN_RANGE ||
+        pCreateInfo->minFilter > VK_FILTER_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexFilter pCreateInfo->minFilter, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkFilter pCreateInfo->minFilter, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->mipMode < VK_TEX_MIPMAP_MODE_BEGIN_RANGE ||
-        pCreateInfo->mipMode > VK_TEX_MIPMAP_MODE_END_RANGE)
+    if(pCreateInfo->mipmapMode < VK_SAMPLER_MIPMAP_MODE_BEGIN_RANGE ||
+        pCreateInfo->mipmapMode > VK_SAMPLER_MIPMAP_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkTexMipmapMode pCreateInfo->mipMode, is an unrecognized enumerator");
+        "vkCreateSampler parameter, VkSamplerMipmapMode pCreateInfo->mipmapMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeU < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
-        pCreateInfo->addressModeU > VK_TEX_ADDRESS_MODE_END_RANGE)
+    if(pCreateInfo->addressModeU < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeU > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeU, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeV < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
-        pCreateInfo->addressModeV > VK_TEX_ADDRESS_MODE_END_RANGE)
+    if(pCreateInfo->addressModeV < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeV > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeV, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->addressModeW < VK_TEX_ADDRESS_MODE_BEGIN_RANGE ||
-        pCreateInfo->addressModeW > VK_TEX_ADDRESS_MODE_END_RANGE)
+    if(pCreateInfo->addressModeW < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
+        pCreateInfo->addressModeW > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
@@ -5754,7 +5754,7 @@ bool PostCmdBlitImage(
     VkImage destImage,
     VkImageLayout destImageLayout,
     uint32_t regionCount,
-    VkTexFilter filter)
+    VkFilter filter)
 {
 
 
@@ -5776,11 +5776,11 @@ bool PostCmdBlitImage(
     }
 
 
-    if(filter < VK_TEX_FILTER_BEGIN_RANGE ||
-        filter > VK_TEX_FILTER_END_RANGE)
+    if(filter < VK_FILTER_BEGIN_RANGE ||
+        filter > VK_FILTER_END_RANGE)
     {
         log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkTexFilter filter, is an unrecognized enumerator");
+        "vkCmdBlitImage parameter, VkFilter filter, is an unrecognized enumerator");
         return false;
     }
 
@@ -5795,7 +5795,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkImageLayout destImageLayout,
     uint32_t regionCount,
     const VkImageBlit* pRegions,
-    VkTexFilter filter)
+    VkFilter filter)
 {
     PreCmdBlitImage(cmdBuffer, pRegions);
 

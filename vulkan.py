@@ -872,7 +872,7 @@ core = Extension(
              Param("VkImageLayout", "destImageLayout"),
              Param("uint32_t", "regionCount"),
              Param("const VkImageBlit*", "pRegions"),
-             Param("VkTexFilter", "filter")]),
+             Param("VkFilter", "filter")]),
 
         Proto("void", "CmdCopyBufferToImage",
             [Param("VkCmdBuffer", "cmdBuffer"),
