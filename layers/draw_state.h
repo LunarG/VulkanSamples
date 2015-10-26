@@ -321,9 +321,9 @@ typedef struct _GLOBAL_CB_NODE {
     vector<VkViewport>           viewports;
     vector<VkRect2D>             scissors;
     float                        lineWidth;
-    float                        depthBias;
+    float                        depthBiasConstantFactor;
     float                        depthBiasClamp;
-    float                        slopeScaledDepthBias;
+    float                        depthBiasSlopeFactor;
     float                        blendConst[4];
     float                        minDepthBounds;
     float                        maxDepthBounds;

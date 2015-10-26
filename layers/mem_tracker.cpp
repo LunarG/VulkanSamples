@@ -1741,9 +1741,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     VkCmdBuffer                         cmdBuffer,
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias)
+    float                               depthBiasSlopeFactor)
 {
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1754,7 +1754,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
+        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
     }
 }
 

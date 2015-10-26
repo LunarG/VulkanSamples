@@ -113,9 +113,9 @@ protected:
     std::vector<VkViewport>             m_viewports;
     std::vector<VkRect2D>               m_scissors;
     float                               m_lineWidth;
-    float                               m_depthBias;
+    float                               m_depthBiasConstantFactor;
     float                               m_depthBiasClamp;
-    float                               m_slopeScaledDepthBias;
+    float                               m_depthBiasSlopeFactor;
     float                               m_blendConst[4];
     float                               m_minDepthBounds;
     float                               m_maxDepthBounds;
@@ -192,7 +192,7 @@ public:
     void SetViewport(uint32_t viewportCount, const VkViewport* pViewports);
     void SetScissor(uint32_t scissorCount, const VkRect2D* pScissors);
     void SetLineWidth(float lineWidth);
-    void SetDepthBias(float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
+    void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
     void SetBlendConstants(const float blendConst[4]);
     void SetDepthBounds(float minDepthBounds, float maxDepthBounds);
     void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);

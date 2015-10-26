@@ -203,9 +203,9 @@ void VkRenderFramework::InitState()
 
     m_lineWidth = 1.0f;
 
-    m_depthBias = 0.0f;
+    m_depthBiasConstantFactor = 0.0f;
     m_depthBiasClamp = 0.0f;
-    m_slopeScaledDepthBias = 0.0f;
+    m_depthBiasSlopeFactor = 0.0f;
 
     m_blendConst[0] = 1.0f;
     m_blendConst[1] = 1.0f;
@@ -1139,9 +1139,9 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_rs_state.frontFace = VK_FRONT_FACE_CW;
     m_rs_state.depthBiasEnable = VK_FALSE;
     m_rs_state.lineWidth = 1.0f;
-    m_rs_state.depthBias = 0.0f;
+    m_rs_state.depthBiasConstantFactor = 0.0f;
     m_rs_state.depthBiasClamp = 0.0f;
-    m_rs_state.slopeScaledDepthBias = 0.0f;
+    m_rs_state.depthBiasSlopeFactor = 0.0f;
 
     memset(&m_cb_state,0,sizeof(m_cb_state));
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -1535,11 +1535,11 @@ void VkCommandBufferObj::SetLineWidth(float lineWidth)
 }
 
 void VkCommandBufferObj::SetDepthBias(
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias)
+    float                               depthBiasSlopeFactor)
 {
-    vkCmdSetDepthBias( handle(), depthBias, depthBiasClamp, slopeScaledDepthBias);
+    vkCmdSetDepthBias( handle(), depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
 void VkCommandBufferObj::SetBlendConstants(

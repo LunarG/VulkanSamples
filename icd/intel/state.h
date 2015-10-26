@@ -81,9 +81,9 @@ void intel_set_scissor(struct intel_cmd *cmd, uint32_t count, const VkRect2D *sc
 void intel_set_line_width(struct intel_cmd *cmd, float line_width);
 void intel_set_depth_bias(
     struct intel_cmd                   *cmd,
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias);
+    float                               depthBiasSlopeFactor);
 void intel_set_blend_constants(
     struct intel_cmd                   *cmd,
     const float                         blendConst[4]);

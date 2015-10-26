@@ -1640,9 +1640,9 @@ typedef struct {
     VkCullMode                                  cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
-    float                                       depthBias;
+    float                                       depthBiasConstantFactor;
     float                                       depthBiasClamp;
-    float                                       slopeScaledDepthBias;
+    float                                       depthBiasSlopeFactor;
     float                                       lineWidth;
 } VkPipelineRasterStateCreateInfo;
 
@@ -2183,7 +2183,7 @@ typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBin
 typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports);
 typedef void (VKAPI *PFN_vkCmdSetScissor)(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
 typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCmdBuffer cmdBuffer, float lineWidth);
-typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
+typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCmdBuffer cmdBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
 typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCmdBuffer cmdBuffer, const float blendConst[4]);
 typedef void (VKAPI *PFN_vkCmdSetDepthBounds)(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds);
 typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
@@ -2738,9 +2738,9 @@ void VKAPI vkCmdSetLineWidth(
 
 void VKAPI vkCmdSetDepthBias(
     VkCmdBuffer                                 cmdBuffer,
-    float                                       depthBias,
+    float                                       depthBiasConstantFactor,
     float                                       depthBiasClamp,
-    float                                       slopeScaledDepthBias);
+    float                                       depthBiasSlopeFactor);
 
 void VKAPI vkCmdSetBlendConstants(
     VkCmdBuffer                                 cmdBuffer,

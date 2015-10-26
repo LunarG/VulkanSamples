@@ -724,9 +724,9 @@ core = Extension(
 
         Proto("void", "CmdSetDepthBias",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("float", "depthBias"),
+             Param("float", "depthBiasConstantFactor"),
              Param("float", "depthBiasClamp"),
-             Param("float", "slopeScaledDepthBias")]),
+             Param("float", "depthBiasSlopeFactor")]),
 
         Proto("void", "CmdSetBlendConstants",
             [Param("VkCmdBuffer", "cmdBuffer"),

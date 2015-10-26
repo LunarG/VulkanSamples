@@ -49,13 +49,13 @@ void intel_set_line_width(struct intel_cmd *cmd, float line_width)
 
 void intel_set_depth_bias(
     struct intel_cmd                   *cmd,
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias)
+    float                               depthBiasSlopeFactor)
 {
-    cmd->bind.state.depth_bias.depth_bias = depthBias;
+    cmd->bind.state.depth_bias.depth_bias = depthBiasConstantFactor;
     cmd->bind.state.depth_bias.depth_bias_clamp = depthBiasClamp;
-    cmd->bind.state.depth_bias.slope_scaled_depth_bias = slopeScaledDepthBias;
+    cmd->bind.state.depth_bias.slope_scaled_depth_bias = depthBiasSlopeFactor;
 }
 
 void intel_set_blend_constants(
@@ -191,9 +191,9 @@ ICD_EXPORT void VKAPI vkCmdSetLineWidth(
 
 ICD_EXPORT void VKAPI vkCmdSetDepthBias(
     VkCmdBuffer                         cmdBuffer,
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias)
+    float                               depthBiasSlopeFactor)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -201,7 +201,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBias(
         return;
     }
 
-    intel_set_depth_bias(cmd, depthBias, depthBiasClamp, slopeScaledDepthBias);
+    intel_set_depth_bias(cmd, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
 ICD_EXPORT void VKAPI vkCmdSetBlendConstants(

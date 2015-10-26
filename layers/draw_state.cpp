@@ -2418,9 +2418,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     VkCmdBuffer                         cmdBuffer,
-    float                               depthBias,
+    float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
-    float                               slopeScaledDepthBias)
+    float                               depthBiasSlopeFactor)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -2430,15 +2430,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_SETDEPTHBIASSTATE);
             pCB->status |= CBSTATUS_DEPTH_BIAS_SET;
-            pCB->depthBias = depthBias;
+            pCB->depthBiasConstantFactor = depthBiasConstantFactor;
             pCB->depthBiasClamp = depthBiasClamp;
-            pCB->slopeScaledDepthBias = slopeScaledDepthBias;
+            pCB->depthBiasSlopeFactor = depthBiasSlopeFactor;
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, cmdBuffer, "vkCmdSetDepthBias()");
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetDepthBias(cmdBuffer, depthBias, depthBiasClamp, slopeScaledDepthBias);
+        dev_data->device_dispatch_table->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])

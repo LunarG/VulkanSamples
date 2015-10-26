@@ -1091,9 +1091,9 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
         pipeline->state.line_width.line_width = info->rs.lineWidth;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS) {
-        pipeline->state.depth_bias.depth_bias = info->rs.depthBias;
+        pipeline->state.depth_bias.depth_bias = info->rs.depthBiasConstantFactor;
         pipeline->state.depth_bias.depth_bias_clamp = info->rs.depthBiasClamp;
-        pipeline->state.depth_bias.slope_scaled_depth_bias = info->rs.slopeScaledDepthBias;
+        pipeline->state.depth_bias.slope_scaled_depth_bias = info->rs.depthBiasSlopeFactor;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS) {
         pipeline->state.blend.blend_const[0] = info->cb.blendConst[0];
