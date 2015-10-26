@@ -958,7 +958,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     cmd_meta_clear_depth_stencil_image(cmdBuffer, img, imageLayout, pDepthStencil->depth, pDepthStencil->stencil, rangeCount, pRanges);
 }
 
-void cmd_clear_color_attachment(
+static void cmd_clear_color_attachment(
     VkCmdBuffer                             cmdBuffer,
     uint32_t                                colorAttachment,
     VkImageLayout                           imageLayout,
@@ -995,7 +995,7 @@ void cmd_clear_color_attachment(
     }
 }
 
-void cmd_clear_depth_stencil_attachment(
+static void cmd_clear_depth_stencil_attachment(
     VkCmdBuffer                             cmdBuffer,
     VkImageAspectFlags                      aspectMask,
     VkImageLayout                           imageLayout,
