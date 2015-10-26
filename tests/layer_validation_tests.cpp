@@ -3943,7 +3943,7 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize)
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
-    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.pCode = (const uint32_t *) &spv;
     moduleCreateInfo.codeSize = 4;
     moduleCreateInfo.flags = 0;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);
@@ -3975,7 +3975,7 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic)
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
-    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.pCode = (const uint32_t *) &spv;
     moduleCreateInfo.codeSize = sizeof(spv) + 10;
     moduleCreateInfo.flags = 0;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);
@@ -4008,7 +4008,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion)
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
 
-    moduleCreateInfo.pCode = &spv;
+    moduleCreateInfo.pCode = (const uint32_t *) &spv;
     moduleCreateInfo.codeSize = sizeof(spv) + 10;
     moduleCreateInfo.flags = 0;
     vkCreateShaderModule(m_device->device(), &moduleCreateInfo, &module);

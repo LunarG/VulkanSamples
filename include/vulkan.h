@@ -1522,7 +1522,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     size_t                                      codeSize;
-    const void*                                 pCode;
+    const uint32_t*                             pCode;
     VkShaderModuleCreateFlags                   flags;
 } VkShaderModuleCreateInfo;
 

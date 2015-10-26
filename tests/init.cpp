@@ -522,13 +522,13 @@ TEST_F(VkTest, TestCommandBuffer) {
 
 void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
 {
-    void *code;
+    uint32_t *code;
     uint32_t codeSize;
     struct icd_spv_header *pSPV;
     VkResult err;
 
-    codeSize = sizeof(struct icd_spv_header) + 100;
-    code = malloc(codeSize);
+    codeSize = sizeof(struct icd_spv_header) + sizeof(uint32_t) * 25;
+    code = (uint32_t *) malloc(codeSize);
     ASSERT_TRUE(NULL != code) << "malloc failed!";
 
     memset(code, 0, codeSize);

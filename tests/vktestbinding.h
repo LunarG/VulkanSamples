@@ -465,7 +465,7 @@ public:
     void init(const Device &dev, const VkShaderModuleCreateInfo &info);
     VkResult init_try(const Device &dev, const VkShaderModuleCreateInfo &info);
 
-    static VkShaderModuleCreateInfo create_info(size_t code_size, const void *code, VkFlags flags);
+    static VkShaderModuleCreateInfo create_info(size_t code_size, const uint32_t *code, VkFlags flags);
 };
 
 class Shader : public internal::NonDispHandle<VkShader> {
@@ -792,7 +792,7 @@ inline VkExtent3D Image::extent(const VkExtent3D &extent, uint32_t mip_level)
     return Image::extent(width, height, depth);
 }
 
-inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, const void *code, VkFlags flags)
+inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, const uint32_t *code, VkFlags flags)
 {
     VkShaderModuleCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

@@ -1080,7 +1080,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
 
         shader_len = strlen(shader_code);
         moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + shader_len + 1;
-        moduleCreateInfo.pCode = malloc(moduleCreateInfo.codeSize);
+        moduleCreateInfo.pCode = (uint32_t *) malloc(moduleCreateInfo.codeSize);
         moduleCreateInfo.flags = 0;
 
         /* try version 0 first: VkShaderStage followed by GLSL */
