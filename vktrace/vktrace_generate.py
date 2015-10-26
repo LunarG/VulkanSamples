@@ -1327,7 +1327,7 @@ class Subcommand(object):
         rif_body.append('}')
         return "\n".join(rif_body)
 
-    def _remap_packet_param(self, funcName, paramType, paramName):
+    def _remap_packet_param(self, funcName, paramType, paramName, lastName):
         remap_list = vulkan.object_type_list
         param_exclude_list = ['pDescriptorSets', 'pFences']
         cleanParamType = paramType.strip('*').replace('const ', '')
@@ -1344,16 +1344,34 @@ class Subcommand(object):
                         objectTypeRemapParam = ', pPacket->objType'
                 elif 'srcObject' == paramName and 'Callback' in funcName:
                     objectTypeRemapParam = ', pPacket->objType'
+                pArray = ''
                 if '*' in paramType:
-                    if 'const ' not in paramType:
-                        result = '            %s remapped%s = m_objMapper.remap_%ss(*pPacket->%s%s);\n' % (cleanParamType, paramName, paramName.lower(), paramName, objectTypeRemapParam)
-                        result += '            if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
-                        result += '            {\n'
-                        result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
+                    if 'const' not in paramType:
+                        result = '        %s remapped%s = m_objMapper.remap_%ss(*pPacket->%s%s);\n' % (cleanParamType, paramName, paramName.lower(), paramName, objectTypeRemapParam)
+                        result += '        if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
+                        result += '        {\n'
+                        result += '            return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
+                        result += '        }\n'
+                        return result
+                    else:
+                        if lastName == '':
+                            return '            // pPacket->%s should have been remapped with special case code' % (paramName)
+                        pArray = '[pPacket->%s]' % lastName
+                        result = '            %s remapped%s%s;\n' % (cleanParamType, paramName, pArray)
+                        result += '%s\n' % self.lineinfo.get()
+                        result += '            for (uint32_t i = 0; i < pPacket->%s; i++) {\n' % lastName
+                        if cleanParamType in  VulkNonDispObjects:
+                            result += '                remapped%s[i].handle = m_objMapper.remap_%ss(pPacket->%s[i]%s.handle);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
+                            result += '                if (pPacket->%s[i].handle != 0 && remapped%s[i].handle == 0)\n' % (paramName, paramName)
+                        else:
+                            result += '                remapped%s[i] = m_objMapper.remap_%ss(pPacket->%s[i]%s);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
+                            result += '                if (pPacket->%s[i] != VK_NULL_HANDLE && remapped%s[i] == VK_NULL_HANDLE)\n' % (paramName, paramName)
+                        result += '                {\n'
+                        result += '                    return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
+                        result += '                }\n'
                         result += '            }\n'
                         return result
-                    else: # TODO : Don't remap array ptrs?
-                        return '            // pPacket->%s should have been remapped with special case code' % (paramName)
+
                 if paramType in VulkNonDispObjects:
                     result = '            %s remapped%s;\n' % (paramType, paramName)
                     result += '            remapped%s.handle = m_objMapper.remap_%ss(pPacket->%s%s.handle);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
@@ -1385,11 +1403,6 @@ class Subcommand(object):
                         objectTypeRemapParam = ', VKTRACE_VK_OBJECT_TYPE_UNKNOWN'
                     else:
                         objectTypeRemapParam = ', pPacket->objType'
-                if '*' in paramType:
-                    if 'const ' not in paramType:
-                        return 'remapped%s' % (paramName)
-                    else: # TODO : Don't remap array ptrs?
-                        return 'pPacket->%s' % (paramName)
                 return 'remapped%s' % (paramName)
         return 'pPacket->%s' % (paramName)
 
@@ -1568,13 +1581,14 @@ class Subcommand(object):
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
-
+                last_name = ''
                 for p in proto.params:
                     if create_func or create_view:
                         if p.name != proto.params[-1].name:
-                            rbody.append(self._remap_packet_param(proto.name, p.ty, p.name))
+                            rbody.append(self._remap_packet_param(proto.name, p.ty, p.name, last_name))
                     else:
-                        rbody.append(self._remap_packet_param(proto.name, p.ty, p.name))
+                        rbody.append(self._remap_packet_param(proto.name, p.ty, p.name, last_name))
+                    last_name = p.name
 
                 if proto.name == 'DestroyInstance':
                     rbody.append('            if (m_vkFuncs.real_vkDbgDestroyMsgCallback != NULL)')
