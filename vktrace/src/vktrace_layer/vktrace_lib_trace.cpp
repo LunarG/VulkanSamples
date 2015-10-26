@@ -1229,12 +1229,8 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkGetImageSparseMemoryRequirements;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(name, "QueueBindSparseBufferMemory"))
-        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseBufferMemory;
-    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
-        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseImageOpaqueMemory;
-    if (!strcmp(name, "QueueBindSparseImageMemory"))
-        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparseImageMemory;
+    if (!strcmp(name, "QueueBindSparse"))
+        return (PFN_vkVoidFunction) __HOOKED_vkQueueBindSparse;
     if (!strcmp(name, "CreateFence"))
         return (PFN_vkVoidFunction) __HOOKED_vkCreateFence;
     if (!strcmp(name, "DestroyFence"))

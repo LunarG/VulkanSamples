@@ -47,9 +47,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkGetBufferMemoryRequirements GetBufferMemoryRequirements;
     PFN_vkBindImageMemory BindImageMemory;
     PFN_vkBindBufferMemory BindBufferMemory;
-    PFN_vkQueueBindSparseBufferMemory QueueBindSparseBufferMemory;
-    PFN_vkQueueBindSparseImageOpaqueMemory QueueBindSparseImageOpaqueMemory;
-    PFN_vkQueueBindSparseImageMemory QueueBindSparseImageMemory;
+    PFN_vkQueueBindSparse QueueBindSparse;
     PFN_vkCreateFence CreateFence;
     PFN_vkDestroyFence DestroyFence;
     PFN_vkGetFenceStatus GetFenceStatus;

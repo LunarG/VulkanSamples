@@ -1696,35 +1696,16 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
+ICD_EXPORT VkResult VKAPI vkQueueBindSparse(
     VkQueue                                     queue,
-    VkBuffer                                    buffer,
     uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo)
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseImageMemoryBindInfo*          pBindInfo)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
 ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,

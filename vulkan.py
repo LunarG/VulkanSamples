@@ -388,23 +388,11 @@ core = Extension(
              Param("uint32_t*", "pPropertyCount"),
              Param("VkSparseImageFormatProperties*", "pProperties")]),
 
-        Proto("VkResult", "QueueBindSparseBufferMemory",
+        Proto("VkResult", "QueueBindSparse",
             [Param("VkQueue", "queue"),
-             Param("VkBuffer", "buffer"),
              Param("uint32_t", "bindInfoCount"),
-             Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
-
-        Proto("VkResult", "QueueBindSparseImageOpaqueMemory",
-            [Param("VkQueue", "queue"),
-             Param("VkImage", "image"),
-             Param("uint32_t", "bindInfoCount"),
-             Param("const VkSparseMemoryBindInfo*", "pBindInfo")]),
-
-        Proto("VkResult", "QueueBindSparseImageMemory",
-            [Param("VkQueue", "queue"),
-             Param("VkImage", "image"),
-             Param("uint32_t", "bindInfoCount"),
-             Param("const VkSparseImageMemoryBindInfo*", "pBindInfo")]),
+             Param("const VkBindSparseInfo*", "pBindInfo"),
+             Param("VkFence", "fence")]),
 
         Proto("VkResult", "CreateFence",
             [Param("VkDevice", "device"),

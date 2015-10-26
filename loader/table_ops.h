@@ -55,9 +55,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->GetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements) gpa(dev, "vkGetImageMemoryRequirements");
     table->BindBufferMemory = (PFN_vkBindBufferMemory) gpa(dev, "vkBindBufferMemory");
     table->BindImageMemory = (PFN_vkBindImageMemory) gpa(dev, "vkBindImageMemory");
-    table->QueueBindSparseBufferMemory = (PFN_vkQueueBindSparseBufferMemory) gpa(dev, "vkQueueBindSparseBufferMemory");
-    table->QueueBindSparseImageMemory = (PFN_vkQueueBindSparseImageMemory) gpa(dev, "vkQueueBindSparseImageMemory");
-    table->QueueBindSparseImageOpaqueMemory = (PFN_vkQueueBindSparseImageOpaqueMemory) gpa(dev, "vkQueueBindSparseImageOpaqueMemory");
+    table->QueueBindSparse = (PFN_vkQueueBindSparse) gpa(dev, "vkQueueBindSparse");
     table->CreateFence = (PFN_vkCreateFence) gpa(dev, "vkCreateFence");
     table->DestroyFence = (PFN_vkDestroyFence) gpa(dev, "vkDestroyFence");
     table->ResetFences = (PFN_vkResetFences) gpa(dev, "vkResetFences");
@@ -221,12 +219,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->BindBufferMemory;
     if (!strcmp(name, "BindImageMemory"))
         return (void *) table->BindImageMemory;
-    if (!strcmp(name, "QueueBindSparseBufferMemory"))
-        return (void *) table->QueueBindSparseBufferMemory;
-    if (!strcmp(name, "QueueBindSparseImageMemory"))
-        return (void *) table->QueueBindSparseImageMemory;
-    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
-        return (void *) table->QueueBindSparseImageOpaqueMemory;
+    if (!strcmp(name, "QueueBindSparse"))
+        return (void *) table->QueueBindSparse;
     if (!strcmp(name, "CreateFence"))
         return (void *) table->CreateFence;
     if (!strcmp(name, "DestroyFence"))

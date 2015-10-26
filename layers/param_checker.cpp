@@ -2693,9 +2693,10 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     PostGetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
-bool PreQueueBindSparseBufferMemory(
+bool PreQueueBindSparse(
     VkQueue queue,
-    const VkSparseMemoryBindInfo* pBindInfo)
+    uint32_t                                    bindInfoCount,
+    const VkBindSparseInfo*                     pBindInfo)
 {
     if(pBindInfo != nullptr)
     {
@@ -2704,10 +2705,11 @@ bool PreQueueBindSparseBufferMemory(
     return true;
 }
 
-bool PostQueueBindSparseBufferMemory(
+bool PostQueueBindSparse(
     VkQueue queue,
-    VkBuffer buffer,
-    uint32_t numBindings,
+    uint32_t bindInfoCount,
+    const VkBindSparseInfo* pBindInfo,
+    VkFence fence,
     VkResult result)
 {
 
@@ -2715,7 +2717,7 @@ bool PostQueueBindSparseBufferMemory(
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkQueueBindSparseBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkQueueBindSparse parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -2723,114 +2725,17 @@ bool PostQueueBindSparseBufferMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
     VkQueue queue,
-    VkBuffer buffer,
-    uint32_t numBindings,
-    const VkSparseMemoryBindInfo* pBindInfo)
+    uint32_t bindInfoCount,
+    const VkBindSparseInfo* pBindInfo,
+    VkFence fence)
 {
-    PreQueueBindSparseBufferMemory(queue, pBindInfo);
+    PreQueueBindSparse(queue, bindInfoCount, pBindInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparseBufferMemory(queue, buffer, numBindings, pBindInfo);
+    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 
-    PostQueueBindSparseBufferMemory(queue, buffer, numBindings, result);
-
-    return result;
-}
-
-bool PreQueueBindSparseImageOpaqueMemory(
-    VkQueue queue,
-    const VkSparseMemoryBindInfo* pBindInfo)
-{
-    if(pBindInfo != nullptr)
-    {
-    }
-
-    return true;
-}
-
-bool PostQueueBindSparseImageOpaqueMemory(
-    VkQueue queue,
-    VkImage image,
-    uint32_t numBindings,
-    VkResult result)
-{
-
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkQueueBindSparseImageOpaqueMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
-    VkQueue queue,
-    VkImage image,
-    uint32_t numBindings,
-    const VkSparseMemoryBindInfo* pBindInfo)
-{
-    PreQueueBindSparseImageOpaqueMemory(queue, pBindInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparseImageOpaqueMemory(queue, image, numBindings, pBindInfo);
-
-    PostQueueBindSparseImageOpaqueMemory(queue, image, numBindings, result);
-
-    return result;
-}
-
-bool PreQueueBindSparseImageMemory(
-    VkQueue queue,
-    const VkSparseImageMemoryBindInfo* pBindInfo)
-{
-    if(pBindInfo != nullptr)
-    {
-    if ((pBindInfo->subresource.aspect &
-       (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
-    {
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueBindSparseImageMemory parameter, VkImageAspect pBindInfo->subresource.aspect, is an unrecognized enumerator");
-        return false;
-    }
-    }
-
-    return true;
-}
-
-bool PostQueueBindSparseImageMemory(
-    VkQueue queue,
-    VkImage image,
-    uint32_t numBindings,
-    VkResult result)
-{
-
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkQueueBindSparseImageMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue queue,
-    VkImage image,
-    uint32_t numBindings,
-    const VkSparseImageMemoryBindInfo* pBindInfo)
-{
-    PreQueueBindSparseImageMemory(queue, pBindInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueBindSparseImageMemory(queue, image, numBindings, pBindInfo);
-
-    PostQueueBindSparseImageMemory(queue, image, numBindings, result);
+    PostQueueBindSparse(queue, bindInfoCount, pBindInfo, fence, result);
 
     return result;
 }

@@ -99,12 +99,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkGetImageSparseMemoryRequirements;
     if (!strcmp(name, "GetPhysicalDeviceSparseImageFormatProperties"))
         return (void*) vkGetPhysicalDeviceSparseImageFormatProperties;
-    if (!strcmp(name, "QueueBindSparseBufferMemory"))
-        return (void*) vkQueueBindSparseBufferMemory;
-    if (!strcmp(name, "QueueBindSparseImageOpaqueMemory"))
-        return (void*) vkQueueBindSparseImageOpaqueMemory;
-    if (!strcmp(name, "QueueBindSparseImageMemory"))
-        return (void*) vkQueueBindSparseImageMemory;
+    if (!strcmp(name, "QueueBindSparse"))
+        return (void*) vkQueueBindSparse;
     if (!strcmp(name, "CreateFence"))
         return (void*) vkCreateFence;
     if (!strcmp(name, "DestroyFence"))

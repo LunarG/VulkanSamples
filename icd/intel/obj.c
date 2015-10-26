@@ -360,34 +360,13 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
+ICD_EXPORT VkResult VKAPI vkQueueBindSparse(
     VkQueue                                     queue,
-    VkBuffer                                    buffer,
     uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo)
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence)
 {
-    assert(0 && "vkQueueBindSparseBufferMemory not supported");
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo)
-{
-    assert(0 && "vkQueueBindSparseImageOpaqueMemory not supported");
-    return VK_SUCCESS;
-}
-
-
-ICD_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseImageMemoryBindInfo*          pBindInfo)
-{
-    assert(0 && "vkQueueBindSparseImageMemory not supported");
+    assert(0 && "vkQueueBindSparse not supported");
     return VK_SUCCESS;
 }
 

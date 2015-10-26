@@ -182,9 +182,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_SUBMIT_INFO = 48,
     VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO = 49,
     VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO = 50,
+    VK_STRUCTURE_TYPE_BIND_SPARSE_INFO = 51,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_BIND_SPARSE_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_BIND_SPARSE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -1395,7 +1396,19 @@ typedef struct {
     VkDeviceSize                                memOffset;
     VkDeviceMemory                              mem;
     VkSparseMemoryBindFlags                     flags;
-} VkSparseMemoryBindInfo;
+} VkSparseMemoryBind;
+
+typedef struct {
+    VkBuffer                                    buffer;
+    uint32_t                                    bindCount;
+    const VkSparseMemoryBind*                   pBinds;
+} VkSparseBufferMemoryBindInfo;
+
+typedef struct {
+    VkImage                                     image;
+    uint32_t                                    bindCount;
+    const VkSparseMemoryBind*                   pBinds;
+} VkSparseImageOpaqueMemoryBindInfo;
 
 typedef struct {
     VkImageAspectFlagBits                       aspect;
@@ -1416,7 +1429,28 @@ typedef struct {
     VkDeviceSize                                memOffset;
     VkDeviceMemory                              mem;
     VkSparseMemoryBindFlags                     flags;
+} VkSparseImageMemoryBind;
+
+typedef struct {
+    VkImage                                     image;
+    uint32_t                                    bindCount;
+    const VkSparseImageMemoryBind*              pBinds;
 } VkSparseImageMemoryBindInfo;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    waitSemaphoreCount;
+    const VkSemaphore*                          pWaitSemaphores;
+    uint32_t                                    bufferBindCount;
+    const VkSparseBufferMemoryBindInfo*         pBufferBinds;
+    uint32_t                                    imageOpaqueBindCount;
+    const VkSparseImageOpaqueMemoryBindInfo*    pImageOpaqueBinds;
+    uint32_t                                    imageBindCount;
+    const VkSparseImageMemoryBindInfo*          pImageBinds;
+    uint32_t                                    signalSemaphoreCount;
+    const VkSemaphore*                          pSignalSemaphores;
+} VkBindSparseInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -2110,9 +2144,7 @@ typedef void (VKAPI *PFN_vkGetBufferMemoryRequirements)(VkDevice device, VkBuffe
 typedef void (VKAPI *PFN_vkGetImageMemoryRequirements)(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements);
 typedef void (VKAPI *PFN_vkGetImageSparseMemoryRequirements)(VkDevice device, VkImage image, uint32_t* pSparseMemoryRequirementCount, VkSparseImageMemoryRequirements* pSparseMemoryRequirements);
 typedef void (VKAPI *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo);
-typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageOpaqueMemory)(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo);
-typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseImageMemoryBindInfo* pBindInfo);
+typedef VkResult (VKAPI *PFN_vkQueueBindSparse)(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkFence* pFence);
 typedef void (VKAPI *PFN_vkDestroyFence)(VkDevice device, VkFence fence, const VkAllocCallbacks* pAllocator);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences);
@@ -2396,23 +2428,11 @@ void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     uint32_t*                                   pPropertyCount,
     VkSparseImageFormatProperties*              pProperties);
 
-VkResult VKAPI vkQueueBindSparseBufferMemory(
+VkResult VKAPI vkQueueBindSparse(
     VkQueue                                     queue,
-    VkBuffer                                    buffer,
     uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo);
-
-VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseMemoryBindInfo*               pBindInfo);
-
-VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    bindInfoCount,
-    const VkSparseImageMemoryBindInfo*          pBindInfo);
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence);
 
 VkResult VKAPI vkCreateFence(
     VkDevice                                    device,

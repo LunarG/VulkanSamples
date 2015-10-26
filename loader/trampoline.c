@@ -483,31 +483,13 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysic
     disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pPropertyCount, pProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(VkQueue queue, VkBuffer buffer, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo)
+LOADER_EXPORT VkResult VKAPI vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueBindSparseBufferMemory(queue, buffer, bindInfoCount, pBindInfo);
-}
-
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseMemoryBindInfo* pBindInfo)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueueBindSparseImageOpaqueMemory(queue, image, bindInfoCount, pBindInfo);
-}
-
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(VkQueue queue, VkImage image, uint32_t bindInfoCount, const VkSparseImageMemoryBindInfo* pBindInfo)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueueBindSparseImageMemory(queue, image, bindInfoCount, pBindInfo);
+    return disp->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkFence* pFence)

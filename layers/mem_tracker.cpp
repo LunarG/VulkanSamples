@@ -1372,61 +1372,53 @@ void VKAPI vkGetImageMemoryRequirements(
     my_data->device_dispatch_table->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
+VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
     VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    numBindings,
-    const VkSparseMemoryBindInfo*               pBindInfo)
+    uint32_t                                    bindInfoCount,
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
-    loader_platform_thread_lock_mutex(&globalLock);
-    // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageOpaqeMemory");
-    print_mem_list(my_data, queue);
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        result = my_data->device_dispatch_table->QueueBindSparseImageOpaqueMemory( queue, image, numBindings, pBindInfo);
-    }
-    return result;
-}
+    VkBool32 skipCall = VK_FALSE;
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    numBindings,
-    const VkSparseImageMemoryBindInfo*          pBindInfo)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
-    // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageMemory");
-    print_mem_list(my_data, queue);
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        VkResult result = my_data->device_dispatch_table->QueueBindSparseImageMemory(
-                              queue, image, numBindings, pBindInfo);
-    }
-    return result;
-}
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
-    VkQueue                       queue,
-    VkBuffer                      buffer,
-    uint32_t                      numBindings,
-    const VkSparseMemoryBindInfo* pBindInfo)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
-    loader_platform_thread_lock_mutex(&globalLock);
-    // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, "VkQueueBindSparseBufferMemory");
+    for (uint32_t i = 0; i < bindInfoCount; i++) {
+        // Track objects tied to memory
+        for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
+            for (uint32_t k = 0; k < pBindInfo[i].pBufferBinds[j].bindCount; k++) {
+                if (set_sparse_mem_binding(my_data, queue,
+                            pBindInfo[i].pBufferBinds[j].pBinds[k].mem,
+                            (uint64_t) pBindInfo[i].pBufferBinds[j].buffer,
+                            VK_OBJECT_TYPE_BUFFER, "vkQueueBindSparse"))
+                    skipCall = VK_TRUE;
+            }
+        }
+        for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; j++) {
+            for (uint32_t k = 0; k < pBindInfo[i].pImageOpaqueBinds[j].bindCount; k++) {
+                if (set_sparse_mem_binding(my_data, queue,
+                            pBindInfo[i].pImageOpaqueBinds[j].pBinds[k].mem,
+                            (uint64_t) pBindInfo[i].pImageOpaqueBinds[j].image,
+                            VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparse"))
+                    skipCall = VK_TRUE;
+            }
+        }
+        for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++) {
+            for (uint32_t k = 0; k < pBindInfo[i].pImageBinds[j].bindCount; k++) {
+                if (set_sparse_mem_binding(my_data, queue,
+                            pBindInfo[i].pImageBinds[j].pBinds[k].mem,
+                            (uint64_t) pBindInfo[i].pImageBinds[j].image,
+                            VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparse"))
+                    skipCall = VK_TRUE;
+            }
+        }
+    }
+
     print_mem_list(my_data, queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        VkResult result = my_data->device_dispatch_table->QueueBindSparseBufferMemory(
-                              queue, buffer, numBindings, pBindInfo);
+        result = my_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
     }
     return result;
 }
@@ -2513,12 +2505,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkGetBufferMemoryRequirements;
     if (!strcmp(funcName, "vkGetImageMemoryRequirements"))
         return (PFN_vkVoidFunction) vkGetImageMemoryRequirements;
-    if (!strcmp(funcName, "vkQueueBindSparseBufferMemory"))
-        return (PFN_vkVoidFunction) vkQueueBindSparseBufferMemory;
-    if (!strcmp(funcName, "vkQueueBindSparseImageOpaqueMemory"))
-        return (PFN_vkVoidFunction) vkQueueBindSparseImageOpaqueMemory;
-    if (!strcmp(funcName, "vkQueueBindSparseImageMemory"))
-        return (PFN_vkVoidFunction) vkQueueBindSparseImageMemory;
+    if (!strcmp(funcName, "vkQueueBindSparse"))
+        return (PFN_vkVoidFunction) vkQueueBindSparse;
     if (!strcmp(funcName, "vkCreateFence"))
         return (PFN_vkVoidFunction) vkCreateFence;
     if (!strcmp(funcName, "vkGetFenceStatus"))
