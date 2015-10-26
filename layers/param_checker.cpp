@@ -1071,51 +1071,6 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkImageViewCreateFlagBits const& enumerator)
-{
-    VkImageViewCreateFlagBits allFlags = (VkImageViewCreateFlagBits)(VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT |
-        VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT);
-    if(enumerator & (~allFlags))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkImageViewCreateFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
-    {
-        return "unrecognized enumerator";
-    }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT)
-    {
-        strings.push_back("VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT");
-    }
-    if(enumerator & VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT)
-    {
-        strings.push_back("VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT");
-    }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
-    {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
-    }
-
-    return enumeratorString;
-}
-
-static
 bool ValidateEnumerator(VkChannelFlagBits const& enumerator)
 {
     VkChannelFlagBits allFlags = (VkChannelFlagBits)(VK_CHANNEL_A_BIT |

@@ -910,11 +910,6 @@ typedef enum {
 } VkBufferUsageFlagBits;
 typedef VkFlags VkBufferUsageFlags;
 typedef VkFlags VkBufferViewCreateFlags;
-
-typedef enum {
-    VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
-    VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
-} VkImageViewCreateFlagBits;
 typedef VkFlags VkImageViewCreateFlags;
 typedef VkFlags VkImageAspectFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
