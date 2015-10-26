@@ -225,7 +225,7 @@ void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
     pLimits->maxComputeWorkGroupInvocations = 512;
 
     // incremented every 80ns
-    pLimits->timestampFrequency = 1000 * 1000 * 1000 / 80;
+    pLimits->timestampPeriod = 80.0f;
 
     // hardware is limited to 16 viewports
     pLimits->maxViewports        = INTEL_MAX_VIEWPORTS;

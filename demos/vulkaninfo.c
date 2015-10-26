@@ -913,7 +913,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxSampledImageIntegerSamples           = 0x%" PRIxLEAST32 "\n", limits->maxSampledImageIntegerSamples          );
     printf("\t\tmaxStorageImageSamples                  = 0x%" PRIxLEAST32 "\n", limits->maxStorageImageSamples                 );
     printf("\t\tmaxSampleMaskWords                      = 0x%" PRIxLEAST32 "\n", limits->maxSampleMaskWords                     );
-    printf("\t\ttimestampFrequency                      = 0x%" PRIxLEAST64 "\n", limits->timestampFrequency                     );
+    printf("\t\ttimestampPeriod                         = 0x%f\n",               limits->timestampPeriod                        );
     printf("\t\tmaxClipDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxClipDistances                       );
     printf("\t\tmaxCullDistances                        = 0x%" PRIxLEAST32 "\n", limits->maxCullDistances                       );
     printf("\t\tmaxCombinedClipAndCullDistances         = 0x%" PRIxLEAST32 "\n", limits->maxCombinedClipAndCullDistances        );

@@ -1261,7 +1261,7 @@ typedef struct {
     uint32_t                                    maxSampledImageIntegerSamples;
     uint32_t                                    maxStorageImageSamples;
     uint32_t                                    maxSampleMaskWords;
-    uint64_t                                    timestampFrequency;
+    float                                       timestampPeriod;
     uint32_t                                    maxClipDistances;
     uint32_t                                    maxCullDistances;
     uint32_t                                    maxCombinedClipAndCullDistances;
