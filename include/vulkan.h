@@ -59,8 +59,8 @@ extern "C" {
         
 
 
-typedef uint32_t VkBool32;
 typedef uint32_t VkFlags;
+typedef uint32_t VkBool32;
 typedef uint64_t VkDeviceSize;
 typedef uint32_t VkSampleMask;
 
@@ -764,6 +764,7 @@ typedef enum {
     VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
 } VkRenderPassContents;
 
+typedef VkFlags VkInstanceCreateFlags;
 
 typedef enum {
     VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT = 0x00000001,
@@ -834,6 +835,8 @@ typedef enum {
     VK_MEMORY_HEAP_HOST_LOCAL_BIT = 0x00000001,
 } VkMemoryHeapFlagBits;
 typedef VkFlags VkMemoryHeapFlags;
+typedef VkFlags VkDeviceCreateFlags;
+typedef VkFlags VkDeviceQueueCreateFlags;
 typedef VkFlags VkMemoryMapFlags;
 
 typedef enum {
@@ -861,6 +864,7 @@ typedef enum {
 typedef VkFlags VkFenceCreateFlags;
 typedef VkFlags VkSemaphoreCreateFlags;
 typedef VkFlags VkEventCreateFlags;
+typedef VkFlags VkQueryPoolCreateFlags;
 
 typedef enum {
     VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT = 0x00000001,
@@ -887,6 +891,13 @@ typedef enum {
 typedef VkFlags VkQueryResultFlags;
 
 typedef enum {
+    VK_BUFFER_CREATE_SPARSE_BINDING_BIT = 0x00000001,
+    VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
+    VK_BUFFER_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
+} VkBufferCreateFlagBits;
+typedef VkFlags VkBufferCreateFlags;
+
+typedef enum {
     VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT = 0x00000001,
     VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT = 0x00000002,
     VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT = 0x00000004,
@@ -898,20 +909,14 @@ typedef enum {
     VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT = 0x00000100,
 } VkBufferUsageFlagBits;
 typedef VkFlags VkBufferUsageFlags;
-
-typedef enum {
-    VK_BUFFER_CREATE_SPARSE_BINDING_BIT = 0x00000001,
-    VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
-    VK_BUFFER_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
-} VkBufferCreateFlagBits;
-typedef VkFlags VkBufferCreateFlags;
-typedef VkFlags VkImageAspectFlags;
+typedef VkFlags VkBufferViewCreateFlags;
 
 typedef enum {
     VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
     VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
 } VkImageViewCreateFlagBits;
 typedef VkFlags VkImageViewCreateFlags;
+typedef VkFlags VkImageAspectFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
@@ -924,6 +929,23 @@ typedef enum {
     VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
+typedef VkFlags VkPipelineCacheCreateFlags;
+
+typedef enum {
+    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
+    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
+    VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
+} VkPipelineCreateFlagBits;
+typedef VkFlags VkPipelineCreateFlags;
+typedef VkFlags VkPipelineShaderStageCreateFlags;
+typedef VkFlags VkPipelineVertexInputStateCreateFlags;
+typedef VkFlags VkPipelineInputAssemblyStateCreateFlags;
+typedef VkFlags VkPipelineTesselationStateCreateFlags;
+typedef VkFlags VkPipelineViewportStateCreateFlags;
+typedef VkFlags VkPipelineRasterStateCreateFlags;
+typedef VkFlags VkPipelineMultisampleStateCreateFlags;
+typedef VkFlags VkPipelineDepthStencilStateCreateFlags;
+typedef VkFlags VkPipelineColorBlendStateCreateFlags;
 
 typedef enum {
     VK_CHANNEL_R_BIT = 0x00000001,
@@ -932,20 +954,19 @@ typedef enum {
     VK_CHANNEL_A_BIT = 0x00000008,
 } VkChannelFlagBits;
 typedef VkFlags VkChannelFlags;
-
-typedef enum {
-    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
-    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
-    VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
-} VkPipelineCreateFlagBits;
-typedef VkFlags VkPipelineCreateFlags;
+typedef VkFlags VkPipelineDynamicStateCreateFlags;
+typedef VkFlags VkPipelineLayoutCreateFlags;
 typedef VkFlags VkShaderStageFlags;
+typedef VkFlags VkSamplerCreateFlags;
+typedef VkFlags VkDescriptorSetLayoutCreateFlags;
 
 typedef enum {
     VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT = 0x00000001,
 } VkDescriptorPoolCreateFlagBits;
 typedef VkFlags VkDescriptorPoolCreateFlags;
 typedef VkFlags VkDescriptorPoolResetFlags;
+typedef VkFlags VkFramebufferCreateFlags;
+typedef VkFlags VkRenderPassCreateFlags;
 
 typedef enum {
     VK_ATTACHMENT_DESCRIPTION_MAY_ALIAS_BIT = 0x00000001,
@@ -1075,6 +1096,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkInstanceCreateFlags                       flags;
     const VkApplicationInfo*                    pAppInfo;
     uint32_t                                    enabledLayerNameCount;
     const char*const*                           ppEnabledLayerNames;
@@ -1315,6 +1337,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkDeviceQueueCreateFlags                    flags;
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queuePriorityCount;
     const float*                                pQueuePriorities;
@@ -1323,6 +1346,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkDeviceCreateFlags                         flags;
     uint32_t                                    requestedQueueCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    enabledLayerNameCount;
@@ -1473,6 +1497,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkQueryPoolCreateFlags                      flags;
     VkQueryType                                 queryType;
     uint32_t                                    slots;
     VkQueryPipelineStatisticFlags               pipelineStatistics;
@@ -1481,9 +1506,9 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkBufferCreateFlags                         flags;
     VkDeviceSize                                size;
     VkBufferUsageFlags                          usage;
-    VkBufferCreateFlags                         flags;
     VkSharingMode                               sharingMode;
     uint32_t                                    queueFamilyIndexCount;
     const uint32_t*                             pQueueFamilyIndices;
@@ -1492,6 +1517,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkBufferViewCreateFlags                     flags;
     VkBuffer                                    buffer;
     VkFormat                                    format;
     VkDeviceSize                                offset;
@@ -1501,6 +1527,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkImageCreateFlags                          flags;
     VkImageType                                 imageType;
     VkFormat                                    format;
     VkExtent3D                                  extent;
@@ -1509,7 +1536,6 @@ typedef struct {
     uint32_t                                    samples;
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
-    VkImageCreateFlags                          flags;
     VkSharingMode                               sharingMode;
     uint32_t                                    queueFamilyIndexCount;
     const uint32_t*                             pQueueFamilyIndices;
@@ -1541,34 +1567,35 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkImageViewCreateFlags                      flags;
     VkImage                                     image;
     VkImageViewType                             viewType;
     VkFormat                                    format;
     VkChannelMapping                            channels;
     VkImageSubresourceRange                     subresourceRange;
-    VkImageViewCreateFlags                      flags;
 } VkImageViewCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkShaderModuleCreateFlags                   flags;
     size_t                                      codeSize;
     const uint32_t*                             pCode;
-    VkShaderModuleCreateFlags                   flags;
 } VkShaderModuleCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkShaderCreateFlags                         flags;
     VkShaderModule                              module;
     const char*                                 pName;
-    VkShaderCreateFlags                         flags;
     VkShaderStageFlagBits                       stage;
 } VkShaderCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineCacheCreateFlags                  flags;
     size_t                                      initialSize;
     const void*                                 initialData;
     size_t                                      maxSize;
@@ -1590,6 +1617,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineShaderStageCreateFlags            flags;
     VkShader                                    shader;
     const VkSpecializationInfo*                 pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
@@ -1610,6 +1638,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineVertexInputStateCreateFlags       flags;
     uint32_t                                    vertexBindingDescriptionCount;
     const VkVertexInputBindingDescription*      pVertexBindingDescriptions;
     uint32_t                                    vertexAttributeDescriptionCount;
@@ -1619,6 +1648,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineInputAssemblyStateCreateFlags     flags;
     VkPrimitiveTopology                         topology;
     VkBool32                                    primitiveRestartEnable;
 } VkPipelineInputAssemblyStateCreateInfo;
@@ -1626,6 +1656,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineTesselationStateCreateFlags       flags;
     uint32_t                                    patchControlPoints;
 } VkPipelineTessellationStateCreateInfo;
 
@@ -1656,6 +1687,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineViewportStateCreateFlags          flags;
     uint32_t                                    viewportCount;
     const VkViewport*                           pViewports;
     uint32_t                                    scissorCount;
@@ -1665,6 +1697,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineRasterStateCreateFlags            flags;
     VkBool32                                    depthClampEnable;
     VkBool32                                    rasterizerDiscardEnable;
     VkFillMode                                  fillMode;
@@ -1680,6 +1713,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineMultisampleStateCreateFlags       flags;
     uint32_t                                    rasterSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
@@ -1701,6 +1735,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineDepthStencilStateCreateFlags      flags;
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
@@ -1726,6 +1761,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineColorBlendStateCreateFlags        flags;
     VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
@@ -1736,6 +1772,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineDynamicStateCreateFlags           flags;
     uint32_t                                    dynamicStateCount;
     const VkDynamicState*                       pDynamicStates;
 } VkPipelineDynamicStateCreateInfo;
@@ -1743,6 +1780,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineCreateFlags                       flags;
     uint32_t                                    stageCount;
     const VkPipelineShaderStageCreateInfo*      pStages;
     const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
@@ -1754,7 +1792,6 @@ typedef struct {
     const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
     const VkPipelineColorBlendStateCreateInfo*  pColorBlendState;
     const VkPipelineDynamicStateCreateInfo*     pDynamicState;
-    VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
@@ -1765,8 +1802,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineShaderStageCreateInfo             stage;
     VkPipelineCreateFlags                       flags;
+    VkPipelineShaderStageCreateInfo             stage;
     VkPipelineLayout                            layout;
     VkPipeline                                  basePipelineHandle;
     int32_t                                     basePipelineIndex;
@@ -1781,6 +1818,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineLayoutCreateFlags                 flags;
     uint32_t                                    setLayoutCount;
     const VkDescriptorSetLayout*                pSetLayouts;
     uint32_t                                    pushConstantRangeCount;
@@ -1790,6 +1828,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkSamplerCreateFlags                        flags;
     VkFilter                                    magFilter;
     VkFilter                                    minFilter;
     VkSamplerMipmapMode                         mipmapMode;
@@ -1816,6 +1855,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkDescriptorSetLayoutCreateFlags            flags;
     uint32_t                                    bindingCount;
     const VkDescriptorSetLayoutBinding*         pBindings;
 } VkDescriptorSetLayoutCreateInfo;
@@ -1882,6 +1922,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkFramebufferCreateFlags                    flags;
     VkRenderPass                                renderPass;
     uint32_t                                    attachmentCount;
     const VkImageView*                          pAttachments;
@@ -1893,6 +1934,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkAttachmentDescriptionFlags                flags;
     VkFormat                                    format;
     uint32_t                                    samples;
     VkAttachmentLoadOp                          loadOp;
@@ -1901,7 +1943,6 @@ typedef struct {
     VkAttachmentStoreOp                         stencilStoreOp;
     VkImageLayout                               initialLayout;
     VkImageLayout                               finalLayout;
-    VkAttachmentDescriptionFlags                flags;
 } VkAttachmentDescription;
 
 typedef struct {
@@ -1912,8 +1953,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineBindPoint                         pipelineBindPoint;
     VkSubpassDescriptionFlags                   flags;
+    VkPipelineBindPoint                         pipelineBindPoint;
     uint32_t                                    inputAttachmentCount;
     const VkAttachmentReference*                pInputAttachments;
     uint32_t                                    colorAttachmentCount;
@@ -1939,6 +1980,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkRenderPassCreateFlags                     flags;
     uint32_t                                    attachmentCount;
     const VkAttachmentDescription*              pAttachments;
     uint32_t                                    subpassCount;
@@ -1950,8 +1992,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    queueFamilyIndex;
     VkCmdPoolCreateFlags                        flags;
+    uint32_t                                    queueFamilyIndex;
 } VkCmdPoolCreateInfo;
 
 typedef struct {

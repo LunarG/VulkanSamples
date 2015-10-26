@@ -152,6 +152,7 @@ static void writePPM( const char *filename, VkImage image1)
     const VkImageCreateInfo imgCreateInfo = {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         NULL,
+        0,
         VK_IMAGE_TYPE_2D,
         format,
         {width, height, 1},
@@ -160,7 +161,6 @@ static void writePPM( const char *filename, VkImage image1)
         1,
         VK_IMAGE_TILING_LINEAR,
         (VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
-        0
     };
     VkMemoryAllocInfo memAllocInfo = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
