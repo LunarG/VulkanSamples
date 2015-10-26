@@ -551,14 +551,10 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkPipelineCache", "pipelineCache")]),
 
-        Proto("size_t", "GetPipelineCacheSize",
-            [Param("VkDevice", "device"),
-             Param("VkPipelineCache", "pipelineCache")]),
-
         Proto("VkResult", "GetPipelineCacheData",
             [Param("VkDevice", "device"),
              Param("VkPipelineCache", "pipelineCache"),
-             Param("size_t", "dataSize"),
+             Param("size_t*", "pDataSize"),
              Param("void*", "pData")]),
 
         Proto("VkResult", "MergePipelineCaches",

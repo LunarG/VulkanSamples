@@ -1918,23 +1918,14 @@ void VKAPI vkDestroyPipelineCache(
     dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache);
 }
 
-size_t VKAPI vkGetPipelineCacheSize(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
-{
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    size_t size = dev_data->device_dispatch_table->GetPipelineCacheSize(device, pipelineCache);
-    return size;
-}
-
 VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
-    size_t                                      dataSize,
+    size_t*                                     pDataSize,
     void*                                       pData)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, dataSize, pData);
+    VkResult result = dev_data->device_dispatch_table->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
     return result;
 }
 
@@ -3714,8 +3705,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))
         return (PFN_vkVoidFunction) vkDestroyPipelineCache;
-    if (!strcmp(funcName, "GetPipelineCacheSize"))
-        return (PFN_vkVoidFunction) vkGetPipelineCacheSize;
     if (!strcmp(funcName, "GetPipelineCacheData"))
         return (PFN_vkVoidFunction) vkGetPipelineCacheData;
     if (!strcmp(funcName, "MergePipelineCaches"))

@@ -1272,8 +1272,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))
         return (PFN_vkVoidFunction) __HOOKED_vkDestroyPipelineCache;
-    if (!strcmp(name, "GetPipelineCacheSize"))
-        return (PFN_vkVoidFunction) __HOOKED_vkGetPipelineCacheSize;
     if (!strcmp(name, "GetPipelineCacheData"))
         return (PFN_vkVoidFunction) __HOOKED_vkGetPipelineCacheData;
     if (!strcmp(name, "MergePipelineCaches"))

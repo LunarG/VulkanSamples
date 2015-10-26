@@ -3840,34 +3840,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
     return result;
 }
 
-bool PostGetPipelineCacheSize(
-    VkDevice device,
-    VkPipelineCache pipelineCache)
-{
-
-
-    return true;
-}
-
-VK_LAYER_EXPORT size_t VKAPI vkGetPipelineCacheSize(
-    VkDevice device,
-    VkPipelineCache pipelineCache)
-{
-    size_t result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheSize(device, pipelineCache);
-
-    PostGetPipelineCacheSize(device, pipelineCache);
-
-    return result;
-}
-
 bool PostGetPipelineCacheData(
     VkDevice device,
     VkPipelineCache pipelineCache,
-    size_t dataSize,
+    size_t* pDataSize,
     void* pData,
     VkResult result)
 {
 
+
+    if(pDataSize != nullptr)
+    {
+    }
 
     if(pData != nullptr)
     {
@@ -3886,12 +3870,12 @@ bool PostGetPipelineCacheData(
 VK_LAYER_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkDevice device,
     VkPipelineCache pipelineCache,
-    size_t dataSize,
+    size_t* pDataSize,
     void* pData)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, dataSize, pData);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
 
-    PostGetPipelineCacheData(device, pipelineCache, dataSize, pData, result);
+    PostGetPipelineCacheData(device, pipelineCache, pDataSize, pData, result);
 
     return result;
 }

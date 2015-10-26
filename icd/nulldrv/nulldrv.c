@@ -1733,18 +1733,10 @@ void VKAPI vkDestroyPipelineCache(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
-{
-    NULLDRV_LOG_FUNC;
-    return 0;
-}
-
 ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
-    size_t                                      dataSize,
+    size_t*                                     pDataSize,
     void*                                       pData)
 {
     NULLDRV_LOG_FUNC;

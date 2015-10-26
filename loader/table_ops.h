@@ -90,7 +90,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DestroyShader = (PFN_vkDestroyShader) gpa(dev, "vkDestroyShader");
     table->CreatePipelineCache = (PFN_vkCreatePipelineCache) gpa(dev, "vkCreatePipelineCache");
     table->DestroyPipelineCache = (PFN_vkDestroyPipelineCache) gpa(dev, "vkDestroyPipelineCache");
-    table->GetPipelineCacheSize = (PFN_vkGetPipelineCacheSize) gpa(dev, "vkGetPipelineCacheSize");
     table->GetPipelineCacheData = (PFN_vkGetPipelineCacheData) gpa(dev, "vkGetPipelineCacheData");
     table->MergePipelineCaches = (PFN_vkMergePipelineCaches) gpa(dev, "vkMergePipelineCaches");
     table->CreateGraphicsPipelines = (PFN_vkCreateGraphicsPipelines) gpa(dev, "vkCreateGraphicsPipelines");
@@ -294,8 +293,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))
         return (void*) vkDestroyPipelineCache;
-    if (!strcmp(name, "GetPipelineCacheSize"))
-        return (void*) vkGetPipelineCacheSize;
     if (!strcmp(name, "GetPipelineCacheData"))
         return (void*) vkGetPipelineCacheData;
     if (!strcmp(name, "MergePipelineCaches"))

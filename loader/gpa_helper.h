@@ -169,8 +169,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))
         return (void*) vkDestroyPipelineCache;
-    if (!strcmp(name, "GetPipelineCacheSize"))
-        return (void*) vkGetPipelineCacheSize;
     if (!strcmp(name, "GetPipelineCacheData"))
         return (void*) vkGetPipelineCacheData;
     if (!strcmp(name, "MergePipelineCaches"))

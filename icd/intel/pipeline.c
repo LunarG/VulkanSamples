@@ -1364,17 +1364,10 @@ void VKAPI vkDestroyPipelineCache(
 {
 }
 
-ICD_EXPORT size_t VKAPI vkGetPipelineCacheSize(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
-{
-    return VK_ERROR_VALIDATION_FAILED;
-}
-
 ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
-    size_t                                      dataSize,
+    size_t*                                     pDataSize,
     void*                                       pData)
 {
     return VK_ERROR_VALIDATION_FAILED;
