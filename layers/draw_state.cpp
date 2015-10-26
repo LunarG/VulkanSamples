@@ -880,30 +880,6 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
     return skipCall;
 }
 
-static VkBool32 validateDescriptorSetImageView(const layer_data* my_data, VkDevice device, uint32_t writeDsCount, const VkWriteDescriptorSet *pWDS)
-{
-    VkBool32    skipCall = VK_FALSE;
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    // Check ImageAspects of each descriptorSet in each writeDescriptorSet array
-    for (uint32_t i = 0; i < writeDsCount; i++) {
-        for (uint32_t j = 0; j < pWDS[i].count; j++) {
-            const VkDescriptorImageInfo *dInfo = &pWDS[i].pImageInfo[j];
-            auto imageViewItem = dev_data->imageViewMap.find(dInfo->imageView.handle);
-            if (imageViewItem != dev_data->imageViewMap.end()) {
-                VkImageAspectFlags flags = ((*imageViewItem).second)->subresourceRange.aspectMask;
-                if ((flags & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                    (flags & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE_VIEW, dInfo->imageView.handle, 0,
-                        DRAWSTATE_INVALID_IMAGE_ASPECT, "DS", "vkUpdateDescriptorSets: DesriptorSet[%d] in WriteDesriptorSet[%d] "
-                        "has ImageView with both STENCIL and DEPTH aspects set", j, i);
-                }
-            }
-        }
-    }
-    return skipCall;
-}
-
 // update DS mappings based on ppUpdateArray
 // TODO : copy updates are completely broken
 // TODO : Validate that actual VkDescriptorImageInfo, VkDescriptorBufferInfo
@@ -933,7 +909,6 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
 
     if (type == VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET) {
         pWDS = (const VkWriteDescriptorSet *)pUpdateArray;
-        skipCall |= validateDescriptorSetImageView(my_data, device, updateCount, pWDS);
     } else {
         pCDS = (const VkCopyDescriptorSet *)pUpdateArray;
     }
