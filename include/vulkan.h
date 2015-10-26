@@ -1112,6 +1112,7 @@ typedef struct {
     VkBool32                                    fillModeNonSolid;
     VkBool32                                    depthBounds;
     VkBool32                                    wideLines;
+    VkBool32                                    strictLines;
     VkBool32                                    largePoints;
     VkBool32                                    alphaToOne;
     VkBool32                                    multiViewport;

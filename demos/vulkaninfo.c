@@ -762,6 +762,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
     printf("\twideLines                               = %u\n", features->wideLines                              );
+    printf("\tstrictLines                             = %u\n", features->strictLines                            );
     printf("\tlargePoints                             = %u\n", features->largePoints                            );
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
