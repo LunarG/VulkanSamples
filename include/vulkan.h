@@ -1106,7 +1106,6 @@ typedef struct {
     VkBool32                                    fillModeNonSolid;
     VkBool32                                    depthBounds;
     VkBool32                                    wideLines;
-    VkBool32                                    strictLines;
     VkBool32                                    largePoints;
     VkBool32                                    alphaToOne;
     VkBool32                                    multiViewport;
@@ -1263,6 +1262,7 @@ typedef struct {
     float                                       lineWidthRange[2];
     float                                       pointSizeGranularity;
     float                                       lineWidthGranularity;
+    VkBool32                                    strictLines;
     uint32_t                                    recommendedBufferCopyOffsetAlignment;
     uint32_t                                    recommendedBufferCopyRowPitchAlignment;
 } VkPhysicalDeviceLimits;

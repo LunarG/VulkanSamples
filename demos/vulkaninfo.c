@@ -761,7 +761,6 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
     printf("\twideLines                               = %u\n", features->wideLines                              );
-    printf("\tstrictLines                             = %u\n", features->strictLines                            );
     printf("\tlargePoints                             = %u\n", features->largePoints                            );
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
@@ -921,6 +920,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tlineWidthRange[1]                       = %f\n",                 limits->lineWidthRange[1]                      );
     printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
     printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
+    printf("\t\tstrictLines                             = %u\n",                 limits->strictLines                            );
     printf("\t\trecommendedBufferCopyOffsetAlignment    = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyOffsetAlignment   );
     printf("\t\trecommendedBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST32 "\n", limits->recommendedBufferCopyRowPitchAlignment );
 }
