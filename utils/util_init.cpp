@@ -263,6 +263,9 @@ VkResult init_device(struct sample_info &info)
     res = vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     assert(res == VK_SUCCESS);
 
+    res = vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
+    assert(res == VK_SUCCESS);
+
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
