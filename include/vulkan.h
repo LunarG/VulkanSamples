@@ -806,7 +806,6 @@ typedef enum {
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
     VK_QUEUE_DMA_BIT = 0x00000004,
     VK_QUEUE_SPARSE_MEMMGR_BIT = 0x00000008,
-    VK_QUEUE_EXTENDED_BIT = 0x40000000,
 } VkQueueFlagBits;
 typedef VkFlags VkQueueFlags;
 

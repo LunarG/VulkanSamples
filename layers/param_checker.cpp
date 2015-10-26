@@ -447,7 +447,7 @@ std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkQueueFlagBits const& enumerator)
 {
-    VkQueueFlagBits allFlags = (VkQueueFlagBits)(VK_QUEUE_EXTENDED_BIT |
+    VkQueueFlagBits allFlags = (VkQueueFlagBits)(
         VK_QUEUE_DMA_BIT |
         VK_QUEUE_COMPUTE_BIT |
         VK_QUEUE_SPARSE_MEMMGR_BIT |
@@ -469,10 +469,6 @@ std::string EnumeratorString(VkQueueFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUEUE_EXTENDED_BIT)
-    {
-        strings.push_back("VK_QUEUE_EXTENDED_BIT");
-    }
     if(enumerator & VK_QUEUE_DMA_BIT)
     {
         strings.push_back("VK_QUEUE_DMA_BIT");

@@ -979,11 +979,10 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
 
     printf("VkQueueFamilyProperties[%d]:\n", id);
     printf("============================\n");
-    printf("\tqueueFlags         = %c%c%c%c\n",
+    printf("\tqueueFlags         = %c%c%c\n",
             (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
-            (props->queueFlags & VK_QUEUE_DMA_BIT)      ? 'D' : '.',
-            (props->queueFlags & VK_QUEUE_EXTENDED_BIT) ? 'X' : '.');
+            (props->queueFlags & VK_QUEUE_DMA_BIT)      ? 'D' : '.');
     printf("\tqueueCount         = %u\n",   props->queueCount);
     printf("\ttimestampValidBits = %u\n",   props->timestampValidBits);
     fflush(stdout);
