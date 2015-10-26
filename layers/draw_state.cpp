@@ -2027,7 +2027,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
             }
         }
         if (totalCount > 0) {
-            pNewNode->descriptorTypes.reserve(totalCount);
+            pNewNode->descriptorTypes.resize(totalCount);
             uint32_t offset = 0;
             uint32_t j = 0;
             for (uint32_t i=0; i<pCreateInfo->count; i++) {
@@ -2055,12 +2055,12 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
     if (VK_SUCCESS == result) {
         PIPELINE_LAYOUT_NODE plNode = dev_data->pipelineLayoutMap[pPipelineLayout->handle];
-        plNode.descriptorSetLayouts.reserve(pCreateInfo->descriptorSetCount);
+        plNode.descriptorSetLayouts.resize(pCreateInfo->descriptorSetCount);
         uint32_t i = 0;
         for (i=0; i<pCreateInfo->descriptorSetCount; ++i) {
             plNode.descriptorSetLayouts[i] = pCreateInfo->pSetLayouts[i];
         }
-        plNode.pushConstantRanges.reserve(pCreateInfo->pushConstantRangeCount);
+        plNode.pushConstantRanges.resize(pCreateInfo->pushConstantRangeCount);
         for (i=0; i<pCreateInfo->pushConstantRangeCount; ++i) {
             plNode.pushConstantRanges[i] = pCreateInfo->pPushConstantRanges[i];
         }
