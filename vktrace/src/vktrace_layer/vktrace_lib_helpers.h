@@ -158,13 +158,13 @@ static VKAllocInfo * find_mem_info_entry(const VkDeviceMemory handle)
     VKAllocInfo *entry;
     unsigned int i;
     entry = g_memInfo.pEntrys;
-    if (g_memInfo.pLastMapped && g_memInfo.pLastMapped->handle.handle == handle.handle && g_memInfo.pLastMapped->valid)
+    if (g_memInfo.pLastMapped && g_memInfo.pLastMapped->handle == handle && g_memInfo.pLastMapped->valid)
     {
         return g_memInfo.pLastMapped;
     }
     for (i = 0; i < g_memInfo.numEntrys; i++)
     {
-        if ((entry + i)->valid && (handle.handle == (entry + i)->handle.handle))
+        if ((entry + i)->valid && (handle == (entry + i)->handle))
         {
             return entry + i;
         }

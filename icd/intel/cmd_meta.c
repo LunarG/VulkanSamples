@@ -65,8 +65,7 @@ static void cmd_meta_set_src_for_buf(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
-    VkBuffer localbuf;
-    localbuf.handle = (uint64_t) buf;
+    VkBuffer localbuf = (VkBuffer) buf;
 
     res = cmd_meta_create_buf_view(cmd, localbuf,
             buf->size, format, &view);
@@ -95,8 +94,7 @@ static void cmd_meta_set_dst_for_buf(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
-    VkBuffer localbuf;
-    localbuf.handle = (uint64_t) buf;
+    VkBuffer localbuf = (VkBuffer) buf;
 
     res = cmd_meta_create_buf_view(cmd, localbuf,
             buf->size, format, &view);
@@ -130,7 +128,7 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image.handle = (uint64_t) img;
+    info.image = (VkImage) img;
 
     if (img->array_size == 1) {
         switch (img->type) {
@@ -259,7 +257,7 @@ static void cmd_meta_set_dst_for_img(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image.handle = (uint64_t) img;
+    info.image = (VkImage) img;
     info.format = format;
     info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     info.subresourceRange.baseMipLevel = lod;
@@ -291,8 +289,7 @@ static void cmd_meta_set_src_for_writer(struct intel_cmd *cmd,
 {
     struct intel_buf_view *view;
     VkResult res;
-    VkBuffer localbuf;
-    localbuf.handle = 0;
+    VkBuffer localbuf = VK_NULL_HANDLE;
 
     res = cmd_meta_create_buf_view(cmd, localbuf,
             size, format, &view);
@@ -323,7 +320,7 @@ static void cmd_meta_set_ds_view(struct intel_cmd *cmd,
 
     memset(&info, 0, sizeof(info));
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image.handle = (uint64_t)img;
+    info.image = (VkImage) img;
     info.subresourceRange.baseMipLevel = lod;
     info.subresourceRange.numLevels = 1;
     info.subresourceRange.baseArrayLayer = layer;

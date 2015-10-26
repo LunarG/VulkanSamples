@@ -183,7 +183,7 @@ struct _SwpDevice {
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
-    unordered_map<uint64_t, SwpSwapchain*> swapchains;
+    unordered_map<VkSwapchainKHR, SwpSwapchain*> swapchains;
 };
 
 // Create one of these for each VkImage within a VkSwapchainKHR:

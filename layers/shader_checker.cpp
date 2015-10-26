@@ -89,7 +89,7 @@ static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
 
-std::unordered_map<uint64_t, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
+std::unordered_map<VkDescriptorSetLayout, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
@@ -102,7 +102,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        auto& bindings = descriptor_set_layout_map[pSetLayout->handle];
+        auto& bindings = descriptor_set_layout_map[*pSetLayout];
         bindings = new std::vector<VkDescriptorSetLayoutBinding>(
                 pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->count);
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -112,7 +112,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 }
 
 
-std::unordered_map<uint64_t, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
+std::unordered_map<VkPipelineLayout, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
@@ -124,11 +124,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        auto& layouts = pipeline_layout_map[pPipelineLayout->handle];
+        auto& layouts = pipeline_layout_map[*pPipelineLayout];
         layouts = new std::vector<std::vector<VkDescriptorSetLayoutBinding>*>();
         layouts->reserve(pCreateInfo->descriptorSetCount);
         for (unsigned i = 0; i < pCreateInfo->descriptorSetCount; i++) {
-            layouts->push_back(descriptor_set_layout_map[pCreateInfo->pSetLayouts[i].handle]);
+            layouts->push_back(descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -209,7 +209,7 @@ struct shader_module {
 };
 
 
-static std::unordered_map<uint64_t, shader_module *> shader_module_map;
+static std::unordered_map<VkShaderModule, shader_module *> shader_module_map;
 
 struct shader_object {
     std::string name;
@@ -218,12 +218,12 @@ struct shader_object {
 
     shader_object(VkShaderCreateInfo const *pCreateInfo)
     {
-        module = shader_module_map[pCreateInfo->module.handle];
+        module = shader_module_map[pCreateInfo->module];
         stage = pCreateInfo->stage;
         name = pCreateInfo->pName;
     }
 };
-static std::unordered_map<uint64_t, shader_object *> shader_object_map;
+static std::unordered_map<VkShader, shader_object *> shader_object_map;
 
 struct render_pass {
     std::vector<std::vector<VkFormat>> subpass_color_formats;
@@ -250,7 +250,7 @@ struct render_pass {
         }
     }
 };
-static std::unordered_map<uint64_t, render_pass *> render_pass_map;
+static std::unordered_map<VkRenderPass, render_pass *> render_pass_map;
 
 
 static void
@@ -650,7 +650,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
 
     if (res == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        shader_module_map[pShaderModule->handle] = new shader_module(pCreateInfo);
+        shader_module_map[*pShaderModule] = new shader_module(pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return res;
@@ -664,7 +664,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateShader(device, pCreateInfo, pShader);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    shader_object_map[pShader->handle] = new shader_object(pCreateInfo);
+    shader_object_map[*pShader] = new shader_object(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
@@ -677,7 +677,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
     VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    render_pass_map[pRenderPass->handle] = new render_pass(pCreateInfo);
+    render_pass_map[*pRenderPass] = new render_pass(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
@@ -1080,7 +1080,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
                 }
             }
             else {
-                struct shader_object *shader = shader_object_map[pStage->shader.handle];
+                struct shader_object *shader = shader_object_map[pStage->shader];
                 shaders[get_shader_stage_id(shader->stage)] = shader->module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
@@ -1088,8 +1088,8 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
                 collect_interface_by_descriptor_slot(dev, shader->module, spv::StorageClassUniform,
                         descriptor_uses);
 
-                auto layout = pCreateInfo->layout.handle ?
-                    pipeline_layout_map[pCreateInfo->layout.handle] : nullptr;
+                auto layout = pCreateInfo->layout != VK_NULL_HANDLE ?
+                    pipeline_layout_map[pCreateInfo->layout] : nullptr;
 
                 for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
 
@@ -1112,7 +1112,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     }
 
     if (pCreateInfo->renderPass != VK_NULL_HANDLE)
-        rp = render_pass_map[pCreateInfo->renderPass.handle];
+        rp = render_pass_map[pCreateInfo->renderPass];
 
     vi = pCreateInfo->pVertexInputState;
 

@@ -313,7 +313,7 @@ ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pRequirements)
 {
-    struct intel_base *base = intel_base(buffer.handle);
+    struct intel_base *base = intel_base(buffer);
 
     base->get_memory_requirements(base, pRequirements);
 }
@@ -323,7 +323,7 @@ ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
     VkImage                                     image,
     VkMemoryRequirements*                       pRequirements)
 {
-    struct intel_base *base = intel_base(image.handle);
+    struct intel_base *base = intel_base(image);
 
     base->get_memory_requirements(base, pRequirements);
 }
@@ -334,7 +334,7 @@ ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
 {
-    struct intel_obj *obj = intel_obj(buffer.handle);
+    struct intel_obj *obj = intel_obj(buffer);
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_obj_bind_mem(obj, mem, memOffset);
@@ -348,7 +348,7 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
     VkDeviceMemory                              mem_,
     VkDeviceSize                                memOffset)
 {
-    struct intel_obj *obj = intel_obj(image.handle);
+    struct intel_obj *obj = intel_obj(image);
     struct intel_mem *mem = intel_mem(mem_);
 
     intel_obj_bind_mem(obj, mem, memOffset);

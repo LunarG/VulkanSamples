@@ -119,7 +119,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
 
         debug_report_log_msg(
                     debug_data, VK_DBG_REPORT_WARN_BIT,
-                    VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback.handle,
+                    VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) pTrav->msgCallback,
                     0, DEBUG_REPORT_CALLBACK_REF,
                     "DebugReport",
                     "Debug Report callbacks not removed before DestroyInstance");
@@ -159,7 +159,7 @@ static inline VkResult layer_create_msg_callback(
 
     // Handle of 0 is logging_callback so use allocated Node address as unique handle
     if (!(*pMsgCallback))
-        *pMsgCallback = (uint64_t) pNewDbgFuncNode;
+        *pMsgCallback = (VkDbgMsgCallback) pNewDbgFuncNode;
     pNewDbgFuncNode->msgCallback = *pMsgCallback;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->msgFlags = msgFlags;
@@ -171,7 +171,7 @@ static inline VkResult layer_create_msg_callback(
 
     debug_report_log_msg(
                 debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                VK_OBJECT_TYPE_MSG_CALLBACK, (*pMsgCallback).handle,
+                VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) *pMsgCallback,
                 0, DEBUG_REPORT_CALLBACK_REF,
                 "DebugReport",
                 "Added callback");
@@ -196,7 +196,7 @@ static inline void layer_destroy_msg_callback(
             }
             debug_report_log_msg(
                         debug_data, VK_DBG_REPORT_DEBUG_BIT,
-                        VK_OBJECT_TYPE_MSG_CALLBACK, pTrav->msgCallback.handle,
+                        VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) pTrav->msgCallback,
                         0, DEBUG_REPORT_NONE,
                         "DebugReport",
                         "Destroyed callback");

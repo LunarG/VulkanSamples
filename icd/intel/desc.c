@@ -602,7 +602,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             uint32_t j;
 
             for (j = 1; j < lb->arraySize; j++) {
-                if (lb->pImmutableSamplers[j].handle != lb->pImmutableSamplers[0].handle) {
+                if (lb->pImmutableSamplers[j] != lb->pImmutableSamplers[0]) {
                     shared = false;
                     break;
                 }
@@ -760,7 +760,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     VkDescriptorSetLayout                   descriptorSetLayout)
 
 {
-    struct intel_obj *obj = intel_obj(descriptorSetLayout.handle);
+    struct intel_obj *obj = intel_obj(descriptorSetLayout);
 
     obj->destroy(obj);
 }
@@ -782,7 +782,7 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     VkPipelineLayout                        pipelineLayout)
 
 {
-    struct intel_obj *obj = intel_obj(pipelineLayout.handle);
+    struct intel_obj *obj = intel_obj(pipelineLayout);
 
     obj->destroy(obj);
 }
@@ -803,7 +803,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     VkDescriptorPool                        descriptorPool)
 
 {
-    struct intel_obj *obj = intel_obj(descriptorPool.handle);
+    struct intel_obj *obj = intel_obj(descriptorPool);
 
     obj->destroy(obj);
 }

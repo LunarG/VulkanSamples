@@ -63,7 +63,7 @@ typedef struct
     VkFormat format;
     VkImage *imageList;
 } SwapchainMapStruct;
-static unordered_map<uint64_t, SwapchainMapStruct *> swapchainMap;
+static unordered_map<VkSwapchainKHR, SwapchainMapStruct *> swapchainMap;
 
 // unordered map: associates an image with a device, image extent, and format
 typedef struct
@@ -72,7 +72,7 @@ typedef struct
     VkExtent2D imageExtent;
     VkFormat format;
 } ImageMapStruct;
-static unordered_map<uint64_t, ImageMapStruct *> imageMap;
+static unordered_map<VkImage, ImageMapStruct *> imageMap;
 
 // unordered map: associates a device with a queue, cmdPool, and physical device
 typedef struct
@@ -140,13 +140,13 @@ static void writePPM( const char *filename, VkImage image1)
     const char *ptr;
     VkDeviceMemory mem2;
     VkCmdBuffer cmdBuffer;
-    VkDevice device = imageMap[image1.handle]->device;
+    VkDevice device = imageMap[image1]->device;
     VkPhysicalDevice physicalDevice = deviceMap[device]->physicalDevice;
     VkInstance instance = physDeviceMap[physicalDevice]->instance;
     VkQueue queue = deviceMap[device]->queue;
-    int width = imageMap[image1.handle]->imageExtent.width;
-    int height = imageMap[image1.handle]->imageExtent.height;
-    VkFormat format = imageMap[image1.handle]->format;
+    int width = imageMap[image1]->imageExtent.width;
+    int height = imageMap[image1]->imageExtent.height;
+    VkFormat format = imageMap[image1]->format;
     const VkImageSubresource sr = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
     VkSubresourceLayout sr_layout;
     const VkImageCreateInfo imgCreateInfo = {
@@ -196,7 +196,7 @@ static void writePPM( const char *filename, VkImage image1)
     VkLayerDispatchTable* pTableCmdBuffer;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
-    if (imageMap.empty() || imageMap.find(image1.handle) == imageMap.end())
+    if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
         return;
 
     // The VkImage image1 we are going to dump may not be mappable,
@@ -504,10 +504,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
         swapchainMapElem->device = device;
         swapchainMapElem->imageExtent = pCreateInfo->imageExtent;
         swapchainMapElem->format = pCreateInfo->imageFormat;
-        swapchainMap.insert(make_pair(pSwapchain->handle, swapchainMapElem));
+        swapchainMap.insert(make_pair(*pSwapchain, swapchainMapElem));
 
         // Create a mapping for the swapchain object into the dispatch table
-        screenshot_device_table_map.emplace((void *)pSwapchain->handle, pTable);
+        screenshot_device_table_map.emplace((void *)pSwapchain, pTable);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
 
@@ -531,32 +531,32 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
 
     if (result == VK_SUCCESS &&
         pSwapchainImages &&
-        !swapchainMap.empty() && swapchainMap.find(swapchain.handle) != swapchainMap.end())
+        !swapchainMap.empty() && swapchainMap.find(swapchain) != swapchainMap.end())
     {
         unsigned i;
 
         for (i=0; i<*pCount; i++)
         {
             // Create a mapping for an image to a device, image extent, and format
-            if (imageMap[pSwapchainImages[i].handle] == NULL)
+            if (imageMap[pSwapchainImages[i]] == NULL)
             {
                 ImageMapStruct *imageMapElem = new ImageMapStruct;
-                imageMap[pSwapchainImages[i].handle] = imageMapElem;
+                imageMap[pSwapchainImages[i]] = imageMapElem;
             }
-            imageMap[pSwapchainImages[i].handle]->device = swapchainMap[swapchain.handle]->device;
-            imageMap[pSwapchainImages[i].handle]->imageExtent = swapchainMap[swapchain.handle]->imageExtent;
-            imageMap[pSwapchainImages[i].handle]->format = swapchainMap[swapchain.handle]->format;
+            imageMap[pSwapchainImages[i]]->device = swapchainMap[swapchain]->device;
+            imageMap[pSwapchainImages[i]]->imageExtent = swapchainMap[swapchain]->imageExtent;
+            imageMap[pSwapchainImages[i]]->format = swapchainMap[swapchain]->format;
         }
 
         // Add list of images to swapchain to image map
-        SwapchainMapStruct *swapchainMapElem = swapchainMap[swapchain.handle];
+        SwapchainMapStruct *swapchainMapElem = swapchainMap[swapchain];
         if (i >= 1 && swapchainMapElem)
         {
             VkImage *imageList = new VkImage[i];
             swapchainMapElem->imageList = imageList;
             for (unsigned j=0; j<i; j++)
             {
-                swapchainMapElem->imageList[j] = pSwapchainImages[j].handle;
+                swapchainMapElem->imageList[j] = pSwapchainImages[j];
             }
         }
 
@@ -615,9 +615,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             fileName = to_string(frameNumber) + ".ppm";
 
             VkImage image;
-            uint64_t swapchain;
+            VkSwapchainKHR swapchain;
             // We'll dump only one image: the first
-            swapchain = pPresentInfo->swapchains[0].handle;
+            swapchain = pPresentInfo->swapchains[0];
             image = swapchainMap[swapchain]->imageList[pPresentInfo->imageIndices[0]];
             writePPM(fileName.c_str(), image);
             screenshotFrames.erase(it);

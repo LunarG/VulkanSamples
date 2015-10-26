@@ -1102,8 +1102,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkBufferView view;
-    view.handle = 0xbaadbeef; // invalid bufferView object
+    VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
 
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
@@ -1739,7 +1738,6 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     std::string     msgString;
     VkResult        err;
     VkCmdBuffer     draw_cmd;
-    VkCmdPool       cmd_pool;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
@@ -3272,8 +3270,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkSampler sampler;
-    sampler.handle = 0xbaadbeef; // Sampler with invalid handle
+    VkSampler sampler = (VkSampler) 0xbaadbeef; // Sampler with invalid handle
 
     VkDescriptorImageInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));
@@ -3370,8 +3367,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkImageView view;
-    view.handle = 0xbaadbeef; // invalid imageView object
+    VkImageView view = (VkImageView) 0xbaadbeef; // invalid imageView object
 
     VkDescriptorImageInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));

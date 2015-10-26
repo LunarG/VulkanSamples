@@ -133,7 +133,7 @@ ICD_EXPORT void VKAPI vkDestroyFence(
     VkFence                                 fence)
 
  {
-    struct intel_obj *obj = intel_obj(fence.handle);
+    struct intel_obj *obj = intel_obj(fence);
 
     obj->destroy(obj);
  }

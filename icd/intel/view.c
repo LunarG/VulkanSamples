@@ -1369,7 +1369,7 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
     VkBufferView                        bufferView)
 
  {
-    struct intel_obj *obj = intel_obj(bufferView.handle);
+    struct intel_obj *obj = intel_obj(bufferView);
 
     obj->destroy(obj);
  }
@@ -1390,7 +1390,7 @@ ICD_EXPORT void VKAPI vkDestroyImageView(
     VkImageView                         imageView)
 
 {
-    struct intel_obj *obj = intel_obj(imageView.handle);
+    struct intel_obj *obj = intel_obj(imageView);
 
     obj->destroy(obj);
 }

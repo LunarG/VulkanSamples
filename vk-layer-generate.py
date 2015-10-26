@@ -127,8 +127,8 @@ class Subcommand(object):
             return ("%lu", name)
         if vk_type.strip('*') in vulkan.object_non_dispatch_list:
             if '*' in vk_type:
-                return ("%lu", "%s->handle" % name)
-            return ("%lu", "%s.handle" % name)
+                return ("%lu", "%s" % name)
+            return ("%lu", "%s" % name)
         if "size" in vk_type:
             if '*' in vk_type:
                 return ("%lu", "(unsigned long)*%s" % name)
@@ -994,9 +994,9 @@ class APIDumpSubcommand(Subcommand):
                         cp = True
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
             if p.name == "pSwapchain" or p.name == "pSwapchainImages":
-                log_func += '%s = " << ((%s == NULL) ? 0 : %s->handle) << ", ' % (p.name, p.name, p.name)
+                log_func += '%s = " << %s << ", ' % (p.name, p.name)
             elif p.name == "swapchain":
-                log_func += '%s = " << %s.handle << ", ' % (p.name, p.name)
+                log_func += '%s = " << %s << ", ' % (p.name, p.name)
             else:
                 log_func += '%s = " << %s << ", ' % (p.name, pfi)
             if "%p" == pft:
@@ -1067,10 +1067,7 @@ class APIDumpSubcommand(Subcommand):
                         print_cast = ''
                         print_func = 'string_convert_helper'
                         #cis_print_func = 'tmp_str = string_convert_helper((void*)%s[i], "    ");' % proto.params[sp_index].name
-                    if proto.params[sp_index].ty.strip('*').replace('const ', '') in vulkan.object_non_dispatch_list:
-                        cis_print_func = 'tmp_str = %s(%s%s[i].handle, "    ");' % (print_func, print_cast, proto.params[sp_index].name)
-                    else:
-                        cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
+                    cis_print_func = 'tmp_str = %s(%s%s[i], "    ");' % (print_func, print_cast, proto.params[sp_index].name)
                     if not i_decl:
                         log_func += '\n%suint32_t i;' % (indent)
                         i_decl = True
@@ -1215,26 +1212,18 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static void create_obj(%s dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o, o))
-                procs_txt.append('{')
-                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
-                procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
             else:
                 procs_txt.append('static void create_obj(VkDevice dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (o))
-                procs_txt.append('{')
-                procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
-                procs_txt.append('        vkObj.handle);')
+            procs_txt.append('{')
+            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
+            procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
             procs_txt.append('')
             procs_txt.append('    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;')
             procs_txt.append('    pNewObjNode->objType = objType;')
             procs_txt.append('    pNewObjNode->status  = OBJSTATUS_NONE;')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);')
-                procs_txt.append('    %sMap[vkObj] = pNewObjNode;' % (o))
-            else:
-                procs_txt.append('    pNewObjNode->vkObj  = vkObj.handle;')
-                procs_txt.append('    %sMap[(void*)vkObj.handle] = pNewObjNode;' % (o))
+            procs_txt.append('    pNewObjNode->vkObj  = reinterpret_cast<uint64_t>(vkObj);')
+            procs_txt.append('    %sMap[vkObj] = pNewObjNode;' % (o))
             procs_txt.append('    uint32_t objIndex = objTypeToIndex(objType);')
             procs_txt.append('    numObjs[objIndex]++;')
             procs_txt.append('    numTotalObjs++;')
@@ -1263,12 +1252,12 @@ class ObjectTrackerSubcommand(Subcommand):
                     procs_txt.append('')
                 if o == "VkImage":
                     procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
-                    procs_txt.append('    if ((%sMap.find((void*)object.handle)        == %sMap.end()) &&' % (o, o))
-                    procs_txt.append('        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {')
+                    procs_txt.append('    if ((%sMap.find((void*)object)        == %sMap.end()) &&' % (o, o))
+                    procs_txt.append('        (swapchainImageMap.find((void*)object) == swapchainImageMap.end())) {')
                 else:
-                    procs_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object %%p", object.handle);' % o)
+                    procs_txt.append('    if (%sMap.find((void*)object) == %sMap.end()) {' % (o, o))
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid %s Object %%p", object);' % o)
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
@@ -1280,68 +1269,42 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static void destroy_obj(VkDevice dispatchable_object, %s object)' % (o))
             procs_txt.append('{')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
-            else:
-                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+            procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             procs_txt.append('        uint32_t objIndex = objTypeToIndex(pNode->objType);')
             procs_txt.append('        assert(numTotalObjs > 0);')
             procs_txt.append('        numTotalObjs--;')
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
-                procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
-            else:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
-                procs_txt.append('            string_VkDbgObjectType(pNode->objType), object.handle, numTotalObjs, numObjs[objIndex],')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
+            procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType));')
             procs_txt.append('        delete pNode;')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('        %sMap.erase(object);' % (o))
-                procs_txt.append('    } else {')
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
-                procs_txt.append('           reinterpret_cast<uint64_t>(object));')
-                procs_txt.append('    }')
-            else:
-                procs_txt.append('        %sMap.erase((void*)object.handle);' % (o))
-                procs_txt.append('    } else {')
-                procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
-                procs_txt.append('            object.handle);')
-                procs_txt.append('    }')
+            procs_txt.append('        %sMap.erase(object);' % (o))
+            procs_txt.append('    } else {')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
+            procs_txt.append('           reinterpret_cast<uint64_t>(object));')
+            procs_txt.append('    }')
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static VkBool32 set_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
-                procs_txt.append('{')
-                procs_txt.append('    if (object != VK_NULL_HANDLE) {')
-                procs_txt.append('        if (%sMap.find(object) != %sMap.end()) {' % (o, o))
-                procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             else:
                 procs_txt.append('static VkBool32 set_status(VkDevice dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o))
-                procs_txt.append('{')
-                procs_txt.append('    if (object != VK_NULL_HANDLE) {')
-                procs_txt.append('        if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
-                procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('{')
+            procs_txt.append('    if (object != VK_NULL_HANDLE) {')
+            procs_txt.append('        if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+            procs_txt.append('            OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             procs_txt.append('            pNode->status |= status_flag;')
             procs_txt.append('        }')
             procs_txt.append('        else {')
             procs_txt.append('            // If we do not find it print an error')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('                reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
-            else:
-                procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",')
-                procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('                object.handle, string_VkDbgObjectType(objType));')
+            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+            procs_txt.append('                reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             procs_txt.append('        }')
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
@@ -1360,35 +1323,21 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    OBJECT_TRACK_ERROR  error_code,')
             procs_txt.append('    const char         *fail_msg)')
             procs_txt.append('{')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
-            else:
-                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+            procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
-                procs_txt.append('                 reinterpret_cast<uint64_t>(object), fail_msg);')
-            else:
-                procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
-                procs_txt.append('                 object.handle, fail_msg);')
+            procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDbgObjectType(objType),')
+            procs_txt.append('                 reinterpret_cast<uint64_t>(object), fail_msg);')
             procs_txt.append('            return VK_FALSE;')
             procs_txt.append('        }')
             procs_txt.append('        return VK_TRUE;')
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
-            else:
-                procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            object.handle, string_VkDbgObjectType(objType));')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+            procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             procs_txt.append('        return VK_FALSE;')
             procs_txt.append('    }')
             procs_txt.append('}')
@@ -1396,26 +1345,18 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('static VkBool32 reset_status(%s dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o, o))
-                procs_txt.append('{')
-                procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             else:
                 procs_txt.append('static VkBool32 reset_status(VkDevice dispatchable_object, %s object, VkDbgObjectType objType, ObjectStatusFlags status_flag)' % (o))
-                procs_txt.append('{')
-                procs_txt.append('    if (%sMap.find((void*)object.handle) != %sMap.end()) {' % (o, o))
-                procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[(void*)object.handle];' % (o))
+            procs_txt.append('{')
+            procs_txt.append('    if (%sMap.find(object) != %sMap.end()) {' % (o, o))
+            procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object];' % (o))
             procs_txt.append('        pNode->status &= ~status_flag;')
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
-            else:
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, object.handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-                procs_txt.append('            object.handle, string_VkDbgObjectType(objType));')
+            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
+            procs_txt.append('            reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));')
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
@@ -1517,9 +1458,9 @@ class ObjectTrackerSubcommand(Subcommand):
                   'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
             cbv_txt.append('static VkBool32 validate_object(VkCmdBuffer dispatchable_object, %s object)' % (o))
             cbv_txt.append('{')
-            cbv_txt.append('    if (%sMap.find((void*)object.handle) == %sMap.end()) {' % (o, o))
-            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-            cbv_txt.append('            "Invalid %s Object %%p", object.handle);' % (o))
+            cbv_txt.append('    if (%sMap.find((void*)object) == %sMap.end()) {' % (o, o))
+            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            cbv_txt.append('            "Invalid %s Object %%p", object);' % (o))
             cbv_txt.append('    }')
             cbv_txt.append('    return VK_FALSE;')
             cbv_txt.append('}')
@@ -1776,12 +1717,8 @@ class ThreadingSubcommand(Subcommand):
     }
     def generate_useObject(self, ty):
         obj_type = self.thread_check_object_types[ty]
-        if ty in self.thread_check_dispatchable_objects:
-            key = "object"
-            msg_object = "reinterpret_cast<uint64_t>(object)"
-        else:
-            key = "object.handle"
-            msg_object = "object.handle"
+        key = "object"
+        msg_object = "reinterpret_cast<uint64_t>(object)"
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void useObject(const void* dispatchable_object, %s object)' % ty)
@@ -1812,10 +1749,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('}')
         return "\n".join(header_txt)
     def generate_finishUsingObject(self, ty):
-        if ty in self.thread_check_dispatchable_objects:
-            key = "object"
-        else:
-            key = "object.handle"
+        key = "object"
         header_txt = []
         header_txt.append('%s' % self.lineinfo.get())
         header_txt.append('static void finishUsingObject(%s object)' % ty)
@@ -1851,7 +1785,7 @@ class ThreadingSubcommand(Subcommand):
         for ty in self.thread_check_dispatchable_objects:
             header_txt.append('static unordered_map<%s, loader_platform_thread_id> %sObjectsInUse;' % (ty, ty))
         for ty in self.thread_check_nondispatchable_objects:
-            header_txt.append('static unordered_map<uint64_t, loader_platform_thread_id> %sObjectsInUse;' % ty)
+            header_txt.append('static unordered_map<%s, loader_platform_thread_id> %sObjectsInUse;' % (ty, ty))
         header_txt.append('static int threadingLockInitialized = 0;')
         header_txt.append('static loader_platform_thread_mutex threadingLock;')
         header_txt.append('static loader_platform_thread_cond threadingCond;')

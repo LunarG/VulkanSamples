@@ -273,18 +273,18 @@ static VkResult pipeline_build_shaders(struct intel_pipeline *pipeline,
 {
     VkResult ret = VK_SUCCESS;
 
-    if (ret == VK_SUCCESS && info->vs.shader.handle)
+    if (ret == VK_SUCCESS && info->vs.shader)
         ret = pipeline_build_shader(pipeline, &info->vs, &pipeline->vs);
-    if (ret == VK_SUCCESS && info->tcs.shader.handle)
+    if (ret == VK_SUCCESS && info->tcs.shader)
         ret = pipeline_build_shader(pipeline, &info->tcs,&pipeline->tcs);
-    if (ret == VK_SUCCESS && info->tes.shader.handle)
+    if (ret == VK_SUCCESS && info->tes.shader)
         ret = pipeline_build_shader(pipeline, &info->tes,&pipeline->tes);
-    if (ret == VK_SUCCESS && info->gs.shader.handle)
+    if (ret == VK_SUCCESS && info->gs.shader)
         ret = pipeline_build_shader(pipeline, &info->gs, &pipeline->gs);
-    if (ret == VK_SUCCESS && info->fs.shader.handle)
+    if (ret == VK_SUCCESS && info->fs.shader)
         ret = pipeline_build_shader(pipeline, &info->fs, &pipeline->fs);
 
-    if (ret == VK_SUCCESS && info->compute.stage.shader.handle) {
+    if (ret == VK_SUCCESS && info->compute.stage.shader) {
         ret = pipeline_build_shader(pipeline,
                 &info->compute.stage, &pipeline->cs);
     }
@@ -1399,7 +1399,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
             (struct intel_pipeline **) &(pPipelines[i]));
         //return NULL handle for unsuccessful creates
         if (res != VK_SUCCESS)
-            pPipelines[i].handle = 0;
+            pPipelines[i] = VK_NULL_HANDLE;
         else
             one_succeeded = true;
     }
@@ -1425,7 +1425,7 @@ ICD_EXPORT void VKAPI vkDestroyPipeline(
     VkPipeline                              pipeline)
 
  {
-    struct intel_obj *obj = intel_obj(pipeline.handle);
+    struct intel_obj *obj = intel_obj(pipeline);
 
     intel_mem_free(obj->mem);
     obj->destroy(obj);

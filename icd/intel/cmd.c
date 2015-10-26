@@ -501,7 +501,7 @@ void intel_free_cmd_buffers(
     const VkCmdBuffer                  *cmd_bufs)
 {
     for (uint32_t i = 0; i < count; i++) {
-        struct intel_obj *obj = intel_obj((uint64_t)cmd_bufs[i]);
+        struct intel_obj *obj = intel_obj(cmd_bufs[i]);
 
         obj->destroy(obj);
     }

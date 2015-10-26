@@ -62,12 +62,12 @@ struct intel_obj {
     size_t offset;
 };
 
-static inline struct intel_base *intel_base(uint64_t base)
+static inline struct intel_base *intel_base(void * base)
 {
     return (struct intel_base *) base;
 }
 
-static inline struct intel_obj *intel_obj(uint64_t obj)
+static inline struct intel_obj *intel_obj(void * obj)
 {
     return (struct intel_obj *) obj;
 }

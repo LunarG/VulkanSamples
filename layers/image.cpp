@@ -51,7 +51,7 @@ struct layer_data {
     debug_report_data *report_data;
     std::vector<VkDbgMsgCallback> logging_callback;
     VkPhysicalDevice physicalDevice;
-    unordered_map<uint64_t, IMAGE_STATE> imageMap;
+    unordered_map<VkImage, IMAGE_STATE> imageMap;
 
     layer_data() :
         report_data(nullptr),
@@ -295,7 +295,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     VkResult result = get_dispatch_table(image_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
 
     if(result == VK_SUCCESS) {
-        device_data->imageMap[pImage->handle] = IMAGE_STATE(pCreateInfo);
+        device_data->imageMap[*pImage] = IMAGE_STATE(pCreateInfo);
     }
     return result;
 }
@@ -303,7 +303,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
 VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    device_data->imageMap.erase(image.handle);
+    device_data->imageMap.erase(image);
     get_dispatch_table(image_device_table_map, device)->DestroyImage(device, image);
 }
 
@@ -388,18 +388,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    auto imageEntry = device_data->imageMap.find(pCreateInfo->image.handle);
+    auto imageEntry = device_data->imageMap.find(pCreateInfo->image);
     if (imageEntry != device_data->imageMap.end()) {
         if (pCreateInfo->subresourceRange.baseMipLevel >= imageEntry->second.mipLevels) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseMipLevel " << pCreateInfo->subresourceRange.baseMipLevel
-               << " for image " << pCreateInfo->image.handle << " that only has " << imageEntry->second.mipLevels << " mip levels.";
+               << " for image " << pCreateInfo->image << " that only has " << imageEntry->second.mipLevels << " mip levels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
         if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second.arraySize) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image "
-               << pCreateInfo->image.handle << " that only has " << imageEntry->second.arraySize << " mip levels.";
+               << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " mip levels.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", ss.str().c_str());
         }
         if (!pCreateInfo->subresourceRange.numLevels) {
@@ -423,20 +423,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
                 std::stringstream ss;
                 ss << "vkCreateImageView: Color image formats must have the VK_IMAGE_ASPECT_COLOR_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
             if ((aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) != aspectMask) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
             if (VK_FALSE == vk_format_is_color(ivciFormat)) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: The image view's format can differ from the parent image's format, but both must be "
                    << "color formats.  ImageFormat is " << string_VkFormat(imageFormat) << " ImageViewFormat is " << string_VkFormat(ivciFormat);
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_FORMAT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_FORMAT, "IMAGE", ss.str().c_str());
             }
             // TODO:  Uncompressed formats are compatible if they occupy they same number of bits per pixel.
             //        Compressed formats are compatible if the only difference between them is the numerical type of
@@ -447,39 +447,39 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
                 std::stringstream ss;
                 ss << "vkCreateImageView: Combination depth/stencil image formats must have both VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
             if ((aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != aspectMask) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Combination depth/stencil image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT and VK_IMAGE_ASPECT_STENCIL_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         } else  if (vk_format_is_depth_only(imageFormat)) {
             if ((aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != VK_IMAGE_ASPECT_DEPTH_BIT) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Depth-only image formats must have the VK_IMAGE_ASPECT_DEPTH_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
             if ((aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != aspectMask) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Depth-only image formats can have only the VK_IMAGE_ASPECT_DEPTH_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         } else  if (vk_format_is_stencil_only(imageFormat)) {
             if ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != VK_IMAGE_ASPECT_STENCIL_BIT) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Stencil-only image formats must have the VK_IMAGE_ASPECT_STENCIL_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
             if ((aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) != aspectMask) {
                 std::stringstream ss;
                 ss << "vkCreateImageView: Stencil-only image formats can have only the VK_IMAGE_ASPECT_STENCIL_BIT set";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)pCreateInfo->image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)pCreateInfo->image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         }
     }
@@ -557,8 +557,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
-    auto destImageEntry = device_data->imageMap.find(destImage.handle);
+    auto srcImageEntry = device_data->imageMap.find(srcImage);
+    auto destImageEntry = device_data->imageMap.find(destImage);
 
     // For each region, src and dst number of layers should not be zero
     // For each region, src and dst number of layers must match
@@ -758,8 +758,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkBool32    skipCall    = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
 
-    auto srcImageEntry  = device_data->imageMap.find(srcImage.handle);
-    auto destImageEntry = device_data->imageMap.find(destImage.handle);
+    auto srcImageEntry  = device_data->imageMap.find(srcImage);
+    auto destImageEntry = device_data->imageMap.find(destImage);
 
     if ((srcImageEntry  != device_data->imageMap.end()) &&
         (destImageEntry != device_data->imageMap.end())) {
@@ -877,8 +877,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
-    auto destImageEntry = device_data->imageMap.find(destImage.handle);
+    auto srcImageEntry = device_data->imageMap.find(srcImage);
+    auto destImageEntry = device_data->imageMap.find(destImage);
 
     // For each region, the number of layers in the image subresource should not be zero
     // For each region, src and dest image aspect must be color only
@@ -945,7 +945,7 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkFormat    format;
 
-    auto imageEntry = device_data->imageMap.find(image.handle);
+    auto imageEntry = device_data->imageMap.find(image);
 
     // Validate that image aspects match formats
     if (imageEntry != device_data->imageMap.end()) {
@@ -955,7 +955,7 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
                 std::stringstream ss;
                 ss << "vkGetImageSubresourceLayout: For color formats, the aspect field of VkImageSubresource must be VK_IMAGE_ASPECT_COLOR.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         } else if (vk_format_is_depth_or_stencil(format)) {
             if ((pSubresource->aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
@@ -963,7 +963,7 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
                 std::stringstream ss;
                 ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspect selects either the depth or stencil image aspect.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
-                                   (uint64_t)image.handle, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
+                                   (uint64_t)image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         }
     }

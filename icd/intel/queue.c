@@ -415,7 +415,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
             intel_fence_set_seqno(queue->fence,
                     intel_cmd_get_batch(last_cmd, NULL));
 
-            if (fence_.handle != VK_NULL_HANDLE) {
+            if (fence_ != VK_NULL_HANDLE) {
                 struct intel_fence *fence = intel_fence(fence_);
                 intel_fence_copy(fence, queue->fence);
             }
@@ -461,6 +461,6 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore)
 {
-    struct intel_obj *obj = intel_obj(semaphore.handle);
+    struct intel_obj *obj = intel_obj(semaphore);
     obj->destroy(obj);
 }

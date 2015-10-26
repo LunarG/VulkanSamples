@@ -1213,7 +1213,7 @@ class Subcommand(object):
         rc_body.append('    switch (objectType) {')
         rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
         rc_body.append('        {')
-        rc_body.append('            std::map<uint64_t, bufferObj>::iterator it = m_buffers.find(handle);')
+        rc_body.append('            std::map<VkBuffer, bufferObj>::iterator it = m_buffers.find((VkBuffer) handle);')
         rc_body.append('            if (it != m_buffers.end()) {')
         rc_body.append('                objMemory obj = it->second.bufferMem;')
         rc_body.append('                obj.setCount(num);')
@@ -1223,7 +1223,7 @@ class Subcommand(object):
         rc_body.append('        }')
         rc_body.append('        case VK_OBJECT_TYPE_IMAGE:')
         rc_body.append('        {')
-        rc_body.append('            std::map<uint64_t, imageObj>::iterator it = m_images.find(handle);')
+        rc_body.append('            std::map<VkImage, imageObj>::iterator it = m_images.find((VkImage) handle);')
         rc_body.append('            if (it != m_images.end()) {')
         rc_body.append('                objMemory obj = it->second.imageMem;')
         rc_body.append('                obj.setCount(num);')
@@ -1240,7 +1240,7 @@ class Subcommand(object):
         rc_body.append('    switch (objectType) {')
         rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
         rc_body.append('        {')
-        rc_body.append('            std::map<uint64_t, bufferObj>::iterator it = m_buffers.find(handle);')
+        rc_body.append('            std::map<VkBuffer, bufferObj>::iterator it = m_buffers.find((VkBuffer) handle);')
         rc_body.append('            if (it != m_buffers.end()) {')
         rc_body.append('                objMemory obj = it->second.bufferMem;')
         rc_body.append('                obj.setReqs(pMemReqs, num);')
@@ -1250,7 +1250,7 @@ class Subcommand(object):
         rc_body.append('        }')
         rc_body.append('        case VK_OBJECT_TYPE_IMAGE:')
         rc_body.append('        {')
-        rc_body.append('            std::map<uint64_t, imageObj>::iterator it = m_images.find(handle);')
+        rc_body.append('            std::map<VkImage, imageObj>::iterator it = m_images.find((VkImage) handle);')
         rc_body.append('            if (it != m_images.end()) {')
         rc_body.append('                objMemory obj = it->second.imageMem;')
         rc_body.append('                obj.setReqs(pMemReqs, num);')
@@ -1270,53 +1270,47 @@ class Subcommand(object):
         rc_body.append('    }\n')
         disp_obj_types = [obj for obj in vulkan.object_dispatch_list]
         for var in sorted(obj_map_dict):
-            # Disp objs are pts so the obj can be map key, for non-disp objs, use uint64_t handle as map key
-            if obj_map_dict[var] in disp_obj_types:
+            if obj_map_dict[var] == 'VkImage':
+                rc_body.append(self._map_decl('VkImage', 'imageObj', var))
+                rc_body.append(self._add_to_map_decl('VkImage', 'imageObj', var))
+                rc_body.append(self._rm_from_map_decl('VkImage', var))
+                rc_body.append('    VkImage remap_images(const VkImage& value)')
+                rc_body.append('    {')
+                rc_body.append('        if (value == 0) { return 0; }')
+                rc_body.append('')
+                rc_body.append('        std::map<VkImage, imageObj>::const_iterator q = m_images.find(value);')
+                rc_body.append('        if (q == m_images.end()) { vktrace_LogError("Failed to remap VkImage."); return value; }\n')
+                rc_body.append('        return q->second.replayImage;')
+                rc_body.append('    }\n')
+            elif obj_map_dict[var] == 'VkBuffer':
+                rc_body.append(self._map_decl('VkBuffer', 'bufferObj', var))
+                rc_body.append(self._add_to_map_decl('VkBuffer', 'bufferObj', var))
+                rc_body.append(self._rm_from_map_decl('VkBuffer', var))
+                rc_body.append('    VkBuffer remap_buffers(const VkBuffer& value)')
+                rc_body.append('    {')
+                rc_body.append('        if (value == 0) { return 0; }')
+                rc_body.append('')
+                rc_body.append('        std::map<VkBuffer, bufferObj>::const_iterator q = m_buffers.find(value);')
+                rc_body.append('        if (q == m_buffers.end()) { vktrace_LogError("Failed to remap VkBuffer."); return value; }\n')
+                rc_body.append('        return q->second.replayBuffer;')
+                rc_body.append('    }\n')
+            elif obj_map_dict[var] == 'VkDeviceMemory':
+                rc_body.append(self._map_decl('VkDeviceMemory', 'gpuMemObj', var))
+                rc_body.append(self._add_to_map_decl('VkDeviceMemory', 'gpuMemObj', var))
+                rc_body.append(self._rm_from_map_decl('VkDeviceMemory', var))
+                rc_body.append('    VkDeviceMemory remap_devicememorys(const VkDeviceMemory& value)')
+                rc_body.append('    {')
+                rc_body.append('        if (value == 0) { return 0; }')
+                rc_body.append('')
+                rc_body.append('        std::map<VkDeviceMemory, gpuMemObj>::const_iterator q = m_devicememorys.find(value);')
+                rc_body.append('        if (q == m_devicememorys.end()) { vktrace_LogError("Failed to remap VkDeviceMemory."); return value; }')
+                rc_body.append('        return q->second.replayGpuMem;')
+                rc_body.append('    }\n')
+            else:
                 rc_body.append(self._map_decl(obj_map_dict[var], obj_map_dict[var], var))
                 rc_body.append(self._add_to_map_decl(obj_map_dict[var], obj_map_dict[var], var))
                 rc_body.append(self._rm_from_map_decl(obj_map_dict[var], var))
                 rc_body.append(self._remap_decl(obj_map_dict[var], var))
-            elif obj_map_dict[var] == 'VkImage':
-                rc_body.append(self._map_decl('uint64_t', 'imageObj', var))
-                rc_body.append(self._add_to_map_decl('uint64_t', 'imageObj', var))
-                rc_body.append(self._rm_from_map_decl('uint64_t', var))
-                rc_body.append('    uint64_t remap_images(const uint64_t& value)')
-                rc_body.append('    {')
-                rc_body.append('        if (value == 0) { return 0; }')
-                rc_body.append('')
-                rc_body.append('        std::map<uint64_t, imageObj>::const_iterator q = m_images.find(value);')
-                rc_body.append('        if (q == m_images.end()) { vktrace_LogError("Failed to remap VkImage."); return value; }\n')
-                rc_body.append('        return q->second.replayImage.handle;')
-                rc_body.append('    }\n')
-            elif obj_map_dict[var] == 'VkBuffer':
-                rc_body.append(self._map_decl('uint64_t', 'bufferObj', var))
-                rc_body.append(self._add_to_map_decl('uint64_t', 'bufferObj', var))
-                rc_body.append(self._rm_from_map_decl('uint64_t', var))
-                rc_body.append('    uint64_t remap_buffers(const uint64_t& value)')
-                rc_body.append('    {')
-                rc_body.append('        if (value == 0) { return 0; }')
-                rc_body.append('')
-                rc_body.append('        std::map<uint64_t, bufferObj>::const_iterator q = m_buffers.find(value);')
-                rc_body.append('        if (q == m_buffers.end()) { vktrace_LogError("Failed to remap VkBuffer."); return value; }\n')
-                rc_body.append('        return q->second.replayBuffer.handle;')
-                rc_body.append('    }\n')
-            elif obj_map_dict[var] == 'VkDeviceMemory':
-                rc_body.append(self._map_decl('uint64_t', 'gpuMemObj', var))
-                rc_body.append(self._add_to_map_decl('uint64_t', 'gpuMemObj', var))
-                rc_body.append(self._rm_from_map_decl('uint64_t', var))
-                rc_body.append('    uint64_t remap_devicememorys(const uint64_t& value)')
-                rc_body.append('    {')
-                rc_body.append('        if (value == 0) { return 0; }')
-                rc_body.append('')
-                rc_body.append('        std::map<uint64_t, gpuMemObj>::const_iterator q = m_devicememorys.find(value);')
-                rc_body.append('        if (q == m_devicememorys.end()) { vktrace_LogError("Failed to remap VkDeviceMemory."); return value; }')
-                rc_body.append('        return q->second.replayGpuMem.handle;')
-                rc_body.append('    }\n')
-            else:
-                rc_body.append(self._map_decl('uint64_t', 'uint64_t', var))
-                rc_body.append(self._add_to_map_decl('uint64_t', 'uint64_t', var))
-                rc_body.append(self._rm_from_map_decl('uint64_t', var))
-                rc_body.append(self._remap_decl('uint64_t', var))
         # VkDynamicStateObject code
 # TODO138 : Each dynamic state object is now unique so need to make sure their re-mapping is being handled correctly
 #        state_obj_remap_types = vulkan.object_dynamic_state_list
@@ -1389,33 +1383,20 @@ class Subcommand(object):
                         result = '            %s *remapped%s = new %s%s;\n' % (cleanParamType, paramName, cleanParamType, pArray)
                         result += '%s\n' % self.lineinfo.get()
                         result += '            for (uint32_t i = 0; i < pPacket->%s; i++) {\n' % lastName
-                        if cleanParamType in  VulkNonDispObjects:
-                            result += '                remapped%s[i].handle = m_objMapper.remap_%ss(pPacket->%s[i]%s.handle);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
-                            result += '                if (pPacket->%s[i].handle != 0 && remapped%s[i].handle == 0)\n' % (paramName, paramName)
-                        else:
-                            result += '                remapped%s[i] = m_objMapper.remap_%ss(pPacket->%s[i]%s);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
-                            result += '                if (pPacket->%s[i] != VK_NULL_HANDLE && remapped%s[i] == VK_NULL_HANDLE)\n' % (paramName, paramName)
+                        result += '                remapped%s[i] = m_objMapper.remap_%ss(pPacket->%s[i]%s);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
+                        result += '                if (pPacket->%s[i] != VK_NULL_HANDLE && remapped%s[i] == VK_NULL_HANDLE)\n' % (paramName, paramName)
                         result += '                {\n'
                         result += '                    return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
                         result += '                }\n'
                         result += '            }\n'
                         return result
 
-                if paramType in VulkNonDispObjects:
-                    result = '            %s remapped%s;\n' % (paramType, paramName)
-                    result += '            remapped%s.handle = m_objMapper.remap_%ss(pPacket->%s%s.handle);\n' % (paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
-                    result += '%s\n' % self.lineinfo.get()
-                    result += '            if (pPacket->%s.handle != 0 && remapped%s.handle == 0)\n' % (paramName, paramName)
-                    result += '            {\n'
-                    result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
-                    result += '            }\n'
-                else:
-                    result = '            %s remapped%s = m_objMapper.remap_%ss(pPacket->%s%s);\n' % (paramType, paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
-                    result += '%s\n' % self.lineinfo.get()
-                    result += '            if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
-                    result += '            {\n'
-                    result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
-                    result += '            }\n'
+                result = '            %s remapped%s = m_objMapper.remap_%ss(pPacket->%s%s);\n' % (paramType, paramName, cleanParamType.lower()[2:], paramName, objectTypeRemapParam)
+                result += '%s\n' % self.lineinfo.get()
+                result += '            if (pPacket->%s != VK_NULL_HANDLE && remapped%s == VK_NULL_HANDLE)\n' % (paramName, paramName)
+                result += '            {\n'
+                result += '                return vktrace_replay::VKTRACE_REPLAY_ERROR;\n'
+                result += '            }\n'
                 return result
         return '            // No need to remap %s' % (paramName)
 
@@ -1446,7 +1427,7 @@ class Subcommand(object):
         ci_body.append('            replayResult = m_vkFuncs.real_vkCreateImage(remappedDevice, pPacket->pCreateInfo, &local_imageObj.replayImage);')
         ci_body.append('            if (replayResult == VK_SUCCESS)')
         ci_body.append('            {')
-        ci_body.append('                m_objMapper.add_to_images_map(pPacket->pImage->handle, local_imageObj);')
+        ci_body.append('                m_objMapper.add_to_images_map(*(pPacket->pImage), local_imageObj);')
         ci_body.append('            }')
         return "\n".join(ci_body)
 
@@ -1461,7 +1442,7 @@ class Subcommand(object):
         cb_body.append('            replayResult = m_vkFuncs.real_vkCreateBuffer(remappedDevice, pPacket->pCreateInfo, &local_bufferObj.replayBuffer);')
         cb_body.append('            if (replayResult == VK_SUCCESS)')
         cb_body.append('            {')
-        cb_body.append('                m_objMapper.add_to_buffers_map(pPacket->pBuffer->handle, local_bufferObj);')
+        cb_body.append('                m_objMapper.add_to_buffers_map(*(pPacket->pBuffer), local_bufferObj);')
         cb_body.append('            }')
         return "\n".join(cb_body)
 
@@ -1579,11 +1560,11 @@ class Subcommand(object):
                     rbody.append('            %s createInfo;' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     rbody.append('            memcpy(&createInfo, pPacket->pCreateInfo, sizeof(%s));' % (proto.params[1].ty.strip('*').replace('const ', '')))
                     if 'CreateComputePipeline' == proto.name:
-                        rbody.append('            createInfo.cs.shader.handle = m_objMapper.remap_shaders(pPacket->pCreateInfo->cs.shader.handle);')
+                        rbody.append('            createInfo.cs.shader = m_objMapper.remap_shaders(pPacket->pCreateInfo->cs.shader);')
                     elif 'CreateBufferView' == proto.name:
-                        rbody.append('            createInfo.buffer.handle = m_objMapper.remap_buffers(pPacket->pCreateInfo->buffer.handle);')
+                        rbody.append('            createInfo.buffer = m_objMapper.remap_buffers(pPacket->pCreateInfo->buffer);')
                     else:
-                        rbody.append('            createInfo.image.handle = m_objMapper.remap_images(pPacket->pCreateInfo->image.handle);')
+                        rbody.append('            createInfo.image = m_objMapper.remap_images(pPacket->pCreateInfo->image);')
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
                     if 'AllocDescriptorSets' == proto.name:
@@ -1592,21 +1573,21 @@ class Subcommand(object):
                         rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocInfo->count * sizeof(VkDescriptorSetLayout));')
                         rbody.append('            VkDescriptorSetAllocInfo local_AllocInfo, *local_pAllocInfo = &local_AllocInfo;')
                         rbody.append('            VkDescriptorPool local_descPool;')
-                        rbody.append('            local_descPool.handle = m_objMapper.remap_descriptorpools(pPacket->pAllocInfo->descriptorPool.handle);')
+                        rbody.append('            local_descPool = m_objMapper.remap_descriptorpools(pPacket->pAllocInfo->descriptorPool);')
                         rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++)')
                         rbody.append('            {')
-                        rbody.append('                local_pSetLayouts[i].handle = m_objMapper.remap_descriptorsetlayouts(pPacket->%s->pSetLayouts[i].handle);' % (proto.params[-2].name))
+                        rbody.append('                local_pSetLayouts[i] = m_objMapper.remap_descriptorsetlayouts(pPacket->%s->pSetLayouts[i]);' % (proto.params[-2].name))
                         rbody.append('            }')
                         rbody.append('            memcpy(local_pAllocInfo, pPacket->pAllocInfo, sizeof(VkDescriptorSetAllocInfo));')
                         rbody.append('            local_pAllocInfo->pSetLayouts = local_pSetLayouts;')
-                        rbody.append('            local_pAllocInfo->descriptorPool.handle = local_descPool.handle;')
+                        rbody.append('            local_pAllocInfo->descriptorPool = local_descPool;')
                     else:
                         rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif proto.name == 'ResetFences':
                     rbody.append('            VkFence* fences = VKTRACE_NEW_ARRAY(VkFence, pPacket->fenceCount);')
                     rbody.append('            for (uint32_t i = 0; i < pPacket->fenceCount; i++)')
                     rbody.append('            {')
-                    rbody.append('                fences[i].handle = m_objMapper.remap_fences(pPacket->%s[i].handle);' % (proto.params[-1].name))
+                    rbody.append('                fences[i] = m_objMapper.remap_fences(pPacket->%s[i]);' % (proto.params[-1].name))
                     rbody.append('            }')
                 elif proto.name in do_while_dict:
                     rbody.append('            do {')
@@ -1696,7 +1677,7 @@ class Subcommand(object):
                 elif 'DestroySwapchainKHR' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                m_objMapper.rm_from_swapchainkhrs_map(pPacket->swapchain.handle);')
+                    rbody.append('                m_objMapper.rm_from_swapchainkhrs_map(pPacket->swapchain);')
                     rbody.append('            }')
                 elif 'DestroyInstance' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
@@ -1715,7 +1696,7 @@ class Subcommand(object):
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
                     rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocInfo->count; i++) {')
-                    rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i].handle, local_%s[i].handle);' % (proto.params[-1].name, proto.params[-1].name))
+                    rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i], local_%s[i]);' % (proto.params[-1].name, proto.params[-1].name))
                     rbody.append('                }')
                     rbody.append('            }')
                     rbody.append('            free(local_pSetLayouts);')
@@ -1728,10 +1709,7 @@ class Subcommand(object):
                         rbody.append('            {')
                     clean_type = proto.params[-1].ty.strip('*').replace('const ', '')
                     VkNonDispObjType = [o for o in vulkan.object_non_dispatch_list]
-                    if clean_type in VkNonDispObjType:
-                        rbody.append('                m_objMapper.add_to_%ss_map(pPacket->%s->handle, local_%s.handle);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
-                    else:
-                        rbody.append('                m_objMapper.add_to_%ss_map(*(pPacket->%s), local_%s);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
+                    rbody.append('                m_objMapper.add_to_%ss_map(*(pPacket->%s), local_%s);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
                     if 'AllocMemory' == proto.name:
                         rbody.append('                m_objMapper.add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
                     if ret_value:

@@ -123,7 +123,7 @@ static const VkFormat x11_presentable_formats[] = {
 
 static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapchainKHR sc)
 {
-    return (struct intel_x11_swap_chain *) sc.handle;
+    return (struct intel_x11_swap_chain *) sc;
 }
 
 static bool x11_is_format_presentable(const struct intel_dev *dev,
@@ -1016,7 +1016,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
 {
     struct intel_dev *dev = intel_dev(device);
 
-    if (pCreateInfo->oldSwapchain.handle) {
+    if (pCreateInfo->oldSwapchain) {
         // TODO: Eventually, do more than simply up-front destroy the
         // oldSwapchain (but just do that for now):
         struct intel_x11_swap_chain *sc =
@@ -1063,7 +1063,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     if (pSwapchainImages) {
         uint32_t i;
         for (i = 0; i < *pCount; i++) {
-            pSwapchainImages[i].handle = (uint64_t) sc->persistent_images[i];
+            pSwapchainImages[i] = (VkImage) sc->persistent_images[i];
         }
     } else {
         *pCount = sc->persistent_image_count;

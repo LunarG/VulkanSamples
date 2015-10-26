@@ -192,7 +192,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     pPacket = interpret_body_as_vkUnmapMemory(pHeader);
     if (siz)
     {
-        assert(entry->handle.handle == mem.handle);
+        assert(entry->handle == mem);
         vktrace_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pData), siz, entry->pData + off);
         vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
         entry->pData = NULL;
@@ -264,7 +264,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
 
         if (pEntry != NULL)
         {
-            assert(pEntry->handle.handle == pRange->mem.handle);
+            assert(pEntry->handle == pRange->mem);
             assert(pEntry->totalSize >= (pRange->size + pRange->offset));
             assert(pEntry->totalSize >= pRange->size);
             assert(pRange->offset >= pEntry->rangeOffset && (pRange->offset + pRange->size) <= (pEntry->rangeOffset + pEntry->rangeSize));

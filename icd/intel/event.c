@@ -155,7 +155,7 @@ ICD_EXPORT void VKAPI vkDestroyEvent(
     VkEvent                                 event)
 
  {
-    struct intel_obj *obj = intel_obj(event.handle);
+    struct intel_obj *obj = intel_obj(event);
 
     intel_mem_free(obj->mem);
     obj->destroy(obj);

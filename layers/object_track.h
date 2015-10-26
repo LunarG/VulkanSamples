@@ -451,20 +451,20 @@ extern unordered_map<const void*, OBJTRACK_NODE*> VkSwapchainKHRMap;
 
 static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object)
 {
-    if ((VkImageMap.find((void*)object.handle)        == VkImageMap.end()) &&
-        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {
-        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkImage Object %p", object.handle);
+    if ((VkImageMap.find((void*)object)        == VkImageMap.end()) &&
+        (swapchainImageMap.find((void*)object) == swapchainImageMap.end())) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkImage Object %p", object);
     }
     return VK_FALSE;
 }
 
 static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkImage object)
 {
-    if ((VkImageMap.find((void*)object.handle)        == VkImageMap.end()) &&
-        (swapchainImageMap.find((void*)object.handle) == swapchainImageMap.end())) {
-        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkImage Object %p", object.handle);
+    if ((VkImageMap.find((void*)object)        == VkImageMap.end()) &&
+        (swapchainImageMap.find((void*)object) == swapchainImageMap.end())) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkImage Object %p", object);
     }
     return VK_FALSE;
 }
@@ -480,18 +480,18 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkCmdBuffer object)
 
 static VkBool32 validate_object(VkCmdBuffer dispatchable_object, VkDescriptorSet object)
 {
-    if (VkDescriptorSetMap.find((void*)object.handle) == VkDescriptorSetMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkDescriptorSet Object %p", object.handle);
+    if (VkDescriptorSetMap.find((void*)object) == VkDescriptorSetMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkDescriptorSet Object %p", object);
     }
     return VK_FALSE;
 }
 
 static VkBool32 validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
-    if (VkBufferMap.find((void*)object.handle) != VkBufferMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkBuffer Object %p", object.handle);
+    if (VkBufferMap.find((void*)object) != VkBufferMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkBuffer Object %p", object);
     }
     return VK_FALSE;
 }
@@ -500,15 +500,15 @@ static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObj
 {
     VkBool32 skipCall = VK_FALSE;
     if (object != VK_NULL_HANDLE) {
-        if (VkFenceMap.find((void*)object.handle) != VkFenceMap.end()) {
-            OBJTRACK_NODE* pNode = VkFenceMap[(void*)object.handle];
+        if (VkFenceMap.find((void*)object) != VkFenceMap.end()) {
+            OBJTRACK_NODE* pNode = VkFenceMap[(void*)object];
             pNode->status |= status_flag;
         }
         else {
             // If we do not find it print an error
-            skipCall |= log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+            skipCall |= log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
                 "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-                object.handle, string_VkDbgObjectType(objType));
+                (uint64_t) object, string_VkDbgObjectType(objType));
         }
     }
     return skipCall;
@@ -516,9 +516,9 @@ static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObj
 
 static VkBool32 validate_object(VkQueue dispatchable_object, VkSemaphore object)
 {
-    if (VkSemaphoreMap.find((void*)object.handle) == VkSemaphoreMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkSemaphore Object %p", object.handle);
+    if (VkSemaphoreMap.find((void*)object) == VkSemaphoreMap.end()) {
+        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+            "Invalid VkSemaphore Object %p", object);
     }
     return VK_FALSE;
 }
@@ -565,15 +565,15 @@ static void create_obj(VkDevice dispatchable_object, VkCmdBuffer vkObj, VkDbgObj
 }
 static void create_obj(VkDevice dispatchable_object, VkSwapchainKHR vkObj, VkDbgObjectType objType)
 {
-    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, (uint64_t) vkObj, 0, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
-        vkObj.handle);
+        (uint64_t) vkObj);
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
     pNewObjNode->objType = objType;
     pNewObjNode->status  = OBJSTATUS_NONE;
-    pNewObjNode->vkObj  = vkObj.handle;
-    VkSwapchainKHRMap[(void*) vkObj.handle] = pNewObjNode;
+    pNewObjNode->vkObj  = (uint64_t) vkObj;
+    VkSwapchainKHRMap[(void*) vkObj] = pNewObjNode;
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
     numTotalObjs++;
@@ -595,37 +595,37 @@ static void create_obj(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectT
 }
 static void create_swapchain_image_obj(VkDevice dispatchable_object, VkImage vkObj, VkSwapchainKHR swapchain)
 {
-    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_IMAGE, vkObj.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t) vkObj, 0, OBJTRACK_NONE, "OBJTRACK",
         "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, "SwapchainImage",
-        vkObj.handle);
+        (uint64_t) vkObj);
 
     OBJTRACK_NODE* pNewObjNode             = new OBJTRACK_NODE;
     pNewObjNode->objType                   = VK_OBJECT_TYPE_IMAGE;
     pNewObjNode->status                    = OBJSTATUS_NONE;
-    pNewObjNode->vkObj                     = vkObj.handle;
-    pNewObjNode->parentObj                 = swapchain.handle;
-    swapchainImageMap[(void*)vkObj.handle] = pNewObjNode;
+    pNewObjNode->vkObj                     = (uint64_t) vkObj;
+    pNewObjNode->parentObj                 = (uint64_t) swapchain;
+    swapchainImageMap[(void*)vkObj] = pNewObjNode;
 }
 
 static void destroy_obj(VkDevice dispatchable_object, VkSwapchainKHR object)
 {
-    if (VkSwapchainKHRMap.find((void*) object.handle) != VkSwapchainKHRMap.end()) {
-        OBJTRACK_NODE* pNode = VkSwapchainKHRMap[(void*) object.handle];
+    if (VkSwapchainKHRMap.find((void*) object) != VkSwapchainKHRMap.end()) {
+        OBJTRACK_NODE* pNode = VkSwapchainKHRMap[(void*) object];
         uint32_t objIndex = objTypeToIndex(pNode->objType);
         assert(numTotalObjs > 0);
         numTotalObjs--;
         assert(numObjs[objIndex] > 0);
         numObjs[objIndex]--;
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",
-            string_VkDbgObjectType(pNode->objType), object.handle, numTotalObjs, numObjs[objIndex],
+            string_VkDbgObjectType(pNode->objType), (uint64_t) object, numTotalObjs, numObjs[objIndex],
             string_VkDbgObjectType(pNode->objType));
         delete pNode;
-        VkSwapchainKHRMap.erase((void*) object.handle);
+        VkSwapchainKHRMap.erase((void*) object);
     } else {
-        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object.handle, 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
-           object.handle);
+           (uint64_t) object);
     }
 }
 //
@@ -856,7 +856,7 @@ explicit_DestroySwapchainKHR(
     unordered_map<const void*, OBJTRACK_NODE*>::iterator itr = swapchainImageMap.begin();
     while (itr != swapchainImageMap.end()) {
         OBJTRACK_NODE* pNode = (*itr).second;
-        if (pNode->parentObj == swapchain.handle) {
+        if (pNode->parentObj == (uint64_t) swapchain) {
            swapchainImageMap.erase(itr++);
         } else {
            ++itr;

@@ -80,7 +80,7 @@ ICD_EXPORT void VKAPI vkDestroyShaderModule(
     VkShaderModule                          shaderModule)
 
  {
-    struct intel_obj *obj = intel_obj(shaderModule.handle);
+    struct intel_obj *obj = intel_obj(shaderModule);
 
     obj->destroy(obj);
  }
@@ -139,7 +139,7 @@ ICD_EXPORT void VKAPI vkDestroyShader(
     VkShader                                shader)
 
  {
-    struct intel_obj *obj = intel_obj(shader.handle);
+    struct intel_obj *obj = intel_obj(shader);
 
     obj->destroy(obj);
  }

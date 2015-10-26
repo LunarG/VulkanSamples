@@ -927,7 +927,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
     swap_chain.queueFamilyCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
     swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain.handle = 0;
+    swap_chain.oldSwapchain = VK_NULL_HANDLE;
     swap_chain.clipped = true;
 
     uint32_t i;

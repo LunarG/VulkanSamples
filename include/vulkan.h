@@ -44,46 +44,17 @@ extern "C" {
 #define VK_API_VERSION VK_MAKE_VERSION(0, 185, 0)
 
 
-#if defined(__cplusplus) && ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
-    #define VK_NULL_HANDLE nullptr
-#else
-    #define VK_NULL_HANDLE 0
-#endif
+#define VK_NULL_HANDLE 0
+        
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
 
 
-#if defined(__cplusplus)
-    #if ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
-        // The bool operator only works if there are no implicit conversions from an obj to
-        // a bool-compatible type, which can then be used to unintentionally violate type safety.
-        // C++11 and above supports the "explicit" keyword on conversion operators to stop this
-        // from happening. Otherwise users of C++ below C++11 won't get direct access to evaluating
-        // the object handle as a bool in expressions like:
-        //     if (obj) vkDestroy(obj);
-        #define VK_NONDISP_HANDLE_OPERATOR_BOOL() explicit operator bool() const { return handle != 0; }
-        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
-            explicit obj(uint64_t x) : handle(x) { } \
-            obj(decltype(nullptr)) : handle(0) { }
-    #else
-        #define VK_NONDISP_HANDLE_OPERATOR_BOOL()
-        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
-            obj(uint64_t x) : handle(x) { }
-    #endif
-    #define VK_DEFINE_NONDISP_HANDLE(obj) \
-        struct obj { \
-            obj() : handle(0) { } \
-            VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
-            obj& operator =(uint64_t x) { handle = x; return *this; } \
-            bool operator==(const obj& other) const { return handle == other.handle; } \
-            bool operator!=(const obj& other) const { return handle != other.handle; } \
-            bool operator!() const { return !handle; } \
-            VK_NONDISP_HANDLE_OPERATOR_BOOL() \
-            uint64_t handle; \
-        };
+#if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+	#define VK_DEFINE_NONDISP_HANDLE(obj) typedef struct obj##_T *obj;
 #else
-    #define VK_DEFINE_NONDISP_HANDLE(obj) typedef struct obj##_T { uint64_t handle; } obj;
+	#define VK_DEFINE_NONDISP_HANDLE(obj) typedef uint64_t obj;
 #endif
         
 

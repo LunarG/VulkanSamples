@@ -438,7 +438,7 @@ static void demo_flush_init_cmd(struct demo *demo)
     assert(!err);
 
     const VkCmdBuffer cmd_bufs[] = { demo->cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
     VkSubmitInfo submit_info = {
         .waitSemCount = 0,
         .pWaitSemaphores = NULL,
@@ -483,9 +483,9 @@ static void demo_set_image_layout(
             .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = 0,
-            .renderPass = { VK_NULL_HANDLE },
+            .renderPass = VK_NULL_HANDLE,
             .subpass = 0,
-            .framebuffer = { VK_NULL_HANDLE },
+            .framebuffer = VK_NULL_HANDLE,
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
         assert(!err);
@@ -526,9 +526,9 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
-        .renderPass = { VK_NULL_HANDLE },
+        .renderPass = VK_NULL_HANDLE,
         .subpass = 0,
-        .framebuffer = { VK_NULL_HANDLE },
+        .framebuffer = VK_NULL_HANDLE,
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.float32 = { 0.2f, 0.2f, 0.2f, 0.2f } },
@@ -631,7 +631,7 @@ static void demo_draw(struct demo *demo)
         .pNext = NULL,
         .flags = 0,
     };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
 
     err = vkCreateSemaphore(demo->device,
                             &presentCompleteSemaphoreCreateInfo,
@@ -816,7 +816,7 @@ static void demo_prepare_buffers(struct demo *demo)
     // swapchain at this point.
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
-    if (oldSwapchain.handle != VK_NULL_HANDLE) {
+    if (oldSwapchain != VK_NULL_HANDLE) {
         demo->fpDestroySwapchainKHR(demo->device, oldSwapchain);
     }
 
@@ -894,7 +894,7 @@ static void demo_prepare_depth(struct demo *demo)
     VkImageViewCreateInfo view = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = NULL,
-        .image.handle = VK_NULL_HANDLE,
+        .image = VK_NULL_HANDLE,
         .format = depth_format,
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -1187,7 +1187,7 @@ static void demo_prepare_textures(struct demo *demo)
         VkImageViewCreateInfo view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
-            .image.handle = VK_NULL_HANDLE,
+            .image = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
             .channels = { VK_CHANNEL_SWIZZLE_R,

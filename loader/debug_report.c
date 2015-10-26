@@ -107,7 +107,7 @@ static VkResult debug_report_DbgDestroyMsgCallback(
     VkResult result = inst->disp->DbgDestroyMsgCallback(instance, msg_callback);
 
     while (pTrav) {
-        if (pTrav->msgCallback.handle == msg_callback.handle) {
+        if (pTrav->msgCallback == msg_callback) {
             pPrev->pNext = pTrav->pNext;
             if (inst->DbgFunctionHead == pTrav)
                 inst->DbgFunctionHead = pTrav->pNext;
@@ -174,7 +174,7 @@ VkResult VKAPI loader_DbgCreateMsgCallback(
     if (icd) {
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
-            if (icd_info[storage_idx].handle) {
+            if (icd_info[storage_idx]) {
                 icd->DbgDestroyMsgCallback(
                       icd->instance,
                       icd_info[storage_idx]);
@@ -212,7 +212,7 @@ VkResult VKAPI loader_DbgDestroyMsgCallback(
     icd_info = *(VkDbgMsgCallback **) &msgCallback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
-        if (icd_info[storage_idx].handle) {
+        if (icd_info[storage_idx]) {
             icd->DbgDestroyMsgCallback(
                   icd->instance,
                   icd_info[storage_idx]);

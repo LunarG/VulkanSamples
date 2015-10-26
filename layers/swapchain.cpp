@@ -53,7 +53,7 @@ template layer_data *get_my_data_ptr<layer_data>(
 static std::unordered_map<void *, SwpInstance>       instanceMap;
 static std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
 static std::unordered_map<void *, SwpDevice>         deviceMap;
-static std::unordered_map<uint64_t, SwpSwapchain>    swapchainMap;
+static std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
 
 
 static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
@@ -830,11 +830,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(VkDevice device, const VkSwa
             // Remember the swapchain's handle, and link it to the device:
             SwpDevice *pDevice = &deviceMap[device];
 
-            swapchainMap[pSwapchain->handle].swapchain = *pSwapchain;
-            pDevice->swapchains[pSwapchain->handle] =
-                &swapchainMap[pSwapchain->handle];
-            swapchainMap[pSwapchain->handle].pDevice = pDevice;
-            swapchainMap[pSwapchain->handle].imageCount = 0;
+            swapchainMap[*pSwapchain].swapchain = *pSwapchain;
+            pDevice->swapchains[*pSwapchain] =
+                &swapchainMap[*pSwapchain];
+            swapchainMap[*pSwapchain].pDevice = pDevice;
+            swapchainMap[*pSwapchain].imageCount = 0;
         }
 
         return result;
@@ -864,11 +864,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
     }
 
     // Regardless of skipCall value, do some internal cleanup:
-    SwpSwapchain *pSwapchain = &swapchainMap[swapchain.handle];
+    SwpSwapchain *pSwapchain = &swapchainMap[swapchain];
     if (pSwapchain) {
         // Delete the SwpSwapchain associated with this swapchain:
         if (pSwapchain->pDevice) {
-            pSwapchain->pDevice->swapchains.erase(swapchain.handle);
+            pSwapchain->pDevice->swapchains.erase(swapchain);
             if (device != pSwapchain->pDevice->device) {
                 LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                           SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
@@ -880,10 +880,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
         if (pSwapchain->imageCount) {
             pSwapchain->images.clear();
         }
-        swapchainMap.erase(swapchain.handle);
+        swapchainMap.erase(swapchain);
     } else {
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                                            swapchain.handle,
+                                            swapchain,
                                             "VkSwapchainKHR");
     }
 
@@ -916,7 +916,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
                               "extension was not enabled for this VkDevice.",
                               __FUNCTION__);
     }
-    SwpSwapchain *pSwapchain = &swapchainMap[swapchain.handle];
+    SwpSwapchain *pSwapchain = &swapchainMap[swapchain];
     if (!pSwapchain) {
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
                                             swapchain.handle,
@@ -973,10 +973,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
                               __FUNCTION__);
     }
     // Validate that a valid VkSwapchainKHR was used:
-    SwpSwapchain *pSwapchain = &swapchainMap[swapchain.handle];
+    SwpSwapchain *pSwapchain = &swapchainMap[swapchain];
     if (!pSwapchain) {
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                                            swapchain.handle,
+                                            swapchain,
                                             "VkSwapchainKHR");
     } else {
         // Look to see if the application is trying to own too many images at
@@ -1037,7 +1037,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
     for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
         uint32_t index = pPresentInfo->imageIndices[i];
         SwpSwapchain *pSwapchain =
-            &swapchainMap[pPresentInfo->swapchains[i].handle];
+            &swapchainMap[pPresentInfo->swapchains[i]];
         if (pSwapchain) {
             if (!pSwapchain->pDevice->deviceSwapchainExtensionEnabled) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE,
@@ -1051,7 +1051,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             }
             if (index >= pSwapchain->imageCount) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                                      pPresentInfo->swapchains[i].handle,
+                                      pPresentInfo->swapchains[i],
                                       "VkSwapchainKHR",
                                       SWAPCHAIN_INDEX_TOO_LARGE,
                                       "%s() called for an index that is too "
@@ -1062,7 +1062,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             } else {
                 if (!pSwapchain->images[index].ownedByApp) {
                     skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                                          pPresentInfo->swapchains[i].handle,
+                                          pPresentInfo->swapchains[i],
                                           "VkSwapchainKHR",
                                           SWAPCHAIN_INDEX_NOT_IN_USE,
                                           "%s() returned an index (i.e. %d) "
@@ -1073,7 +1073,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             }
         } else {
             skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-                                                pPresentInfo->swapchains[i].handle,
+                                                pPresentInfo->swapchains[i],
                                                 "VkSwapchainKHR");
         }
     }
@@ -1087,7 +1087,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
             for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
                 int index = pPresentInfo->imageIndices[i];
                 SwpSwapchain *pSwapchain =
-                    &swapchainMap[pPresentInfo->swapchains[i].handle];
+                    &swapchainMap[pPresentInfo->swapchains[i]];
                 if (pSwapchain) {
                     // Change the state of the image (no longer owned by the
                     // application):

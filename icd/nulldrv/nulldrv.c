@@ -800,7 +800,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
                         VK_OBJECT_TYPE_IMAGE);
                 if (!img)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
-            pSwapchainImages[i].handle = (uint64_t) &img;
+            pSwapchainImages[i] = (VkImage) img;
         }
     }
 
@@ -1622,7 +1622,7 @@ ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     VkMemoryRequirements*                       pMemoryRequirements)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_base *base = nulldrv_base((void*)buffer.handle);
+    struct nulldrv_base *base = nulldrv_base((void*)buffer);
 
     base->get_memory_requirements(base, pMemoryRequirements);
 }
@@ -1633,7 +1633,7 @@ ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
     VkMemoryRequirements*                       pMemoryRequirements)
 {
     NULLDRV_LOG_FUNC;
-    struct nulldrv_base *base = nulldrv_base((void*)image.handle);
+    struct nulldrv_base *base = nulldrv_base((void*)image);
 
     base->get_memory_requirements(base, pMemoryRequirements);
 }

@@ -411,7 +411,7 @@ ICD_EXPORT void VKAPI vkDestroySampler(
     VkSampler                                 sampler)
 
  {
-    struct intel_obj *obj = intel_obj(sampler.handle);
+    struct intel_obj *obj = intel_obj(sampler);
 
     obj->destroy(obj);
  }

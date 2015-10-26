@@ -212,7 +212,7 @@ ICD_EXPORT void VKAPI vkDestroyFramebuffer(
     VkFramebuffer                           framebuffer)
 
 {
-    struct intel_obj *obj = intel_obj(framebuffer.handle);
+    struct intel_obj *obj = intel_obj(framebuffer);
 
     obj->destroy(obj);
 }
@@ -233,7 +233,7 @@ ICD_EXPORT void VKAPI vkDestroyRenderPass(
     VkRenderPass                           renderPass)
 
 {
-    struct intel_obj *obj = intel_obj(renderPass.handle);
+    struct intel_obj *obj = intel_obj(renderPass);
 
     obj->destroy(obj);
 }

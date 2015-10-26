@@ -103,7 +103,7 @@ ICD_EXPORT void VKAPI vkDestroyBuffer(
     VkBuffer                                buffer)
 
  {
-    struct intel_obj *obj = intel_obj(buffer.handle);
+    struct intel_obj *obj = intel_obj(buffer);
 
     obj->destroy(obj);
  }

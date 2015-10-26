@@ -155,7 +155,7 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     VkImage                                 image)
 
  {
-    struct intel_obj *obj = intel_obj(image.handle);
+    struct intel_obj *obj = intel_obj(image);
 
     obj->destroy(obj);
  }

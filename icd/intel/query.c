@@ -211,7 +211,7 @@ ICD_EXPORT void VKAPI vkDestroyQueryPool(
     VkQueryPool                                 queryPool)
 
  {
-    struct intel_obj *obj = intel_obj(queryPool.handle);
+    struct intel_obj *obj = intel_obj(queryPool);
 
     obj->destroy(obj);
  }
