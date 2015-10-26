@@ -187,13 +187,12 @@ core = Extension(
         "VkPhysicalDevice",
         "VkDevice",
         "VkQueue",
+        "VkSemaphore",
         "VkCmdBuffer",
-        "VkCmdPool",
         "VkFence",
         "VkDeviceMemory",
         "VkBuffer",
         "VkImage",
-        "VkSemaphore",
         "VkEvent",
         "VkQueryPool",
         "VkBufferView",
@@ -202,13 +201,14 @@ core = Extension(
         "VkShader",
         "VkPipelineCache",
         "VkPipelineLayout",
+        "VkRenderPass",
         "VkPipeline",
         "VkDescriptorSetLayout",
         "VkSampler",
         "VkDescriptorPool",
         "VkDescriptorSet",
-        "VkRenderPass",
         "VkFramebuffer",
+        "VkCmdPool",
     ],
     protos=[
         Proto("VkResult", "CreateInstance",
@@ -241,6 +241,19 @@ core = Extension(
              Param("VkImageCreateFlags", "flags"),
              Param("VkImageFormatProperties*", "pImageFormatProperties")]),
 
+        Proto("void", "GetPhysicalDeviceProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceProperties*", "pProperties")]),
+
+        Proto("void", "GetPhysicalDeviceQueueFamilyProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t*", "pCount"),
+             Param("VkQueueFamilyProperties*", "pQueueFamilyProperties")]),
+
+        Proto("void", "GetPhysicalDeviceMemoryProperties",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("VkPhysicalDeviceMemoryProperties*", "pMemoryProperties")]),
+
         Proto("PFN_vkVoidFunction", "GetInstanceProcAddr",
             [Param("VkInstance", "instance"),
              Param("const char*", "pName")]),
@@ -256,19 +269,6 @@ core = Extension(
 
         Proto("void", "DestroyDevice",
             [Param("VkDevice", "device")]),
-
-        Proto("void", "GetPhysicalDeviceProperties",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("VkPhysicalDeviceProperties*", "pProperties")]),
-
-        Proto("void", "GetPhysicalDeviceQueueFamilyProperties",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("uint32_t*", "pCount"),
-             Param("VkQueueFamilyProperties*", "pQueueFamilyProperties")]),
-
-        Proto("void", "GetPhysicalDeviceMemoryProperties",
-            [Param("VkPhysicalDevice", "physicalDevice"),
-             Param("VkPhysicalDeviceMemoryProperties*", "pMemoryProperties")]),
 
         Proto("VkResult", "EnumerateInstanceExtensionProperties",
             [Param("const char*", "pLayerName"),
@@ -643,6 +643,29 @@ core = Extension(
              Param("uint32_t", "copyCount"),
              Param("const VkCopyDescriptorSet*", "pDescriptorCopies")]),
 
+        Proto("VkResult", "CreateFramebuffer",
+            [Param("VkDevice", "device"),
+             Param("const VkFramebufferCreateInfo*", "pCreateInfo"),
+             Param("VkFramebuffer*", "pFramebuffer")]),
+
+        Proto("void", "DestroyFramebuffer",
+            [Param("VkDevice", "device"),
+             Param("VkFramebuffer", "framebuffer")]),
+
+        Proto("VkResult", "CreateRenderPass",
+            [Param("VkDevice", "device"),
+             Param("const VkRenderPassCreateInfo*", "pCreateInfo"),
+             Param("VkRenderPass*", "pRenderPass")]),
+
+        Proto("void", "DestroyRenderPass",
+            [Param("VkDevice", "device"),
+             Param("VkRenderPass", "renderPass")]),
+
+        Proto("void", "GetRenderAreaGranularity",
+            [Param("VkDevice", "device"),
+             Param("VkRenderPass", "renderPass"),
+             Param("VkExtent2D*", "pGranularity")]),
+
         Proto("VkResult", "CreateCommandPool",
             [Param("VkDevice", "device"),
              Param("const VkCmdPoolCreateInfo*", "pCreateInfo"),
@@ -683,6 +706,50 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineBindPoint", "pipelineBindPoint"),
              Param("VkPipeline", "pipeline")]),
+
+        Proto("void", "CmdSetViewport",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("uint32_t", "viewportCount"),
+             Param("const VkViewport*", "pViewports")]),
+
+        Proto("void", "CmdSetScissor",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("uint32_t", "scissorCount"),
+             Param("const VkRect2D*", "pScissors")]),
+
+        Proto("void", "CmdSetLineWidth",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "lineWidth")]),
+
+        Proto("void", "CmdSetDepthBias",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "depthBias"),
+             Param("float", "depthBiasClamp"),
+             Param("float", "slopeScaledDepthBias")]),
+
+        Proto("void", "CmdSetBlendConstants",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("const float[4]", "blendConst")]),
+
+        Proto("void", "CmdSetDepthBounds",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("float", "minDepthBounds"),
+             Param("float", "maxDepthBounds")]),
+
+        Proto("void", "CmdSetStencilCompareMask",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilCompareMask")]),
+
+        Proto("void", "CmdSetStencilWriteMask",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilWriteMask")]),
+
+        Proto("void", "CmdSetStencilReference",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkStencilFaceFlags", "faceMask"),
+             Param("uint32_t", "stencilReference")]),
 
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -895,28 +962,13 @@ core = Extension(
              Param("VkDeviceSize", "destStride"),
              Param("VkQueryResultFlags", "flags")]),
 
-        Proto("VkResult", "CreateFramebuffer",
-            [Param("VkDevice", "device"),
-             Param("const VkFramebufferCreateInfo*", "pCreateInfo"),
-             Param("VkFramebuffer*", "pFramebuffer")]),
-
-        Proto("void", "DestroyFramebuffer",
-            [Param("VkDevice", "device"),
-             Param("VkFramebuffer", "framebuffer")]),
-
-        Proto("VkResult", "CreateRenderPass",
-            [Param("VkDevice", "device"),
-             Param("const VkRenderPassCreateInfo*", "pCreateInfo"),
-             Param("VkRenderPass*", "pRenderPass")]),
-
-        Proto("void", "DestroyRenderPass",
-            [Param("VkDevice", "device"),
-             Param("VkRenderPass", "renderPass")]),
-
-        Proto("void", "GetRenderAreaGranularity",
-            [Param("VkDevice", "device"),
-             Param("VkRenderPass", "renderPass"),
-             Param("VkExtent2D*", "pGranularity")]),
+        Proto("void", "CmdPushConstants",
+            [Param("VkCmdBuffer", "cmdBuffer"),
+             Param("VkPipelineLayout", "layout"),
+             Param("VkShaderStageFlags", "stageFlags"),
+             Param("uint32_t", "start"),
+             Param("uint32_t", "length"),
+             Param("const void*", "values")]),
 
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -927,14 +979,6 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkRenderPassContents", "contents")]),
 
-        Proto("void", "CmdPushConstants",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkPipelineLayout", "layout"),
-             Param("VkShaderStageFlags", "stageFlags"),
-             Param("uint32_t", "start"),
-             Param("uint32_t", "length"),
-             Param("const void*", "values")]),
-
         Proto("void", "CmdEndRenderPass",
             [Param("VkCmdBuffer", "cmdBuffer")]),
 
@@ -942,50 +986,6 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("uint32_t", "cmdBuffersCount"),
              Param("const VkCmdBuffer*", "pCmdBuffers")]),
-
-        Proto("void", "CmdSetViewport",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("uint32_t", "viewportCount"),
-             Param("const VkViewport*", "pViewports")]),
-
-        Proto("void", "CmdSetScissor",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("uint32_t", "scissorCount"),
-             Param("const VkRect2D*", "pScissors")]),
-
-        Proto("void", "CmdSetLineWidth",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("float", "lineWidth")]),
-
-        Proto("void", "CmdSetDepthBias",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("float", "depthBias"),
-             Param("float", "depthBiasClamp"),
-             Param("float", "slopeScaledDepthBias")]),
-
-        Proto("void", "CmdSetBlendConstants",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("const float*", "blendConst")]),
-
-        Proto("void", "CmdSetDepthBounds",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("float", "minDepthBounds"),
-             Param("float", "maxDepthBounds")]),
-
-        Proto("void", "CmdSetStencilCompareMask",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilCompareMask")]),
-
-        Proto("void", "CmdSetStencilWriteMask",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilWriteMask")]),
-
-        Proto("void", "CmdSetStencilReference",
-            [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilReference")]),
     ],
 )
 
