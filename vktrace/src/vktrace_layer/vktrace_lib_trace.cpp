@@ -570,22 +570,21 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
-    size_t* pDataSize,
+    size_t dataSize,
     void* pData,
+    VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    size_t _dataSize;
     packet_vkGetQueryPoolResults* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
+    result = mdd(device)->devTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
     endTime = vktrace_get_time();
-    _dataSize = (pDataSize == NULL || pData == NULL) ? 0 : *pDataSize;
-    CREATE_TRACE_PACKET(vkGetQueryPoolResults, ((pDataSize != NULL) ? sizeof(size_t) : 0) + _dataSize);
+    CREATE_TRACE_PACKET(vkGetQueryPoolResults, dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
@@ -594,11 +593,11 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     pPacket->queryPool = queryPool;
     pPacket->startQuery = startQuery;
     pPacket->queryCount = queryCount;
+    pPacket->dataSize = dataSize;
+    pPacket->stride = stride;
     pPacket->flags = flags;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDataSize), sizeof(size_t), &_dataSize);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), _dataSize, pData);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pData), dataSize, pData);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDataSize));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
     FINISH_TRACE_PACKET();
     return result;

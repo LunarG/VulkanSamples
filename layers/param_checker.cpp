@@ -3302,18 +3302,15 @@ bool PostGetQueryPoolResults(
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
-    size_t* pDataSize,
+    size_t dataSize,
     void* pData,
+    VkDeviceSize stride,
     VkQueryResultFlags flags,
     VkResult result)
 {
 
 
 
-
-    if(pDataSize != nullptr)
-    {
-    }
 
     if(pData != nullptr)
     {
@@ -3335,13 +3332,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
-    size_t* pDataSize,
+    size_t dataSize,
     void* pData,
+    VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
 
-    PostGetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags, result);
+    PostGetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags, result);
 
     return result;
 }
@@ -6489,7 +6487,7 @@ bool PostCmdCopyQueryPoolResults(
     uint32_t queryCount,
     VkBuffer destBuffer,
     VkDeviceSize destOffset,
-    VkDeviceSize destStride,
+    VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
 
@@ -6510,12 +6508,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     uint32_t queryCount,
     VkBuffer destBuffer,
     VkDeviceSize destOffset,
-    VkDeviceSize destStride,
+    VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, stride, flags);
 
-    PostCmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
+    PostCmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, stride, flags);
 }
 
 bool PreCmdPushConstants(

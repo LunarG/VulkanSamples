@@ -211,7 +211,7 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     uint32_t                                    queryCount,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
-    VkDeviceSize                                destStride,
+    VkDeviceSize                                stride,
     VkFlags                                     flags)
 {
     /* TODO: Fill in functionality here */

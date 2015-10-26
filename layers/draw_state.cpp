@@ -3207,7 +3207,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCmdBuffer cmdBuffer, VkQueryPoo
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery,
                                                      uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset,
-                                                     VkDeviceSize destStride, VkQueryResultFlags flags)
+                                                     VkDeviceSize stride, VkQueryResultFlags flags)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -3223,7 +3223,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCmdBuffer cmdBuffer, VkQu
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdCopyQueryPoolResults(cmdBuffer, queryPool,
-                           startQuery, queryCount, destBuffer, destOffset, destStride, flags);
+                           startQuery, queryCount, destBuffer, destOffset, stride, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset)

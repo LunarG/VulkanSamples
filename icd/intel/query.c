@@ -221,23 +221,12 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
-    size_t*                                     pDataSize,
+    size_t                                      dataSize,
     void*                                       pData,
+    size_t                                      stride,
     VkQueryResultFlags                          flags)
 {
     struct intel_query *query = intel_query(queryPool);
-
-    switch (query->type) {
-    case VK_QUERY_TYPE_OCCLUSION:
-        *pDataSize = sizeof(uint64_t) * queryCount;
-        break;
-    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-        *pDataSize = query->slot_stride * queryCount;
-        break;
-    default:
-        assert(!"unknown query type");
-        break;
-    }
 
     if (pData)
         return intel_query_get_results(query, startQuery, queryCount, pData);

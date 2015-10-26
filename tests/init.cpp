@@ -211,7 +211,7 @@ TEST_F(VkTest, Query) {
     VkQueryPoolCreateInfo query_info;
     VkQueryPool query_pool;
     size_t query_result_size;
-    uint32_t *query_result_data;
+    uint8_t *query_result_data;
     VkResult err;
 
     //        typedef enum VkQueryType_
@@ -253,14 +253,12 @@ TEST_F(VkTest, Query) {
     // TODO: commands
     // TOOD: vkCmdEndQuery
 
-    err = vkGetQueryPoolResults(device(), query_pool, 0, MAX_QUERY_SLOTS,
-                                 &query_result_size, VK_NULL_HANDLE, 0);
-    ASSERT_VK_SUCCESS(err);
-
+    query_result_size = MAX_QUERY_SLOTS * sizeof(uint64_t);
     if (query_result_size > 0) {
-        query_result_data = new uint32_t [query_result_size];
+        query_result_data = new uint8_t [query_result_size];
         err = vkGetQueryPoolResults(device(), query_pool, 0, MAX_QUERY_SLOTS,
-                                     &query_result_size, query_result_data, 0);
+                                     query_result_size, query_result_data,
+                                     sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
         //ASSERT_VK_SUCCESS(err); TODO fix once actually submit queries
 
         // TODO: Test Query result data.

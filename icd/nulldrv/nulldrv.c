@@ -1812,8 +1812,9 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
-    size_t*                                     pDataSize,
+    size_t                                      dataSize,
     void*                                       pData,
+    size_t                                      stride,
     VkQueryResultFlags                          flags)
 {
     NULLDRV_LOG_FUNC;

@@ -477,8 +477,9 @@ core = Extension(
              Param("VkQueryPool", "queryPool"),
              Param("uint32_t", "startQuery"),
              Param("uint32_t", "queryCount"),
-             Param("size_t*", "pDataSize"),
+             Param("size_t", "dataSize"),
              Param("void*", "pData"),
+             Param("VkDeviceSize", "stride"),
              Param("VkQueryResultFlags", "flags")]),
 
         Proto("VkResult", "CreateBuffer",
@@ -959,7 +960,7 @@ core = Extension(
              Param("uint32_t", "queryCount"),
              Param("VkBuffer", "destBuffer"),
              Param("VkDeviceSize", "destOffset"),
-             Param("VkDeviceSize", "destStride"),
+             Param("VkDeviceSize", "stride"),
              Param("VkQueryResultFlags", "flags")]),
 
         Proto("void", "CmdPushConstants",

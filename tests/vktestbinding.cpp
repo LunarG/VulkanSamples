@@ -504,16 +504,10 @@ void QueryPool::init(const Device &dev, const VkQueryPoolCreateInfo &info)
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateQueryPool, dev, &info);
 }
 
-VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data)
+VkResult QueryPool::results(uint32_t start, uint32_t count, size_t size, void *data, size_t stride)
 {
-    size_t tmp = size;
-    VkResult err = vkGetQueryPoolResults(device(), handle(), start, count, &tmp, data, 0);
-    if (err == VK_SUCCESS) {
-        if (!EXPECT(tmp == size))
-            memset(data, 0, size);
-    } else {
-        EXPECT(err == VK_NOT_READY);
-    }
+    VkResult err = vkGetQueryPoolResults(device(), handle(), start, count, size, data, stride, 0);
+    EXPECT(err == VK_SUCCESS || err == VK_NOT_READY);
 
     return err;
 }
