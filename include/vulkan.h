@@ -1194,7 +1194,6 @@ typedef struct {
     uint32_t                                    mipmapPrecisionBits;
     uint32_t                                    maxDrawIndexedIndexValue;
     uint32_t                                    maxDrawIndirectInstanceCount;
-    VkBool32                                    primitiveRestartForPatches;
     float                                       maxSamplerLodBias;
     float                                       maxSamplerAnisotropy;
     uint32_t                                    maxViewports;
