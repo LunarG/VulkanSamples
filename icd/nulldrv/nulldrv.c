@@ -1846,22 +1846,6 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
-    VkQueue                                   queue,
-    VkSemaphore                               semaphore)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
-    VkQueue                                   queue,
-    VkSemaphore                               semaphore)
-{
-    NULLDRV_LOG_FUNC;
-    return VK_SUCCESS;
-}
-
 ICD_EXPORT VkResult VKAPI vkCreateSampler(
     VkDevice                                  device,
     const VkSamplerCreateInfo*              pCreateInfo,

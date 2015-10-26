@@ -231,11 +231,6 @@ public:
     // vkQueueWaitIdle()
     void wait();
 
-    // vkQueueSignalSemaphore()
-    // vkQueueWaitSemaphore()
-    void signal_semaphore(Semaphore &sem);
-    void wait_semaphore(Semaphore &sem);
-
     int get_family_index() {return family_index_;}
 
 private:

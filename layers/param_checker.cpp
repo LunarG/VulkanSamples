@@ -3048,62 +3048,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     return result;
 }
 
-bool PostQueueSignalSemaphore(
-    VkQueue queue,
-    VkSemaphore semaphore,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkQueueSignalSemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
-    VkQueue queue,
-    VkSemaphore semaphore)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSignalSemaphore(queue, semaphore);
-
-    PostQueueSignalSemaphore(queue, semaphore, result);
-
-    return result;
-}
-
-bool PostQueueWaitSemaphore(
-    VkQueue queue,
-    VkSemaphore semaphore,
-    VkResult result)
-{
-
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkQueueWaitSemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
-    VkQueue queue,
-    VkSemaphore semaphore)
-{
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueWaitSemaphore(queue, semaphore);
-
-    PostQueueWaitSemaphore(queue, semaphore, result);
-
-    return result;
-}
-
 bool PreCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo)
@@ -6695,10 +6639,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkWaitForFences;
     if (!strcmp(funcName, "vkCreateSemaphore"))
         return (PFN_vkVoidFunction) vkCreateSemaphore;
-    if (!strcmp(funcName, "vkQueueSignalSemaphore"))
-        return (PFN_vkVoidFunction) vkQueueSignalSemaphore;
-    if (!strcmp(funcName, "vkQueueWaitSemaphore"))
-        return (PFN_vkVoidFunction) vkQueueWaitSemaphore;
     if (!strcmp(funcName, "vkCreateEvent"))
         return (PFN_vkVoidFunction) vkCreateEvent;
     if (!strcmp(funcName, "vkGetEventStatus"))

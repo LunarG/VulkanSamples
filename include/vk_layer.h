@@ -57,8 +57,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkWaitForFences WaitForFences;
     PFN_vkCreateSemaphore CreateSemaphore;
     PFN_vkDestroySemaphore DestroySemaphore;
-    PFN_vkQueueSignalSemaphore QueueSignalSemaphore;
-    PFN_vkQueueWaitSemaphore QueueWaitSemaphore;
     PFN_vkCreateEvent CreateEvent;
     PFN_vkDestroyEvent DestroyEvent;
     PFN_vkGetEventStatus GetEventStatus;

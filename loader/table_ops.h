@@ -65,8 +65,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->WaitForFences = (PFN_vkWaitForFences) gpa(dev, "vkWaitForFences");
     table->CreateSemaphore = (PFN_vkCreateSemaphore) gpa(dev, "vkCreateSemaphore");
     table->DestroySemaphore = (PFN_vkDestroySemaphore) gpa(dev, "vkDestroySemaphore");
-    table->QueueSignalSemaphore = (PFN_vkQueueSignalSemaphore) gpa(dev, "vkQueueSignalSemaphore");
-    table->QueueWaitSemaphore = (PFN_vkQueueWaitSemaphore) gpa(dev, "vkQueueWaitSemaphore");
     table->CreateEvent = (PFN_vkCreateEvent) gpa(dev, "vkCreateEvent");
     table->DestroyEvent = (PFN_vkDestroyEvent) gpa(dev, "vkDestroyEvent");
     table->GetEventStatus = (PFN_vkGetEventStatus) gpa(dev, "vkGetEventStatus");
@@ -243,10 +241,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateSemaphore;
     if (!strcmp(name, "DestroySemaphore"))
         return (void *) table->DestroySemaphore;
-    if (!strcmp(name, "QueueSignalSemaphore"))
-        return (void *) table->QueueSignalSemaphore;
-    if (!strcmp(name, "QueueWaitSemaphore"))
-        return (void *) table->QueueWaitSemaphore;
     if (!strcmp(name, "CreateEvent"))
         return (void *) table->CreateEvent;
     if (!strcmp(name, "DestroyEvent"))

@@ -2117,8 +2117,6 @@ typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout);
 typedef VkResult (VKAPI *PFN_vkCreateSemaphore)(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore);
 typedef void (VKAPI *PFN_vkDestroySemaphore)(VkDevice device, VkSemaphore semaphore);
-typedef VkResult (VKAPI *PFN_vkQueueSignalSemaphore)(VkQueue queue, VkSemaphore semaphore);
-typedef VkResult (VKAPI *PFN_vkQueueWaitSemaphore)(VkQueue queue, VkSemaphore semaphore);
 typedef VkResult (VKAPI *PFN_vkCreateEvent)(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent);
 typedef void (VKAPI *PFN_vkDestroyEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkGetEventStatus)(VkDevice device, VkEvent event);
@@ -2439,14 +2437,6 @@ VkResult VKAPI vkCreateSemaphore(
 
 void VKAPI vkDestroySemaphore(
     VkDevice                                    device,
-    VkSemaphore                                 semaphore);
-
-VkResult VKAPI vkQueueSignalSemaphore(
-    VkQueue                                     queue,
-    VkSemaphore                                 semaphore);
-
-VkResult VKAPI vkQueueWaitSemaphore(
-    VkQueue                                     queue,
     VkSemaphore                                 semaphore);
 
 VkResult VKAPI vkCreateEvent(

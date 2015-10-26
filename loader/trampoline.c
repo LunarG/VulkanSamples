@@ -576,24 +576,6 @@ LOADER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semapho
     disp->DestroySemaphore(device, semaphore);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(VkQueue queue, VkSemaphore semaphore)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueueSignalSemaphore(queue, semaphore);
-}
-
-LOADER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(VkQueue queue, VkSemaphore semaphore)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(queue);
-
-    return disp->QueueWaitSemaphore(queue, semaphore);
-}
-
 LOADER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent)
 {
     const VkLayerDispatchTable *disp;

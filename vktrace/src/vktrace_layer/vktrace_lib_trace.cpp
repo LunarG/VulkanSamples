@@ -1222,10 +1222,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkCreateSemaphore;
     if (!strcmp(name, "DestroySemaphore"))
         return (PFN_vkVoidFunction) __HOOKED_vkDestroySemaphore;
-    if (!strcmp(name, "QueueSignalSemaphore"))
-        return (PFN_vkVoidFunction) __HOOKED_vkQueueSignalSemaphore;
-    if (!strcmp(name, "QueueWaitSemaphore"))
-        return (PFN_vkVoidFunction) __HOOKED_vkQueueWaitSemaphore;
     if (!strcmp(name, "CreateEvent"))
         return (PFN_vkVoidFunction) __HOOKED_vkCreateEvent;
     if (!strcmp(name, "DestroyEvent"))

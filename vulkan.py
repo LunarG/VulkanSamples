@@ -434,14 +434,6 @@ core = Extension(
             [Param("VkDevice", "device"),
              Param("VkSemaphore", "semaphore")]),
 
-        Proto("VkResult", "QueueSignalSemaphore",
-            [Param("VkQueue", "queue"),
-             Param("VkSemaphore", "semaphore")]),
-
-        Proto("VkResult", "QueueWaitSemaphore",
-            [Param("VkQueue", "queue"),
-             Param("VkSemaphore", "semaphore")]),
-
         Proto("VkResult", "CreateEvent",
             [Param("VkDevice", "device"),
              Param("const VkEventCreateInfo*", "pCreateInfo"),

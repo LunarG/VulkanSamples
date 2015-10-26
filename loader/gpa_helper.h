@@ -119,10 +119,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateSemaphore;
     if (!strcmp(name, "DestroySemaphore"))
         return (void*) vkDestroySemaphore;
-    if (!strcmp(name, "QueueSignalSemaphore"))
-        return (void*) vkQueueSignalSemaphore;
-    if (!strcmp(name, "QueueWaitSemaphore"))
-        return (void*) vkQueueWaitSemaphore;
     if (!strcmp(name, "CreateEvent"))
         return (void*) vkCreateEvent;
     if (!strcmp(name, "DestroyEvent"))

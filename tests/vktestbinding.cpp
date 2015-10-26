@@ -422,16 +422,6 @@ void Queue::wait()
     EXPECT(vkQueueWaitIdle(handle()) == VK_SUCCESS);
 }
 
-void Queue::signal_semaphore(Semaphore &sem)
-{
-    EXPECT(vkQueueSignalSemaphore(handle(), sem.handle()) == VK_SUCCESS);
-}
-
-void Queue::wait_semaphore(Semaphore &sem)
-{
-    EXPECT(vkQueueWaitSemaphore(handle(), sem.handle()) == VK_SUCCESS);
-}
-
 DeviceMemory::~DeviceMemory()
 {
     if (initialized())

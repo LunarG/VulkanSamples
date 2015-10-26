@@ -843,18 +843,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaph
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSignalSemaphore(VkQueue queue, VkSemaphore semaphore)
-{
-    VkResult result = nextTable.QueueSignalSemaphore(queue, semaphore);
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitSemaphore(VkQueue queue, VkSemaphore semaphore)
-{
-    VkResult result = nextTable.QueueWaitSemaphore(queue, semaphore);
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent)
 {
     loader_platform_thread_lock_mutex(&objLock);

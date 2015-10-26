@@ -464,24 +464,3 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
     struct intel_obj *obj = intel_obj(semaphore.handle);
     obj->destroy(obj);
 }
-
-ICD_EXPORT VkResult VKAPI vkQueueSignalSemaphore(
-    VkQueue                                   queue_,
-    VkSemaphore                               semaphore)
-{
-    struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
-    struct intel_queue *queue = intel_queue(queue_);
-    intel_signal_queue_semaphore(queue, pSemaphore);
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkQueueWaitSemaphore(
-    VkQueue                                   queue_,
-    VkSemaphore                               semaphore)
-{
-    struct intel_semaphore *pSemaphore = intel_semaphore(semaphore);
-    struct intel_queue *queue = intel_queue(queue_);
-    intel_wait_queue_semaphore(queue, pSemaphore);
-
-    return VK_SUCCESS;
-}
