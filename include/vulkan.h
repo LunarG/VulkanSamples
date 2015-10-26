@@ -1711,8 +1711,8 @@ typedef struct {
 
 typedef struct {
     VkShaderStageFlags                          stageFlags;
-    uint32_t                                    start;
-    uint32_t                                    length;
+    uint32_t                                    offset;
+    uint32_t                                    size;
 } VkPushConstantRange;
 
 typedef struct {
@@ -2183,7 +2183,7 @@ typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool query
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
 typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize stride, VkQueryResultFlags flags);
-typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
+typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
 typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCmdBuffer cmdBuffer, VkRenderPassContents contents);
 typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
@@ -2934,8 +2934,8 @@ void VKAPI vkCmdPushConstants(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
-    uint32_t                                    start,
-    uint32_t                                    length,
+    uint32_t                                    offset,
+    uint32_t                                    size,
     const void*                                 values);
 
 void VKAPI vkCmdBeginRenderPass(

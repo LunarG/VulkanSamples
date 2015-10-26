@@ -955,8 +955,8 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineLayout", "layout"),
              Param("VkShaderStageFlags", "stageFlags"),
-             Param("uint32_t", "start"),
-             Param("uint32_t", "length"),
+             Param("uint32_t", "offset"),
+             Param("uint32_t", "size"),
              Param("const void*", "values")]),
 
         Proto("void", "CmdBeginRenderPass",

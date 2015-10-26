@@ -3795,8 +3795,8 @@ void VKAPI vkCmdPushConstants(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
-    uint32_t                                    start,
-    uint32_t                                    length,
+    uint32_t                                    offset,
+    uint32_t                                    size,
     const void*                                 values)
 {
     /* TODO: Implement */

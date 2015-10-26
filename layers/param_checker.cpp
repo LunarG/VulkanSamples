@@ -6435,8 +6435,8 @@ bool PostCmdPushConstants(
     VkCmdBuffer cmdBuffer,
     VkPipelineLayout layout,
     VkShaderStageFlags stageFlags,
-    uint32_t start,
-    uint32_t length)
+    uint32_t offset,
+    uint32_t size)
 {
 
 
@@ -6450,15 +6450,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdPushConstants(
     VkCmdBuffer cmdBuffer,
     VkPipelineLayout layout,
     VkShaderStageFlags stageFlags,
-    uint32_t start,
-    uint32_t length,
+    uint32_t offset,
+    uint32_t size,
     const void* values)
 {
     PreCmdPushConstants(cmdBuffer, values);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPushConstants(cmdBuffer, layout, stageFlags, start, length, values);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPushConstants(cmdBuffer, layout, stageFlags, offset, size, values);
 
-    PostCmdPushConstants(cmdBuffer, layout, stageFlags, start, length);
+    PostCmdPushConstants(cmdBuffer, layout, stageFlags, offset, size);
 }
 
 bool PreCmdBeginRenderPass(
