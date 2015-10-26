@@ -303,7 +303,7 @@ core = Extension(
         Proto("VkResult", "QueueSubmit",
             [Param("VkQueue", "queue"),
              Param("uint32_t", "submitCount"),
-             Param("const VkSubmitInfo*", "pSubmitInfo"),
+             Param("const VkSubmitInfo*", "pSubmits"),
              Param("VkFence", "fence")]),
 
         Proto("VkResult", "QueueWaitIdle",
@@ -654,9 +654,9 @@ core = Extension(
 
         Proto("void", "UpdateDescriptorSets",
             [Param("VkDevice", "device"),
-             Param("uint32_t", "writeCount"),
+             Param("uint32_t", "descriptorWriteCount"),
              Param("const VkWriteDescriptorSet*", "pDescriptorWrites"),
-             Param("uint32_t", "copyCount"),
+             Param("uint32_t", "descriptorCopyCount"),
              Param("const VkCopyDescriptorSet*", "pDescriptorCopies")]),
 
         Proto("VkResult", "CreateFramebuffer",

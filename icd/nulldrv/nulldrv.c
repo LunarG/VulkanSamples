@@ -1827,7 +1827,7 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
 ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue                                   queue_,
     uint32_t                                  submitCount,
-    const VkSubmitInfo*                       pSubmitInfo,
+    const VkSubmitInfo*                       pSubmits,
     VkFence                                   fence_)
 {
     NULLDRV_LOG_FUNC;
@@ -2064,9 +2064,9 @@ ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
 
 ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
-    uint32_t                                    writeCount,
+    uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
-    uint32_t                                    copyCount,
+    uint32_t                                    descriptorCopyCount,
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     NULLDRV_LOG_FUNC;

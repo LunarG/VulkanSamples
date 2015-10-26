@@ -372,7 +372,7 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
 ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue                                   queue_,
     uint32_t                                  submitCount,
-    const VkSubmitInfo*                       pSubmitInfo,
+    const VkSubmitInfo*                       pSubmits,
     VkFence                                   fence_)
 {
     struct intel_queue *queue = intel_queue(queue_);
@@ -382,7 +382,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
 
-        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        const VkSubmitInfo *submit = &pSubmits[submit_idx];
 
         for (i = 0; i < submit->waitSemaphoreCount; i++) {
             struct intel_semaphore *pSemaphore = intel_semaphore(submit->pWaitSemaphores[i]);

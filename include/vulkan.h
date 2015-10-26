@@ -1606,7 +1606,7 @@ typedef struct {
 
 typedef struct {
     uint32_t                                    mapEntryCount;
-    const VkSpecializationMapEntry*             pMap;
+    const VkSpecializationMapEntry*             pMapEntries;
     size_t                                      dataSize;
     const void*                                 pData;
 } VkSpecializationInfo;
@@ -2167,7 +2167,7 @@ typedef VkResult (VKAPI *PFN_vkEnumerateDeviceExtensionProperties)(VkPhysicalDev
 typedef VkResult (VKAPI *PFN_vkEnumerateInstanceLayerProperties)(uint32_t* pPropertyCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkEnumerateDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkLayerProperties* pProperties);
 typedef void (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue);
-typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmitInfo, VkFence fence);
+typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, const VkAllocCallbacks* pAllocator, VkDeviceMemory* pMem);
@@ -2230,7 +2230,7 @@ typedef void (VKAPI *PFN_vkDestroyDescriptorPool)(VkDevice device, VkDescriptorP
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, const VkDescriptorSetAllocInfo* pAllocInfo, VkDescriptorSet* pDescriptorSets);
 typedef VkResult (VKAPI *PFN_vkFreeDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets);
-typedef void (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies);
+typedef void (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkFramebuffer* pFramebuffer);
 typedef void (VKAPI *PFN_vkDestroyFramebuffer)(VkDevice device, VkFramebuffer framebuffer, const VkAllocCallbacks* pAllocator);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkRenderPass* pRenderPass);
@@ -2382,7 +2382,7 @@ void VKAPI vkGetDeviceQueue(
 VkResult VKAPI vkQueueSubmit(
     VkQueue                                     queue,
     uint32_t                                    submitCount,
-    const VkSubmitInfo*                         pSubmitInfo,
+    const VkSubmitInfo*                         pSubmits,
     VkFence                                     fence);
 
 VkResult VKAPI vkQueueWaitIdle(
@@ -2733,9 +2733,9 @@ VkResult VKAPI vkFreeDescriptorSets(
 
 void VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
-    uint32_t                                    writeCount,
+    uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
-    uint32_t                                    copyCount,
+    uint32_t                                    descriptorCopyCount,
     const VkCopyDescriptorSet*                  pDescriptorCopies);
 
 VkResult VKAPI vkCreateFramebuffer(

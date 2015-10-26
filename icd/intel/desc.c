@@ -867,14 +867,14 @@ ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
 
 ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     VkDevice                                    device,
-    uint32_t                                    writeCount,
+    uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
-    uint32_t                                    copyCount,
+    uint32_t                                    descriptorCopyCount,
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
     uint32_t i, j;
 
-    for (i = 0; i < writeCount; i++) {
+    for (i = 0; i < descriptorWriteCount; i++) {
         const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
         struct intel_desc_set *set = intel_desc_set(write->destSet);
         const struct intel_desc_layout_binding *binding;
@@ -981,7 +981,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         }
     }
 
-    for (i = 0; i < copyCount; i++) {
+    for (i = 0; i < descriptorCopyCount; i++) {
         const VkCopyDescriptorSet *copy = &pDescriptorCopies[i];
         const struct intel_desc_set *src_set = intel_desc_set(copy->srcSet);
         const struct intel_desc_set *dst_set = intel_desc_set(copy->destSet);

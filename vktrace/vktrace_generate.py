@@ -685,7 +685,7 @@ class Subcommand(object):
         pid_enum.append('        if (pShader->pSpecializationInfo != NULL)')
         pid_enum.append('        {')
         pid_enum.append('            VkSpecializationInfo* pInfo = (VkSpecializationInfo*)pShader->pSpecializationInfo;')
-        pid_enum.append('            pInfo->pMap = (const VkSpecializationMapEntry*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pMap);')
+        pid_enum.append('            pInfo->pMapEntries = (const VkSpecializationMapEntry*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pMapEntries);')
         pid_enum.append('            pInfo->pData = (const void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo->pData);')
         pid_enum.append('        }')
         pid_enum.append('    }')
@@ -857,7 +857,7 @@ class Subcommand(object):
                                                                                 '        *ppDescSetLayout = (VkDescriptorSetLayout *) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pAllocInfo->pSetLayouts));']},
                              'UpdateDescriptorSets' : {'param': 'pDescriptorWrites', 'txt':
                                                                                [ 'uint32_t i;\n',
-                                                                                 'for (i = 0; i < pPacket->writeCount; i++) {\n',
+                                                                                 'for (i = 0; i < pPacket->descriptorWriteCount; i++) {\n',
                                                                                  '    switch (pPacket->pDescriptorWrites[i].descriptorType) {',
                                                                                  '    case VK_DESCRIPTOR_TYPE_SAMPLER:',
                                                                                  '    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:',
@@ -889,15 +889,15 @@ class Subcommand(object):
                                                                                  '    }',
                                                                                  '}'
                                                                                ]},
-                             'QueueSubmit' : {'param': 'pSubmitInfo', 'txt':
+                             'QueueSubmit' : {'param': 'pSubmits', 'txt':
                                                                                [ 'uint32_t i;\n',
                                                                                  'for (i = 0; i < pPacket->submitCount; i++) {\n',
-                                                                                 '   VkCmdBuffer** ppCBs = (VkCmdBuffer**)&pPacket->pSubmitInfo[i].pCommandBuffers;\n',
-                                                                                 '   *ppCBs = (VkCmdBuffer*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pCommandBuffers);\n',
-                                                                                 '   VkSemaphore** ppSems = (VkSemaphore**)&pPacket->pSubmitInfo[i].pWaitSemaphores;\n',
-                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pWaitSemaphores);\n',
-                                                                                 '   ppSems = (VkSemaphore**)&pPacket->pSubmitInfo[i].pSignalSemaphores;\n',
-                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmitInfo[i].pSignalSemaphores);\n',
+                                                                                 '   VkCmdBuffer** ppCBs = (VkCmdBuffer**)&pPacket->pSubmits[i].pCommandBuffers;\n',
+                                                                                 '   *ppCBs = (VkCmdBuffer*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pCommandBuffers);\n',
+                                                                                 '   VkSemaphore** ppSems = (VkSemaphore**)&pPacket->pSubmits[i].pWaitSemaphores;\n',
+                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pWaitSemaphores);\n',
+                                                                                 '   ppSems = (VkSemaphore**)&pPacket->pSubmits[i].pSignalSemaphores;\n',
+                                                                                 '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pSignalSemaphores);\n',
                                                                                  '}'
                                                                                ]},
                              'CreateGraphicsPipelines' : {'param': 'pCreateInfos', 'txt': create_gfx_pipe},

@@ -658,17 +658,17 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocDescriptorSets(
 
 VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
 VkDevice device,
-        uint32_t writeCount,
+        uint32_t descriptorWriteCount,
         const VkWriteDescriptorSet* pDescriptorWrites,
-        uint32_t copyCount,
+        uint32_t descriptorCopyCount,
         const VkCopyDescriptorSet* pDescriptorCopies);
 // Manually written because it needs to use get_struct_chain_size and allocate some extra pointers (why?)
 // Also since it needs to app the array of pointers and sub-buffers (see comments in function)
 VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     VkDevice device,
-    uint32_t writeCount,
+    uint32_t descriptorWriteCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
-    uint32_t copyCount,
+    uint32_t descriptorCopyCount,
     const VkCopyDescriptorSet* pDescriptorCopies )
 {
     vktrace_trace_packet_header* pHeader;
@@ -677,12 +677,12 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     size_t arrayByteCount = 0;
     size_t i;
 
-    for (i = 0; i < writeCount; i++)
+    for (i = 0; i < descriptorWriteCount; i++)
     {
         arrayByteCount += get_struct_chain_size(&pDescriptorWrites[i]);
     }
 
-    for (i = 0; i < copyCount; i++)
+    for (i = 0; i < descriptorCopyCount; i++)
     {
         arrayByteCount += get_struct_chain_size(&pDescriptorCopies[i]);
     }
@@ -690,14 +690,14 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     CREATE_TRACE_PACKET(vkUpdateDescriptorSets, arrayByteCount);
     // end custom code
 
-    mdd(device)->devTable.UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    mdd(device)->devTable.UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkUpdateDescriptorSets(pHeader);
     pPacket->device = device;
-    pPacket->writeCount = writeCount;
+    pPacket->descriptorWriteCount = descriptorWriteCount;
     // begin custom code
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites), writeCount * sizeof(VkWriteDescriptorSet), pDescriptorWrites);
-    for (i = 0; i < writeCount; i++)
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorWrites), descriptorWriteCount * sizeof(VkWriteDescriptorSet), pDescriptorWrites);
+    for (i = 0; i < descriptorWriteCount; i++)
     {
         switch (pPacket->pDescriptorWrites[i].descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -737,8 +737,8 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     }
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorWrites));
 
-    pPacket->copyCount = copyCount;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorCopies), copyCount * sizeof(VkCopyDescriptorSet), pDescriptorCopies);
+    pPacket->descriptorCopyCount = descriptorCopyCount;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorCopies), descriptorCopyCount * sizeof(VkCopyDescriptorSet), pDescriptorCopies);
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorCopies));
     // end custom code
     FINISH_TRACE_PACKET();
@@ -747,7 +747,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueueSubmit(
     VkQueue queue,
     uint32_t submitCount,
-    const VkSubmitInfo* pSubmitInfo,
+    const VkSubmitInfo* pSubmits,
     VkFence fence)
 {
     vktrace_trace_packet_header* pHeader;
@@ -756,26 +756,26 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueueSubmit(
     size_t arrayByteCount = 0;
     uint32_t i = 0;
     for (i=0; i<submitCount; ++i) {
-        arrayByteCount += vk_size_vksubmitinfo(&pSubmitInfo[i]);
+        arrayByteCount += vk_size_vksubmitinfo(&pSubmits[i]);
     }
     CREATE_TRACE_PACKET(vkQueueSubmit, arrayByteCount);
-    result = mdd(queue)->devTable.QueueSubmit(queue, submitCount, pSubmitInfo, fence);
+    result = mdd(queue)->devTable.QueueSubmit(queue, submitCount, pSubmits, fence);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkQueueSubmit(pHeader);
     pPacket->queue = queue;
     pPacket->submitCount = submitCount;
     pPacket->fence = fence;
     pPacket->result = result;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo), submitCount*sizeof(VkSubmitInfo), pSubmitInfo);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmits), submitCount*sizeof(VkSubmitInfo), pSubmits);
     for (i=0; i<submitCount; ++i) {
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pCommandBuffers), pPacket->pSubmitInfo[i].commandBufferCount * sizeof(VkCmdBuffer), pSubmitInfo[i].pCommandBuffers);
-        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pCommandBuffers));
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pWaitSemaphores), pPacket->pSubmitInfo[i].waitSemaphoreCount * sizeof(VkSemaphore), pSubmitInfo[i].pWaitSemaphores);
-        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pWaitSemaphores));
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmitInfo[i].pSignalSemaphores), pPacket->pSubmitInfo[i].signalSemaphoreCount * sizeof(VkSemaphore), pSubmitInfo[i].pSignalSemaphores);
-        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo[i].pSignalSemaphores));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmits[i].pCommandBuffers), pPacket->pSubmits[i].commandBufferCount * sizeof(VkCmdBuffer), pSubmits[i].pCommandBuffers);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmits[i].pCommandBuffers));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmits[i].pWaitSemaphores), pPacket->pSubmits[i].waitSemaphoreCount * sizeof(VkSemaphore), pSubmits[i].pWaitSemaphores);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmits[i].pWaitSemaphores));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSubmits[i].pSignalSemaphores), pPacket->pSubmits[i].signalSemaphoreCount * sizeof(VkSemaphore), pSubmits[i].pSignalSemaphores);
+        vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmits[i].pSignalSemaphores));
     }
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmitInfo));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSubmits));
     FINISH_TRACE_PACKET();
     return result;
 }

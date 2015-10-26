@@ -1008,7 +1008,7 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
     return skipCall;
 }
 // update DS mappings based on write and copy update arrays
-static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pWDS, uint32_t copyCount, const VkCopyDescriptorSet* pCDS)
+static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWDS, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCDS)
 {
     VkBool32 skipCall = VK_FALSE;
 
@@ -1017,7 +1017,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
     VkDescriptorSetLayoutCreateInfo* pLayoutCI = NULL;
     // Validate Write updates
     uint32_t i = 0;
-    for (i=0; i < writeCount; i++) {
+    for (i=0; i < descriptorWriteCount; i++) {
         VkDescriptorSet ds = pWDS[i].destSet;
         SET_NODE* pSet = my_data->setMap[ds];
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
@@ -1070,7 +1070,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
         }
     }
     // Now validate copy updates
-    for (i=0; i < copyCount; ++i) {
+    for (i=0; i < descriptorCopyCount; ++i) {
         SET_NODE *pSrcSet = NULL, *pDstSet = NULL;
         LAYOUT_NODE *pSrcLayout = NULL, *pDstLayout = NULL;
         uint32_t srcStartIndex = 0, srcEndIndex = 0, dstStartIndex = 0, dstEndIndex = 0;
@@ -1725,13 +1725,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmitInfo, VkFence fence)
+VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
             // Validate that cmd buffers have been updated
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
@@ -1753,7 +1753,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount
         }
     }
     if (VK_FALSE == skipCall)
-        return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
+        return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
     return VK_ERROR_VALIDATION_FAILED;
 }
 
@@ -2228,12 +2228,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
+VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when update returns VK_FALSE
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    if (!dsUpdate(dev_data, device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies)) {
-        dev_data->device_dispatch_table->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    if (!dsUpdate(dev_data, device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies)) {
+        dev_data->device_dispatch_table->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
     }
 }
 

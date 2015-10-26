@@ -2113,7 +2113,7 @@ bool PreQueueSubmit(
 {
     if(submit->sType != VK_STRUCTURE_TYPE_SUBMIT_INFO) {
         log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkQueueSubmit parameter, VkStructureType pSubmitInfo->sType, is an invalid enumerator");
+        "vkQueueSubmit parameter, VkStructureType pSubmits->sType, is an invalid enumerator");
         return false;
     }
 
@@ -2146,14 +2146,14 @@ bool PostQueueSubmit(
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue queue,
     uint32_t submitCount,
-    const VkSubmitInfo* pSubmitInfo,
+    const VkSubmitInfo* pSubmits,
     VkFence fence)
 {
     for (uint32_t i = 0; i < submitCount; i++) {
-        PreQueueSubmit(queue, &pSubmitInfo[i]);
+        PreQueueSubmit(queue, &pSubmits[i]);
     }
 
-    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
+    VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueSubmit(queue, submitCount, pSubmits, fence);
 
     PostQueueSubmit(queue, submitCount, fence, result);
 
@@ -3769,7 +3769,7 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->pStages->pSpecializationInfo != nullptr)
     {
-    if(pCreateInfos->pStages->pSpecializationInfo->pMap != nullptr)
+    if(pCreateInfos->pStages->pSpecializationInfo->pMapEntries != nullptr)
     {
     }
     if(pCreateInfos->pStages->pSpecializationInfo->pData != nullptr)
@@ -4084,7 +4084,7 @@ bool PreCreateComputePipelines(
     }
     if(pCreateInfos->stage.pSpecializationInfo != nullptr)
     {
-    if(pCreateInfos->stage.pSpecializationInfo->pMap != nullptr)
+    if(pCreateInfos->stage.pSpecializationInfo->pMapEntries != nullptr)
     {
     }
     if(pCreateInfos->stage.pSpecializationInfo->pData != nullptr)
@@ -4604,14 +4604,14 @@ bool PreUpdateDescriptorSets(
 
 VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(
     VkDevice device,
-    uint32_t writeCount,
+    uint32_t descriptorWriteCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
-    uint32_t copyCount,
+    uint32_t descriptorCopyCount,
     const VkCopyDescriptorSet* pDescriptorCopies)
 {
     PreUpdateDescriptorSets(device, pDescriptorWrites, pDescriptorCopies);
 
-    get_dispatch_table(pc_device_table_map, device)->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    get_dispatch_table(pc_device_table_map, device)->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
 bool PreCreateFramebuffer(

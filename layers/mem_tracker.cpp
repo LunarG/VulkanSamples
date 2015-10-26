@@ -1124,7 +1124,7 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
 VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     VkQueue             queue,
     uint32_t            submitCount,
-    const VkSubmitInfo *pSubmitInfo,
+    const VkSubmitInfo *pSubmits,
     VkFence             fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
@@ -1139,7 +1139,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     print_mem_list(my_data, queue);
     printCBList(my_data, queue);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             pCBInfo = get_cmd_buf_info(my_data, submit->pCommandBuffers[i]);
             pCBInfo->fenceId = fenceId;
@@ -1176,12 +1176,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->QueueSubmit(
-            queue, submitCount, pSubmitInfo, fence);
+            queue, submitCount, pSubmits, fence);
     }
 
     loader_platform_thread_lock_mutex(&globalLock);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
-        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 

@@ -339,13 +339,13 @@ LOADER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeInd
     loader_set_dispatch(*pQueue, disp);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmitInfo, VkFence fence)
+LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(queue);
 
-    return disp->QueueSubmit(queue, submitCount, pSubmitInfo, fence);
+    return disp->QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
 LOADER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
@@ -908,13 +908,13 @@ LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorP
     return disp->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 }
 
-LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies)
+LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(device);
 
-    disp->UpdateDescriptorSets(device, writeCount, pDescriptorWrites, copyCount, pDescriptorCopies);
+    disp->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
 LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkFramebuffer* pFramebuffer)

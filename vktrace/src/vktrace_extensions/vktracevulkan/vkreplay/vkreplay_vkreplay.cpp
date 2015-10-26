@@ -650,13 +650,13 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
     if (pPacket->fence != VK_NULL_HANDLE && remappedFence == VK_NULL_HANDLE)
         return VK_ERROR_VALIDATION_FAILED;
 
-    VkSubmitInfo *remappedSubmitInfo = NULL;
-    remappedSubmitInfo = VKTRACE_NEW_ARRAY( VkSubmitInfo, pPacket->submitCount);
+    VkSubmitInfo *remappedSubmits = NULL;
+    remappedSubmits = VKTRACE_NEW_ARRAY( VkSubmitInfo, pPacket->submitCount);
     VkCmdBuffer *pRemappedBuffers = NULL;
     VkSemaphore *pRemappedWaitSems = NULL, *pRemappedSignalSems = NULL;
     for (uint32_t submit_idx = 0; submit_idx < pPacket->submitCount; submit_idx++) {
-        const VkSubmitInfo *submit = &pPacket->pSubmitInfo[submit_idx];
-        VkSubmitInfo *remappedSubmit = &remappedSubmitInfo[submit_idx];
+        const VkSubmitInfo *submit = &pPacket->pSubmits[submit_idx];
+        VkSubmitInfo *remappedSubmit = &remappedSubmits[submit_idx];
         memset(remappedSubmit, 0, sizeof(VkSubmitInfo));
         // Remap Semaphores & CmdBuffers for this submit
         uint32_t i = 0;
@@ -667,7 +667,7 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
             for (i = 0; i < submit->commandBufferCount; i++) {
                 *(pRemappedBuffers + i) = m_objMapper.remap_cmdbuffers(*(submit->pCommandBuffers + i));
                 if (*(pRemappedBuffers + i) == VK_NULL_HANDLE) {
-                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(remappedSubmits);
                     VKTRACE_DELETE(pRemappedBuffers);
                     return replayResult;
                 }
@@ -681,7 +681,7 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
                 //*(pRemappedWaitSems + i)->handle = m_objMapper.remap_semaphores(*(submit->pWaitSemaphores + i));
                 (*(pRemappedWaitSems + i)) = m_objMapper.remap_semaphores((*(submit->pWaitSemaphores + i)));
                 if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
-                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(remappedSubmits);
                     VKTRACE_DELETE(pRemappedWaitSems);
                     return replayResult;
                 }
@@ -694,7 +694,7 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
             for (i = 0; i < submit->signalSemaphoreCount; i++) {
                 (*(pRemappedSignalSems + i)) = m_objMapper.remap_semaphores((*(submit->pSignalSemaphores + i)));
                 if (*(pRemappedSignalSems + i) == VK_NULL_HANDLE) {
-                    VKTRACE_DELETE(remappedSubmitInfo);
+                    VKTRACE_DELETE(remappedSubmits);
                     VKTRACE_DELETE(pRemappedSignalSems);
                     return replayResult;
                 }
@@ -703,12 +703,12 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
     }
     replayResult = m_vkFuncs.real_vkQueueSubmit(remappedQueue,
                                                 pPacket->submitCount,
-                                                remappedSubmitInfo,
+                                                remappedSubmits,
                                                 remappedFence);
     VKTRACE_DELETE(pRemappedBuffers);
     VKTRACE_DELETE(pRemappedWaitSems);
     VKTRACE_DELETE(pRemappedSignalSems);
-    VKTRACE_DELETE(remappedSubmitInfo);
+    VKTRACE_DELETE(remappedSubmits);
     return replayResult;
 }
 
@@ -859,13 +859,13 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
         return;
     }
 
-    VkWriteDescriptorSet* pRemappedWrites = VKTRACE_NEW_ARRAY(VkWriteDescriptorSet, pPacket->writeCount);
-    memcpy(pRemappedWrites, pPacket->pDescriptorWrites, pPacket->writeCount * sizeof(VkWriteDescriptorSet));
+    VkWriteDescriptorSet* pRemappedWrites = VKTRACE_NEW_ARRAY(VkWriteDescriptorSet, pPacket->descriptorWriteCount);
+    memcpy(pRemappedWrites, pPacket->pDescriptorWrites, pPacket->descriptorWriteCount * sizeof(VkWriteDescriptorSet));
 
-    VkCopyDescriptorSet* pRemappedCopies = VKTRACE_NEW_ARRAY(VkCopyDescriptorSet, pPacket->copyCount);
-    memcpy(pRemappedCopies, pPacket->pDescriptorCopies, pPacket->copyCount * sizeof(VkCopyDescriptorSet));
+    VkCopyDescriptorSet* pRemappedCopies = VKTRACE_NEW_ARRAY(VkCopyDescriptorSet, pPacket->descriptorCopyCount);
+    memcpy(pRemappedCopies, pPacket->pDescriptorCopies, pPacket->descriptorCopyCount * sizeof(VkCopyDescriptorSet));
 
-    for (uint32_t i = 0; i < pPacket->writeCount; i++)
+    for (uint32_t i = 0; i < pPacket->descriptorWriteCount; i++)
     {
         pRemappedWrites[i].destSet = m_objMapper.remap_descriptorsets(pPacket->pDescriptorWrites[i].destSet);
         if (pRemappedWrites[i].destSet == VK_NULL_HANDLE)
@@ -989,7 +989,7 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
         }
     }
 
-    for (uint32_t i = 0; i < pPacket->copyCount; i++)
+    for (uint32_t i = 0; i < pPacket->descriptorCopyCount; i++)
     {
         pRemappedCopies[i].destSet = m_objMapper.remap_descriptorsets(pPacket->pDescriptorCopies[i].destSet);
         if (pRemappedCopies[i].destSet == VK_NULL_HANDLE)
@@ -1010,7 +1010,7 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
         }
     }
 
-    m_vkFuncs.real_vkUpdateDescriptorSets(remappedDevice, pPacket->writeCount, pRemappedWrites, pPacket->copyCount, pRemappedCopies);
+    m_vkFuncs.real_vkUpdateDescriptorSets(remappedDevice, pPacket->descriptorWriteCount, pRemappedWrites, pPacket->descriptorCopyCount, pRemappedCopies);
 }
 
 VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket)
