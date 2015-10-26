@@ -112,11 +112,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
@@ -127,13 +127,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
@@ -148,11 +148,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    VkResult result = device_data->device_dispatch_table->CreateDevice(physicalDevice, pCreateInfo, pDevice);
+    VkResult result = device_data->device_dispatch_table->CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
     if(result == VK_SUCCESS)
     {
         device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
@@ -162,11 +162,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    my_data->device_dispatch_table->DestroyDevice(device);
+    my_data->device_dispatch_table->DestroyDevice(device, pAllocator);
     delete my_data->device_dispatch_table;
     layer_data_map.erase(key);
 }
@@ -240,7 +240,7 @@ bool is_depth_format(VkFormat format)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkImage* pImage)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -259,7 +259,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
 
-    VkResult result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
+    VkResult result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
 
     if(result == VK_SUCCESS) {
         device_data->imageMap[*pImage] = IMAGE_STATE(pCreateInfo);
@@ -267,14 +267,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocCallbacks* pAllocator)
 {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     device_data->imageMap.erase(image);
-    device_data->device_dispatch_table->DestroyImage(device, image);
+    device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -346,12 +346,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
 
-    VkResult result = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkImageView* pView)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -454,7 +454,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
 
-    VkResult result = device_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pView);
+    VkResult result = device_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     return result;
 }
 

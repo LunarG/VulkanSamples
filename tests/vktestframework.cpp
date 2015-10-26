@@ -522,7 +522,7 @@ void  TestFrameworkVkPresent::Display()
 
     err = vkCreateSemaphore(m_device.handle(),
                             &presentCompleteSemaphoreCreateInfo,
-                            &presentCompleteSemaphore);
+                            NULL, &presentCompleteSemaphore);
     assert(!err);
 
     // Get the index of the next available swapchain image:
@@ -597,7 +597,7 @@ void  TestFrameworkVkPresent::Display()
     vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);
     m_queue.wait();
 
-    vkDestroySemaphore(m_device.handle(), presentCompleteSemaphore);
+    vkDestroySemaphore(m_device.handle(), presentCompleteSemaphore, NULL);
 
     VkPresentInfoKHR present = {};
     present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -966,7 +966,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
 
         color_image_view.image = m_buffers[i].image;
         err = vkCreateImageView(m_device.handle(),
-                &color_image_view, &m_buffers[i].view);
+                &color_image_view, NULL, &m_buffers[i].view);
         assert(!err);
 
         /* Set image layout to PRESENT_SOURCE_KHR so that before the copy, it can be set to */
@@ -1188,7 +1188,7 @@ void TestFrameworkVkPresent::TearDown()
     m_fpDestroySwapchainKHR(m_device.handle(), m_swap_chain);
 
     for (uint32_t i = 0; i < m_swapchainImageCount; i++) {
-        vkDestroyImageView(m_device.handle(), m_buffers[i].view);
+        vkDestroyImageView(m_device.handle(), m_buffers[i].view, NULL);
     }
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);

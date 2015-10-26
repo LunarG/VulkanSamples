@@ -121,7 +121,7 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
     const uint32_t sampler_count = 1024*1024;
     struct intel_desc_region *region;
 
-    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
     if (!region)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -134,14 +134,14 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
             region->sampler_desc_size * sampler_count);
 
     region->surfaces = intel_alloc(dev, region->size.surface,
-            64, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            64, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
     if (!region->surfaces) {
         intel_free(dev, region);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     region->samplers = intel_alloc(dev, region->size.sampler,
-            64, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            64, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
     if (!region->samplers) {
         intel_free(dev, region->surfaces);
         intel_free(dev, region);
@@ -562,7 +562,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->bindingCount, 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            info->bindingCount, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!layout->bindings)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -618,7 +618,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
                         sizeof(binding->immutable_samplers[0]) * lb->arraySize,
-                        0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                        0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
                 if (!binding->immutable_samplers)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -705,7 +705,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->layouts = intel_alloc(pipeline_layout,
                                            sizeof(pipeline_layout->layouts[0]) * count,
-                                           0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                           0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!pipeline_layout->layouts) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -713,7 +713,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->dynamic_desc_indices = intel_alloc(pipeline_layout,
             sizeof(pipeline_layout->dynamic_desc_indices[0]) * count,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!pipeline_layout->dynamic_desc_indices) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -748,6 +748,7 @@ void intel_pipeline_layout_destroy(struct intel_pipeline_layout *pipeline_layout
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice                                   device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkDescriptorSetLayout*                   pSetLayout)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -758,7 +759,8 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 
 ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     VkDevice                                device,
-    VkDescriptorSetLayout                   descriptorSetLayout)
+    VkDescriptorSetLayout                   descriptorSetLayout,
+    const VkAllocCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(descriptorSetLayout);
@@ -769,6 +771,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
 ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                device,
     const VkPipelineLayoutCreateInfo*       pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipelineLayout*                       pPipelineLayout)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -780,7 +783,8 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
 
 ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     VkDevice                                device,
-    VkPipelineLayout                        pipelineLayout)
+    VkPipelineLayout                        pipelineLayout,
+    const VkAllocCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(pipelineLayout);
@@ -791,6 +795,7 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice                                    device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkDescriptorPool*                           pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -801,7 +806,8 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 
 ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     VkDevice                                device,
-    VkDescriptorPool                        descriptorPool)
+    VkDescriptorPool                        descriptorPool,
+    const VkAllocCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(descriptorPool);

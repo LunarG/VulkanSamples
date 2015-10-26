@@ -70,9 +70,10 @@ static inline struct intel_img *intel_img_from_obj(struct intel_obj *obj)
 }
 
 VkResult intel_img_create(struct intel_dev *dev,
-                            const VkImageCreateInfo *info,
-                            bool scanout,
-                            struct intel_img **img_ret);
+                          const VkImageCreateInfo *info,
+                          const VkAllocCallbacks *allocator,
+                          bool scanout,
+                          struct intel_img **img_ret);
 
 void intel_img_destroy(struct intel_img *img);
 

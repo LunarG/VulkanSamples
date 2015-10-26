@@ -98,12 +98,11 @@ void VkRenderFramework::InitFramework(
     instInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instInfo.pNext = NULL;
     instInfo.pAppInfo = &app_info;
-    instInfo.pAllocCb = NULL;
     instInfo.enabledLayerNameCount = instance_layer_names.size();
     instInfo.ppEnabledLayerNames = instance_layer_names.data();
     instInfo.enabledExtensionNameCount = instance_extension_names.size();
     instInfo.ppEnabledExtensionNames = instance_extension_names.data();
-    err = vkCreateInstance(&instInfo, &this->inst);
+    err = vkCreateInstance(&instInfo, NULL, &this->inst);
     ASSERT_VK_SUCCESS(err);
 
     err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
@@ -151,17 +150,17 @@ void VkRenderFramework::ShutdownFramework()
 {
     if (m_cmdBuffer)
         delete m_cmdBuffer;
-    if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool);
-    if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer);
-    if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass);
+    if (m_cmdPool) vkDestroyCommandPool(device(), m_cmdPool, NULL);
+    if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer, NULL);
+    if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass, NULL);
 
     if (m_globalMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_globalMsgCallback);
     if (m_devMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_devMsgCallback);
 
     while (!m_renderTargets.empty()) {
-        vkDestroyImageView(device(), m_renderTargets.back()->targetView(m_render_target_fmt));
-        vkDestroyImage(device(), m_renderTargets.back()->image());
-        vkFreeMemory(device(), m_renderTargets.back()->memory());
+        vkDestroyImageView(device(), m_renderTargets.back()->targetView(m_render_target_fmt), NULL);
+        vkDestroyImage(device(), m_renderTargets.back()->image(), NULL);
+        vkFreeMemory(device(), m_renderTargets.back()->memory(), NULL);
         m_renderTargets.pop_back();
     }
 
@@ -174,7 +173,7 @@ void VkRenderFramework::ShutdownFramework()
 
     // reset the driver
     delete m_device;
-    if (this->inst) vkDestroyInstance(this->inst);
+    if (this->inst) vkDestroyInstance(this->inst, NULL);
 }
 
 void VkRenderFramework::InitState()
@@ -224,7 +223,7 @@ void VkRenderFramework::InitState()
     cmd_pool_info.pNext = NULL,
     cmd_pool_info.queueFamilyIndex = m_device->graphics_queue_node_index_;
     cmd_pool_info.flags = 0,
-    err = vkCreateCommandPool(device(), &cmd_pool_info, &m_cmdPool);
+    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &m_cmdPool);
     assert(!err);
 
     m_cmdBuffer = new VkCommandBufferObj(m_device, m_cmdPool);
@@ -377,7 +376,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     rp_info.subpassCount = 1;
     rp_info.pSubpasses = &subpass;
 
-    vkCreateRenderPass(device(), &rp_info, &m_renderPass);
+    vkCreateRenderPass(device(), &rp_info, NULL, &m_renderPass);
 
     // Create Framebuffer and RenderPass with color attachments and any depth/stencil attachment
     VkFramebufferCreateInfo fb_info = {};
@@ -390,7 +389,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
     fb_info.height = (uint32_t)m_height;
     fb_info.layers = 1;
 
-    vkCreateFramebuffer(device(), &fb_info, &m_framebuffer);
+    vkCreateFramebuffer(device(), &fb_info, NULL, &m_framebuffer);
 
     m_renderPassBeginInfo.renderPass = m_renderPass;
     m_renderPassBeginInfo.framebuffer = m_framebuffer;

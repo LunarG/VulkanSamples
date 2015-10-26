@@ -925,13 +925,13 @@ static void init_mem_tracker(
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
@@ -952,11 +952,12 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 
 VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkInstance*                                 pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         my_data->report_data = debug_report_create_instance(
@@ -993,11 +994,12 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDevice                 *pDevice)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkLayerDispatchTable *pDeviceTable = my_device_data->device_dispatch_table;
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
@@ -1007,7 +1009,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
-    VkDevice device)
+    VkDevice device,
+    const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
@@ -1042,7 +1045,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
 #endif
     VkLayerDispatchTable *pDisp  = my_device_data->device_dispatch_table;
     if (VK_FALSE == skipCall) {
-        pDisp->DestroyDevice(device);
+        pDisp->DestroyDevice(device, pAllocator);
     }
     delete my_device_data->device_dispatch_table;
     layer_data_map.erase(key);
@@ -1195,10 +1198,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
 VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                 device,
     const VkMemoryAllocInfo *pAllocInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDeviceMemory          *pMem)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->AllocMemory(device, pAllocInfo, pMem);
+    VkResult result = my_data->device_dispatch_table->AllocMemory(device, pAllocInfo, pAllocator, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
     add_mem_obj_info(my_data, device, *pMem, pAllocInfo);
@@ -1209,7 +1213,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
 
 VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     VkDevice       device,
-    VkDeviceMemory mem)
+    VkDeviceMemory mem,
+    const VkAllocCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
@@ -1221,7 +1226,7 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     print_mem_list(my_data, device);
     printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
-    my_data->device_dispatch_table->FreeMemory(device, mem);
+    my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
@@ -1260,7 +1265,7 @@ VK_LAYER_EXPORT void VKAPI vkUnmapMemory(
     my_data->device_dispatch_table->UnmapMemory(device, mem);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
+VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1270,10 +1275,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
         my_data->fenceMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    my_data->device_dispatch_table->DestroyFence(device, fence);
+    my_data->device_dispatch_table->DestroyFence(device, fence, pAllocator);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1285,11 +1290,11 @@ VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->DestroyBuffer(device, buffer);
+        my_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1301,7 +1306,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->DestroyImage(device, image);
+        my_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
     }
 }
 
@@ -1429,10 +1434,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     VkDevice                 device,
     const VkFenceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkFence                 *pFence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateFence(device, pCreateInfo, pFence);
+    VkResult result = my_data->device_dispatch_table->CreateFence(device, pCreateInfo, pAllocator, pFence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         MT_FENCE_INFO* pFI = &my_data->fenceMap[*pFence];
@@ -1568,10 +1574,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     VkDevice                  device,
     const VkBufferCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkBuffer                 *pBuffer)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = my_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info(my_data, (uint64_t)*pBuffer, VK_OBJECT_TYPE_BUFFER, pCreateInfo);
@@ -1583,10 +1590,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice                 device,
     const VkImageCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkImage                 *pImage)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
+    VkResult result = my_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info(my_data, (uint64_t)*pImage, VK_OBJECT_TYPE_IMAGE, pCreateInfo);
@@ -1598,10 +1606,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice                     device,
     const VkImageViewCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkImageView                 *pView)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pView);
+    VkResult result = my_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         // Validate that img has correct usage flags set
@@ -1616,10 +1625,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     VkDevice                      device,
     const VkBufferViewCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkBufferView                 *pView)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = my_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
@@ -2431,10 +2441,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkDevice                     device,
     const VkSemaphoreCreateInfo *pCreateInfo,
+    const VkAllocCallbacks*      pAllocator,
     VkSemaphore                 *pSemaphore)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pSemaphore);
+    VkResult result = my_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pSemaphore != VK_NULL_HANDLE) {
         my_data->semaphoreMap[*pSemaphore] = MEMTRACK_SEMAPHORE_STATE_UNSET;
@@ -2445,7 +2456,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
 
 VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice    device,
-    VkSemaphore semaphore)
+    VkSemaphore semaphore,
+    const VkAllocCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2454,7 +2466,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
         my_data->semaphoreMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    my_data->device_dispatch_table->DestroySemaphore(device, semaphore);
+    my_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
 }
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(

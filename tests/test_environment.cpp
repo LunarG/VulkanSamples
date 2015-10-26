@@ -87,12 +87,11 @@ void Environment::SetUp()
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_;
-    inst_info.pAllocCb = NULL;
     inst_info.enabledExtensionNameCount = instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
     inst_info.enabledLayerNameCount = 0;
     inst_info.ppEnabledLayerNames = NULL;
-    err = vkCreateInstance(&inst_info, &inst);
+    err = vkCreateInstance(&inst_info, NULL, &inst);
     ASSERT_EQ(VK_SUCCESS, err);
     err = vkEnumeratePhysicalDevices(inst, &count, NULL);
     ASSERT_EQ(VK_SUCCESS, err);
@@ -132,6 +131,6 @@ void Environment::TearDown()
     devs_.clear();
 
     if (inst)
-        vkDestroyInstance(inst);
+        vkDestroyInstance(inst, NULL);
 }
 } // vk_testing namespace

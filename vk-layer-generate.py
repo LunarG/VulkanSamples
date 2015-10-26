@@ -687,7 +687,7 @@ class GenericLayerSubcommand(Subcommand):
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(device);\n'
                          '    VkLayerDispatchTable *pDisp  =  device_dispatch_table(device);\n'
-                         '    pDisp->DestroyDevice(device);\n'
+                         '    pDisp->DestroyDevice(device, pAllocator);\n'
                          '    deviceExtMap.erase(pDisp);\n'
                          '    destroy_device_dispatch_table(key);\n'
                          '}\n' % (qual, decl))
@@ -697,7 +697,7 @@ class GenericLayerSubcommand(Subcommand):
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(instance);\n'
                          '    VkLayerInstanceDispatchTable *pDisp  =  instance_dispatch_table(instance);\n'
-                         '    pDisp->DestroyInstance(instance);\n'
+                         '    pDisp->DestroyInstance(instance, pAllocator);\n'
                          '    // Clean up logging callback, if any\n'
                          '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);\n'
                          '    if (my_data->logging_callback) {\n'
@@ -1367,7 +1367,8 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt = []
         gedi_txt.append('%s' % self.lineinfo.get())
         gedi_txt.append('void vkDestroyInstance(')
-        gedi_txt.append('VkInstance instance)')
+        gedi_txt.append('VkInstance instance,')
+        gedi_txt.append('const VkAllocCallbacks* pAllocator)')
         gedi_txt.append('{')
         gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
         gedi_txt.append('    validate_object(instance, instance);')
@@ -1387,7 +1388,7 @@ class ObjectTrackerSubcommand(Subcommand):
             gedi_txt.append('')
         gedi_txt.append('    dispatch_key key = get_dispatch_key(instance);')
         gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, instance);')
-        gedi_txt.append('    pInstanceTable->DestroyInstance(instance);')
+        gedi_txt.append('    pInstanceTable->DestroyInstance(instance, pAllocator);')
         gedi_txt.append('')
         gedi_txt.append('    // Clean up logging callback, if any')
         gedi_txt.append('    layer_data *my_data = get_my_data_ptr(key, layer_data_map);')
@@ -1415,7 +1416,8 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt = []
         gedd_txt.append('%s' % self.lineinfo.get())
         gedd_txt.append('void vkDestroyDevice(')
-        gedd_txt.append('VkDevice device)')
+        gedd_txt.append('VkDevice device,')
+        gedd_txt.append('const VkAllocCallbacks* pAllocator)')
         gedd_txt.append('{')
         gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
         gedd_txt.append('    validate_object(device, device);')
@@ -1443,7 +1445,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('')
         gedd_txt.append('    dispatch_key key = get_dispatch_key(device);')
         gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);')
-        gedd_txt.append('    pDisp->DestroyDevice(device);')
+        gedd_txt.append('    pDisp->DestroyDevice(device, pAllocator);')
         gedd_txt.append('    ObjectTracker_device_table_map.erase(key);')
         gedd_txt.append('    assert(ObjectTracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedd_txt.append('')
@@ -1585,7 +1587,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 funcs.append('%s\n' % self.lineinfo.get())
                 destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
 #                destroy_line += '    if (result == VK_SUCCESS) {\n'
-                destroy_line += '    destroy_obj(%s, %s);\n' % (param0_name, proto.params[-1].name)
+                destroy_line += '    destroy_obj(%s, %s);\n' % (param0_name, proto.params[-2].name)
 #                destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
             if len(loop_params) > 0:
@@ -1904,7 +1906,7 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n'
                          '{\n'
                          '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(Threading_instance_table_map, *pInstance);\n'
-                         '    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pInstance);\n'
+                         '    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);\n'
                          '\n'
                          '    if (result == VK_SUCCESS) {\n'
                          '        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);\n'

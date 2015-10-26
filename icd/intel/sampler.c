@@ -398,6 +398,7 @@ void intel_sampler_destroy(struct intel_sampler *sampler)
 ICD_EXPORT VkResult VKAPI vkCreateSampler(
     VkDevice                                  device,
     const VkSamplerCreateInfo*              pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkSampler*                                pSampler)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -408,7 +409,8 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
 
 ICD_EXPORT void VKAPI vkDestroySampler(
     VkDevice                                device,
-    VkSampler                                 sampler)
+    VkSampler                                 sampler,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(sampler);

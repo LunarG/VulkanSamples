@@ -1822,10 +1822,11 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkInstance* pInstance)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, *pInstance);
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         layer_data *data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -1839,12 +1840,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyInstance(
-    VkInstance instance)
+    VkInstance instance,
+    const VkAllocCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -2085,6 +2087,7 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDevice* pDevice)
 {
     /*
@@ -2095,7 +2098,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
      * object as the first parameter. We couldn't get here if it was wrong!
      */
     VkLayerDispatchTable *pTable = get_dispatch_table(pc_device_table_map, *pDevice);
-    VkResult result = pTable->CreateDevice(physicalDevice, pCreateInfo, pDevice);
+    VkResult result = pTable->CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
     if(result == VK_SUCCESS)
     {
         layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
@@ -2107,7 +2110,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
-    VkDevice device)
+    VkDevice device,
+    const VkAllocCallbacks* pAllocator)
 {
     layer_debug_report_destroy_device(device);
 
@@ -2116,7 +2120,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
 
-    get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device);
+    get_dispatch_table(pc_device_table_map, device)->DestroyDevice(device, pAllocator);
     pc_device_table_map.erase(key);
     assert(pc_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
 }
@@ -2291,11 +2295,12 @@ bool PostAllocMemory(
 VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice device,
     const VkMemoryAllocInfo* pAllocInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDeviceMemory* pMem)
 {
     PreAllocMemory(device, pAllocInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocMemory(device, pAllocInfo, pMem);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocMemory(device, pAllocInfo, pAllocator, pMem);
 
     PostAllocMemory(device, pMem, result);
 
@@ -2870,11 +2875,12 @@ bool PostCreateFence(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     VkDevice device,
     const VkFenceCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkFence* pFence)
 {
     PreCreateFence(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFence(device, pCreateInfo, pFence);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFence(device, pCreateInfo, pAllocator, pFence);
 
     PostCreateFence(device, pFence, result);
 
@@ -3039,11 +3045,12 @@ bool PostCreateSemaphore(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkDevice device,
     const VkSemaphoreCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkSemaphore* pSemaphore)
 {
     PreCreateSemaphore(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pSemaphore);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
 
     PostCreateSemaphore(device, pSemaphore, result);
 
@@ -3090,11 +3097,12 @@ bool PostCreateEvent(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkEvent* pEvent)
 {
     PreCreateEvent(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateEvent(device, pCreateInfo, pEvent);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
 
     PostCreateEvent(device, pEvent, result);
 
@@ -3232,11 +3240,12 @@ bool PostCreateQueryPool(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
     VkDevice device,
     const VkQueryPoolCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkQueryPool* pQueryPool)
 {
     PreCreateQueryPool(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateQueryPool(device, pCreateInfo, pQueryPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
 
     PostCreateQueryPool(device, pQueryPool, result);
 
@@ -3340,11 +3349,12 @@ bool PostCreateBuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     VkDevice device,
     const VkBufferCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkBuffer* pBuffer)
 {
     PreCreateBuffer(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 
     PostCreateBuffer(device, pBuffer, result);
 
@@ -3398,11 +3408,12 @@ bool PostCreateBufferView(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkBufferView* pView)
 {
     PreCreateBufferView(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateBufferView(device, pCreateInfo, pAllocator, pView);
 
     PostCreateBufferView(device, pView, result);
 
@@ -3480,11 +3491,12 @@ bool PostCreateImage(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice device,
     const VkImageCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkImage* pImage)
 {
     PreCreateImage(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateImage(device, pCreateInfo, pAllocator, pImage);
 
     PostCreateImage(device, pImage, result);
 
@@ -3618,11 +3630,12 @@ bool PostCreateImageView(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice device,
     const VkImageViewCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkImageView* pView)
 {
     PreCreateImageView(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateImageView(device, pCreateInfo, pAllocator, pView);
 
     PostCreateImageView(device, pView, result);
 
@@ -3670,10 +3683,11 @@ bool PostCreateShaderModule(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
     VkDevice device,
     const VkShaderModuleCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkShaderModule* pShaderModule)
 {
     PreCreateShaderModule(device, pCreateInfo);
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
     PostCreateShaderModule(device, pShaderModule, result);
     return result;
 }
@@ -3721,11 +3735,12 @@ bool PostCreateShader(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkShader* pShader)
 {
     PreCreateShader(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShader(device, pCreateInfo, pShader);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShader(device, pCreateInfo, pAllocator, pShader);
 
     PostCreateShader(device, pShader, result);
 
@@ -3775,11 +3790,12 @@ bool PostCreatePipelineCache(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice device,
     const VkPipelineCacheCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkPipelineCache* pPipelineCache)
 {
     PreCreatePipelineCache(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
 
     PostCreatePipelineCache(device, pPipelineCache, result);
 
@@ -4176,11 +4192,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkPipelineCache pipelineCache,
     uint32_t count,
     const VkGraphicsPipelineCreateInfo* pCreateInfos,
+    const VkAllocCallbacks* pAllocator,
     VkPipeline* pPipelines)
 {
     PreCreateGraphicsPipelines(device, pCreateInfos);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
 
     PostCreateGraphicsPipelines(device, pipelineCache, count, pPipelines, result);
 
@@ -4248,11 +4265,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkPipelineCache pipelineCache,
     uint32_t count,
     const VkComputePipelineCreateInfo* pCreateInfos,
+    const VkAllocCallbacks* pAllocator,
     VkPipeline* pPipelines)
 {
     PreCreateComputePipelines(device, pCreateInfos);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
 
     PostCreateComputePipelines(device, pipelineCache, count, pPipelines, result);
 
@@ -4305,11 +4323,12 @@ bool PostCreatePipelineLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkPipelineLayout* pPipelineLayout)
 {
     PreCreatePipelineLayout(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 
     PostCreatePipelineLayout(device, pPipelineLayout, result);
 
@@ -4412,11 +4431,12 @@ bool PostCreateSampler(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
     VkDevice device,
     const VkSamplerCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkSampler* pSampler)
 {
     PreCreateSampler(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
 
     PostCreateSampler(device, pSampler, result);
 
@@ -4476,11 +4496,12 @@ bool PostCreateDescriptorSetLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDescriptorSetLayout* pSetLayout)
 {
     PreCreateDescriptorSetLayout(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 
     PostCreateDescriptorSetLayout(device, pSetLayout, result);
 
@@ -4540,11 +4561,12 @@ bool PostCreateDescriptorPool(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDescriptorPool* pDescriptorPool)
 {
     PreCreateDescriptorPool(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
 
     PostCreateDescriptorPool(device, pCreateInfo->maxSets, pDescriptorPool, result);
 
@@ -4775,11 +4797,12 @@ bool PostCreateFramebuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkFramebuffer* pFramebuffer)
 {
     PreCreateFramebuffer(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 
     PostCreateFramebuffer(device, pFramebuffer, result);
 
@@ -4956,11 +4979,12 @@ bool PostCreateRenderPass(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkRenderPass* pRenderPass)
 {
     PreCreateRenderPass(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
     PostCreateRenderPass(device, pRenderPass, result);
 
@@ -5031,11 +5055,12 @@ bool PostCreateCommandPool(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice device,
     const VkCmdPoolCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkCmdPool* pCmdPool)
 {
     PreCreateCommandPool(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pCmdPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCmdPool);
 
     PostCreateCommandPool(device, pCmdPool, result);
 

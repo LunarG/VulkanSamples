@@ -207,7 +207,7 @@ static void writePPM( const char *filename, VkImage image1)
     //     map image2
     //     read from image2's mapped memeory.
 
-    err = pTableDevice->CreateImage(device, &imgCreateInfo, &image2);
+    err = pTableDevice->CreateImage(device, &imgCreateInfo, NULL, &image2);
     assert(!err);
 
     pTableDevice->GetImageMemoryRequirements(device, image2, &memRequirements);
@@ -222,7 +222,7 @@ static void writePPM( const char *filename, VkImage image1)
                                 &memAllocInfo.memoryTypeIndex);
     assert(pass);
 
-    err = pTableDevice->AllocMemory(device, &memAllocInfo, &mem2);
+    err = pTableDevice->AllocMemory(device, &memAllocInfo, NULL, &mem2);
     assert(!err);
 
     err = pTableQueue->BindImageMemory(device, image2, mem2, 0);
@@ -308,7 +308,7 @@ static void writePPM( const char *filename, VkImage image1)
 
     // Clean up
     pTableDevice->UnmapMemory(device, mem2);
-    pTableDevice->FreeMemory(device, mem2);
+    pTableDevice->FreeMemory(device, mem2, NULL);
     pTableDevice->FreeCommandBuffers(device, deviceMap[device]->cmdPool, 1, &cmdBuffer);
 }
 
@@ -336,10 +336,11 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDevice                 *pDevice)
 {
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, *pDevice);
-    VkResult result = pDisp->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = pDisp->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
 
     if (result == VK_SUCCESS) {
         init_screenshot();
@@ -461,10 +462,11 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice  device,
     const VkCmdPoolCreateInfo *pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkCmdPool *pCmdPool)
 {
     VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pCmdPool);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCmdPool);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {

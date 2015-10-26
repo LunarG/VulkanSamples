@@ -1565,11 +1565,11 @@ static void init_draw_state(layer_data *my_data)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -1585,12 +1585,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    pTable->DestroyInstance(instance);
+    pTable->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
@@ -1625,10 +1625,10 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         dev_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
@@ -1638,7 +1638,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 // prototype
 static void deleteRenderPasses(layer_data*);
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data* dev_data = get_my_data_ptr(key, layer_data_map);
@@ -1655,7 +1655,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
     dev_data->bufferMap.clear();
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    dev_data->device_dispatch_table->DestroyDevice(device);
+    dev_data->device_dispatch_table->DestroyDevice(device, pAllocator);
     tableDebugMarkerMap.erase(key);
     delete dev_data->device_dispatch_table;
     layer_data_map.erase(key);
@@ -1757,97 +1757,97 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
+VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFence(device, fence);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFence(device, fence, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore)
+VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySemaphore(device, semaphore);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event)
+VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyEvent(device, event);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyEvent(device, event, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyQueryPool(device, queryPool);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyBuffer(device, buffer);
+    dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
     dev_data->bufferMap.erase(buffer);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView)
+VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView);
+    dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
     dev_data->bufferViewMap.erase(bufferView);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
+VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyImage(device, image);
+    dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
     dev_data->imageMap.erase(image);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView)
+VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImageView(device, imageView);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule)
+VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShaderModule(device, shaderModule);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShaderModule(device, shaderModule, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader)
+VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader, const VkAllocCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyShader(device, shader);
+    dev_data->device_dispatch_table->DestroyShader(device, shader, pAllocator);
     dev_data->shaderStageMap.erase(shader);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler)
+VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool)
+VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
@@ -1857,22 +1857,22 @@ VK_LAYER_EXPORT void VKAPI vkFreeCommandBuffers(VkDevice device, VkCmdPool cmdPo
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer)
+VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyRenderPass(device, renderPass);
+    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkBuffer* pBuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pBuffer);
+    VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         // TODO : This doesn't create deep copy of pQueueFamilyIndices so need to fix that if/when we want that data to be valid
@@ -1882,10 +1882,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkBufferView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pView);
+    VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->bufferViewMap[*pView] = unique_ptr<VkBufferViewCreateInfo>(new VkBufferViewCreateInfo(*pCreateInfo));
@@ -1894,10 +1894,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkImage* pImage)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
+    VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageMap[*pImage] = unique_ptr<VkImageCreateInfo>(new VkImageCreateInfo(*pCreateInfo));
@@ -1906,10 +1906,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkImageView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pView);
+    VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
@@ -1921,10 +1921,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
         VkDevice device,
         const VkShaderCreateInfo *pCreateInfo,
+        const VkAllocCallbacks* pAllocator,
         VkShader *pShader)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateShader(device, pCreateInfo, pShader);
+    VkResult result = dev_data->device_dispatch_table->CreateShader(device, pCreateInfo, pAllocator, pShader);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -1939,19 +1940,21 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
 VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipelineCache*                            pPipelineCache)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(device, pCreateInfo, pPipelineCache);
+    VkResult result = dev_data->device_dispatch_table->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
     return result;
 }
 
 void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
+    VkPipelineCache                             pipelineCache,
+    const VkAllocCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache);
+    dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
 
 VkResult VKAPI vkGetPipelineCacheData(
@@ -1976,7 +1979,7 @@ VkResult VKAPI vkMergePipelineCaches(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocCallbacks* pAllocator, VkPipeline* pPipelines)
 {
     VkResult result = VK_SUCCESS;
     //TODO What to do with pipelineCache?
@@ -1996,7 +1999,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         loader_platform_thread_lock_mutex(&globalLock);
         for (i=0; i<count; i++) {
             pPipeNode[i]->pipeline = pPipelines[i];
@@ -2018,10 +2021,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkSampler* pSampler)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = dev_data->device_dispatch_table->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         dev_data->sampleMap[*pSampler] = unique_ptr<SAMPLER_NODE>(new SAMPLER_NODE(pSampler, pCreateInfo));
@@ -2030,10 +2033,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDescriptorSetLayout* pSetLayout)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
     if (VK_SUCCESS == result) {
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
@@ -2079,10 +2082,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     return result;
 }
 
-VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout)
+VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
         PIPELINE_LAYOUT_NODE plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
@@ -2098,10 +2101,10 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDescriptorPool* pDescriptorPool)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pDescriptorPool);
+    VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
     if (VK_SUCCESS == result) {
         // Insert this pool into Global Pool LL at head
         if (log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t) *pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
@@ -3270,10 +3273,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCmdBuffer cmdBuffer, VkPipeline
         dev_data->device_dispatch_table->CmdWriteTimestamp(cmdBuffer, pipelineStage, queryPool, slot);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkFramebuffer* pFramebuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pFramebuffer);
+    VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkFramebufferCreateInfo* localFBCI = new VkFramebufferCreateInfo(*pCreateInfo);
@@ -3437,13 +3440,13 @@ bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRe
     return skip_call;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     if (validateDependencies(dev_data, device, pCreateInfo)) {
         return VK_ERROR_VALIDATION_FAILED;
     }
-    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);

@@ -194,7 +194,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
         struct intel_cmd_item *items;
 
         items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
-                0, VK_SYSTEM_ALLOC_TYPE_DEBUG);
+                0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
         if (!items) {
             writer->item_used = 0;
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -296,7 +296,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
      */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = intel_alloc(cmd, sizeof(cmd->relocs[0]) * cmd->reloc_count,
-            4096, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            4096, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!cmd->relocs) {
         intel_cmd_destroy(cmd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -472,6 +472,7 @@ void intel_cmd_pool_destroy(struct intel_cmd_pool *cmd_pool)
 ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice                                    device,
     const VkCmdPoolCreateInfo*                  pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkCmdPool*                                  pCmdPool)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -482,7 +483,8 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
 
 ICD_EXPORT void VKAPI vkDestroyCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool)
+    VkCmdPool                                   cmdPool,
+    const VkAllocCallbacks*                     pAllocator)
 {
 }
 

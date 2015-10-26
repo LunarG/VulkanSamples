@@ -219,6 +219,7 @@ VkResult intel_query_get_results(struct intel_query *query,
 ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
     VkDevice                                    device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkQueryPool*                                pQueryPool)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -229,7 +230,8 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
 
 ICD_EXPORT void VKAPI vkDestroyQueryPool(
     VkDevice                                    device,
-    VkQueryPool                                 queryPool)
+    VkQueryPool                                 queryPool,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(queryPool);

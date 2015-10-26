@@ -409,7 +409,7 @@ static struct intel_img *x11_swap_chain_create_persistent_image(struct intel_x11
     xcb_pixmap_t pixmap;
     VkResult ret;
 
-    ret = intel_img_create(dev, img_info, true, &img);
+    ret = intel_img_create(dev, img_info, NULL, true, &img);
     if (ret != VK_SUCCESS)
         return NULL;
 
@@ -456,12 +456,12 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     uint32_t i;
 
     images = intel_alloc(sc, sizeof(*images) * info->minImageCount,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!images)
         return false;
     image_state = intel_alloc(
             sc, sizeof(intel_x11_swap_chain_image_state) * info->minImageCount,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!image_state) {
         for (i = 0; i < info->minImageCount; i++) {
             intel_img_destroy(images[i]);
@@ -471,7 +471,7 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     }
     present_queue = intel_alloc(
             sc, sizeof(uint32_t) * info->minImageCount,
-            0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!present_queue) {
         for (i = 0; i < info->minImageCount; i++) {
             intel_img_destroy(images[i]);
@@ -786,7 +786,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 
     close(fd);
 
-    sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+    sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!sc)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -843,7 +843,7 @@ VkResult intel_wsi_img_init(struct intel_img *img)
 {
     struct intel_x11_img_data *data;
 
-    data = intel_alloc(img, sizeof(*data), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    data = intel_alloc(img, sizeof(*data), 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!data)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -872,7 +872,7 @@ VkResult intel_wsi_fence_init(struct intel_fence *fence)
 {
     struct intel_x11_fence_data *data;
 
-    data = intel_alloc(fence, sizeof(*data), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    data = intel_alloc(fence, sizeof(*data), 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!data)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

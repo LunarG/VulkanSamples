@@ -243,21 +243,18 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
             createInfo.pNext = NULL;
             createInfo.pAppInfo = pPacket->pCreateInfo->pAppInfo;
-            createInfo.pAllocCb = NULL;
             createInfo.enabledLayerNameCount = 0;
             createInfo.ppEnabledLayerNames = NULL;
             createInfo.enabledExtensionNameCount = instance_extension_count;
             //                createInfo.ppEnabledExtensionNames = requiredLayerNames;
 
             // make the call
-            replayResult = m_vkFuncs.real_vkCreateInstance(&createInfo, &inst);
+            replayResult = m_vkFuncs.real_vkCreateInstance(&createInfo, NULL, &inst);
 
             // clean up
             free(instance_extensions);
         } else {
-            VkAllocCallbacks **pACB = (VkAllocCallbacks**) & pPacket->pCreateInfo->pAllocCb;
             const char strScreenShot[] = "ScreenShot";
-            *pACB = NULL;
             pCreateInfo = (VkInstanceCreateInfo *) pPacket->pCreateInfo;
             if (g_pReplaySettings->screenshotList != NULL) {
                 // enable screenshot layer if it is available and not already in list
@@ -296,7 +293,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
                     vktrace_free(props);
                 }
             }
-            replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, &inst);
+            replayResult = m_vkFuncs.real_vkCreateInstance(pPacket->pCreateInfo, NULL, &inst);
             if (ppEnabledLayerNames) {
                 // restore the packets CreateInfo struct
                 vktrace_free(ppEnabledLayerNames[pCreateInfo->enabledLayerNameCount - 1]);
@@ -370,7 +367,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
                 vktrace_free(props);
             }
         }
-        replayResult = m_vkFuncs.real_vkCreateDevice(remappedPhysicalDevice, pPacket->pCreateInfo, &device);
+        replayResult = m_vkFuncs.real_vkCreateDevice(remappedPhysicalDevice, pPacket->pCreateInfo, NULL, &device);
         if (ppEnabledLayerNames)
         {
             // restore the packets CreateInfo struct
@@ -838,7 +835,7 @@ VkResult vkReplay::manually_replay_vkCreateShader(packet_vkCreateShader* pPacket
     // End manual code
 
     // No need to remap pCreateInfo
-    replayResult = m_vkFuncs.real_vkCreateShader(remappeddevice, pPacket->pCreateInfo, &local_pShader);
+    replayResult = m_vkFuncs.real_vkCreateShader(remappeddevice, pPacket->pCreateInfo, NULL, &local_pShader);
     if (replayResult == VK_SUCCESS)
     {
         m_objMapper.add_to_shaders_map(*(pPacket->pShader), local_pShader);
@@ -1046,7 +1043,7 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
         pInfo = (VkDescriptorSetLayoutCreateInfo*)pPacket->pCreateInfo->pNext;
     }
     VkDescriptorSetLayout setLayout;
-    replayResult = m_vkFuncs.real_vkCreateDescriptorSetLayout(remappedDevice, pPacket->pCreateInfo, &setLayout);
+    replayResult = m_vkFuncs.real_vkCreateDescriptorSetLayout(remappedDevice, pPacket->pCreateInfo, NULL, &setLayout);
     if (replayResult == VK_SUCCESS)
     {
         m_objMapper.add_to_descriptorsetlayouts_map(*(pPacket->pSetLayout), setLayout);
@@ -1062,7 +1059,7 @@ void vkReplay::manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDesc
         return;
     }
 
-    m_vkFuncs.real_vkDestroyDescriptorSetLayout(remappedDevice, pPacket->descriptorSetLayout);
+    m_vkFuncs.real_vkDestroyDescriptorSetLayout(remappedDevice, pPacket->descriptorSetLayout, NULL);
     m_objMapper.rm_from_descriptorsetlayouts_map(pPacket->descriptorSetLayout);
 }
 
@@ -1274,7 +1271,7 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
 
     VkPipeline *local_pPipelines = VKTRACE_NEW_ARRAY(VkPipeline, pPacket->createInfoCount);
 
-    replayResult = m_vkFuncs.real_vkCreateGraphicsPipelines(remappedDevice, pipelineCache, createInfoCount, pLocalCIs, local_pPipelines);
+    replayResult = m_vkFuncs.real_vkCreateGraphicsPipelines(remappedDevice, pipelineCache, createInfoCount, pLocalCIs, NULL, local_pPipelines);
 
     if (replayResult == VK_SUCCESS)
     {
@@ -1311,7 +1308,7 @@ VkResult vkReplay::manually_replay_vkCreatePipelineLayout(packet_vkCreatePipelin
         *pSL = m_objMapper.remap_descriptorsetlayouts(pPacket->pCreateInfo->pSetLayouts[i]);
     }
     VkPipelineLayout localPipelineLayout;
-    replayResult = m_vkFuncs.real_vkCreatePipelineLayout(remappedDevice, pPacket->pCreateInfo, &localPipelineLayout);
+    replayResult = m_vkFuncs.real_vkCreatePipelineLayout(remappedDevice, pPacket->pCreateInfo, NULL, &localPipelineLayout);
     if (replayResult == VK_SUCCESS)
     {
         m_objMapper.add_to_pipelinelayouts_map(*(pPacket->pPipelineLayout), localPipelineLayout);
@@ -1452,7 +1449,7 @@ VkResult vkReplay::manually_replay_vkCreateFramebuffer(packet_vkCreateFramebuffe
     pInfo->renderPass = m_objMapper.remap_renderpasss(pPacket->pCreateInfo->renderPass);
 
     VkFramebuffer local_framebuffer;
-    replayResult = m_vkFuncs.real_vkCreateFramebuffer(remappedDevice, pPacket->pCreateInfo, &local_framebuffer);
+    replayResult = m_vkFuncs.real_vkCreateFramebuffer(remappedDevice, pPacket->pCreateInfo, NULL, &local_framebuffer);
     pInfo->pAttachments = pSavedAttachments;
     pInfo->renderPass = savedRP;
     if (replayResult == VK_SUCCESS)
@@ -1475,7 +1472,7 @@ VkResult vkReplay::manually_replay_vkCreateRenderPass(packet_vkCreateRenderPass*
         return VK_ERROR_VALIDATION_FAILED;
 
     VkRenderPass local_renderpass;
-    replayResult = m_vkFuncs.real_vkCreateRenderPass(remappedDevice, pPacket->pCreateInfo, &local_renderpass);
+    replayResult = m_vkFuncs.real_vkCreateRenderPass(remappedDevice, pPacket->pCreateInfo, NULL, &local_renderpass);
     if (replayResult == VK_SUCCESS)
     {
         m_objMapper.add_to_renderpasss_map(*(pPacket->pRenderPass), local_renderpass);
@@ -1614,7 +1611,7 @@ VkResult vkReplay::manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket)
     gpuMemObj local_mem;
 
     if (!m_objMapper.m_adjustForGPU)
-        replayResult = m_vkFuncs.real_vkAllocMemory(remappedDevice, pPacket->pAllocInfo, &local_mem.replayGpuMem);
+        replayResult = m_vkFuncs.real_vkAllocMemory(remappedDevice, pPacket->pAllocInfo, NULL, &local_mem.replayGpuMem);
     if (replayResult == VK_SUCCESS || m_objMapper.m_adjustForGPU)
     {
         local_mem.pGpuMem = new (gpuMemory);
@@ -1636,7 +1633,7 @@ void vkReplay::manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket)
     gpuMemObj local_mem;
     local_mem = m_objMapper.m_devicememorys.find(pPacket->mem)->second;
     // TODO how/when to free pendingAlloc that did not use and existing gpuMemObj
-    m_vkFuncs.real_vkFreeMemory(remappedDevice, local_mem.replayGpuMem);
+    m_vkFuncs.real_vkFreeMemory(remappedDevice, local_mem.replayGpuMem, NULL);
     delete local_mem.pGpuMem;
     m_objMapper.rm_from_devicememorys_map(pPacket->mem);
 }

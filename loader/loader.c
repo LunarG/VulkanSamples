@@ -111,11 +111,11 @@ LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
 void* loader_heap_alloc(
     const struct loader_instance     *instance,
     size_t                            size,
-    VkSystemAllocType                 alloc_type)
+    VkSystemAllocScope                alloc_scope)
 {
     if (instance && instance->alloc_callbacks.pfnAlloc) {
         /* TODO: What should default alignment be? 1, 4, 8, other? */
-        return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_type);
+        return instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_scope);
     }
     return malloc(size);
 }
@@ -137,10 +137,10 @@ void* loader_heap_realloc(
     void                       *pMem,
     size_t                      orig_size,
     size_t                      size,
-    VkSystemAllocType           alloc_type)
+    VkSystemAllocScope          alloc_scope)
 {
     if (pMem == NULL  || orig_size == 0)
-        return loader_heap_alloc(instance, size, alloc_type);
+        return loader_heap_alloc(instance, size, alloc_scope);
     if (size == 0) {
         loader_heap_free(instance, pMem);
         return NULL;
@@ -150,7 +150,7 @@ void* loader_heap_realloc(
             memset(((uint8_t *)pMem) + size,  0, orig_size - size);
             return pMem;
         }
-        void *new_ptr = instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_type);
+        void *new_ptr = instance->alloc_callbacks.pfnAlloc(instance->alloc_callbacks.pUserData, size, 4, alloc_scope);
         if (!new_ptr)
             return NULL;
         memcpy(new_ptr, pMem, orig_size);
@@ -162,7 +162,7 @@ void* loader_heap_realloc(
 
 void *loader_tls_heap_alloc(size_t size)
 {
-    return loader_heap_alloc(tls_instance, size, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    return loader_heap_alloc(tls_instance, size, VK_SYSTEM_ALLOC_SCOPE_FUNCTION);
 }
 
 void loader_tls_heap_free(void *pMem)
@@ -429,7 +429,7 @@ static struct loader_layer_properties *loader_get_next_layer_property(
     if (layer_list->capacity == 0) {
         layer_list->list = loader_heap_alloc(inst,
                                   sizeof(struct loader_layer_properties) * 64,
-                                  VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                  VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
         if (layer_list->list == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't add any layer properties to list");
             return NULL;
@@ -444,7 +444,7 @@ static struct loader_layer_properties *loader_get_next_layer_property(
         layer_list->list = loader_heap_realloc(inst, layer_list->list,
                                             layer_list->capacity,
                                             layer_list->capacity * 2,
-                                            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
         if (layer_list->list == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
                             "realloc failed for layer list");
@@ -575,7 +575,7 @@ static bool loader_init_ext_list(const struct loader_instance *inst,
                                  struct loader_extension_list *ext_info)
 {
     ext_info->capacity = 32 * sizeof(VkExtensionProperties);
-    ext_info->list = loader_heap_alloc(inst, ext_info->capacity, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    ext_info->list = loader_heap_alloc(inst, ext_info->capacity, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (ext_info->list == NULL) {
         return false;
     }
@@ -629,7 +629,7 @@ void loader_add_to_ext_list(
                                                  ext_list->list,
                                                  ext_list->capacity,
                                                  ext_list->capacity * 2,
-                                                 VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                                 VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
             // double capacity
             ext_list->capacity *= 2;
         }
@@ -676,7 +676,7 @@ static bool loader_init_layer_list(const struct loader_instance *inst,
                                    struct loader_layer_list *list)
 {
     list->capacity = 32 * sizeof(struct loader_layer_properties);
-    list->list = loader_heap_alloc(inst, list->capacity, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    list->list = loader_heap_alloc(inst, list->capacity, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (list->list == NULL) {
         return false;
     }
@@ -700,7 +700,7 @@ static bool loader_init_layer_library_list(const struct loader_instance *inst,
                                            struct loader_layer_library_list *list)
 {
     list->capacity = 32 * sizeof(struct loader_lib_info);
-    list->list = loader_heap_alloc(inst, list->capacity, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    list->list = loader_heap_alloc(inst, list->capacity, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (list->list == NULL) {
         return false;
     }
@@ -755,7 +755,7 @@ void loader_add_to_layer_library_list(
                                              list->list,
                                              list->capacity,
                                              list->capacity * 2,
-                                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                             VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
             // double capacity
             list->capacity *= 2;
         }
@@ -833,7 +833,7 @@ void loader_add_to_layer_list(
                                              list->list,
                                              list->capacity,
                                              list->capacity * 2,
-                                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                             VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
             // double capacity
             list->capacity *= 2;
         }
@@ -958,7 +958,7 @@ static struct loader_device *loader_add_logical_device(
 {
     struct loader_device *new_dev;
 
-    new_dev = loader_heap_alloc(inst, sizeof(struct loader_device), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    new_dev = loader_heap_alloc(inst, sizeof(struct loader_device), VK_SYSTEM_ALLOC_SCOPE_DEVICE);
     if (!new_dev) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to alloc struct laoder-device");
         return NULL;
@@ -1017,7 +1017,7 @@ static struct loader_icd * loader_icd_create(const struct loader_instance *inst)
 {
     struct loader_icd *icd;
 
-    icd = loader_heap_alloc(inst, sizeof(*icd), VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    icd = loader_heap_alloc(inst, sizeof(*icd), VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!icd)
         return NULL;
 
@@ -1068,7 +1068,7 @@ static void loader_scanned_icd_init(const struct loader_instance *inst,
 {
     loader_scanned_icd_clear(inst, icd_libs);
     icd_libs->capacity = 8 * sizeof(struct loader_scanned_icds);
-    icd_libs->list = loader_heap_alloc(inst, icd_libs->capacity, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    icd_libs->list = loader_heap_alloc(inst, icd_libs->capacity, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
 
 }
 
@@ -1113,7 +1113,7 @@ static void loader_scanned_icd_add(
                                                  icd_libs->list,
                                                  icd_libs->capacity,
                                                  icd_libs->capacity * 2,
-                                                 VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                                 VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
             // double capacity
             icd_libs->capacity *= 2;
     }
@@ -1126,7 +1126,7 @@ static void loader_scanned_icd_add(
 
     new_node->lib_name = (char *) loader_heap_alloc(inst,
                                             strlen(filename) + 1,
-                                            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!new_node->lib_name) {
         loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Out of memory can't add icd");
         return;
@@ -1376,7 +1376,7 @@ static void loader_copy_layer_properties(
                                         inst,
                                         sizeof(VkExtensionProperties) *
                                         src->instance_extension_list.count,
-                                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                        VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     dst->instance_extension_list.capacity = sizeof(VkExtensionProperties) *
                                         src->instance_extension_list.count;
     memcpy(dst->instance_extension_list.list, src->instance_extension_list.list,
@@ -1385,7 +1385,7 @@ static void loader_copy_layer_properties(
                                         inst,
                                         sizeof(VkExtensionProperties) *
                                         src->device_extension_list.count,
-                                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                        VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     dst->device_extension_list.capacity = sizeof(VkExtensionProperties) *
                                         src->device_extension_list.count;
     memcpy(dst->device_extension_list.list, src->device_extension_list.list,
@@ -1759,14 +1759,14 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
                     if (out_files->count == 0) {
                         out_files->filename_list = loader_heap_alloc(inst,
                                               alloced_count * sizeof(char *),
-                                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                              VK_SYSTEM_ALLOC_SCOPE_FUNCTION);
                     }
                     else if (out_files->count == alloced_count) {
                         out_files->filename_list = loader_heap_realloc(inst,
                                         out_files->filename_list,
                                         alloced_count * sizeof(char *),
                                         alloced_count * sizeof(char *) * 2,
-                                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                        VK_SYSTEM_ALLOC_SCOPE_FUNCTION);
                         alloced_count *= 2;
                     }
                     if (out_files->filename_list == NULL) {
@@ -1776,7 +1776,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
                     out_files->filename_list[out_files->count] = loader_heap_alloc(
                                                 inst,
                                                 strlen(name) + 1,
-                                                VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                                VK_SYSTEM_ALLOC_SCOPE_FUNCTION);
                     if (out_files->filename_list[out_files->count] == NULL) {
                         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
                         return;
@@ -2073,7 +2073,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
                                             inst, loader.loaded_layer_lib_list,
                                             loader.loaded_layer_lib_capacity,
                                             new_alloc_size,
-                                            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
         if (!new_layer_lib_list) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "loader: realloc failed in loader_add_layer_lib");
             return NULL;
@@ -2135,7 +2135,7 @@ static void loader_remove_layer_lib(
     /* Need to remove unused library from list */
     new_layer_lib_list = loader_heap_alloc(inst,
                                            loader.loaded_layer_lib_capacity,
-                                           VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                           VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!new_layer_lib_list) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "loader: heap alloc failed loader_remove_layer_library");
         return;
@@ -2415,6 +2415,7 @@ static VkResult loader_enable_device_layers(
 static VkResult VKAPI scratch_vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks*   pAllocator,
     VkDevice                 *pDevice)
 {
     return VK_SUCCESS;
@@ -2456,7 +2457,7 @@ static uint32_t loader_activate_device_layers(
 
     wrappedGpus = loader_heap_alloc(inst,
                     sizeof (VkBaseLayerObject) * dev->activated_layer_list.count,
-                    VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                    VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!wrappedGpus) {
         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Failed to alloc Gpu objects for layer");
         return 0;
@@ -2612,6 +2613,7 @@ VkResult loader_validate_device_extensions(
 
 VkResult VKAPI loader_CreateInstance(
         const VkInstanceCreateInfo*     pCreateInfo,
+        const VkAllocCallbacks*         pAllocator,
         VkInstance*                     pInstance)
 {
     struct loader_instance *ptr_instance = *(struct loader_instance **) pInstance;
@@ -2625,7 +2627,6 @@ VkResult VKAPI loader_CreateInstance(
     icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     icd_create_info.enabledLayerNameCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
-    icd_create_info.pAllocCb = pCreateInfo->pAllocCb;
     icd_create_info.pAppInfo = pCreateInfo->pAppInfo;
     icd_create_info.pNext = pCreateInfo->pNext;
 
@@ -2656,6 +2657,7 @@ VkResult VKAPI loader_CreateInstance(
             }
 
             res = ptr_instance->icd_libs.list[i].CreateInstance(&icd_create_info,
+                                           pAllocator,
                                            &(icd->instance));
             success = loader_icd_init_entrys(
                                 icd,
@@ -2690,7 +2692,8 @@ VkResult VKAPI loader_CreateInstance(
 }
 
 void VKAPI loader_DestroyInstance(
-        VkInstance                                instance)
+        VkInstance                                instance,
+        const VkAllocCallbacks*                   pAllocator)
 {
     struct loader_instance *ptr_instance = loader_instance(instance);
     struct loader_icd *icds = ptr_instance->icds;
@@ -2714,7 +2717,7 @@ void VKAPI loader_DestroyInstance(
 
     while (icds) {
         if (icds->instance) {
-            icds->DestroyInstance(icds->instance);
+            icds->DestroyInstance(icds->instance, pAllocator);
         }
         next_icd = icds->next;
         icds->instance = VK_NULL_HANDLE;
@@ -2754,7 +2757,7 @@ VkResult loader_init_physical_device_info(
         icd->gpus = (VkPhysicalDevice *) loader_heap_alloc(
                                                 ptr_instance,
                                                 n * sizeof(VkPhysicalDevice),
-                                                VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                                                VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
         if (!icd->gpus) {
             /* TODO: Add cleanup code here */
             return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -2927,6 +2930,7 @@ void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
 VkResult VKAPI loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
+        const VkAllocCallbacks*                 pAllocator,
         VkDevice*                               pDevice)
 {
     uint32_t gpu_index;
@@ -2997,7 +3001,7 @@ VkResult VKAPI loader_CreateDevice(
 
     // since gpu object maybe wrapped by a layer need to get unwrapped version
     // we haven't yet called down the chain for the layer to unwrap the object
-    res = icd->CreateDevice(icd->gpus[gpu_index], pCreateInfo, pDevice);
+    res = icd->CreateDevice(icd->gpus[gpu_index], pCreateInfo, pAllocator, pDevice);
     if (res != VK_SUCCESS) {
         return res;
     }
@@ -3021,7 +3025,7 @@ VkResult VKAPI loader_CreateDevice(
     }
     loader_activate_device_layers(inst, dev, *pDevice);
 
-    res = dev->loader_dispatch.CreateDevice(gpu, pCreateInfo, pDevice);
+    res = dev->loader_dispatch.CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
 
     dev->loader_dispatch.CreateDevice = icd->CreateDevice;
 

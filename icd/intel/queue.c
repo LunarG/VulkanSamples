@@ -439,6 +439,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
 ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkDevice                                device,
     const VkSemaphoreCreateInfo            *pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkSemaphore                            *pSemaphore)
 {
     /*
@@ -459,7 +460,8 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
 
 ICD_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice                                    device,
-    VkSemaphore                                 semaphore)
+    VkSemaphore                                 semaphore,
+    const VkAllocCallbacks*                     pAllocator)
 {
     struct intel_obj *obj = intel_obj(semaphore);
     obj->destroy(obj);

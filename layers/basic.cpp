@@ -95,27 +95,27 @@ VK_LAYER_EXPORT VkResult VKAPI basic_EnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
 {
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
-    VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     printf("Completed wrapped vkCreateDevice() call w/ pDevice, Device %p: %p\n", (void*)pDevice, (void *) *pDevice);
     return result;
 }
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI basic_DestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI basic_DestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
-    device_dispatch_table(device)->DestroyDevice(device);
+    device_dispatch_table(device)->DestroyDevice(device, pAllocator);
     destroy_device_dispatch_table(key);
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI basic_DestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI basic_DestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
-    instance_dispatch_table(instance)->DestroyInstance(instance);
+    instance_dispatch_table(instance)->DestroyInstance(instance, pAllocator);
     destroy_instance_dispatch_table(key);
 }
 

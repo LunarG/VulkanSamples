@@ -68,6 +68,7 @@ static VkResult shader_module_create(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
     VkDevice                                    device,
     const VkShaderModuleCreateInfo*             pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkShaderModule*                             pShaderModule)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -77,7 +78,8 @@ ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
 
 ICD_EXPORT void VKAPI vkDestroyShaderModule(
     VkDevice                                device,
-    VkShaderModule                          shaderModule)
+    VkShaderModule                          shaderModule,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(shaderModule);
@@ -127,6 +129,7 @@ static VkResult shader_create(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreateShader(
         VkDevice                                  device,
         const VkShaderCreateInfo*               pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
         VkShader*                                 pShader)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -136,7 +139,8 @@ ICD_EXPORT VkResult VKAPI vkCreateShader(
 
 ICD_EXPORT void VKAPI vkDestroyShader(
     VkDevice                                device,
-    VkShader                                shader)
+    VkShader                                shader,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(shader);

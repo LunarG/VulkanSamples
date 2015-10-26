@@ -103,12 +103,11 @@ protected:
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
-        inst_info.pAllocCb = NULL;
         inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
         inst_info.enabledExtensionNameCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
-        err = vkCreateInstance(&inst_info, &inst);
+        err = vkCreateInstance(&inst_info, NULL, &inst);
         ASSERT_VK_SUCCESS(err);
         err = vkEnumeratePhysicalDevices(inst, &this->gpu_count, NULL);
         ASSERT_VK_SUCCESS(err);
@@ -135,7 +134,7 @@ protected:
 
     virtual void TearDown() {
         delete m_device;
-        vkDestroyInstance(inst);
+        vkDestroyInstance(inst, NULL);
     }
 };
 
@@ -156,7 +155,7 @@ TEST_F(VkTest, AllocMemory) {
     pass = m_device->phy().set_memory_type(((1 << mem_props.memoryTypeCount) - 1), &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     ASSERT_TRUE(pass);
 
-    err = vkAllocMemory(device(), &alloc_info, &gpu_mem);
+    err = vkAllocMemory(device(), &alloc_info, NULL, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkMapMemory(device(), gpu_mem, 0, 0, 0, (void **) &pData);
@@ -167,7 +166,7 @@ TEST_F(VkTest, AllocMemory) {
 
     vkUnmapMemory(device(), gpu_mem);
 
-    vkFreeMemory(device(), gpu_mem);
+    vkFreeMemory(device(), gpu_mem, NULL);
 }
 
 TEST_F(VkTest, Event) {
@@ -184,7 +183,7 @@ TEST_F(VkTest, Event) {
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = vkCreateEvent(device(), &event_info, &event);
+    err = vkCreateEvent(device(), &event_info, NULL, &event);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(device(), event);
@@ -202,7 +201,7 @@ TEST_F(VkTest, Event) {
     // TODO: Test actual synchronization with command buffer event.
 
     // All done with event memory, clean up
-    vkDestroyEvent(device(), event);
+    vkDestroyEvent(device(), event, NULL);
 }
 
 #define MAX_QUERY_SLOTS 10
@@ -243,7 +242,7 @@ TEST_F(VkTest, Query) {
     //            const VkQueryPoolCreateInfo*           pCreateInfo,
     //            VkQueryPool*                             pQueryPool);
 
-    err = vkCreateQueryPool(device(), &query_info, &query_pool);
+    err = vkCreateQueryPool(device(), &query_info, NULL, &query_pool);
     ASSERT_VK_SUCCESS(err);
 
     // TODO: Test actual synchronization with command buffer event.
@@ -265,7 +264,7 @@ TEST_F(VkTest, Query) {
 
     }
 
-    vkDestroyQueryPool(device(), query_pool);
+    vkDestroyQueryPool(device(), query_pool, NULL);
 }
 
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
@@ -357,7 +356,7 @@ void VkTest::CreateImageTest()
 //        VkDevice                                  device,
 //        const VkImageCreateInfo*                pCreateInfo,
 //        VkImage*                                  pImage);
-    err = vkCreateImage(device(), &imageCreateInfo, &image);
+    err = vkCreateImage(device(), &imageCreateInfo, NULL, &image);
     ASSERT_VK_SUCCESS(err);
 
     // Verify image resources
@@ -423,7 +422,7 @@ void VkTest::CreateImageTest()
         pass = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_TRUE(pass);
 
-        err = vkAllocMemory(device(), &mem_info, &image_mem);
+        err = vkAllocMemory(device(), &mem_info, NULL, &image_mem);
         ASSERT_VK_SUCCESS(err);
 
         err = vkBindImageMemory(device(), image, image_mem, 0);
@@ -464,17 +463,17 @@ void VkTest::CreateImageTest()
 //        const VkImageViewCreateInfo*           pCreateInfo,
 //        VkImageView*                             pView);
 
-    err = vkCreateImageView(device(), &viewInfo, &view);
+    err = vkCreateImageView(device(), &viewInfo, NULL, &view);
     ASSERT_VK_SUCCESS(err) << "vkCreateImageView failed";
 
     // TODO: Test image memory.
 
     // All done with image memory, clean up
-    vkDestroyImageView(device(), view);
-    vkDestroyImage(device(), image);
+    vkDestroyImageView(device(), view, NULL);
+    vkDestroyImage(device(), image, NULL);
 
     if (mem_req.size) {
-        vkFreeMemory(device(), image_mem);
+        vkFreeMemory(device(), image_mem, NULL);
     }
 }
 
@@ -502,7 +501,7 @@ void VkTest::CreateCommandBufferTest()
     cmd_pool_info.pNext = NULL,
     cmd_pool_info.queueFamilyIndex = graphics_queue_node_index;
     cmd_pool_info.flags = 0,
-    err = vkCreateCommandPool(device(), &cmd_pool_info, &cmdPool);
+    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &cmdPool);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandPool failed";
 
     info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
@@ -513,7 +512,7 @@ void VkTest::CreateCommandBufferTest()
     ASSERT_VK_SUCCESS(err) << "vkAllocCommandBuffers failed";
 
     vkFreeCommandBuffers(device(), cmdPool, 1, &cmdBuffer);
-    vkDestroyCommandPool(device(), cmdPool);
+    vkDestroyCommandPool(device(), cmdPool, NULL);
 }
 
 TEST_F(VkTest, TestCommandBuffer) {
@@ -548,7 +547,7 @@ void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
     moduleCreateInfo.pCode = code;
     moduleCreateInfo.codeSize = codeSize;
     moduleCreateInfo.flags = 0;
-    err = vkCreateShaderModule(device(), &moduleCreateInfo, &module);
+    err = vkCreateShaderModule(device(), &moduleCreateInfo, NULL, &module);
     ASSERT_VK_SUCCESS(err);
 
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
@@ -557,10 +556,10 @@ void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
     createInfo.pName = "main";
     createInfo.flags = 0;
     createInfo.stage = stage;
-    err = vkCreateShader(device(), &createInfo, &shader);
+    err = vkCreateShader(device(), &createInfo, NULL, &shader);
     ASSERT_VK_SUCCESS(err);
 
-    vkDestroyShaderModule(device(), module);
+    vkDestroyShaderModule(device(), module, NULL);
 
     *pshader = shader;
 }

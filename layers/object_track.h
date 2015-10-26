@@ -634,11 +634,12 @@ static void destroy_obj(VkDevice dispatchable_object, VkSwapchainKHR object)
 VkResult
 explicit_CreateInstance(
     const VkInstanceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks     * pAllocator,
     VkInstance                 * pInstance)
 {
 
     VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, *pInstance);
-    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -673,12 +674,13 @@ VkResult
 explicit_CreateDevice(
     VkPhysicalDevice         gpu,
     const VkDeviceCreateInfo *pCreateInfo,
+    const VkAllocCallbacks   *pAllocator,
     VkDevice                 *pDevice)
 {
     loader_platform_thread_lock_mutex(&objLock);
 //    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, gpu);
     VkLayerDispatchTable *pDeviceTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         //// VkLayerDispatchTable *pTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
@@ -872,13 +874,14 @@ explicit_DestroySwapchainKHR(
 void
 explicit_FreeMemory(
     VkDevice       device,
-    VkDeviceMemory mem)
+    VkDeviceMemory mem,
+    const VkAllocCallbacks* pAllocator)
 {
     loader_platform_thread_lock_mutex(&objLock);
     validate_object(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->FreeMemory(device, mem);
+    get_dispatch_table(ObjectTracker_device_table_map, device)->FreeMemory(device, mem, pAllocator);
 
     loader_platform_thread_lock_mutex(&objLock);
     destroy_obj(device, mem);

@@ -97,12 +97,11 @@ protected:
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
         inst_info.pAppInfo = &app_info;
-        inst_info.pAllocCb = NULL;
         inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
         inst_info.enabledExtensionNameCount = 0;
         inst_info.ppEnabledExtensionNames = NULL;
-        err = vkCreateInstance(&inst_info, &this->inst);
+        err = vkCreateInstance(&inst_info, NULL, &this->inst);
         ASSERT_VK_SUCCESS(err);
         err = vkEnumeratePhysicalDevices(this->inst, &this->gpu_count, NULL);
         ASSERT_VK_SUCCESS(err);
@@ -117,7 +116,7 @@ protected:
 
     virtual void TearDown() {
         delete this->m_device;
-        vkDestroyInstance(this->inst);
+        vkDestroyInstance(this->inst, NULL);
     }
 };
 
@@ -212,7 +211,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     //        VkDevice                                  device,
     //        const VkImageCreateInfo*                pCreateInfo,
     //        VkImage*                                  pImage);
-    err = vkCreateImage(device(), &imageCreateInfo, &m_image);
+    err = vkCreateImage(device(), &imageCreateInfo, NULL, &m_image);
     ASSERT_VK_SUCCESS(err);
 
     VkMemoryRequirements mem_req;
@@ -231,7 +230,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     ASSERT_TRUE(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(device(), &mem_info, &m_image_mem);
+    err = vkAllocMemory(device(), &mem_info, NULL, &m_image_mem);
     ASSERT_VK_SUCCESS(err);
 
     /* bind memory */
@@ -242,8 +241,8 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 void VkImageTest::DestroyImage()
 {
     // All done with image object and memory, clean up
-    vkDestroyImage(device(), m_image);
-    vkFreeMemory(device(), m_image_mem);
+    vkDestroyImage(device(), m_image, NULL);
+    vkFreeMemory(device(), m_image_mem, NULL);
 }
 
 void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
@@ -251,13 +250,13 @@ void VkImageTest::CreateImageView(VkImageViewCreateInfo *pCreateInfo,
 {
     VkResult err;
     pCreateInfo->image = this->m_image;
-    err = vkCreateImageView(device(), pCreateInfo, pView);
+    err = vkCreateImageView(device(), pCreateInfo, NULL, pView);
     ASSERT_VK_SUCCESS(err);
 }
 
 void VkImageTest::DestroyImageView(VkImageView imageView)
 {
-    vkDestroyImageView(device(), imageView);
+    vkDestroyImageView(device(), imageView, NULL);
 }
 
 TEST_F(VkImageTest, CreateImageViewTest) {

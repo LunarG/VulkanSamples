@@ -207,7 +207,7 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     struct intel_pipeline_shader *sh;
     VkResult ret;
 
-    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
@@ -1350,6 +1350,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipelineCache*                            pPipelineCache)
 {
 
@@ -1360,7 +1361,8 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
 
 void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
+    VkPipelineCache                             pipelineCache,
+    const VkAllocCallbacks*                     pAllocator)
 {
 }
 
@@ -1387,6 +1389,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
     const VkGraphicsPipelineCreateInfo*       pCreateInfos,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipeline*                               pPipelines)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1415,6 +1418,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
     const VkComputePipelineCreateInfo*        pCreateInfos,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipeline*                               pPipelines)
 {
     return VK_ERROR_VALIDATION_FAILED;
@@ -1422,7 +1426,8 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
 
 ICD_EXPORT void VKAPI vkDestroyPipeline(
     VkDevice                                device,
-    VkPipeline                              pipeline)
+    VkPipeline                              pipeline,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(pipeline);

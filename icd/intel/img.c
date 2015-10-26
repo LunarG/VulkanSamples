@@ -60,6 +60,7 @@ static VkResult img_get_memory_requirements(struct intel_base *base, VkMemoryReq
 
 VkResult intel_img_create(struct intel_dev *dev,
                           const VkImageCreateInfo *info,
+                          const VkAllocCallbacks *allocator,
                           bool scanout,
                           struct intel_img **img_ret)
 {
@@ -93,7 +94,7 @@ VkResult intel_img_create(struct intel_dev *dev,
         VkImageCreateInfo s8_info;
 
         img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
-                VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+                VK_SYSTEM_ALLOC_SCOPE_OBJECT);
         if (!img->s8_layout) {
             intel_img_destroy(img);
             return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -142,17 +143,19 @@ void intel_img_destroy(struct intel_img *img)
 ICD_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkImage*                                  pImage)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_img_create(dev, pCreateInfo, false,
+    return intel_img_create(dev, pCreateInfo, pAllocator, false,
             (struct intel_img **) pImage);
 }
 
 ICD_EXPORT void VKAPI vkDestroyImage(
     VkDevice                                device,
-    VkImage                                 image)
+    VkImage                                 image,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(image);

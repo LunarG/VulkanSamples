@@ -637,6 +637,7 @@ static void demo_draw(struct demo *demo)
 
     err = vkCreateSemaphore(demo->device,
                             &presentCompleteSemaphoreCreateInfo,
+                            NULL,
                             &presentCompleteSemaphore);
     assert(!err);
 
@@ -650,7 +651,7 @@ static void demo_draw(struct demo *demo)
         // must be recreated:
         demo_resize(demo);
         demo_draw(demo);
-        vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+        vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
         return;
     } else if (err == VK_SUBOPTIMAL_KHR) {
         // demo->swapchain is not as optimal as it could be, but the platform's
@@ -711,7 +712,7 @@ static void demo_draw(struct demo *demo)
     err = vkQueueWaitIdle(demo->queue);
     assert(err == VK_SUCCESS);
 
-    vkDestroySemaphore(demo->device, presentCompleteSemaphore);
+    vkDestroySemaphore(demo->device, presentCompleteSemaphore, NULL);
 }
 
 static void demo_prepare_buffers(struct demo *demo)
@@ -873,7 +874,7 @@ static void demo_prepare_buffers(struct demo *demo)
         color_image_view.image = demo->buffers[i].image;
 
         err = vkCreateImageView(demo->device,
-                &color_image_view, &demo->buffers[i].view);
+                &color_image_view, NULL, &demo->buffers[i].view);
         assert(!err);
     }
 }
@@ -918,7 +919,7 @@ static void demo_prepare_depth(struct demo *demo)
     demo->depth.format = depth_format;
 
     /* create image */
-    err = vkCreateImage(demo->device, &image,
+    err = vkCreateImage(demo->device, &image, NULL,
             &demo->depth.image);
     assert(!err);
 
@@ -938,7 +939,8 @@ static void demo_prepare_depth(struct demo *demo)
     assert(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &demo->depth.mem_alloc, &demo->depth.mem);
+    err = vkAllocMemory(demo->device, &demo->depth.mem_alloc,
+            NULL, &demo->depth.mem);
     assert(!err);
 
     /* bind memory */
@@ -953,7 +955,7 @@ static void demo_prepare_depth(struct demo *demo)
 
     /* create image view */
     view.image = demo->depth.image;
-    err = vkCreateImageView(demo->device, &view, &demo->depth.view);
+    err = vkCreateImageView(demo->device, &view, NULL, &demo->depth.view);
     assert(!err);
 }
 
@@ -1047,7 +1049,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     VkMemoryRequirements mem_reqs;
 
-    err = vkCreateImage(demo->device, &image_create_info,
+    err = vkCreateImage(demo->device, &image_create_info, NULL,
             &tex_obj->image);
     assert(!err);
 
@@ -1062,7 +1064,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &tex_obj->mem_alloc,
+    err = vkAllocMemory(demo->device, &tex_obj->mem_alloc, NULL,
                 &(tex_obj->mem));
     assert(!err);
 
@@ -1103,8 +1105,8 @@ static void demo_prepare_texture_image(struct demo *demo,
 static void demo_destroy_texture_image(struct demo *demo, struct texture_object *tex_objs)
 {
     /* clean up staging resources */
-    vkFreeMemory(demo->device, tex_objs->mem);
-    vkDestroyImage(demo->device, tex_objs->image);
+    vkFreeMemory(demo->device, tex_objs->mem, NULL);
+    vkDestroyImage(demo->device, tex_objs->image, NULL);
 }
 
 static void demo_prepare_textures(struct demo *demo)
@@ -1203,13 +1205,13 @@ static void demo_prepare_textures(struct demo *demo)
         };
 
         /* create sampler */
-        err = vkCreateSampler(demo->device, &sampler,
+        err = vkCreateSampler(demo->device, &sampler, NULL,
                 &demo->textures[i].sampler);
         assert(!err);
 
         /* create image view */
         view.image = demo->textures[i].image;
-        err = vkCreateImageView(demo->device, &view,
+        err = vkCreateImageView(demo->device, &view, NULL,
                 &demo->textures[i].view);
         assert(!err);
     }
@@ -1246,7 +1248,8 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     buf_info.size = sizeof(data);
-    err = vkCreateBuffer(demo->device, &buf_info, &demo->uniform_data.buf);
+    err = vkCreateBuffer(demo->device, &buf_info, NULL,
+            &demo->uniform_data.buf);
     assert(!err);
 
     vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
@@ -1262,7 +1265,8 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
                                       &demo->uniform_data.mem_alloc.memoryTypeIndex);
     assert(pass);
 
-    err = vkAllocMemory(demo->device, &demo->uniform_data.mem_alloc, &(demo->uniform_data.mem));
+    err = vkAllocMemory(demo->device, &demo->uniform_data.mem_alloc,
+            NULL, &(demo->uniform_data.mem));
     assert(!err);
 
     err = vkMapMemory(demo->device, demo->uniform_data.mem, 0, demo->uniform_data.mem_alloc.allocationSize, 0, (void **) &pData);
@@ -1307,7 +1311,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorSetLayout(demo->device,
-            &descriptor_layout, &demo->desc_layout);
+            &descriptor_layout, NULL, &demo->desc_layout);
     assert(!err);
 
     const VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {
@@ -1319,6 +1323,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
 
     err = vkCreatePipelineLayout(demo->device,
                                  &pPipelineLayoutCreateInfo,
+                                 NULL,
                                  &demo->pipeline_layout);
     assert(!err);
 }
@@ -1384,7 +1389,7 @@ static void demo_prepare_render_pass(struct demo *demo)
     };
     VkResult U_ASSERT_ONLY err;
 
-    err = vkCreateRenderPass(demo->device, &rp_info, &demo->render_pass);
+    err = vkCreateRenderPass(demo->device, &rp_info, NULL, &demo->render_pass);
     assert(!err);
 }
 
@@ -1411,14 +1416,14 @@ static VkShader demo_prepare_shader(struct demo* demo,
         moduleCreateInfo.codeSize = size;
         moduleCreateInfo.pCode = code;
         moduleCreateInfo.flags = 0;
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, pShaderModule);
         assert(!err);
 
         shaderCreateInfo.flags = 0;
         shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
         shaderCreateInfo.stage = stage;
-        err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        err = vkCreateShader(demo->device, &shaderCreateInfo, NULL, &shader);
         assert(!err);
     } else {
         // Create fake SPV structure to feed GLSL
@@ -1433,7 +1438,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
 
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, pShaderModule);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, pShaderModule);
         if (err) {
             free((void *) moduleCreateInfo.pCode);
         }
@@ -1442,7 +1447,7 @@ static VkShader demo_prepare_shader(struct demo* demo,
         shaderCreateInfo.module = *pShaderModule;
         shaderCreateInfo.pName = "main";
         shaderCreateInfo.stage = stage;
-        err = vkCreateShader(demo->device, &shaderCreateInfo, &shader);
+        err = vkCreateShader(demo->device, &shaderCreateInfo, NULL, &shader);
         assert(!err);
         free((void *) moduleCreateInfo.pCode);
     }
@@ -1635,7 +1640,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&pipelineCache, 0, sizeof(pipelineCache));
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
-    err = vkCreatePipelineCache(demo->device, &pipelineCache, &demo->pipelineCache);
+    err = vkCreatePipelineCache(demo->device, &pipelineCache, NULL, &demo->pipelineCache);
     assert(!err);
 
     pipeline.pVertexInputState   = &vi;
@@ -1651,14 +1656,15 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     pipeline.renderPass = demo->render_pass;
 
-    err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache, 1, &pipeline, &demo->pipeline);
+    err = vkCreateGraphicsPipelines(demo->device, demo->pipelineCache,
+            1, &pipeline, NULL, &demo->pipeline);
     assert(!err);
 
     for (uint32_t i = 0; i < pipeline.stageCount; i++) {
-        vkDestroyShader(demo->device, shaderStages[i].shader);
+        vkDestroyShader(demo->device, shaderStages[i].shader, NULL);
     }
-    vkDestroyShaderModule(demo->device, demo->frag_shader_module);
-    vkDestroyShaderModule(demo->device, demo->vert_shader_module);
+    vkDestroyShaderModule(demo->device, demo->frag_shader_module, NULL);
+    vkDestroyShaderModule(demo->device, demo->vert_shader_module, NULL);
 }
 
 static void demo_prepare_descriptor_pool(struct demo *demo)
@@ -1683,7 +1689,7 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
 
     err = vkCreateDescriptorPool(demo->device,
-            &descriptor_pool, &demo->desc_pool);
+            &descriptor_pool, NULL, &demo->desc_pool);
     assert(!err);
 }
 
@@ -1752,7 +1758,7 @@ static void demo_prepare_framebuffers(struct demo *demo)
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         attachments[0] = demo->buffers[i].view;
-        err = vkCreateFramebuffer(demo->device, &fb_info, &demo->framebuffers[i]);
+        err = vkCreateFramebuffer(demo->device, &fb_info, NULL, &demo->framebuffers[i]);
         assert(!err);
     }
 }
@@ -1767,7 +1773,7 @@ static void demo_prepare(struct demo *demo)
         .queueFamilyIndex = demo->graphics_queue_node_index,
         .flags = 0,
     };
-    err = vkCreateCommandPool(demo->device, &cmd_pool_info, &demo->cmd_pool);
+    err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL, &demo->cmd_pool);
     assert(!err);
 
     const VkCmdBufferAllocInfo cmd = {
@@ -1819,46 +1825,46 @@ static void demo_cleanup(struct demo *demo)
     demo->prepared = false;
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
-        vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
+        vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
     }
     free(demo->framebuffers);
-    vkDestroyDescriptorPool(demo->device, demo->desc_pool);
+    vkDestroyDescriptorPool(demo->device, demo->desc_pool, NULL);
 
-    vkDestroyPipeline(demo->device, demo->pipeline);
-    vkDestroyPipelineCache(demo->device, demo->pipelineCache);
-    vkDestroyRenderPass(demo->device, demo->render_pass);
-    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout);
-    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout);
+    vkDestroyPipeline(demo->device, demo->pipeline, NULL);
+    vkDestroyPipelineCache(demo->device, demo->pipelineCache, NULL);
+    vkDestroyRenderPass(demo->device, demo->render_pass, NULL);
+    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout, NULL);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        vkDestroyImageView(demo->device, demo->textures[i].view);
-        vkDestroyImage(demo->device, demo->textures[i].image);
-        vkFreeMemory(demo->device, demo->textures[i].mem);
-        vkDestroySampler(demo->device, demo->textures[i].sampler);
+        vkDestroyImageView(demo->device, demo->textures[i].view, NULL);
+        vkDestroyImage(demo->device, demo->textures[i].image, NULL);
+        vkFreeMemory(demo->device, demo->textures[i].mem, NULL);
+        vkDestroySampler(demo->device, demo->textures[i].sampler, NULL);
     }
     demo->fpDestroySwapchainKHR(demo->device, demo->swapchain);
 
-    vkDestroyImageView(demo->device, demo->depth.view);
-    vkDestroyImage(demo->device, demo->depth.image);
-    vkFreeMemory(demo->device, demo->depth.mem);
+    vkDestroyImageView(demo->device, demo->depth.view, NULL);
+    vkDestroyImage(demo->device, demo->depth.image, NULL);
+    vkFreeMemory(demo->device, demo->depth.mem, NULL);
 
-    vkDestroyBuffer(demo->device, demo->uniform_data.buf);
-    vkFreeMemory(demo->device, demo->uniform_data.mem);
+    vkDestroyBuffer(demo->device, demo->uniform_data.buf, NULL);
+    vkFreeMemory(demo->device, demo->uniform_data.mem, NULL);
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
-        vkDestroyImageView(demo->device, demo->buffers[i].view);
+        vkDestroyImageView(demo->device, demo->buffers[i].view, NULL);
         vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->buffers[i].cmd);
     }
     free(demo->buffers);
 
     free(demo->queue_props);
 
-    vkDestroyCommandPool(demo->device, demo->cmd_pool);
-    vkDestroyDevice(demo->device);
+    vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
+    vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
         demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
     }
-    vkDestroyInstance(demo->inst);
+    vkDestroyInstance(demo->inst, NULL);
 
 #ifndef _WIN32
     xcb_destroy_window(demo->connection, demo->window);
@@ -1882,39 +1888,39 @@ static void demo_resize(struct demo *demo)
     demo->prepared = false;
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
-        vkDestroyFramebuffer(demo->device, demo->framebuffers[i]);
+        vkDestroyFramebuffer(demo->device, demo->framebuffers[i], NULL);
     }
     free(demo->framebuffers);
-    vkDestroyDescriptorPool(demo->device, demo->desc_pool);
+    vkDestroyDescriptorPool(demo->device, demo->desc_pool, NULL);
 
-    vkDestroyPipeline(demo->device, demo->pipeline);
-    vkDestroyPipelineCache(demo->device, demo->pipelineCache);
-    vkDestroyRenderPass(demo->device, demo->render_pass);
-    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout);
-    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout);
+    vkDestroyPipeline(demo->device, demo->pipeline, NULL);
+    vkDestroyPipelineCache(demo->device, demo->pipelineCache, NULL);
+    vkDestroyRenderPass(demo->device, demo->render_pass, NULL);
+    vkDestroyPipelineLayout(demo->device, demo->pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(demo->device, demo->desc_layout, NULL);
 
     for (i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-        vkDestroyImageView(demo->device, demo->textures[i].view);
-        vkDestroyImage(demo->device, demo->textures[i].image);
-        vkFreeMemory(demo->device, demo->textures[i].mem);
-        vkDestroySampler(demo->device, demo->textures[i].sampler);
+        vkDestroyImageView(demo->device, demo->textures[i].view, NULL);
+        vkDestroyImage(demo->device, demo->textures[i].image, NULL);
+        vkFreeMemory(demo->device, demo->textures[i].mem, NULL);
+        vkDestroySampler(demo->device, demo->textures[i].sampler, NULL);
     }
 
-    vkDestroyImageView(demo->device, demo->depth.view);
-    vkDestroyImage(demo->device, demo->depth.image);
-    vkFreeMemory(demo->device, demo->depth.mem);
+    vkDestroyImageView(demo->device, demo->depth.view, NULL);
+    vkDestroyImage(demo->device, demo->depth.image, NULL);
+    vkFreeMemory(demo->device, demo->depth.mem, NULL);
 
-    vkDestroyBuffer(demo->device, demo->uniform_data.buf);
-    vkFreeMemory(demo->device, demo->uniform_data.mem);
+    vkDestroyBuffer(demo->device, demo->uniform_data.buf, NULL);
+    vkFreeMemory(demo->device, demo->uniform_data.mem, NULL);
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
-        vkDestroyImageView(demo->device, demo->buffers[i].view);
+        vkDestroyImageView(demo->device, demo->buffers[i].view, NULL);
         vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->buffers[i].cmd);
     }
-    vkDestroyCommandPool(demo->device, demo->cmd_pool);
+    vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
     free(demo->buffers);
 
-    vkDestroyCommandPool(demo->device, demo->cmd_pool);
+    vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
 
 
     // Second, re-perform the demo_prepare() function, which will re-create the
@@ -2268,7 +2274,6 @@ static void demo_init_vk(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app,
-        .pAllocCb = NULL,
         .enabledLayerNameCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? instance_validation_layers : NULL),
         .enabledExtensionNameCount = enabled_extension_count,
@@ -2277,7 +2282,7 @@ static void demo_init_vk(struct demo *demo)
 
     uint32_t gpu_count;
 
-    err = vkCreateInstance(&inst_info, &demo->inst);
+    err = vkCreateInstance(&inst_info, NULL, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
                  "(ICD).\n\nPlease look at the Getting Started guide for "
@@ -2444,7 +2449,7 @@ static void demo_init_vk(struct demo *demo)
         .pEnabledFeatures = NULL, // If specific features are required, pass them in here
     };
 
-    err = vkCreateDevice(demo->gpu, &device, &demo->device);
+    err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
     assert(!err);
 
     free(device_layers);

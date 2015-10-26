@@ -40,23 +40,23 @@ static device_table_map multi1_device_table_map;
 /******************************** Layer multi1 functions **************************/
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
     dispatch_key key = get_dispatch_key(device);
 
     printf("At start of multi1 layer vkDestroyDevice()\n");
-    pDisp->DestroyDevice(device);
+    pDisp->DestroyDevice(device, pAllocator);
     multi1_device_table_map.erase(key);
     printf("Completed multi1 layer vkDestroyDevice()\n");
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkSampler* pSampler)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
 
     printf("At start of multi1 layer vkCreateSampler()\n");
-    VkResult result = pDisp->CreateSampler(device, pCreateInfo, pSampler);
+    VkResult result = pDisp->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
     printf("Completed multi1 layer vkCreateSampler()\n");
     return result;
 }
@@ -66,12 +66,13 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipelines(
                                 VkPipelineCache pipelineCache,
                                 uint32_t count,
                                 const VkGraphicsPipelineCreateInfo* pCreateInfos,
+                                const VkAllocCallbacks* pAllocator,
                                 VkPipeline* pPipelines)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
 
     printf("At start of multi1 layer vkCreateGraphicsPipeline()\n");
-    VkResult result = pDisp->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+    VkResult result = pDisp->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     printf("Completed multi1 layer vkCreateGraphicsPipeline()\n");
     return result;
 }
@@ -139,13 +140,13 @@ VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceFeatures(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, instance);
     dispatch_key key = get_dispatch_key(instance);
 
     printf("At start of wrapped multi2 vkDestroyInstance()\n");
-    pDisp->DestroyInstance(instance);
+    pDisp->DestroyInstance(instance, pAllocator);
     multi2_instance_table_map.erase(key);
     printf("Completed multi2 layer vkDestroyInstance()\n");
 }

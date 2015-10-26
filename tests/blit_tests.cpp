@@ -764,7 +764,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     memset(&event_info, 0, sizeof(event_info));
     event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-    err = vkCreateEvent(dev_.handle(), &event_info, &event);
+    err = vkCreateEvent(dev_.handle(), &event_info, NULL, &event);
     ASSERT_VK_SUCCESS(err);
 
     err = vkResetEvent(dev_.handle(), event);
@@ -821,7 +821,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     EXPECT_EQ(0x11111111, data[0]);
     bufs[2].memory().unmap();
 
-    vkDestroyEvent(dev_.handle(), event);
+    vkDestroyEvent(dev_.handle(), event, NULL);
 
 }
 

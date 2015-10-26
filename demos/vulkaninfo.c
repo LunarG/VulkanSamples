@@ -480,7 +480,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     info.enabledExtensionNameCount = enabled_extension_count;
     info.ppEnabledExtensionNames = (const char*const*) known_extensions;
     dev->gpu = gpu;
-    err = vkCreateDevice(gpu->obj, &info, &dev->obj);
+    err = vkCreateDevice(gpu->obj, &info, NULL, &dev->obj);
     if (err)
         ERR_EXIT(err);
 
@@ -488,7 +488,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
 
 static void app_dev_destroy(struct app_dev *dev)
 {
-    vkDestroyDevice(dev->obj);
+    vkDestroyDevice(dev->obj, NULL);
 }
 
 static void app_get_global_layer_extensions(
@@ -532,7 +532,6 @@ static void app_create_instance(struct app_instance *inst)
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
         .pAppInfo = &app_info,
-        .pAllocCb = NULL,
         .enabledLayerNameCount = 0,
         .ppEnabledLayerNames = NULL,
         .enabledExtensionNameCount = 0,
@@ -613,7 +612,7 @@ static void app_create_instance(struct app_instance *inst)
     inst_info.enabledExtensionNameCount = global_extension_count;
     inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
 
-    err = vkCreateInstance(&inst_info, &inst->instance);
+    err = vkCreateInstance(&inst_info, NULL, &inst->instance);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
         printf("Cannot create Vulkan instance.\n");
         ERR_EXIT(err);
@@ -625,7 +624,7 @@ static void app_create_instance(struct app_instance *inst)
 static void app_destroy_instance(struct app_instance *inst)
 {
     free(inst->global_extensions);
-    vkDestroyInstance(inst->instance);
+    vkDestroyInstance(inst->instance, NULL);
 }
 
 

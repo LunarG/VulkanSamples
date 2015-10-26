@@ -31,7 +31,7 @@ namespace {
 #define NON_DISPATCHABLE_HANDLE_INIT(create_func, dev, ...)                         \
     do {                                                                            \
         handle_type handle;                                                         \
-        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, &handle) == VK_SUCCESS))  \
+        if (EXPECT(create_func(dev.handle(), __VA_ARGS__, NULL, &handle) == VK_SUCCESS)) \
             NonDispHandle::init(dev.handle(), handle);                              \
     } while (0)
 
@@ -39,7 +39,7 @@ namespace {
     cls::~cls()                                                                     \
     {                                                                               \
         if (initialized())                                                          \
-            destroy_func(device(), handle());                                       \
+            destroy_func(device(), handle(), NULL);                                 \
     }
 
 #define STRINGIFY(x) #x
@@ -260,7 +260,7 @@ Device::~Device()
         queues_[i].clear();
     }
 
-    vkDestroyDevice(handle());
+    vkDestroyDevice(handle(), NULL);
 }
 
 void Device::init(std::vector<const char *> &layers, std::vector<const char *> &extensions)
@@ -300,7 +300,7 @@ void Device::init(const VkDeviceCreateInfo &info)
 {
     VkDevice dev;
 
-    if (EXPECT(vkCreateDevice(phy_.handle(), &info, &dev) == VK_SUCCESS))
+    if (EXPECT(vkCreateDevice(phy_.handle(), &info, NULL, &dev) == VK_SUCCESS))
         Handle::init(dev);
 
     init_queues();
@@ -427,7 +427,7 @@ void Queue::wait()
 DeviceMemory::~DeviceMemory()
 {
     if (initialized())
-        vkFreeMemory(device(), handle());
+        vkFreeMemory(device(), handle(), NULL);
 }
 
 void DeviceMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
@@ -632,7 +632,7 @@ VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInf
 {
     VkShaderModule mod;
 
-    VkResult err = vkCreateShaderModule(dev.handle(), &info, &mod);
+    VkResult err = vkCreateShaderModule(dev.handle(), &info, NULL, &mod);
     if (err == VK_SUCCESS)
         NonDispHandle::init(dev.handle(), mod);
 
@@ -650,7 +650,7 @@ VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
 {
     VkShader sh;
 
-    VkResult err = vkCreateShader(dev.handle(), &info, &sh);
+    VkResult err = vkCreateShader(dev.handle(), &info, NULL, &sh);
     if (err == VK_SUCCESS)
         NonDispHandle::init(dev.handle(), sh);
 
@@ -665,10 +665,10 @@ void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)
     VkPipelineCacheCreateInfo ci;
     memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
+    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, NULL, &cache);
     if (err == VK_SUCCESS) {
         NON_DISPATCHABLE_HANDLE_INIT(vkCreateGraphicsPipelines, dev, cache, 1, &info);
-        vkDestroyPipelineCache(dev.handle(), cache);
+        vkDestroyPipelineCache(dev.handle(), cache, NULL);
     }
 }
 
@@ -679,14 +679,14 @@ VkResult Pipeline::init_try(const Device &dev, const VkGraphicsPipelineCreateInf
     VkPipelineCacheCreateInfo ci;
     memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
+    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, NULL, &cache);
     EXPECT(err == VK_SUCCESS);
     if (err == VK_SUCCESS) {
-        err = vkCreateGraphicsPipelines(dev.handle(), cache, 1, &info, &pipe);
+        err = vkCreateGraphicsPipelines(dev.handle(), cache, 1, &info, NULL, &pipe);
         if (err == VK_SUCCESS) {
             NonDispHandle::init(dev.handle(), pipe);
         }
-        vkDestroyPipelineCache(dev.handle(), cache);
+        vkDestroyPipelineCache(dev.handle(), cache, NULL);
     }
 
     return err;
@@ -698,10 +698,10 @@ void Pipeline::init(const Device &dev, const VkComputePipelineCreateInfo &info)
     VkPipelineCacheCreateInfo ci;
     memset((void *) &ci, 0, sizeof(VkPipelineCacheCreateInfo));
     ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, &cache);
+    VkResult err = vkCreatePipelineCache(dev.handle(), &ci, NULL, &cache);
     if (err == VK_SUCCESS) {
         NON_DISPATCHABLE_HANDLE_INIT(vkCreateComputePipelines, dev, cache, 1, &info);
-        vkDestroyPipelineCache(dev.handle(), cache);
+        vkDestroyPipelineCache(dev.handle(), cache, NULL);
     }
 }
 

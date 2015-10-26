@@ -138,11 +138,12 @@ static loader_platform_thread_mutex globalLock;
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+    const VkAllocCallbacks* pAllocator,
     VkDescriptorSetLayout* pSetLayout)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* stash a copy of the layout bindings */
-    VkResult result = my_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = my_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -158,10 +159,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkPipelineLayout*                           pPipelineLayout)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    VkResult result = my_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -602,6 +604,7 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         VkDevice device,
         const VkShaderModuleCreateInfo *pCreateInfo,
+        const VkAllocCallbacks* pAllocator,
         VkShaderModule *pShaderModule)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -613,7 +616,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         return VK_ERROR_VALIDATION_FAILED;
     }
 
-    VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pShaderModule);
+    VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
     if (res == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -626,10 +629,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
         VkDevice device,
         const VkShaderCreateInfo *pCreateInfo,
+        const VkAllocCallbacks* pAllocator,
         VkShader *pShader)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult res = my_data->device_dispatch_table->CreateShader(device, pCreateInfo, pShader);
+    VkResult res = my_data->device_dispatch_table->CreateShader(device, pCreateInfo, pAllocator, pShader);
 
     loader_platform_thread_lock_mutex(&globalLock);
     my_data->shader_object_map[*pShader] = new shader_object(my_data, pCreateInfo);
@@ -640,10 +644,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
         VkDevice device,
         const VkRenderPassCreateInfo *pCreateInfo,
+        const VkAllocCallbacks* pAllocator,
         VkRenderPass *pRenderPass)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult res = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    VkResult res = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
     loader_platform_thread_lock_mutex(&globalLock);
     my_data->render_pass_map[*pRenderPass] = new render_pass(pCreateInfo);
@@ -1130,6 +1135,7 @@ vkCreateGraphicsPipelines(VkDevice device,
                          VkPipelineCache pipelineCache,
                          uint32_t count,
                          const VkGraphicsPipelineCreateInfo *pCreateInfos,
+                         const VkAllocCallbacks* pAllocator,
                          VkPipeline *pPipelines)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1142,7 +1148,7 @@ vkCreateGraphicsPipelines(VkDevice device,
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
-        return my_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+        return my_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
     }
     else {
         return VK_ERROR_VALIDATION_FAILED;
@@ -1150,10 +1156,10 @@ vkCreateGraphicsPipelines(VkDevice device,
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pDevice);
+    VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
@@ -1162,22 +1168,23 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 
 /* hook DextroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
-    my_device_data->device_dispatch_table->DestroyDevice(device);
+    my_device_data->device_dispatch_table->DestroyDevice(device, pAllocator);
     delete my_device_data->device_dispatch_table;
     layer_data_map.erase(key);
 }
 
 VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkInstance*                                 pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -1193,11 +1200,11 @@ VkResult VKAPI vkCreateInstance(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    my_data->instance_dispatch_table->DestroyInstance(instance);
+    my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {

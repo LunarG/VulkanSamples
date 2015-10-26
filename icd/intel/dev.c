@@ -212,6 +212,7 @@ void intel_dev_log(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice                    gpu_,
     const VkDeviceCreateInfo*           pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkDevice*                           pDevice)
 {
     struct intel_gpu *gpu = intel_gpu(gpu_);
@@ -220,7 +221,8 @@ ICD_EXPORT VkResult VKAPI vkCreateDevice(
 }
 
 ICD_EXPORT void VKAPI vkDestroyDevice(
-    VkDevice                                  device)
+    VkDevice                                  device,
+    const VkAllocCallbacks*                     pAllocator)
 {
     struct intel_dev *dev = intel_dev(device);
 

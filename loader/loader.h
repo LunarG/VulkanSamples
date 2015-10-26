@@ -265,10 +265,12 @@ VkResult loader_validate_instance_extensions(
 /* instance layer chain termination entrypoint definitions */
 VkResult VKAPI loader_CreateInstance(
         const VkInstanceCreateInfo*             pCreateInfo,
+        const VkAllocCallbacks*                 pAllocator,
         VkInstance*                             pInstance);
 
 void VKAPI loader_DestroyInstance(
-        VkInstance                              instance);
+        VkInstance                              instance,
+        const VkAllocCallbacks*                 pAllocator);
 
 VkResult VKAPI loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
@@ -326,6 +328,7 @@ void VKAPI loader_GetPhysicalDeviceMemoryProperties (
 VkResult VKAPI loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
+        const VkAllocCallbacks*                 pAllocator,
         VkDevice*                               pDevice);
 
 /* helper function definitions */
@@ -390,7 +393,7 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 void* loader_heap_alloc(
         const struct loader_instance *instance,
         size_t                       size,
-        VkSystemAllocType            allocType);
+        VkSystemAllocScope           allocScope);
 
 void loader_heap_free(
         const struct loader_instance *instance,

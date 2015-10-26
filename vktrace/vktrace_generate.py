@@ -554,8 +554,6 @@ class Subcommand(object):
         pid_enum.append('{')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkInstanceCreateInfo), pInStruct);')
         pid_enum.append('    add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&((*ppStruct)->pAppInfo), pInStruct->pAppInfo);')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAllocCb), sizeof(VkAllocCallbacks), pInStruct->pAllocCb);')
-        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAllocCb));')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerNameCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
@@ -627,7 +625,6 @@ class Subcommand(object):
         pid_enum.append('    if (pVkInstanceCreateInfo != NULL)')
         pid_enum.append('    {')
         pid_enum.append('        pVkInstanceCreateInfo->pAppInfo = (VkApplicationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo);')
-        pid_enum.append('        pVkInstanceCreateInfo->pAllocCb = (VkAllocCallbacks*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAllocCb);')
         pid_enum.append('        VkApplicationInfo** ppAppInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pAppInfo;')
         pid_enum.append('        (*ppAppInfo)->pAppName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pAppName);')
         pid_enum.append('        (*ppAppInfo)->pEngineName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pEngineName);')
@@ -1424,7 +1421,7 @@ class Subcommand(object):
         ci_body.append('            {')
         ci_body.append('                return vktrace_replay::VKTRACE_REPLAY_ERROR;')
         ci_body.append('            }')
-        ci_body.append('            replayResult = m_vkFuncs.real_vkCreateImage(remappedDevice, pPacket->pCreateInfo, &local_imageObj.replayImage);')
+        ci_body.append('            replayResult = m_vkFuncs.real_vkCreateImage(remappedDevice, pPacket->pCreateInfo, NULL, &local_imageObj.replayImage);')
         ci_body.append('            if (replayResult == VK_SUCCESS)')
         ci_body.append('            {')
         ci_body.append('                m_objMapper.add_to_images_map(*(pPacket->pImage), local_imageObj);')
@@ -1439,7 +1436,7 @@ class Subcommand(object):
         cb_body.append('            {')
         cb_body.append('                return vktrace_replay::VKTRACE_REPLAY_ERROR;')
         cb_body.append('            }')
-        cb_body.append('            replayResult = m_vkFuncs.real_vkCreateBuffer(remappedDevice, pPacket->pCreateInfo, &local_bufferObj.replayBuffer);')
+        cb_body.append('            replayResult = m_vkFuncs.real_vkCreateBuffer(remappedDevice, pPacket->pCreateInfo, NULL, &local_bufferObj.replayBuffer);')
         cb_body.append('            if (replayResult == VK_SUCCESS)')
         cb_body.append('            {')
         cb_body.append('                m_objMapper.add_to_buffers_map(*(pPacket->pBuffer), local_bufferObj);')
@@ -1644,7 +1641,8 @@ class Subcommand(object):
                     rr_string += ');'
                 elif create_view:
                     rr_list = rr_string.split(', ')
-                    rr_list[-2] = '&createInfo'
+                    rr_list[-3] = '&createInfo'
+                    rr_list[-2] = 'NULL'
                     rr_list[-1] = '&local_%s);' % proto.params[-1].name
                     rr_string = ', '.join(rr_list)
                     # this is a sneaky shortcut to use generic create code below to add_to_map

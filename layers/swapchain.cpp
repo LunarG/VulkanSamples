@@ -197,12 +197,12 @@ static const char *presentModeStr(VkPresentModeKHR value)
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     // Call down the call chain:
     VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
-    VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
+    VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
     if (result == VK_SUCCESS) {
         // Since it succeeded, do layer-specific work:
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -218,7 +218,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
 {
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(instance);
@@ -233,7 +233,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
-        my_data->instance_dispatch_table->DestroyInstance(instance);
+        my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
 
         // Clean up logging callback, if any
         while (my_data->logging_callback.size() > 0) {
@@ -299,7 +299,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -319,7 +319,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     // Call down the call chain:
     result = my_device_data->device_dispatch_table->CreateDevice(
-            physicalDevice, pCreateInfo, pDevice);
+            physicalDevice, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         // Since it succeeded, do layer-specific work:
         my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);
@@ -329,7 +329,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
 {
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(device);
@@ -344,7 +344,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
-        my_data->device_dispatch_table->DestroyDevice(device);
+        my_data->device_dispatch_table->DestroyDevice(device, pAllocator);
     }
 
     // Regardless of skipCall value, do some internal cleanup:

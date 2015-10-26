@@ -142,6 +142,7 @@ VkResult intel_event_get_status(struct intel_event *event)
 ICD_EXPORT VkResult VKAPI vkCreateEvent(
     VkDevice                                  device,
     const VkEventCreateInfo*                pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkEvent*                                  pEvent)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -152,7 +153,8 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
 
 ICD_EXPORT void VKAPI vkDestroyEvent(
     VkDevice                                device,
-    VkEvent                                 event)
+    VkEvent                                 event,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(event);

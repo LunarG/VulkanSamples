@@ -57,10 +57,10 @@ void icd_instance_destroy(struct icd_instance *instance);
 
 static inline void *icd_instance_alloc(const struct icd_instance *instance,
                                        size_t size, size_t alignment,
-                                       VkSystemAllocType type)
+                                       VkSystemAllocScope scope)
 {
     return instance->alloc_cb.pfnAlloc(instance->alloc_cb.pUserData,
-            size, alignment, type);
+            size, alignment, scope);
 }
 
 static inline void icd_instance_free(const struct icd_instance *instance,

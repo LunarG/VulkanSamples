@@ -65,6 +65,7 @@ void intel_mem_free(struct intel_mem *mem)
 ICD_EXPORT VkResult VKAPI vkAllocMemory(
     VkDevice                                device,
     const VkMemoryAllocInfo*                pAllocInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkDeviceMemory*                         pMem)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -74,7 +75,8 @@ ICD_EXPORT VkResult VKAPI vkAllocMemory(
 
 ICD_EXPORT void VKAPI vkFreeMemory(
     VkDevice                                  device,
-    VkDeviceMemory                            mem_)
+    VkDeviceMemory                            mem_,
+    const VkAllocCallbacks*                     pAllocator)
 {
     struct intel_mem *mem = intel_mem(mem_);
 

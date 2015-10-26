@@ -157,7 +157,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    gpu = intel_alloc(instance, sizeof(*gpu), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+    gpu = intel_alloc(instance, sizeof(*gpu), 0, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!gpu)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -171,7 +171,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     render_len = (render_node) ? strlen(render_node) : 0;
 
     gpu->primary_node = intel_alloc(gpu, primary_len + 1 +
-            ((render_len) ? (render_len + 1) : 0), 0, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            ((render_len) ? (render_len + 1) : 0), 0, VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!gpu->primary_node) {
         intel_free(instance, gpu);
         return VK_ERROR_OUT_OF_HOST_MEMORY;

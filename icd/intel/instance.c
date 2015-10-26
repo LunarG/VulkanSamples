@@ -35,11 +35,11 @@ int intel_debug = -1;
 
 void *intel_alloc(const void *handle,
                                 size_t size, size_t alignment,
-                                VkSystemAllocType type)
+                                VkSystemAllocScope scope)
 {
     assert(intel_handle_validate(handle));
     return icd_instance_alloc(((const struct intel_handle *) handle)->instance->icd,
-            size, alignment, type);
+            size, alignment, scope);
 }
 
 void intel_free(const void *handle, void *ptr)
@@ -146,6 +146,7 @@ static void intel_instance_destroy(struct intel_instance *instance)
 
 static VkResult intel_instance_create(
         const VkInstanceCreateInfo* info,
+        const VkAllocCallbacks* allocator,
         struct intel_instance **pInstance)
 {
     struct intel_instance *instance;
@@ -154,12 +155,12 @@ static VkResult intel_instance_create(
 
     intel_debug_init();
 
-    icd = icd_instance_create(info->pAppInfo, info->pAllocCb);
+    icd = icd_instance_create(info->pAppInfo, allocator);
     if (!icd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     instance = icd_instance_alloc(icd, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!instance) {
         icd_instance_destroy(icd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -219,13 +220,16 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
 
 ICD_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkInstance*                             pInstance)
 {
-    return intel_instance_create(pCreateInfo, (struct intel_instance **) pInstance);
+    return intel_instance_create(pCreateInfo, pAllocator,
+            (struct intel_instance **) pInstance);
 }
 
 ICD_EXPORT void VKAPI vkDestroyInstance(
-    VkInstance                                pInstance)
+    VkInstance                                pInstance,
+    const VkAllocCallbacks*                     pAllocator)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 

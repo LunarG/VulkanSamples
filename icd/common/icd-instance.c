@@ -33,7 +33,7 @@
 
 static void * VKAPI default_alloc(void *user_data, size_t size,
                                    size_t alignment,
-                                   VkSystemAllocType allocType)
+                                   VkSystemAllocScope allocScope)
 {
     if (alignment <= 1) {
         return malloc(size);
@@ -80,7 +80,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
         alloc_cb = &default_alloc_cb;
 
     instance = alloc_cb->pfnAlloc(alloc_cb->pUserData, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!instance)
         return NULL;
 
@@ -89,7 +89,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
     name = (app_info->pAppName) ? app_info->pAppName : "unnamed";
     len = strlen(name);
     instance->name = alloc_cb->pfnAlloc(alloc_cb->pUserData, len + 1, 0,
-            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
     if (!instance->name) {
         alloc_cb->pfnFree(alloc_cb->pUserData, instance);
         return NULL;
@@ -133,7 +133,7 @@ VkResult icd_instance_create_logger(
 //    }
 
     logger = icd_instance_alloc(instance, sizeof(*logger), 0,
-            VK_SYSTEM_ALLOC_TYPE_DEBUG);
+            VK_SYSTEM_ALLOC_SCOPE_OBJECT);
     if (!logger)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

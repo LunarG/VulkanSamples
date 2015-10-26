@@ -1356,6 +1356,7 @@ void intel_att_view_init(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
     VkDevice                            device,
     const VkBufferViewCreateInfo*       pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkBufferView*                       pView)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1366,7 +1367,8 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
 
 ICD_EXPORT void VKAPI vkDestroyBufferView(
     VkDevice                            device,
-    VkBufferView                        bufferView)
+    VkBufferView                        bufferView,
+    const VkAllocCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(bufferView);
@@ -1377,6 +1379,7 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
 ICD_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice                            device,
     const VkImageViewCreateInfo*        pCreateInfo,
+    const VkAllocCallbacks*                     pAllocator,
     VkImageView*                        pView)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1387,7 +1390,8 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
 
 ICD_EXPORT void VKAPI vkDestroyImageView(
     VkDevice                            device,
-    VkImageView                         imageView)
+    VkImageView                         imageView,
+    const VkAllocCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(imageView);
