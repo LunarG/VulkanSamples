@@ -938,8 +938,8 @@ core = Extension(
         Proto("void", "CmdWriteTimestamp",
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkPipelineStageFlagBits", "pipelineStage"),
-             Param("VkBuffer", "destBuffer"),
-             Param("VkDeviceSize", "destOffset")]),
+             Param("VkQueryPool", "queryPool"),
+             Param("uint32_t", "slot")]),
 
         Proto("void", "CmdCopyQueryPoolResults",
             [Param("VkCmdBuffer", "cmdBuffer"),

@@ -220,20 +220,21 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
-    VkBuffer                                  destBuffer,
-    VkDeviceSize                                destOffset)
+    VkQueryPool                                 queryPool,
+    uint32_t                                    slot)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
-    struct intel_buf *buf = intel_buf(destBuffer);
+    struct intel_query *query = intel_query(queryPool);
+    struct intel_bo *bo = query->obj.mem->bo;
+    const VkDeviceSize offset = query->slot_stride * slot;
 
     if ((pipelineStage & VK_PIPELINE_STAGE_ALL_GPU_COMMANDS) &&
         pipelineStage != VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) {
-        cmd_batch_timestamp(cmd, buf->obj.mem->bo, destOffset);
+        cmd_batch_timestamp(cmd, bo, offset);
     } else {
         /* XXX we are not supposed to use two commands... */
-        gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
-                destOffset, GEN6_REG_TIMESTAMP);
-        gen6_MI_STORE_REGISTER_MEM(cmd, buf->obj.mem->bo,
-                destOffset + 4, GEN6_REG_TIMESTAMP + 4);
+        gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset, GEN6_REG_TIMESTAMP);
+        gen6_MI_STORE_REGISTER_MEM(cmd, bo, offset + 4,
+                GEN6_REG_TIMESTAMP + 4);
     }
 }

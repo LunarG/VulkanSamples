@@ -104,6 +104,9 @@ VkResult intel_query_create(struct intel_dev *dev,
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         query_init_pipeline_statistics(dev, info, query);
         break;
+    case VK_QUERY_TYPE_TIMESTAMP:
+        query->slot_stride = u_align(sizeof(uint64_t), 64);
+        break;
     default:
         assert(!"unknown query type");
         break;
@@ -163,6 +166,21 @@ query_process_pipeline_statistics(const struct intel_query *query,
     }
 }
 
+static void
+query_process_timestamp(const struct intel_query *query,
+                        uint32_t count, const uint8_t *raw,
+                        uint64_t *results)
+{
+    uint32_t i;
+
+    for (i = 0; i < count; i++) {
+        const uint64_t *ts = (const uint64_t *) raw;
+
+        results[i] = *ts;
+        raw += query->slot_stride;
+    }
+}
+
 VkResult intel_query_get_results(struct intel_query *query,
                                  uint32_t slot_start, uint32_t slot_count,
                                  void *results)
@@ -184,6 +202,9 @@ VkResult intel_query_get_results(struct intel_query *query,
         break;
     case VK_QUERY_TYPE_PIPELINE_STATISTICS:
         query_process_pipeline_statistics(query, slot_count, ptr, results);
+        break;
+    case VK_QUERY_TYPE_TIMESTAMP:
+        query_process_timestamp(query, slot_count, ptr, results);
         break;
     default:
         assert(0);

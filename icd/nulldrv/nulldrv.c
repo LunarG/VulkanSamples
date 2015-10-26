@@ -1062,8 +1062,8 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer                              cmdBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
-    VkBuffer                                  destBuffer,
-    VkDeviceSize                                destOffset)
+    VkQueryPool                                 queryPool,
+    uint32_t                                    slot)
 {
     NULLDRV_LOG_FUNC;
 }

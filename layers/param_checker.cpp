@@ -6362,8 +6362,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
 bool PostCmdWriteTimestamp(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlagBits pipelineStage,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset)
+    VkQueryPool queryPool,
+    uint32_t slot)
 {
 
     ValidateEnumerator(pipelineStage);
@@ -6374,12 +6374,12 @@ bool PostCmdWriteTimestamp(
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(
     VkCmdBuffer cmdBuffer,
     VkPipelineStageFlagBits pipelineStage,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset)
+    VkQueryPool queryPool,
+    uint32_t slot)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, pipelineStage, destBuffer, destOffset);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, pipelineStage, queryPool, slot);
 
-    PostCmdWriteTimestamp(cmdBuffer, pipelineStage, destBuffer, destOffset);
+    PostCmdWriteTimestamp(cmdBuffer, pipelineStage, queryPool, slot);
 }
 
 bool PostCmdCopyQueryPoolResults(
