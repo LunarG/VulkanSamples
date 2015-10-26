@@ -767,12 +767,9 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\ttextureCompressionBC                    = %u\n", features->textureCompressionBC                   );
     printf("\tocclusionQueryNonConservative           = %u\n", features->occlusionQueryNonConservative          );
     printf("\tpipelineStatisticsQuery                 = %u\n", features->pipelineStatisticsQuery                );
-    printf("\tvertexSideEffects                       = %u\n", features->vertexSideEffects                      );
-    printf("\ttessellationSideEffects                 = %u\n", features->tessellationSideEffects                );
-    printf("\tgeometrySideEffects                     = %u\n", features->geometrySideEffects                    );
-    printf("\tfragmentSideEffects                     = %u\n", features->fragmentSideEffects                    );
-    printf("\tshaderTessellationPointSize             = %u\n", features->shaderTessellationPointSize            );
-    printf("\tshaderGeometryPointSize                 = %u\n", features->shaderGeometryPointSize                );
+    printf("\tvertexSideEffects                       = %u\n", features->vertexPipelineStoresAndAtomics         );
+    printf("\ttessellationSideEffects                 = %u\n", features->fragmentStoresAndAtomics               );
+    printf("\tgeometrySideEffects                     = %u\n", features->shaderTessellationAndGeometryPointSize );
     printf("\tshaderImageGatherExtended               = %u\n", features->shaderImageGatherExtended              );
     printf("\tshaderStorageImageExtendedFormats       = %u\n", features->shaderStorageImageExtendedFormats      );
     printf("\tshaderStorageImageMultisample           = %u\n", features->shaderStorageImageMultisample          );

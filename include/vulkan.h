@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 190, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 191, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -1138,12 +1138,9 @@ typedef struct {
     VkBool32                                    textureCompressionBC;
     VkBool32                                    occlusionQueryNonConservative;
     VkBool32                                    pipelineStatisticsQuery;
-    VkBool32                                    vertexSideEffects;
-    VkBool32                                    tessellationSideEffects;
-    VkBool32                                    geometrySideEffects;
-    VkBool32                                    fragmentSideEffects;
-    VkBool32                                    shaderTessellationPointSize;
-    VkBool32                                    shaderGeometryPointSize;
+    VkBool32                                    vertexPipelineStoresAndAtomics;
+    VkBool32                                    fragmentStoresAndAtomics;
+    VkBool32                                    shaderTessellationAndGeometryPointSize;
     VkBool32                                    shaderImageGatherExtended;
     VkBool32                                    shaderStorageImageExtendedFormats;
     VkBool32                                    shaderStorageImageMultisample;
