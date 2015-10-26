@@ -877,7 +877,7 @@ typedef enum {
 typedef VkFlags VkSparseImageFormatFlags;
 
 typedef enum {
-    VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT = 0x00000001,
+    VK_SPARSE_MEMORY_BIND_REPLICATE_BLOCK_BIT = 0x00000001,
 } VkSparseMemoryBindFlagBits;
 typedef VkFlags VkSparseMemoryBindFlags;
 

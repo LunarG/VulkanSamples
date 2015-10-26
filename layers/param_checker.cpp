@@ -657,7 +657,7 @@ std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkSparseMemoryBindFlagBits const& enumerator)
 {
-    VkSparseMemoryBindFlagBits allFlags = (VkSparseMemoryBindFlagBits)(VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT);
+    VkSparseMemoryBindFlagBits allFlags = (VkSparseMemoryBindFlagBits)(VK_SPARSE_MEMORY_BIND_REPLICATE_BLOCK_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -675,9 +675,9 @@ std::string EnumeratorString(VkSparseMemoryBindFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT)
+    if(enumerator & VK_SPARSE_MEMORY_BIND_REPLICATE_BLOCK_BIT)
     {
-        strings.push_back("VK_SPARSE_MEMORY_BIND_REPLICATE_64KIB_BLOCK_BIT");
+        strings.push_back("VK_SPARSE_MEMORY_BIND_REPLICATE_BLOCK_BIT");
     }
 
     std::string enumeratorString;
