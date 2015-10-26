@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 185, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 186, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -52,9 +52,9 @@ extern "C" {
 
 
 #if defined(__LP64__) || defined(_WIN64) || defined(__x86_64__) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
-	#define VK_DEFINE_NONDISP_HANDLE(obj) typedef struct obj##_T *obj;
+        #define VK_DEFINE_NONDISP_HANDLE(obj) typedef struct obj##_T *obj;
 #else
-	#define VK_DEFINE_NONDISP_HANDLE(obj) typedef uint64_t obj;
+        #define VK_DEFINE_NONDISP_HANDLE(obj) typedef uint64_t obj;
 #endif
         
 
