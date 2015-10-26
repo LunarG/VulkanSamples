@@ -237,7 +237,7 @@ void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
     pLimits->maxImageDimension3D   = 8192;
     pLimits->maxImageDimensionCube = 8192;
     pLimits->maxImageArrayLayers   = 2048;
-    pLimits->maxTexelBufferSize    = 128 * 1024 * 1024;  // 128M texels hard limit
+    pLimits->maxTexelBufferElements = 128 * 1024 * 1024;  // 128M texels hard limit
     pLimits->maxUniformBufferRange = 64 * 1024;          // not hard limit
 
     /* HW has two per-stage resource tables:

@@ -818,7 +818,7 @@ typedef enum {
     VK_QUEUE_GRAPHICS_BIT = 0x00000001,
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
     VK_QUEUE_DMA_BIT = 0x00000004,
-    VK_QUEUE_SPARSE_MEMMGR_BIT = 0x00000008,
+    VK_QUEUE_SPARSE_BINDING_BIT = 0x00000008,
 } VkQueueFlagBits;
 typedef VkFlags VkQueueFlags;
 
@@ -847,9 +847,9 @@ typedef enum {
 } VkImageAspectFlagBits;
 
 typedef enum {
-    VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT = 0x00000001,
-    VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT = 0x00000002,
-    VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT = 0x00000004,
+    VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT = 0x00000001,
+    VK_SPARSE_IMAGE_FORMAT_ALIGNED_MIP_SIZE_BIT = 0x00000002,
+    VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT = 0x00000004,
 } VkSparseImageFormatFlagBits;
 typedef VkFlags VkSparseImageFormatFlags;
 
@@ -1193,7 +1193,7 @@ typedef struct {
     uint32_t                                    maxImageDimensionCube;
     uint32_t                                    maxImageArrayLayers;
     VkSampleCountFlags                          sampleCounts;
-    uint32_t                                    maxTexelBufferSize;
+    uint32_t                                    maxTexelBufferElements;
     uint32_t                                    maxUniformBufferRange;
     uint32_t                                    maxStorageBufferRange;
     uint32_t                                    maxPushConstantsSize;
@@ -1289,7 +1289,7 @@ typedef struct {
 
 typedef struct {
     VkBool32                                    residencyStandard2DBlockShape;
-    VkBool32                                    residencyStandard2DMSBlockShape;
+    VkBool32                                    residencyStandard2DMultisampleBlockShape;
     VkBool32                                    residencyStandard3DBlockShape;
     VkBool32                                    residencyAlignedMipSize;
     VkBool32                                    residencyNonResident;
@@ -1404,7 +1404,7 @@ typedef struct {
 } VkSparseImageFormatProperties;
 
 typedef struct {
-    VkSparseImageFormatProperties               formatProps;
+    VkSparseImageFormatProperties               formatProperties;
     uint32_t                                    imageMipTailStartLOD;
     VkDeviceSize                                imageMipTailSize;
     VkDeviceSize                                imageMipTailOffset;
@@ -1412,10 +1412,10 @@ typedef struct {
 } VkSparseImageMemoryRequirements;
 
 typedef struct {
-    VkDeviceSize                                rangeOffset;
-    VkDeviceSize                                rangeSize;
-    VkDeviceSize                                memOffset;
+    VkDeviceSize                                resourceOffset;
+    VkDeviceSize                                size;
     VkDeviceMemory                              mem;
+    VkDeviceSize                                memOffset;
     VkSparseMemoryBindFlags                     flags;
 } VkSparseMemoryBind;
 
@@ -1447,8 +1447,8 @@ typedef struct {
     VkImageSubresource                          subresource;
     VkOffset3D                                  offset;
     VkExtent3D                                  extent;
-    VkDeviceSize                                memOffset;
     VkDeviceMemory                              mem;
+    VkDeviceSize                                memOffset;
     VkSparseMemoryBindFlags                     flags;
 } VkSparseImageMemoryBind;
 
@@ -1593,15 +1593,15 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineCacheCreateFlags                  flags;
-    size_t                                      initialSize;
-    const void*                                 initialData;
+    size_t                                      initialDataSize;
+    const void*                                 pInitialData;
     size_t                                      maxSize;
 } VkPipelineCacheCreateInfo;
 
 typedef struct {
     uint32_t                                    constantId;
-    size_t                                      size;
     uint32_t                                    offset;
+    size_t                                      size;
 } VkSpecializationMapEntry;
 
 typedef struct {
@@ -1621,7 +1621,7 @@ typedef struct {
 
 typedef struct {
     uint32_t                                    binding;
-    uint32_t                                    strideInBytes;
+    uint32_t                                    stride;
     VkVertexInputStepRate                       stepRate;
 } VkVertexInputBindingDescription;
 
@@ -1629,7 +1629,7 @@ typedef struct {
     uint32_t                                    location;
     uint32_t                                    binding;
     VkFormat                                    format;
-    uint32_t                                    offsetInBytes;
+    uint32_t                                    offset;
 } VkVertexInputAttributeDescription;
 
 typedef struct {
@@ -1763,7 +1763,7 @@ typedef struct {
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
     const VkPipelineColorBlendAttachmentState*  pAttachments;
-    float                                       blendConst[4];
+    float                                       blendConstants[4];
 } VkPipelineColorBlendStateCreateInfo;
 
 typedef struct {
@@ -2013,7 +2013,7 @@ typedef struct {
 typedef struct {
     VkDeviceSize                                srcOffset;
     VkDeviceSize                                destOffset;
-    VkDeviceSize                                copySize;
+    VkDeviceSize                                size;
 } VkBufferCopy;
 
 typedef struct {
@@ -2249,7 +2249,7 @@ typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCmdBuffer cmdBuffer, uint32_t viewp
 typedef void (VKAPI *PFN_vkCmdSetScissor)(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
 typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCmdBuffer cmdBuffer, float lineWidth);
 typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCmdBuffer cmdBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
-typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCmdBuffer cmdBuffer, const float blendConst[4]);
+typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCmdBuffer cmdBuffer, const float blendConstants[4]);
 typedef void (VKAPI *PFN_vkCmdSetDepthBounds)(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds);
 typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
 typedef void (VKAPI *PFN_vkCmdSetStencilWriteMask)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
@@ -2269,7 +2269,7 @@ typedef void (VKAPI *PFN_vkCmdBlitImage)(VkCmdBuffer cmdBuffer, VkImage srcImage
 typedef void (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
-typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
+typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize size, uint32_t data);
 typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI *PFN_vkCmdClearAttachments)(VkCmdBuffer cmdBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkClearRect* pRects);
@@ -2830,7 +2830,7 @@ void VKAPI vkCmdSetDepthBias(
 
 void VKAPI vkCmdSetBlendConstants(
     VkCmdBuffer                                 cmdBuffer,
-    const float                                 blendConst[4]);
+    const float                                 blendConstants[4]);
 
 void VKAPI vkCmdSetDepthBounds(
     VkCmdBuffer                                 cmdBuffer,
@@ -2968,7 +2968,7 @@ void VKAPI vkCmdFillBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
-    VkDeviceSize                                fillSize,
+    VkDeviceSize                                size,
     uint32_t                                    data);
 
 void VKAPI vkCmdClearColorImage(

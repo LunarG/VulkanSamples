@@ -751,7 +751,7 @@ core = Extension(
 
         Proto("void", "CmdSetBlendConstants",
             [Param("VkCmdBuffer", "cmdBuffer"),
-             Param("const float[4]", "blendConst")]),
+             Param("const float[4]", "blendConstants")]),
 
         Proto("void", "CmdSetDepthBounds",
             [Param("VkCmdBuffer", "cmdBuffer"),
@@ -889,7 +889,7 @@ core = Extension(
             [Param("VkCmdBuffer", "cmdBuffer"),
              Param("VkBuffer", "destBuffer"),
              Param("VkDeviceSize", "destOffset"),
-             Param("VkDeviceSize", "fillSize"),
+             Param("VkDeviceSize", "size"),
              Param("uint32_t", "data")]),
 
         Proto("void", "CmdClearColorImage",

@@ -2471,7 +2471,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
         dev_data->device_dispatch_table->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
+VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConstants[4])
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -2481,13 +2481,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const f
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_SETBLENDSTATE);
             pCB->status |= CBSTATUS_BLEND_SET;
-            memcpy(pCB->blendConst, blendConst, 4 * sizeof(float));
+            memcpy(pCB->blendConstants, blendConstants, 4 * sizeof(float));
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, cmdBuffer, "vkCmdSetBlendConstants()");
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConst);
+        dev_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConstants);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
@@ -2966,7 +2966,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
         dev_data->device_dispatch_table->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize size, uint32_t data)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -2981,7 +2981,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdCopyFillBuffer");
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+        dev_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(

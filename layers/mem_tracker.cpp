@@ -1813,7 +1813,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
      VkCmdBuffer                            cmdBuffer,
-     const float                            blendConst[4])
+     const float                            blendConstants[4])
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1825,7 +1825,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConst);
+        my_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConstants);
     }
 }
 
@@ -2176,7 +2176,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer  cmdBuffer,
     VkBuffer     destBuffer,
     VkDeviceSize destOffset,
-    VkDeviceSize fillSize,
+    VkDeviceSize size,
     uint32_t     data)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
@@ -2189,7 +2189,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+        my_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
     }
 }
 

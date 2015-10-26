@@ -803,7 +803,7 @@ static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparse
     printf("\t---------------------------------\n");
 
     printf("\t\tresidencyStandard2DBlockShape     = %u\n", sparseProps->residencyStandard2DBlockShape    );
-    printf("\t\tresidencyStandard2DMSBlockShape   = %u\n", sparseProps->residencyStandard2DMSBlockShape  );
+    printf("\t\tresidencyStandard2DMultisampleBlockShape = %u\n", sparseProps->residencyStandard2DMultisampleBlockShape);
     printf("\t\tresidencyStandard3DBlockShape     = %u\n", sparseProps->residencyStandard3DBlockShape    );
     printf("\t\tresidencyAlignedMipSize           = %u\n", sparseProps->residencyAlignedMipSize          );
     printf("\t\tresidencyNonResident              = %u\n", sparseProps->residencyNonResident             );
@@ -821,7 +821,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxImageDimensionCube                   = 0x%" PRIxLEAST32 "\n", limits->maxImageDimensionCube                  );
     printf("\t\tmaxImageArrayLayers                     = 0x%" PRIxLEAST32 "\n", limits->maxImageArrayLayers                    );
     printf("\t\tsampleCounts                            = 0x%" PRIxLEAST32 "\n", limits->sampleCounts                           );
-    printf("\t\tmaxTexelBufferSize                      = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferSize                     );
+    printf("\t\tmaxTexelBufferElements                  = 0x%" PRIxLEAST32 "\n", limits->maxTexelBufferElements                 );
     printf("\t\tmaxUniformBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxUniformBufferRange                 );
     printf("\t\tmaxStorageBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferRange                 );
     printf("\t\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );

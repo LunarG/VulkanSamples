@@ -60,12 +60,12 @@ void intel_set_depth_bias(
 
 void intel_set_blend_constants(
     struct intel_cmd                   *cmd,
-    const float                         blendConst[4])
+    const float                         constants[4])
 {
-    cmd->bind.state.blend.blend_const[0] = blendConst[0];
-    cmd->bind.state.blend.blend_const[1] = blendConst[1];
-    cmd->bind.state.blend.blend_const[2] = blendConst[2];
-    cmd->bind.state.blend.blend_const[3] = blendConst[3];
+    cmd->bind.state.blend.blend_const[0] = constants[0];
+    cmd->bind.state.blend.blend_const[1] = constants[1];
+    cmd->bind.state.blend.blend_const[2] = constants[2];
+    cmd->bind.state.blend.blend_const[3] = constants[3];
 }
 
 void intel_set_depth_bounds(
@@ -206,7 +206,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBias(
 
 ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
     VkCmdBuffer                         cmdBuffer,
-    const float                         blendConst[4])
+    const float                         blendConstants[4])
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
 
@@ -214,7 +214,7 @@ ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
         return;
     }
 
-    intel_set_blend_constants(cmd, blendConst);
+    intel_set_blend_constants(cmd, blendConstants);
 }
 
 ICD_EXPORT void VKAPI vkCmdSetDepthBounds(

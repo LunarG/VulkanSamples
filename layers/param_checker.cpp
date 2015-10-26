@@ -450,7 +450,7 @@ bool ValidateEnumerator(VkQueueFlagBits const& enumerator)
     VkQueueFlagBits allFlags = (VkQueueFlagBits)(
         VK_QUEUE_DMA_BIT |
         VK_QUEUE_COMPUTE_BIT |
-        VK_QUEUE_SPARSE_MEMMGR_BIT |
+        VK_QUEUE_SPARSE_BINDING_BIT |
         VK_QUEUE_GRAPHICS_BIT);
     if(enumerator & (~allFlags))
     {
@@ -477,9 +477,9 @@ std::string EnumeratorString(VkQueueFlagBits const& enumerator)
     {
         strings.push_back("VK_QUEUE_COMPUTE_BIT");
     }
-    if(enumerator & VK_QUEUE_SPARSE_MEMMGR_BIT)
+    if(enumerator & VK_QUEUE_SPARSE_BINDING_BIT)
     {
-        strings.push_back("VK_QUEUE_SPARSE_MEMMGR_BIT");
+        strings.push_back("VK_QUEUE_SPARSE_BINDING_BIT");
     }
     if(enumerator & VK_QUEUE_GRAPHICS_BIT)
     {
@@ -603,9 +603,9 @@ std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkSparseImageFormatFlagBits const& enumerator)
 {
-    VkSparseImageFormatFlagBits allFlags = (VkSparseImageFormatFlagBits)(VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT |
-        VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT |
-        VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT);
+    VkSparseImageFormatFlagBits allFlags = (VkSparseImageFormatFlagBits)(VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT |
+        VK_SPARSE_IMAGE_FORMAT_ALIGNED_MIP_SIZE_BIT |
+        VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -623,17 +623,17 @@ std::string EnumeratorString(VkSparseImageFormatFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT)
+    if(enumerator & VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_NONSTD_BLOCK_SIZE_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT");
     }
-    if(enumerator & VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT)
+    if(enumerator & VK_SPARSE_IMAGE_FORMAT_ALIGNED_MIP_SIZE_BIT)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_ALIGNED_MIP_SIZE_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FORMAT_ALIGNED_MIP_SIZE_BIT");
     }
-    if(enumerator & VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT)
+    if(enumerator & VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT)
     {
-        strings.push_back("VK_SPARSE_IMAGE_FMT_SINGLE_MIPTAIL_BIT");
+        strings.push_back("VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT");
     }
 
     std::string enumeratorString;
@@ -2555,11 +2555,11 @@ bool PostGetImageSparseMemoryRequirements(
 
     if(pSparseMemoryRequirements != nullptr)
     {
-    if ((pSparseMemoryRequirements->formatProps.aspect &
+    if ((pSparseMemoryRequirements->formatProperties.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProps.aspect, is an unrecognized enumerator");
+        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProperties.aspect, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3619,7 +3619,7 @@ bool PreCreatePipelineCache(
         "vkCreatePipelineCache parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->initialData != nullptr)
+    if(pCreateInfo->pInitialData != nullptr)
     {
     }
     }
@@ -5162,9 +5162,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthB
     get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
+VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConstants[4])
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConst);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConstants);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
@@ -5816,7 +5816,7 @@ bool PostCmdFillBuffer(
     VkCmdBuffer cmdBuffer,
     VkBuffer destBuffer,
     VkDeviceSize destOffset,
-    VkDeviceSize fillSize,
+    VkDeviceSize size,
     uint32_t data)
 {
 
@@ -5831,12 +5831,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer cmdBuffer,
     VkBuffer destBuffer,
     VkDeviceSize destOffset,
-    VkDeviceSize fillSize,
+    VkDeviceSize size,
     uint32_t data)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
 
-    PostCmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    PostCmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
 }
 
 bool PreCmdClearColorImage(

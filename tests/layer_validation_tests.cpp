@@ -1856,8 +1856,8 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
 
     VkPipelineCacheCreateInfo pc_ci = {};
         pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-        pc_ci.initialSize = 0;
-        pc_ci.initialData = 0;
+        pc_ci.initialDataSize = 0;
+        pc_ci.pInitialData = 0;
         pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
@@ -4747,8 +4747,8 @@ TEST_F(VkLayerTest, FillBufferAlignment)
     m_cmdBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling FillBuffer with bad size";
-    if (!strstr(msgString.c_str(),"fillSize, is not a multiple of 4")) {
-        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize fillSize, is not a multiple of 4'";
+    if (!strstr(msgString.c_str(),"size, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize size, is not a multiple of 4'";
     }
     EndCommandBuffer();
 }

@@ -335,12 +335,12 @@ validateQueueFlags(
         pQueueInfo = pQueueInfo->pNextQI;
     }
     if (pQueueInfo != NULL) {
-        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_MEMMGR_BIT) == 0) {
+        if ((queueInfo != NULL) && (queueInfo[pQueueInfo->queueNodeIndex].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) == 0) {
             log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not set", function);
+                "Attempting %s on a non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not set", function);
         } else {
             log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(queue), 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",
-                "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_SPARSE_MEMMGR_BIT not known", function);
+                "Attempting %s on a possibly non-memory-management capable queue -- VK_QUEUE_SPARSE_BINDING_BIT not known", function);
         }
     }
 }

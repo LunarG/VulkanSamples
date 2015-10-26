@@ -691,12 +691,12 @@ static void pipeline_build_vertex_elements(struct intel_pipeline *pipeline,
             break;
         }
 
-        assert(attr->offsetInBytes <= 2047);
+        assert(attr->offset <= 2047);
 
         dw[0] = attr->binding << GEN6_VE_DW0_VB_INDEX__SHIFT |
                 GEN6_VE_DW0_VALID |
                 format << GEN6_VE_DW0_FORMAT__SHIFT |
-                attr->offsetInBytes;
+                attr->offset;
 
         dw[1] = comps[0] << GEN6_VE_DW1_COMP0__SHIFT |
                 comps[1] << GEN6_VE_DW1_COMP1__SHIFT |
@@ -1096,10 +1096,10 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
         pipeline->state.depth_bias.slope_scaled_depth_bias = info->rs.depthBiasSlopeFactor;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS) {
-        pipeline->state.blend.blend_const[0] = info->cb.blendConst[0];
-        pipeline->state.blend.blend_const[1] = info->cb.blendConst[1];
-        pipeline->state.blend.blend_const[2] = info->cb.blendConst[2];
-        pipeline->state.blend.blend_const[3] = info->cb.blendConst[3];
+        pipeline->state.blend.blend_const[0] = info->cb.blendConstants[0];
+        pipeline->state.blend.blend_const[1] = info->cb.blendConstants[1];
+        pipeline->state.blend.blend_const[2] = info->cb.blendConstants[2];
+        pipeline->state.blend.blend_const[3] = info->cb.blendConstants[3];
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS) {
         pipeline->state.depth_bounds.min_depth_bounds = info->db.minDepthBounds;

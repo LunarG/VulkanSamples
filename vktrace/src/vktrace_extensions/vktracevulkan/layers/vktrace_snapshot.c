@@ -1376,12 +1376,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer des
     nextTable.CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
+VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize size, uint32_t data)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(cmdBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    nextTable.CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)

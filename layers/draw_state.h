@@ -324,7 +324,7 @@ typedef struct _GLOBAL_CB_NODE {
     float                        depthBiasConstantFactor;
     float                        depthBiasClamp;
     float                        depthBiasSlopeFactor;
-    float                        blendConst[4];
+    float                        blendConstants[4];
     float                        minDepthBounds;
     float                        maxDepthBounds;
     CBStencilData                front;

@@ -206,10 +206,10 @@ void VkRenderFramework::InitState()
     m_depthBiasClamp = 0.0f;
     m_depthBiasSlopeFactor = 0.0f;
 
-    m_blendConst[0] = 1.0f;
-    m_blendConst[1] = 1.0f;
-    m_blendConst[2] = 1.0f;
-    m_blendConst[3] = 1.0f;
+    m_blendConstants[0] = 1.0f;
+    m_blendConstants[1] = 1.0f;
+    m_blendConstants[2] = 1.0f;
+    m_blendConstants[3] = 1.0f;
 
     m_minDepthBounds = 0.f;
     m_maxDepthBounds = 1.f;
@@ -1147,10 +1147,10 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_cb_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     m_cb_state.pNext = VK_NULL_HANDLE;
     m_cb_state.logicOp = VK_LOGIC_OP_COPY;
-    m_cb_state.blendConst[0] = 1.0f;
-    m_cb_state.blendConst[1] = 1.0f;
-    m_cb_state.blendConst[2] = 1.0f;
-    m_cb_state.blendConst[3] = 1.0f;
+    m_cb_state.blendConstants[0] = 1.0f;
+    m_cb_state.blendConstants[1] = 1.0f;
+    m_cb_state.blendConstants[2] = 1.0f;
+    m_cb_state.blendConstants[3] = 1.0f;
 
     m_ms_state.pNext = VK_NULL_HANDLE;
     m_ms_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -1543,9 +1543,9 @@ void VkCommandBufferObj::SetDepthBias(
 }
 
 void VkCommandBufferObj::SetBlendConstants(
-    const float                         blendConst[4])
+    const float                         blendConstants[4])
 {
-    vkCmdSetBlendConstants( handle(), blendConst);
+    vkCmdSetBlendConstants( handle(), blendConstants);
 }
 
 void VkCommandBufferObj::SetDepthBounds(

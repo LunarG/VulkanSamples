@@ -659,7 +659,7 @@ TEST_F(VkCmdCopyBufferTest, Basic)
 
     cmd_.begin();
     VkBufferCopy region = {};
-    region.copySize = 4;
+    region.size = 4;
     vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), 1, &region);
     cmd_.end();
 
@@ -687,7 +687,7 @@ TEST_F(VkCmdCopyBufferTest, Large)
 
     cmd_.begin();
     VkBufferCopy region = {};
-    region.copySize = size * sizeof(VkDeviceSize);
+    region.size = size * sizeof(VkDeviceSize);
     vkCmdCopyBuffer(cmd_.handle(), src.handle(), dst.handle(), 1, &region);
     cmd_.end();
 
@@ -738,7 +738,7 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
     for (int i = 0; i < ARRAY_SIZE(regions); i++) {
         const VkBufferCopy &r = regions[i];
 
-        for (int j = 0; j < r.copySize; j++) {
+        for (int j = 0; j < r.size; j++) {
             EXPECT_EQ(r.srcOffset + j, data[r.destOffset + j]) <<
                 "Region is: " << i << "\n" <<
                 "Offset is: " << r.destOffset + j;
@@ -791,7 +791,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferCopy region = {};
-    region.copySize = 4;
+    region.size = 4;
     vkCmdCopyBuffer(cmd_.handle(), bufs[0].handle(), bufs[1].handle(), 1, &region);
 
     memory_barrier = bufs[1].buffer_memory_barrier(

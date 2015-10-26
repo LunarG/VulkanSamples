@@ -116,7 +116,7 @@ protected:
     float                               m_depthBiasConstantFactor;
     float                               m_depthBiasClamp;
     float                               m_depthBiasSlopeFactor;
-    float                               m_blendConst[4];
+    float                               m_blendConstants[4];
     float                               m_minDepthBounds;
     float                               m_maxDepthBounds;
     uint32_t                            m_stencilCompareMask;
@@ -193,7 +193,7 @@ public:
     void SetScissor(uint32_t scissorCount, const VkRect2D* pScissors);
     void SetLineWidth(float lineWidth);
     void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
-    void SetBlendConstants(const float blendConst[4]);
+    void SetBlendConstants(const float blendConstants[4]);
     void SetDepthBounds(float minDepthBounds, float maxDepthBounds);
     void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
     void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);

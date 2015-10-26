@@ -1096,13 +1096,13 @@ LOADER_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBia
     disp->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
+LOADER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConstants[4])
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdSetBlendConstants(cmdBuffer, blendConst);
+    disp->CmdSetBlendConstants(cmdBuffer, blendConstants);
 }
 
 LOADER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
@@ -1276,13 +1276,13 @@ LOADER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCmdBuffer cmdBuffer, VkBuffer destB
     disp->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
 }
 
-LOADER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data)
+LOADER_EXPORT void VKAPI vkCmdFillBuffer(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize size, uint32_t data)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(cmdBuffer);
 
-    disp->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+    disp->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
 }
 
 LOADER_EXPORT void VKAPI vkCmdClearColorImage(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)

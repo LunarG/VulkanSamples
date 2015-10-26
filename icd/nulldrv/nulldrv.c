@@ -946,7 +946,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
     VkDeviceSize                                destOffset,
-    VkDeviceSize                                fillSize,
+    VkDeviceSize                                size,
     uint32_t                                    data)
 {
     NULLDRV_LOG_FUNC;
@@ -1100,7 +1100,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBiasCo
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConst[4])
+ICD_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConstants[4])
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1414,7 +1414,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
         *pQueueFamilyPropertyCount = 1;
         return;
     }
-    pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_MEMMGR_BIT;
+    pProperties->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_SPARSE_BINDING_BIT;
     pProperties->queueCount = 1;
     pProperties->timestampValidBits = 0;
 }

@@ -1039,18 +1039,18 @@ static void demo_prepare_vertices(struct demo *demo)
     demo->vertices.vi.pVertexAttributeDescriptions = demo->vertices.vi_attrs;
 
     demo->vertices.vi_bindings[0].binding = VERTEX_BUFFER_BIND_ID;
-    demo->vertices.vi_bindings[0].strideInBytes = sizeof(vb[0]);
+    demo->vertices.vi_bindings[0].stride = sizeof(vb[0]);
     demo->vertices.vi_bindings[0].stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
 
     demo->vertices.vi_attrs[0].binding = VERTEX_BUFFER_BIND_ID;
     demo->vertices.vi_attrs[0].location = 0;
     demo->vertices.vi_attrs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    demo->vertices.vi_attrs[0].offsetInBytes = 0;
+    demo->vertices.vi_attrs[0].offset = 0;
 
     demo->vertices.vi_attrs[1].binding = VERTEX_BUFFER_BIND_ID;
     demo->vertices.vi_attrs[1].location = 1;
     demo->vertices.vi_attrs[1].format = VK_FORMAT_R32G32_SFLOAT;
-    demo->vertices.vi_attrs[1].offsetInBytes = sizeof(float) * 3;
+    demo->vertices.vi_attrs[1].offset = sizeof(float) * 3;
 }
 
 static void demo_prepare_descriptor_layout(struct demo *demo)

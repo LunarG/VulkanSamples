@@ -1855,10 +1855,10 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
     pos++;
 
     for (i = 0; i < pipeline->vb_count; i++) {
-        assert(pipeline->vb[i].strideInBytes <= 2048);
+        assert(pipeline->vb[i].stride <= 2048);
 
         dw[0] = i << GEN6_VB_DW0_INDEX__SHIFT |
-                pipeline->vb[i].strideInBytes;
+                pipeline->vb[i].stride;
 
         if (cmd_gen(cmd) >= INTEL_GEN(7)) {
             dw[0] |= GEN7_MOCS_L3_WB << GEN6_VB_DW0_MOCS__SHIFT |

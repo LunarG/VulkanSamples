@@ -427,10 +427,10 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
 
         meta.src.x = region->srcOffset;
         meta.dst.x = region->destOffset;
-        meta.width = region->copySize;
+        meta.width = region->size;
 
         if (cmd_meta_mem_dword_aligned(cmd, region->srcOffset,
-                    region->destOffset, region->copySize)) {
+                    region->destOffset, region->size)) {
             meta.shader_id = INTEL_DEV_META_VS_COPY_MEM;
             meta.src.x /= 4;
             meta.dst.x /= 4;
@@ -753,7 +753,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     VkCmdBuffer                              cmdBuffer,
     VkBuffer                                  destBuffer,
     VkDeviceSize                                destOffset,
-    VkDeviceSize                                fillSize,
+    VkDeviceSize                                size,
     uint32_t                                    data)
 {
     struct intel_cmd *cmd = intel_cmd(cmdBuffer);
@@ -769,7 +769,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     meta.clear_val[0] = data;
 
     meta.dst.x = destOffset / 4;
-    meta.width = fillSize / 4;
+    meta.width = size / 4;
     meta.height = 1;
     meta.samples = 1;
 

@@ -86,7 +86,7 @@ void intel_set_depth_bias(
     float                               depthBiasSlopeFactor);
 void intel_set_blend_constants(
     struct intel_cmd                   *cmd,
-    const float                         blendConst[4]);
+    const float                         constants[4]);
 void intel_set_depth_bounds(
     struct intel_cmd                   *cmd,
     float                               minDepthBounds,

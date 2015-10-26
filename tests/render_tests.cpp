@@ -762,7 +762,7 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
-         sizeof(g_vbData[0]),              // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+         sizeof(g_vbData[0]),              // stride;  Distance between vertices in bytes (0 = no advancement)
          VK_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
     };
 
@@ -770,11 +770,11 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     vi_attribs[0].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[0].location = 0;                         // location, position
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // Binding ID
     vi_attribs[1].location = 1;                         // location, color
     vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[1].offsetInBytes = 1*sizeof(float)*4;     // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = 1*sizeof(float)*4;     // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -841,7 +841,7 @@ TEST_F(VkRenderTest, TriangleMRT)
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
-        sizeof(vb_data[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(vb_data[0]),                     // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -849,7 +849,7 @@ TEST_F(VkRenderTest, TriangleMRT)
     vi_attrib.binding = MESH_BUF_ID;            // index into vertexBindingDescriptions
     vi_attrib.location = 0;
     vi_attrib.format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
-    vi_attrib.offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attrib.offset = 0;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(&vi_attrib, 1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -950,7 +950,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -958,11 +958,11 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[0].location = 0;                         // layout location of vertex attribute
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;               // binding ID from BINDING_DESCRIPTION array to use for this attribute
     vi_attribs[1].location = 1;                         // layout location of vertex attribute
     vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[1].offsetInBytes = 16;                   // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = 16;                   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1043,7 +1043,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1051,7 +1051,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1131,7 +1131,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1139,7 +1139,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1229,7 +1229,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1237,7 +1237,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1318,7 +1318,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1326,7 +1326,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     vi_attribs[0].binding = MESH_BIND_ID;               // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                    // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                    // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,1);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1555,7 +1555,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1563,11 +1563,11 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
-    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
     vi_attribs[1].format = VK_FORMAT_R32G32_SFLOAT;   // format of source data
-    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1658,7 +1658,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
-        sizeof(vData[0]),                       // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(vData[0]),                       // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1666,11 +1666,11 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     vi_attribs[0].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[0].location = 4;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;                         // format of source data
-    vi_attribs[0].offsetInBytes = sizeof(float) * 4 * 2;   // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = sizeof(float) * 4 * 2;   // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;                                        // binding ID
     vi_attribs[1].location = 1;
     vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;                         // format of source data
-    vi_attribs[1].offsetInBytes = sizeof(float) * 4 * 1;   // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = sizeof(float) * 4 * 1;   // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding, 1);
@@ -1751,7 +1751,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
-        sizeof(g_vbData[0]),                    // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1759,11 +1759,11 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
     vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -1868,7 +1868,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 #define MESH_BUF_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
-        sizeof(g_vbData[0]),                     // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vbData[0]),                     // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
     };
 
@@ -1876,11 +1876,11 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     vi_attribs[0].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[0].location = 0;
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[0].offsetInBytes = 0;                // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BUF_ID;            // binding ID
     vi_attribs[1].location = 1;
     vi_attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;            // format of source data
-    vi_attribs[1].offsetInBytes = 16;                // Offset of first element in bytes from base of vertex
+    vi_attribs[1].offset = 16;                // Offset of first element in bytes from base of vertex
 
     pipelineobj.AddVertexInputAttribs(vi_attribs, 2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
@@ -2743,7 +2743,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 #define MESH_BIND_ID 0
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
-        sizeof(g_vb_texture_Data[0]),               // strideInBytes;  Distance between vertices in bytes (0 = no advancement)
+        sizeof(g_vb_texture_Data[0]),               // stride;  Distance between vertices in bytes (0 = no advancement)
         VK_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
     };
 
@@ -2751,11 +2751,11 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     vi_attribs[0].binding = MESH_BIND_ID;                 // Binding ID
     vi_attribs[0].location = 0;                           // location
     vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // format of source data
-    vi_attribs[0].offsetInBytes = 0;                      // Offset of first element in bytes from base of vertex
+    vi_attribs[0].offset = 0;                      // Offset of first element in bytes from base of vertex
     vi_attribs[1].binding = MESH_BIND_ID;                 // Binding ID
     vi_attribs[1].location = 1;                           // location
     vi_attribs[1].format = VK_FORMAT_R32G32_SFLOAT;       // format of source data
-    vi_attribs[1].offsetInBytes = 16;                     // Offset of uv components
+    vi_attribs[1].offset = 16;                     // Offset of uv components
 
     pipelineobj.AddVertexInputAttribs(vi_attribs,2);
     pipelineobj.AddVertexInputBindings(&vi_binding,1);
