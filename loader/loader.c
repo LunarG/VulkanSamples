@@ -2907,12 +2907,17 @@ VkResult VKAPI loader_CreateDevice(
     uint32_t gpu_index;
     struct loader_icd *icd = loader_get_icd(gpu, &gpu_index);
     struct loader_device *dev;
-    const struct loader_instance *inst = icd->this_instance;
+    const struct loader_instance *inst;
     VkDeviceCreateInfo device_create_info;
     char **filtered_extension_names = NULL;
     VkResult res;
 
     assert(pCreateInfo->requestedQueueCount >= 1);
+
+    if (!icd)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    inst = icd->this_instance;
 
     if (!icd->CreateDevice) {
         return VK_ERROR_INITIALIZATION_FAILED;
