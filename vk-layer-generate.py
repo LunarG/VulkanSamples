@@ -1818,12 +1818,12 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'
                      '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
-                     '        useObject((const void *) %s, pMemoryRanges[i].mem);\n' % proto.params[0].name +
+                     '        useObject((const void *) %s, pMemoryRanges[i].memory);\n' % proto.params[0].name +
                      '    }\n'
                      '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                      '    %s pDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
                      '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
-                     '        finishUsingObject(pMemoryRanges[i].mem);\n'
+                     '        finishUsingObject(pMemoryRanges[i].memory);\n'
                      '    }\n'
                      '%s' % (stmt) +
                      '}')

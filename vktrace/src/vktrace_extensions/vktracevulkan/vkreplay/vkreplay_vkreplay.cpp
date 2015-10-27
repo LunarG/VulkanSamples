@@ -1631,11 +1631,11 @@ void vkReplay::manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket)
     }
 
     gpuMemObj local_mem;
-    local_mem = m_objMapper.m_devicememorys.find(pPacket->mem)->second;
+    local_mem = m_objMapper.m_devicememorys.find(pPacket->memory)->second;
     // TODO how/when to free pendingAlloc that did not use and existing gpuMemObj
     m_vkFuncs.real_vkFreeMemory(remappedDevice, local_mem.replayGpuMem, NULL);
     delete local_mem.pGpuMem;
-    m_objMapper.rm_from_devicememorys_map(pPacket->mem);
+    m_objMapper.rm_from_devicememorys_map(pPacket->memory);
 }
 
 VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
@@ -1646,7 +1646,7 @@ VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
     if (remappedDevice == VK_NULL_HANDLE)
         return VK_ERROR_VALIDATION_FAILED;
 
-    gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->mem)->second;
+    gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->memory)->second;
     void* pData;
     if (!local_mem.pGpuMem->isPendingAlloc())
     {
@@ -1677,7 +1677,7 @@ void vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
         return;
     }
 
-    gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->mem)->second;
+    gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->memory)->second;
     if (!local_mem.pGpuMem->isPendingAlloc())
     {
         if (local_mem.pGpuMem)
@@ -1716,9 +1716,9 @@ VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappe
     gpuMemObj* pLocalMems = VKTRACE_NEW_ARRAY(gpuMemObj, pPacket->memoryRangeCount);
     for (uint32_t i = 0; i < pPacket->memoryRangeCount; i++)
     {
-        pLocalMems[i] = m_objMapper.m_devicememorys.find(pPacket->pMemoryRanges[i].mem)->second;
-        localRanges[i].mem = m_objMapper.remap_devicememorys(pPacket->pMemoryRanges[i].mem);
-        if (localRanges[i].mem == VK_NULL_HANDLE || pLocalMems[i].pGpuMem == NULL)
+        pLocalMems[i] = m_objMapper.m_devicememorys.find(pPacket->pMemoryRanges[i].memory)->second;
+        localRanges[i].memory = m_objMapper.remap_devicememorys(pPacket->pMemoryRanges[i].memory);
+        if (localRanges[i].memory == VK_NULL_HANDLE || pLocalMems[i].pGpuMem == NULL)
         {
             VKTRACE_DELETE(localRanges);
             VKTRACE_DELETE(pLocalMems);

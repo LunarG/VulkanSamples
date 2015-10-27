@@ -1389,7 +1389,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
         for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; j++) {
             for (uint32_t k = 0; k < pBindInfo[i].pBufferBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pBufferBinds[j].pBinds[k].mem,
+                            pBindInfo[i].pBufferBinds[j].pBinds[k].memory,
                             (uint64_t) pBindInfo[i].pBufferBinds[j].buffer,
                             VK_OBJECT_TYPE_BUFFER, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
@@ -1398,7 +1398,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
         for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; j++) {
             for (uint32_t k = 0; k < pBindInfo[i].pImageOpaqueBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageOpaqueBinds[j].pBinds[k].mem,
+                            pBindInfo[i].pImageOpaqueBinds[j].pBinds[k].memory,
                             (uint64_t) pBindInfo[i].pImageOpaqueBinds[j].image,
                             VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;
@@ -1407,7 +1407,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
         for (uint32_t j = 0; j < pBindInfo[i].imageBindCount; j++) {
             for (uint32_t k = 0; k < pBindInfo[i].pImageBinds[j].bindCount; k++) {
                 if (set_sparse_mem_binding(my_data, queue,
-                            pBindInfo[i].pImageBinds[j].pBinds[k].mem,
+                            pBindInfo[i].pImageBinds[j].pBinds[k].memory,
                             (uint64_t) pBindInfo[i].pImageBinds[j].image,
                             VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparse"))
                     skipCall = VK_TRUE;

@@ -753,10 +753,10 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tgeometryShader                          = %u\n", features->geometryShader                         );
     printf("\ttessellationShader                      = %u\n", features->tessellationShader                     );
     printf("\tsampleRateShading                       = %u\n", features->sampleRateShading                      );
-    printf("\tdualSrcBlend                         = %u\n", features->dualSrcBlend                        );
+    printf("\tdualSrcBlend                            = %u\n", features->dualSrcBlend                           );
     printf("\tlogicOp                                 = %u\n", features->logicOp                                );
     printf("\tmultiDrawIndirect                       = %u\n", features->multiDrawIndirect                      );
-    printf("\tdepthClip                               = %u\n", features->depthClamp                              );
+    printf("\tdepthClamp                              = %u\n", features->depthClamp                             );
     printf("\tdepthBiasClamp                          = %u\n", features->depthBiasClamp                         );
     printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
@@ -846,7 +846,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxVertexInputAttributeOffset           = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributeOffset          );
     printf("\t\tmaxVertexInputBindingStride             = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputBindingStride            );
     printf("\t\tmaxVertexOutputComponents               = 0x%" PRIxLEAST32 "\n", limits->maxVertexOutputComponents              );
-    printf("\t\tmaxTessellationGenerationLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenerationLevel                        );
+    printf("\t\tmaxTessellationGenerationLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenerationLevel          );
     printf("\t\tmaxTessellationPatchSize                        = 0x%" PRIxLEAST32 "\n", limits->maxTessellationPatchSize                       );
     printf("\t\tmaxTessellationControlPerVertexInputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexInputComponents );
     printf("\t\tmaxTessellationControlPerVertexOutputComponents = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexOutputComponents);
@@ -860,8 +860,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxGeometryOutputVertices               = 0x%" PRIxLEAST32 "\n", limits->maxGeometryOutputVertices              );
     printf("\t\tmaxGeometryTotalOutputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxGeometryTotalOutputComponents       );
     printf("\t\tmaxFragmentInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxFragmentInputComponents             );
-    printf("\t\tmaxFragmentOutputAttachments                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputAttachments               );
-    printf("\t\tmaxFragmentDualSrcAttachments            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSrcAttachments           );
+    printf("\t\tmaxFragmentOutputAttachments            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputAttachments           );
+    printf("\t\tmaxFragmentDualSrcAttachments           = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSrcAttachments          );
     printf("\t\tmaxFragmentCombinedOutputResources      = 0x%" PRIxLEAST32 "\n", limits->maxFragmentCombinedOutputResources     );
     printf("\t\tmaxComputeSharedMemorySize              = 0x%" PRIxLEAST32 "\n", limits->maxComputeSharedMemorySize             );
     printf("\t\tmaxComputeWorkGroupCount[0]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[0]            );

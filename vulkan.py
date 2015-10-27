@@ -320,12 +320,12 @@ core = Extension(
 
         Proto("void", "FreeMemory",
             [Param("VkDevice", "device"),
-             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceMemory", "memory"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
 
         Proto("VkResult", "MapMemory",
             [Param("VkDevice", "device"),
-             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceMemory", "memory"),
              Param("VkDeviceSize", "offset"),
              Param("VkDeviceSize", "size"),
              Param("VkMemoryMapFlags", "flags"),
@@ -333,7 +333,7 @@ core = Extension(
 
         Proto("void", "UnmapMemory",
             [Param("VkDevice", "device"),
-             Param("VkDeviceMemory", "mem")]),
+             Param("VkDeviceMemory", "memory")]),
 
         Proto("VkResult", "FlushMappedMemoryRanges",
             [Param("VkDevice", "device"),
@@ -353,13 +353,13 @@ core = Extension(
         Proto("VkResult", "BindBufferMemory",
             [Param("VkDevice", "device"),
              Param("VkBuffer", "buffer"),
-             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceMemory", "memory"),
              Param("VkDeviceSize", "memoryOffset")]),
 
         Proto("VkResult", "BindImageMemory",
             [Param("VkDevice", "device"),
              Param("VkImage", "image"),
-             Param("VkDeviceMemory", "mem"),
+             Param("VkDeviceMemory", "memory"),
              Param("VkDeviceSize", "memoryOffset")]),
 
         Proto("void", "GetBufferMemoryRequirements",
@@ -694,12 +694,12 @@ core = Extension(
 
         Proto("void", "DestroyCommandPool",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "commandPool"),
+             Param("VkCommandPool", "CommandPool"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
 
         Proto("VkResult", "ResetCommandPool",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "commandPool"),
+             Param("VkCommandPool", "CommandPool"),
              Param("VkCommandPoolResetFlags", "flags")]),
 
         Proto("VkResult", "AllocateCommandBuffers",
@@ -709,7 +709,7 @@ core = Extension(
 
         Proto("void", "FreeCommandBuffers",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "commandPool"),
+             Param("VkCommandPool", "CommandPool"),
              Param("uint32_t", "commandBufferCount"),
              Param("const VkCommandBuffer*", "pCommandBuffers")]),
 

@@ -141,7 +141,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocateMemory(
 
 VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     VkDevice device,
-    VkDeviceMemory mem,
+    VkDeviceMemory memory,
     VkDeviceSize offset,
     VkDeviceSize size,
     VkFlags flags,
@@ -151,11 +151,11 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     VkResult result;
     packet_vkMapMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkMapMemory, sizeof(void*));
-    result = mdd(device)->devTable.MapMemory(device, mem, offset, size, flags, ppData);
+    result = mdd(device)->devTable.MapMemory(device, memory, offset, size, flags, ppData);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkMapMemory(pHeader);
     pPacket->device = device;
-    pPacket->mem = mem;
+    pPacket->memory = memory;
     pPacket->offset = offset;
     pPacket->size = size;
     pPacket->flags = flags;
@@ -163,7 +163,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     {
         vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->ppData), sizeof(void*), *ppData);
         vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->ppData));
-        add_data_to_mem_info(mem, size, offset, *ppData);
+        add_data_to_mem_info(memory, size, offset, *ppData);
     }
     pPacket->result = result;
     FINISH_TRACE_PACKET();
@@ -172,7 +172,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
 
 VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     VkDevice device,
-    VkDeviceMemory mem)
+    VkDeviceMemory memory)
 {
     vktrace_trace_packet_header* pHeader;
     packet_vkUnmapMemory* pPacket;
@@ -181,7 +181,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     // insert into packet the data that was written by CPU between the vkMapMemory call and here
     // Note must do this prior to the real vkUnMap() or else may get a FAULT
     vktrace_enter_critical_section(&g_memInfoLock);
-    entry = find_mem_info_entry(mem);
+    entry = find_mem_info_entry(memory);
     if (entry && entry->pData != NULL)
     {
         if (!entry->didFlush)
@@ -195,37 +195,37 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     pPacket = interpret_body_as_vkUnmapMemory(pHeader);
     if (siz)
     {
-        assert(entry->handle == mem);
+        assert(entry->handle == memory);
         vktrace_add_buffer_to_trace_packet(pHeader, (void**) &(pPacket->pData), siz, entry->pData + off);
         vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pData));
         entry->pData = NULL;
     }
     vktrace_leave_critical_section(&g_memInfoLock);
-    mdd(device)->devTable.UnmapMemory(device, mem);
+    mdd(device)->devTable.UnmapMemory(device, memory);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket->device = device;
-    pPacket->mem = mem;
+    pPacket->memory = memory;
     FINISH_TRACE_PACKET();
 }
 
 VKTRACER_EXPORT void VKAPI __HOOKED_vkFreeMemory(
     VkDevice device,
-    VkDeviceMemory mem,
+    VkDeviceMemory memory,
     const VkAllocationCallbacks* pAllocator)
 {
     vktrace_trace_packet_header* pHeader;
     packet_vkFreeMemory* pPacket = NULL;
     CREATE_TRACE_PACKET(vkFreeMemory, 0);
-    mdd(device)->devTable.FreeMemory(device, mem, pAllocator);
+    mdd(device)->devTable.FreeMemory(device, memory, pAllocator);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkFreeMemory(pHeader);
     pPacket->device = device;
-    pPacket->mem = mem;
+    pPacket->memory = memory;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocator));
     FINISH_TRACE_PACKET();
     // begin custom code
-    rm_handle_from_mem_info(mem);
+    rm_handle_from_mem_info(memory);
     // end custom code
 }
 
@@ -266,11 +266,11 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
     for (iter = 0; iter < memoryRangeCount; iter++)
     {
         VkMappedMemoryRange* pRange = (VkMappedMemoryRange*)&pMemoryRanges[iter];
-        VKAllocInfo* pEntry = find_mem_info_entry(pRange->mem);
+        VKAllocInfo* pEntry = find_mem_info_entry(pRange->memory);
 
         if (pEntry != NULL)
         {
-            assert(pEntry->handle == pRange->mem);
+            assert(pEntry->handle == pRange->memory);
             assert(pEntry->totalSize >= (pRange->size + pRange->offset));
             assert(pEntry->totalSize >= pRange->size);
             assert(pRange->offset >= pEntry->rangeOffset && (pRange->offset + pRange->size) <= (pEntry->rangeOffset + pEntry->rangeSize));
