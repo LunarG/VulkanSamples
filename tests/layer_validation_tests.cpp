@@ -5065,14 +5065,16 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
     ASSERT_VK_SUCCESS(err);
@@ -5169,14 +5171,17 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
-        image_create_info.format = VK_FORMAT_B8G8R8_SRGB;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        // Set format to something other than source image
+        image_create_info.format = VK_FORMAT_R32_SFLOAT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.samples = 1;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
@@ -5274,14 +5279,16 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        // Note: Some implementations expect color attachment usage for any multisample surface
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.samples = 1;
 
     err = vkCreateImage(m_device->device(), &image_create_info, &destImage);
