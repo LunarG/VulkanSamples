@@ -45,6 +45,7 @@ typedef enum _DRAW_STATE_ERROR
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
     DRAWSTATE_OUT_OF_MEMORY,                    // malloc failed
     DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH,         // Type in layout vs. update are not the same
+    DRAWSTATE_DESCRIPTOR_STAGEFLAGS_MISMATCH,   // StageFlags in layout are not the same throughout a single VkWriteDescriptorSet update
     DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS,  // Descriptors set for update out of bounds for corresponding layout section
     DRAWSTATE_DESCRIPTOR_POOL_EMPTY,            // Attempt to allocate descriptor from a pool with no more descriptors of that type available
     DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL,     // Invalid to call vkFreeDescriptorSets on Sets allocated from a NON_FREE Pool
@@ -75,6 +76,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,     // Attachment reference must be present in active subpass
     DRAWSTATE_INVALID_EXTENSION,
     DRAWSTATE_SAMPLER_DESCRIPTOR_ERROR,         // A Descriptor of *_SAMPLER type is being updated with an invalid or bad Sampler
+    DRAWSTATE_INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE, // Descriptors of *COMBINED_IMAGE_SAMPLER type are being updated where some, but not all, of the updates use immutable samplers
     DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,       // A Descriptor of *_IMAGE or *_ATTACHMENT type is being updated with an invalid or bad ImageView
     DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,      // A Descriptor of *_TEXEL_BUFFER type is being updated with an invalid or bad BufferView
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
@@ -145,6 +147,7 @@ typedef struct _LAYOUT_NODE {
     uint32_t                        startIndex; // 1st index of this layout
     uint32_t                        endIndex; // last index of this layout
     vector<VkDescriptorType>        descriptorTypes; // Type per descriptor in this layout to verify correct updates
+    vector<VkShaderStageFlags>      stageFlags; // stageFlags per descriptor in this layout to verify correct updates
 } LAYOUT_NODE;
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {

@@ -2931,8 +2931,8 @@ TEST_F(VkLayerTest, DSTypeMismatch)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after updating BUFFER Descriptor w/ incorrect type of SAMPLER.";
-    if (!strstr(msgString.c_str(),"Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET has descriptor type VK_DESCRIPTOR_TYPE_SAMPLER that does not match ")) {
-        FAIL() << "Error received was not 'Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET has descriptor type VK_DESCRIPTOR_TYPE_SAMPLER that does not match...' but instead '" << msgString.c_str() << "'";
+    if (!strstr(msgString.c_str(),"Write descriptor update has descriptor type VK_DESCRIPTOR_TYPE_SAMPLER that does not match ")) {
+        FAIL() << "Error received was not 'Write descriptor update has descriptor type VK_DESCRIPTOR_TYPE_SAMPLER that does not match...' but instead '" << msgString.c_str() << "'";
     }
 
     vkDestroySampler(m_device->device(), sampler);
