@@ -682,65 +682,40 @@ static VkBool32 validUpdateStruct(layer_data* my_data, const VkDevice device, co
     }
 }
 // For given update struct, return binding
-static VkBool32 getUpdateBinding(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* binding)
+static uint32_t getUpdateBinding(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            *binding = ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
-            break;
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-            *binding = ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
-            break;
-        default:
-            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
-                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            *binding = 0xFFFFFFFF;
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
     }
-    return skipCall;
 }
 // Set arrayIndex for given update struct in the last parameter
-// Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
-static uint32_t getUpdateArrayIndex(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* arrayIndex)
+static uint32_t getUpdateArrayIndex(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            *arrayIndex = ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
-            break;
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            *arrayIndex = ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
-            break;
-        default:
-            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
-                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            *arrayIndex = 0;
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
     }
-    return skipCall;
 }
 // Set count for given update struct in the last parameter
 // Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
-static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct, uint32_t* count)
+static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
-    VkBool32 skipCall = VK_FALSE;
     switch (pUpdateStruct->sType)
     {
         case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            *count = ((VkWriteDescriptorSet*)pUpdateStruct)->count;
-            break;
+            return ((VkWriteDescriptorSet*)pUpdateStruct)->count;
         case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
             // TODO : Need to understand this case better and make sure code is correct
-            *count = ((VkCopyDescriptorSet*)pUpdateStruct)->count;
-            break;
-        default:
-            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_UPDATE_STRUCT, "DS",
-                    "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
-            *count = 0;
+            return ((VkCopyDescriptorSet*)pUpdateStruct)->count;
     }
-    return skipCall;
 }
 // For given Layout Node and binding, return index where that binding begins
 static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
@@ -760,26 +735,22 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
     }
     return offsetIndex-1;
 }
-// For given layout and update, return the first overall index of the layout that is update
-static VkBool32 getUpdateStartIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t* startIndex)
+// For given layout and update, return the first overall index of the layout that is updated
+static uint32_t getUpdateStartIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     uint32_t binding = 0, arrayIndex = 0;
-    VkBool32 skipCall = getUpdateBinding(my_data, device, pUpdateStruct, &binding);
-    skipCall |= getUpdateArrayIndex(my_data, device, pUpdateStruct, &arrayIndex);
-    if (VK_FALSE == skipCall)
-        *startIndex = getBindingStartIndex(pLayout, binding)+arrayIndex;
-    return skipCall;
+    binding = getUpdateBinding(my_data, device, pUpdateStruct);
+    arrayIndex = getUpdateArrayIndex(my_data, device, pUpdateStruct);
+    return getBindingStartIndex(pLayout, binding)+arrayIndex;
 }
 // For given layout and update, return the last overall index of the layout that is update
-static VkBool32 getUpdateEndIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t* endIndex)
+static uint32_t getUpdateEndIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
 {
     uint32_t binding = 0, arrayIndex = 0, count = 0;
-    VkBool32 skipCall = getUpdateBinding(my_data, device, pUpdateStruct, &binding);
-    skipCall |= getUpdateArrayIndex(my_data, device, pUpdateStruct, &arrayIndex);
-    skipCall |= getUpdateCount(my_data, device, pUpdateStruct, &count);
-    if (VK_FALSE == skipCall)
-        *endIndex = getBindingStartIndex(pLayout, binding)+arrayIndex+count-1;
-    return skipCall;
+    binding = getUpdateBinding(my_data, device, pUpdateStruct);
+    arrayIndex = getUpdateArrayIndex(my_data, device, pUpdateStruct);
+    count = getUpdateCount(my_data, device, pUpdateStruct);
+    return getBindingStartIndex(pLayout, binding)+arrayIndex+count-1;
 }
 // Verify that the descriptor type in the update struct matches what's expected by the layout
 static VkBool32 validateUpdateConsistency(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t startIndex, uint32_t endIndex)
@@ -1087,7 +1058,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                     "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
-            skipCall |= getUpdateEndIndex(my_data, device, pLayout, pUpdate, &endIndex);
+            endIndex = getUpdateEndIndex(my_data, device, pLayout, pUpdate);
             if (getBindingEndIndex(pLayout, binding) < endIndex) {
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
@@ -1095,7 +1066,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                         "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 uint32_t startIndex;
-                skipCall |= getUpdateStartIndex(my_data, device, pLayout, pUpdate, &startIndex);
+                startIndex = getUpdateStartIndex(my_data, device, pLayout, pUpdate);
                 // Layout bindings match w/ update, now verify that update type & stageFlags are the same for entire update
                 if ((skipCall = validateUpdateConsistency(my_data, device, pLayout, pUpdate, startIndex, endIndex)) == VK_FALSE) {
                     // The update is within bounds and consistent, but need to make sure contents make sense as well
