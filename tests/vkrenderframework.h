@@ -119,9 +119,9 @@ protected:
     float                               m_blendConstants[4];
     float                               m_minDepthBounds;
     float                               m_maxDepthBounds;
-    uint32_t                            m_stencilCompareMask;
-    uint32_t                            m_stencilWriteMask;
-    uint32_t                            m_stencilReference;
+    uint32_t                            m_compareMask;
+    uint32_t                            m_writeMask;
+    uint32_t                            m_reference;
     std::vector<VkClearValue>           m_renderPassClearValues;
     VkRenderPassBeginInfo               m_renderPassBeginInfo;
     vector<VkImageObj*>                 m_renderTargets;
@@ -195,9 +195,9 @@ public:
     void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
     void SetBlendConstants(const float blendConstants[4]);
     void SetDepthBounds(float minDepthBounds, float maxDepthBounds);
-    void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
-    void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
-    void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t stencilReference);
+    void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t compareMask);
+    void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask);
+    void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t reference);
     void UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t *pData);
     void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
     void ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
@@ -313,10 +313,10 @@ public:
             createView.image = handle();
             createView.viewType =  VK_IMAGE_VIEW_TYPE_2D;
             createView.format = format;
-            createView.channels.r = VK_CHANNEL_SWIZZLE_R;
-            createView.channels.g = VK_CHANNEL_SWIZZLE_G;
-            createView.channels.b = VK_CHANNEL_SWIZZLE_B;
-            createView.channels.a = VK_CHANNEL_SWIZZLE_A;
+            createView.channels.r = VK_COMPONENT_SWIZZLE_R;
+            createView.channels.g = VK_COMPONENT_SWIZZLE_G;
+            createView.channels.b = VK_COMPONENT_SWIZZLE_B;
+            createView.channels.a = VK_COMPONENT_SWIZZLE_A;
             createView.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
             createView.flags = 0;
             m_targetView.init(*m_device, createView);
@@ -390,7 +390,7 @@ public:
 
 protected:
     VkDeviceObj                        *m_device;
-    vector<VkDescriptorTypeCount>       m_type_counts;
+    vector<VkDescriptorPoolSize>       m_type_counts;
     int                                 m_nextSlot;
 
     vector<VkDescriptorImageInfo>       m_imageSamplerDescriptors;
@@ -429,7 +429,7 @@ public:
     {
         VkPipelineColorBlendAttachmentState att = {};
         att.blendEnable = VK_FALSE;
-        att.channelWriteMask = 0xf;
+        att.colorWriteMask = 0xf;
         AddColorAttachment(0, &att);
     }
 

@@ -448,7 +448,7 @@ static
 bool ValidateEnumerator(VkQueueFlagBits const& enumerator)
 {
     VkQueueFlagBits allFlags = (VkQueueFlagBits)(
-        VK_QUEUE_DMA_BIT |
+        VK_QUEUE_TRANSFER_BIT |
         VK_QUEUE_COMPUTE_BIT |
         VK_QUEUE_SPARSE_BINDING_BIT |
         VK_QUEUE_GRAPHICS_BIT);
@@ -469,9 +469,9 @@ std::string EnumeratorString(VkQueueFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUEUE_DMA_BIT)
+    if(enumerator & VK_QUEUE_TRANSFER_BIT)
     {
-        strings.push_back("VK_QUEUE_DMA_BIT");
+        strings.push_back("VK_QUEUE_TRANSFER_BIT");
     }
     if(enumerator & VK_QUEUE_COMPUTE_BIT)
     {
@@ -1031,12 +1031,12 @@ std::string EnumeratorString(VkImageCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkChannelFlagBits const& enumerator)
+bool ValidateEnumerator(VkColorComponentFlagBits const& enumerator)
 {
-    VkChannelFlagBits allFlags = (VkChannelFlagBits)(VK_CHANNEL_A_BIT |
-        VK_CHANNEL_B_BIT |
-        VK_CHANNEL_G_BIT |
-        VK_CHANNEL_R_BIT);
+    VkColorComponentFlagBits allFlags = (VkColorComponentFlagBits)(VK_COLOR_COMPONENT_A_BIT |
+        VK_COLOR_COMPONENT_B_BIT |
+        VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_R_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1046,7 +1046,7 @@ bool ValidateEnumerator(VkChannelFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkChannelFlagBits const& enumerator)
+std::string EnumeratorString(VkColorComponentFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1054,21 +1054,21 @@ std::string EnumeratorString(VkChannelFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CHANNEL_A_BIT)
+    if(enumerator & VK_COLOR_COMPONENT_A_BIT)
     {
-        strings.push_back("VK_CHANNEL_A_BIT");
+        strings.push_back("VK_COLOR_COMPONENT_A_BIT");
     }
-    if(enumerator & VK_CHANNEL_B_BIT)
+    if(enumerator & VK_COLOR_COMPONENT_B_BIT)
     {
-        strings.push_back("VK_CHANNEL_B_BIT");
+        strings.push_back("VK_COLOR_COMPONENT_B_BIT");
     }
-    if(enumerator & VK_CHANNEL_G_BIT)
+    if(enumerator & VK_COLOR_COMPONENT_G_BIT)
     {
-        strings.push_back("VK_CHANNEL_G_BIT");
+        strings.push_back("VK_COLOR_COMPONENT_G_BIT");
     }
-    if(enumerator & VK_CHANNEL_R_BIT)
+    if(enumerator & VK_COLOR_COMPONENT_R_BIT)
     {
-        strings.push_back("VK_CHANNEL_R_BIT");
+        strings.push_back("VK_COLOR_COMPONENT_R_BIT");
     }
 
     std::string enumeratorString;
@@ -1698,7 +1698,7 @@ std::string EnumeratorString(VkImageAspectFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkQueryControlFlagBits const& enumerator)
 {
-    VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_CONSERVATIVE_BIT);
+    VkQueryControlFlagBits allFlags = (VkQueryControlFlagBits)(VK_QUERY_CONTROL_PRECISE_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1716,9 +1716,9 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_QUERY_CONTROL_CONSERVATIVE_BIT)
+    if(enumerator & VK_QUERY_CONTROL_PRECISE_BIT)
     {
-        strings.push_back("VK_QUERY_CONTROL_CONSERVATIVE_BIT");
+        strings.push_back("VK_QUERY_CONTROL_PRECISE_BIT");
     }
 
     std::string enumeratorString;
@@ -3394,32 +3394,32 @@ bool PreCreateImageView(
         "vkCreateImageView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.r < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.r > VK_CHANNEL_SWIZZLE_END_RANGE)
+    if(pCreateInfo->channels.r < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->channels.r > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.r, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.r, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.g < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.g > VK_CHANNEL_SWIZZLE_END_RANGE)
+    if(pCreateInfo->channels.g < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->channels.g > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.g, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.g, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.b < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.b > VK_CHANNEL_SWIZZLE_END_RANGE)
+    if(pCreateInfo->channels.b < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->channels.b > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.b, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.b, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.a < VK_CHANNEL_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.a > VK_CHANNEL_SWIZZLE_END_RANGE)
+    if(pCreateInfo->channels.a < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->channels.a > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkChannelSwizzle pCreateInfo->channels.a, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.a, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3747,11 +3747,11 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions != nullptr)
     {
-    if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate < VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE ||
-        pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate > VK_VERTEX_INPUT_STEP_RATE_END_RANGE)
+    if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate < VK_VERTEX_INPUT_RATE_BEGIN_RANGE ||
+        pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate > VK_VERTEX_INPUT_RATE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkVertexInputStepRate pCreateInfos->pVertexInputState->pVertexBindingDescriptions->stepRate, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkVertexInputRate pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3802,17 +3802,17 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->pRasterizationState != nullptr)
     {
-    if(pCreateInfos->pRasterizationState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO)
+    if(pCreateInfos->pRasterizationState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterizationState->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterizationState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfos->pRasterizationState->fillMode > VK_FILL_MODE_END_RANGE)
+    if(pCreateInfos->pRasterizationState->polygonMode < VK_FILL_MODE_BEGIN_RANGE ||
+        pCreateInfos->pRasterizationState->polygonMode > VK_FILL_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkFillMode pCreateInfos->pRasterizationState->fillMode, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK)
@@ -3853,60 +3853,60 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->depthCompareOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->front.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->front.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->front.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.failOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilFailOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.failOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->front.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->front.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->front.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.passOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilPassOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.passOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->front.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->front.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->front.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.depthFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.stencilDepthFailOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.depthFailOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->front.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->front.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->front.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->front.compareOp > VK_COMPARE_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->front.stencilCompareOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->front.compareOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->back.stencilFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->back.stencilFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->back.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.failOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilFailOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.failOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->back.stencilPassOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->back.stencilPassOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->back.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.passOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilPassOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.passOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->back.stencilDepthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->back.stencilDepthFailOp > VK_STENCIL_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->back.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.depthFailOp > VK_STENCIL_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.stencilDepthFailOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.depthFailOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pDepthStencilState->back.stencilCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfos->pDepthStencilState->back.stencilCompareOp > VK_COMPARE_OP_END_RANGE)
+    if(pCreateInfos->pDepthStencilState->back.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+        pCreateInfos->pDepthStencilState->back.compareOp > VK_COMPARE_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->back.stencilCompareOp, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->back.compareOp, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3928,46 +3928,46 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->pColorBlendState->pAttachments != nullptr && pCreateInfos->pColorBlendState->pAttachments->blendEnable == VK_TRUE)
     {
-    if(pCreateInfos->pColorBlendState->pAttachments->srcBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->srcBlendColor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendColor, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->dstBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->dstBlendColor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->dstBlendColor, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->blendOpColor > VK_BLEND_OP_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->colorBlendOp < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->colorBlendOp > VK_BLEND_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->blendOpColor, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->colorBlendOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha > VK_BLEND_OP_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp < VK_BLEND_OP_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp > VK_BLEND_OP_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp, is an unrecognized enumerator");
         return false;
     }
     }
@@ -4339,10 +4339,10 @@ bool PreCreateDescriptorPool(
         "vkCreateDescriptorPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->pTypeCounts != nullptr)
+    if(pCreateInfo->pPoolSizes != nullptr)
     {
-    if(pCreateInfo->pTypeCounts->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pTypeCounts->type > VK_DESCRIPTOR_TYPE_END_RANGE)
+    if(pCreateInfo->pPoolSizes->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pPoolSizes->type > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is an unrecognized enumerator");
@@ -5114,19 +5114,19 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, fl
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, stencilCompareMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, stencilWriteMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, stencilReference);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
 bool PreCmdBindDescriptorSets(
@@ -6310,14 +6310,14 @@ bool PreCmdBeginRenderPass(
 
 bool PostCmdBeginRenderPass(
     VkCommandBuffer commandBuffer,
-    VkRenderPassContents contents)
+    VkSubpassContents contents)
 {
 
-    if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
-        contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
+    if(contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE ||
+        contents > VK_SUBPASS_CONTENTS_END_RANGE)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBeginRenderPass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
+        "vkCmdBeginRenderPass parameter, VkSubpassContents contents, is an unrecognized enumerator");
         return false;
     }
 
@@ -6327,7 +6327,7 @@ bool PostCmdBeginRenderPass(
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin,
-    VkRenderPassContents contents)
+    VkSubpassContents contents)
 {
     PreCmdBeginRenderPass(commandBuffer, pRenderPassBegin);
 
@@ -6338,14 +6338,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
 
 bool PostCmdNextSubpass(
     VkCommandBuffer commandBuffer,
-    VkRenderPassContents contents)
+    VkSubpassContents contents)
 {
 
-    if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
-        contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
+    if(contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE ||
+        contents > VK_SUBPASS_CONTENTS_END_RANGE)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdNextSubpass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
+        "vkCmdNextSubpass parameter, VkSubpassContents contents, is an unrecognized enumerator");
         return false;
     }
 
@@ -6354,7 +6354,7 @@ bool PostCmdNextSubpass(
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
     VkCommandBuffer commandBuffer,
-    VkRenderPassContents contents)
+    VkSubpassContents contents)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdNextSubpass(commandBuffer, contents);
 

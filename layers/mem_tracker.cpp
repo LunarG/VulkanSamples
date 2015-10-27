@@ -1713,7 +1713,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
 //    need to account for that mem now having binding to given commandBuffer
 VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
-    VkCommandBuffer         commandBuffer,
+    VkCommandBuffer     commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline          pipeline)
 {
@@ -1738,7 +1738,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
 {
@@ -1757,7 +1757,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
@@ -1792,7 +1792,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, floa
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
     float                               depthBiasSlopeFactor)
@@ -1812,7 +1812,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
-     VkCommandBuffer                            commandBuffer,
+     VkCommandBuffer                        commandBuffer,
      const float                            blendConstants[4])
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -1830,7 +1830,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     float                               minDepthBounds,
     float                               maxDepthBounds)
 {
@@ -1849,9 +1849,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask)
+    uint32_t                            compareMask)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1863,14 +1863,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, stencilCompareMask);
+        my_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask)
+    uint32_t                            writeMask)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1882,14 +1882,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, stencilWriteMask);
+        my_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
-    VkCommandBuffer                         commandBuffer,
+    VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference)
+    uint32_t                            reference)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1901,12 +1901,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, stencilReference);
+        my_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, reference);
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
-    VkCommandBuffer            commandBuffer,
+    VkCommandBuffer        commandBuffer,
     VkPipelineBindPoint    pipelineBindPoint,
     VkPipelineLayout       layout,
     uint32_t               firstSet,
@@ -1922,7 +1922,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
-    VkCommandBuffer         commandBuffer,
+    VkCommandBuffer     commandBuffer,
     uint32_t            startBinding,
     uint32_t            bindingCount,
     const VkBuffer     *pBuffers,

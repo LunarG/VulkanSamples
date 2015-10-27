@@ -758,14 +758,14 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tmultiDrawIndirect                       = %u\n", features->multiDrawIndirect                      );
     printf("\tdepthClamp                              = %u\n", features->depthClamp                             );
     printf("\tdepthBiasClamp                          = %u\n", features->depthBiasClamp                         );
-    printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
+    printf("\tpolygonModeNonSolid                        = %u\n", features->polygonModeNonSolid                       );
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
     printf("\twideLines                               = %u\n", features->wideLines                              );
     printf("\tlargePoints                             = %u\n", features->largePoints                            );
     printf("\ttextureCompressionETC2                  = %u\n", features->textureCompressionETC2                 );
     printf("\ttextureCompressionASTC_LDR              = %u\n", features->textureCompressionASTC_LDR             );
     printf("\ttextureCompressionBC                    = %u\n", features->textureCompressionBC                   );
-    printf("\tocclusionQueryNonConservative           = %u\n", features->occlusionQueryNonConservative          );
+    printf("\tocclusionQueryPrecise           = %u\n", features->occlusionQueryPrecise          );
     printf("\tpipelineStatisticsQuery                 = %u\n", features->pipelineStatisticsQuery                );
     printf("\tvertexSideEffects                       = %u\n", features->vertexPipelineStoresAndAtomics         );
     printf("\ttessellationSideEffects                 = %u\n", features->fragmentStoresAndAtomics               );
@@ -920,8 +920,8 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
     printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
     printf("\t\tstrictLines                             = %u\n",                 limits->strictLines                            );
-    printf("\t\trecommendedBufferCopyOffsetAlignment    = 0x%" PRIxLEAST64 "\n", limits->recommendedBufferCopyOffsetAlignment   );
-    printf("\t\trecommendedBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST64 "\n", limits->recommendedBufferCopyRowPitchAlignment );
+    printf("\t\toptimalBufferCopyOffsetAlignment    = 0x%" PRIxLEAST64 "\n", limits->optimalBufferCopyOffsetAlignment   );
+    printf("\t\toptimalBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST64 "\n", limits->optimalBufferCopyRowPitchAlignment );
 }
 
 static void app_gpu_dump_props(const struct app_gpu *gpu)
@@ -979,7 +979,7 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
     printf("\tqueueFlags         = %c%c%c\n",
             (props->queueFlags & VK_QUEUE_GRAPHICS_BIT) ? 'G' : '.',
             (props->queueFlags & VK_QUEUE_COMPUTE_BIT)  ? 'C' : '.',
-            (props->queueFlags & VK_QUEUE_DMA_BIT)      ? 'D' : '.');
+            (props->queueFlags & VK_QUEUE_TRANSFER_BIT)      ? 'D' : '.');
     printf("\tqueueCount         = %u\n",   props->queueCount);
     printf("\ttimestampValidBits = %u\n",   props->timestampValidBits);
     printf("\tminImageTransferGranularity = (%d, %d, %d)\n",

@@ -761,17 +761,17 @@ core = Extension(
         Proto("void", "CmdSetStencilCompareMask",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilCompareMask")]),
+             Param("uint32_t", "compareMask")]),
 
         Proto("void", "CmdSetStencilWriteMask",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilWriteMask")]),
+             Param("uint32_t", "writeMask")]),
 
         Proto("void", "CmdSetStencilReference",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkStencilFaceFlags", "faceMask"),
-             Param("uint32_t", "stencilReference")]),
+             Param("uint32_t", "reference")]),
 
         Proto("void", "CmdBindDescriptorSets",
             [Param("VkCommandBuffer", "commandBuffer"),
@@ -995,11 +995,11 @@ core = Extension(
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("const VkRenderPassBeginInfo*", "pRenderPassBegin"),
-             Param("VkRenderPassContents", "contents")]),
+             Param("VkSubpassContents", "contents")]),
 
         Proto("void", "CmdNextSubpass",
             [Param("VkCommandBuffer", "commandBuffer"),
-             Param("VkRenderPassContents", "contents")]),
+             Param("VkSubpassContents", "contents")]),
 
         Proto("void", "CmdEndRenderPass",
             [Param("VkCommandBuffer", "commandBuffer")]),

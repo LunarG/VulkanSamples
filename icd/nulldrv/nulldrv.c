@@ -1110,17 +1110,17 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float m
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
+ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
+ICD_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -2135,14 +2135,14 @@ ICD_EXPORT void VKAPI vkGetRenderAreaGranularity(
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCommandBuffer                                 commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkRenderPassContents                        contents)
+    VkSubpassContents                        contents)
 {
     NULLDRV_LOG_FUNC;
 }
 
 ICD_EXPORT void VKAPI vkCmdNextSubpass(
     VkCommandBuffer                                 commandBuffer,
-    VkRenderPassContents                        contents)
+    VkSubpassContents                        contents)
 {
     NULLDRV_LOG_FUNC;
 }

@@ -1865,12 +1865,12 @@ static void gen6_3DSTATE_VERTEX_BUFFERS(struct intel_cmd *cmd)
                      GEN7_VB_DW0_ADDR_MODIFIED;
         }
 
-        switch (pipeline->vb[i].stepRate) {
-        case VK_VERTEX_INPUT_STEP_RATE_VERTEX:
+        switch (pipeline->vb[i].inputRate) {
+        case VK_VERTEX_INPUT_RATE_VERTEX:
             dw[0] |= GEN6_VB_DW0_ACCESS_VERTEXDATA;
             dw[3] = 0;
             break;
-        case VK_VERTEX_INPUT_STEP_RATE_INSTANCE:
+        case VK_VERTEX_INPUT_RATE_INSTANCE:
             dw[0] |= GEN6_VB_DW0_ACCESS_INSTANCEDATA;
             dw[3] = 1;
             break;
@@ -2278,8 +2278,8 @@ set_viewport_state(
         scale[0] = viewport->width / 2.0f;
         scale[1] = viewport->height / 2.0f;
         scale[2] = viewport->maxDepth - viewport->minDepth;
-        translate[0] = viewport->originX + scale[0];
-        translate[1] = viewport->originY + scale[1];
+        translate[0] = viewport->x + scale[0];
+        translate[1] = viewport->y + scale[1];
         translate[2] = viewport->minDepth;
 
         viewport_get_guardband(gpu, (int) translate[0], (int) translate[1],
@@ -3814,7 +3814,7 @@ void VKAPI vkGetRenderAreaGranularity(
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     VkCommandBuffer                                 commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkRenderPassContents                        contents)
+    VkSubpassContents                        contents)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_render_pass *rp =
@@ -3871,7 +3871,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 
 ICD_EXPORT void VKAPI vkCmdNextSubpass(
     VkCommandBuffer                                 commandBuffer,
-    VkRenderPassContents                        contents)
+    VkSubpassContents                        contents)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_render_pass *rp = cmd->bind.render_pass;
@@ -3903,7 +3903,7 @@ ICD_EXPORT void VKAPI vkCmdExecuteCommands(
 
    /* TODOVV */
    assert(!(!cmd->bind.render_pass || cmd->bind.render_pass_contents !=
-           VK_RENDER_PASS_CONTENTS_SECONDARY_COMMAND_BUFFERS) && "Invalid RenderPass");
+           VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS) && "Invalid RenderPass");
 
    for (i = 0; i < commandBuffersCount; i++) {
        const struct intel_cmd *secondary = intel_cmd(pCommandBuffers[i]);

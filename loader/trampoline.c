@@ -1114,31 +1114,31 @@ LOADER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     disp->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
+LOADER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);
 
-    disp->CmdSetStencilCompareMask(commandBuffer, faceMask, stencilCompareMask);
+    disp->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+LOADER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);
 
-    disp->CmdSetStencilWriteMask(commandBuffer, faceMask, stencilWriteMask);
+    disp->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
+LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
     const VkLayerDispatchTable *disp;
 
     disp = loader_get_dispatch(commandBuffer);
 
-    disp->CmdSetStencilReference(commandBuffer, faceMask, stencilReference);
+    disp->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
 LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
@@ -1411,7 +1411,7 @@ LOADER_EXPORT void VKAPI vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     disp->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, values);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents)
+LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1420,7 +1420,7 @@ LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, con
     disp->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
 }
 
-LOADER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkRenderPassContents contents)
+LOADER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
 {
     const VkLayerDispatchTable *disp;
 

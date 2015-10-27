@@ -436,7 +436,7 @@ void VkTest::CreateImageTest()
 //        VkImage                               image;
 //        VkImageViewType                     viewType;
 //        VkFormat                              format;
-//        VkChannelMapping                     channels;
+//        VkComponentMapping                     channels;
 //        VkImageSubresourceRange             subresourceRange;
 //        float                                   minLod;
 //    } VkImageViewCreateInfo;
@@ -447,10 +447,10 @@ void VkTest::CreateImageTest()
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = fmt;
 
-    viewInfo.channels.r = VK_CHANNEL_SWIZZLE_R;
-    viewInfo.channels.g = VK_CHANNEL_SWIZZLE_G;
-    viewInfo.channels.b = VK_CHANNEL_SWIZZLE_B;
-    viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
+    viewInfo.channels.r = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.channels.g = VK_COMPONENT_SWIZZLE_G;
+    viewInfo.channels.b = VK_COMPONENT_SWIZZLE_B;
+    viewInfo.channels.a = VK_COMPONENT_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;

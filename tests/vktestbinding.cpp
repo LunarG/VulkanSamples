@@ -334,7 +334,7 @@ void Device::init_queues()
                 queues_[COMPUTE].push_back(new Queue(queue, i));
             }
 
-            if (queue_props[i].queueFlags & VK_QUEUE_DMA_BIT) {
+            if (queue_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
                 queues_[DMA].push_back(new Queue(queue, i));
             }
         }
@@ -594,7 +594,7 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) 
     return data;
 }
 
-VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceCopy &subrescopy) const
+VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceLayers &subrescopy) const
 {
     VkSubresourceLayout data;
     VkImageSubresource subres = subresource(image_aspect(subrescopy.aspect), subrescopy.mipLevel, subrescopy.baseArrayLayer);

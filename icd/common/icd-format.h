@@ -59,20 +59,20 @@ static inline int icd_format_get_block_width(VkFormat format)
     return (icd_format_is_compressed(format)) ? 4 : 1;
 }
 
-static inline bool icd_blend_mode_is_dual_src(VkBlend mode)
+static inline bool icd_blend_mode_is_dual_src(VkBlendFactor mode)
 {
-    return (mode == VK_BLEND_SRC1_COLOR) ||
-           (mode == VK_BLEND_SRC1_ALPHA) ||
-           (mode == VK_BLEND_ONE_MINUS_SRC1_COLOR) ||
-           (mode == VK_BLEND_ONE_MINUS_SRC1_ALPHA);
+    return (mode == VK_BLEND_FACTOR_SRC1_COLOR) ||
+           (mode == VK_BLEND_FACTOR_SRC1_ALPHA) ||
+           (mode == VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR) ||
+           (mode == VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA);
 }
 
 static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipelineColorBlendAttachmentState *att)
 {
-    if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
-        icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||
-        icd_blend_mode_is_dual_src(att->dstBlendColor) ||
-        icd_blend_mode_is_dual_src(att->dstBlendAlpha)) {
+    if (icd_blend_mode_is_dual_src(att->srcColorBlendFactor) ||
+        icd_blend_mode_is_dual_src(att->srcAlphaBlendFactor) ||
+        icd_blend_mode_is_dual_src(att->dstColorBlendFactor) ||
+        icd_blend_mode_is_dual_src(att->dstAlphaBlendFactor)) {
         return true;
     }
     return false;

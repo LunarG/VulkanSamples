@@ -357,10 +357,10 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
     // Make sure depthWriteEnable is set so that Depth fail test will work correctly
     // Make sure stencilTestEnable is set so that Stencil fail test will work correctly
     VkStencilOpState stencil = {};
-    stencil.stencilFailOp = VK_STENCIL_OP_KEEP;
-    stencil.stencilPassOp = VK_STENCIL_OP_KEEP;
-    stencil.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
-    stencil.stencilCompareOp = VK_COMPARE_OP_NEVER;
+    stencil.failOp = VK_STENCIL_OP_KEEP;
+    stencil.passOp = VK_STENCIL_OP_KEEP;
+    stencil.depthFailOp = VK_STENCIL_OP_KEEP;
+    stencil.compareOp = VK_COMPARE_OP_NEVER;
 
     VkPipelineDepthStencilStateCreateInfo ds_ci = {};
     ds_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -848,7 +848,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -856,8 +856,8 @@ TEST_F(VkLayerTest, PipelineNotBound)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1069,7 +1069,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -1077,8 +1077,8 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1342,7 +1342,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -1350,8 +1350,8 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1441,7 +1441,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
     m_errorMonitor->ClearState();
 
     // Create Pool w/ 1 Sampler descriptor, but try to alloc Uniform Buffer descriptor from it
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLER;
         ds_type_count.descriptorCount = 1;
 
@@ -1450,8 +1450,8 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.flags = 0;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1501,7 +1501,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -1509,11 +1509,11 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
+        ds_pool_ci.poolSizeCount = 1;
         ds_pool_ci.flags = 0;
         // Not specifying VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT means
         // app can only call vkResetDescriptorPool on this pool.;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1620,7 +1620,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -1628,8 +1628,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1788,7 +1788,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -1796,8 +1796,8 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -1889,15 +1889,15 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), VK_DESCRIPTOR_POOL_USAGE_NON_FREE, 1, &ds_pool_ci, NULL, &ds_pool);
@@ -2014,15 +2014,15 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -2123,15 +2123,15 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -2231,15 +2231,15 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -2316,7 +2316,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 	ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
 	VkPipelineRasterizationStateCreateInfo rs_ci = {};
-	rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+	rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rs_ci.pNext = nullptr;
 
 	VkPipelineColorBlendStateCreateInfo cb_ci = {};
@@ -2389,15 +2389,15 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -2474,7 +2474,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     VkPipelineRasterizationStateCreateInfo rs_ci = {};
-    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+    rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
 
     VkPipelineColorBlendStateCreateInfo cb_ci = {};
@@ -2548,7 +2548,7 @@ TEST_F(VkLayerTest, NullRenderPass)
 
     BeginCommandBuffer();
     // Don't care about RenderPass handle b/c error should be flagged before that
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), NULL, VK_SUBPASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding NULL RenderPass.";
@@ -2575,7 +2575,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
         rp_begin.renderPass = renderPass();
         rp_begin.framebuffer = framebuffer();
 
-    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
@@ -2851,7 +2851,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -2859,8 +2859,8 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -2947,7 +2947,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -2955,8 +2955,8 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3045,7 +3045,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -3053,8 +3053,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3142,7 +3142,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -3150,8 +3150,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3238,7 +3238,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     // TODO : Farm Descriptor setup code to helper function(s) to reduce copied code
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLER;
         ds_type_count.descriptorCount = 1;
 
@@ -3246,8 +3246,8 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3313,7 +3313,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         ds_type_count.descriptorCount = 1;
 
@@ -3321,8 +3321,8 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3413,7 +3413,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
     //VkDescriptorSetObj descriptorSet(m_device);
-    VkDescriptorTypeCount ds_type_count[2] = {};
+    VkDescriptorPoolSize ds_type_count[2] = {};
         ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count[0].descriptorCount = 1;
         ds_type_count[1].type = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -3423,8 +3423,8 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 2;
-        ds_pool_ci.pTypeCounts = ds_type_count;
+        ds_pool_ci.poolSizeCount = 2;
+        ds_pool_ci.pPoolSizes = ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3555,7 +3555,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
     ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ds_type_count.descriptorCount = 1;
 
@@ -3563,8 +3563,8 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3647,7 +3647,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -3655,8 +3655,8 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -3752,7 +3752,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
     m_errorMonitor->ClearState();
 
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         ds_type_count.descriptorCount = 1;
 
@@ -3760,8 +3760,8 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
@@ -5506,7 +5506,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkDescriptorTypeCount ds_type_count = {};
+    VkDescriptorPoolSize ds_type_count = {};
         ds_type_count.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         ds_type_count.descriptorCount = 1;
 
@@ -5514,8 +5514,8 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
         ds_pool_ci.maxSets = 1;
-        ds_pool_ci.typeCount = 1;
-        ds_pool_ci.pTypeCounts = &ds_type_count;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
 
     VkDescriptorPool ds_pool;
     err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);

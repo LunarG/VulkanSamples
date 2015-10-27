@@ -491,7 +491,7 @@ static inline void cmd_begin_render_pass(struct intel_cmd *cmd,
                                          const struct intel_render_pass *rp,
                                          const struct intel_fb *fb,
                                          const uint32_t sp,
-                                         VkRenderPassContents contents)
+                                         VkSubpassContents contents)
 {
     assert(sp < rp->subpass_count);
 

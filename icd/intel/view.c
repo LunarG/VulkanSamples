@@ -242,15 +242,15 @@ static int view_type_to_surface_type(VkImageViewType type)
     }
 }
 
-static int channel_swizzle_to_scs(VkChannelSwizzle swizzle)
+static int channel_swizzle_to_scs(VkComponentSwizzle swizzle)
 {
     switch (swizzle) {
-    case VK_CHANNEL_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
-    case VK_CHANNEL_SWIZZLE_ONE:   return GEN75_SCS_ONE;
-    case VK_CHANNEL_SWIZZLE_R:     return GEN75_SCS_RED;
-    case VK_CHANNEL_SWIZZLE_G:     return GEN75_SCS_GREEN;
-    case VK_CHANNEL_SWIZZLE_B:     return GEN75_SCS_BLUE;
-    case VK_CHANNEL_SWIZZLE_A:     return GEN75_SCS_ALPHA;
+    case VK_COMPONENT_SWIZZLE_ZERO:  return GEN75_SCS_ZERO;
+    case VK_COMPONENT_SWIZZLE_ONE:   return GEN75_SCS_ONE;
+    case VK_COMPONENT_SWIZZLE_R:     return GEN75_SCS_RED;
+    case VK_COMPONENT_SWIZZLE_G:     return GEN75_SCS_GREEN;
+    case VK_COMPONENT_SWIZZLE_B:     return GEN75_SCS_BLUE;
+    case VK_COMPONENT_SWIZZLE_A:     return GEN75_SCS_ALPHA;
     default: assert(!"unknown swizzle"); return GEN75_SCS_ZERO;
     }
 }
@@ -263,7 +263,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
                                    unsigned num_levels,
                                    unsigned first_layer,
                                    unsigned num_layers,
-                                   VkChannelMapping swizzles,
+                                   VkComponentMapping swizzles,
                                    bool is_rt,
                                    uint32_t dw[8])
 {
@@ -457,10 +457,10 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
           channel_swizzle_to_scs(swizzles.b) << GEN75_SURFACE_DW7_SCS_B__SHIFT |
           channel_swizzle_to_scs(swizzles.a) << GEN75_SURFACE_DW7_SCS_A__SHIFT;
    } else {
-        assert(swizzles.r == VK_CHANNEL_SWIZZLE_R &&
-               swizzles.g == VK_CHANNEL_SWIZZLE_G &&
-               swizzles.b == VK_CHANNEL_SWIZZLE_B &&
-               swizzles.a == VK_CHANNEL_SWIZZLE_A);
+        assert(swizzles.r == VK_COMPONENT_SWIZZLE_R &&
+               swizzles.g == VK_COMPONENT_SWIZZLE_G &&
+               swizzles.b == VK_COMPONENT_SWIZZLE_B &&
+               swizzles.a == VK_COMPONENT_SWIZZLE_A);
    }
 }
 
@@ -1069,11 +1069,11 @@ static void att_view_init_for_ds(struct intel_att_view *view,
    view->has_hiz = info.hiz.stride;
 }
 
-static const VkChannelMapping identity_channel_mapping = {
-    .r = VK_CHANNEL_SWIZZLE_R,
-    .g = VK_CHANNEL_SWIZZLE_G,
-    .b = VK_CHANNEL_SWIZZLE_B,
-    .a = VK_CHANNEL_SWIZZLE_A,
+static const VkComponentMapping identity_channel_mapping = {
+    .r = VK_COMPONENT_SWIZZLE_R,
+    .g = VK_COMPONENT_SWIZZLE_G,
+    .b = VK_COMPONENT_SWIZZLE_B,
+    .a = VK_COMPONENT_SWIZZLE_A,
 };
 
 static void att_view_init_for_rt(struct intel_att_view *view,
@@ -1235,7 +1235,7 @@ void intel_img_view_init(struct intel_dev *dev,
                          const VkImageViewCreateInfo *info,
                          struct intel_img_view *view)
 {
-    VkChannelMapping state_swizzles;
+    VkComponentMapping state_swizzles;
     uint32_t mip_levels, array_size;
     struct intel_img *img = intel_img(info->image);
 
@@ -1254,23 +1254,23 @@ void intel_img_view_init(struct intel_dev *dev,
     if (!(img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
             state_swizzles = info->channels;
-            view->shader_swizzles.r = VK_CHANNEL_SWIZZLE_R;
-            view->shader_swizzles.g = VK_CHANNEL_SWIZZLE_G;
-            view->shader_swizzles.b = VK_CHANNEL_SWIZZLE_B;
-            view->shader_swizzles.a = VK_CHANNEL_SWIZZLE_A;
+            view->shader_swizzles.r = VK_COMPONENT_SWIZZLE_R;
+            view->shader_swizzles.g = VK_COMPONENT_SWIZZLE_G;
+            view->shader_swizzles.b = VK_COMPONENT_SWIZZLE_B;
+            view->shader_swizzles.a = VK_COMPONENT_SWIZZLE_A;
         } else {
-            state_swizzles.r = VK_CHANNEL_SWIZZLE_R;
-            state_swizzles.g = VK_CHANNEL_SWIZZLE_G;
-            state_swizzles.b = VK_CHANNEL_SWIZZLE_B;
-            state_swizzles.a = VK_CHANNEL_SWIZZLE_A;
+            state_swizzles.r = VK_COMPONENT_SWIZZLE_R;
+            state_swizzles.g = VK_COMPONENT_SWIZZLE_G;
+            state_swizzles.b = VK_COMPONENT_SWIZZLE_B;
+            state_swizzles.a = VK_COMPONENT_SWIZZLE_A;
             view->shader_swizzles = info->channels;
         }
 
         /* shader_swizzles is ignored by the compiler */
-        if (view->shader_swizzles.r != VK_CHANNEL_SWIZZLE_R ||
-            view->shader_swizzles.g != VK_CHANNEL_SWIZZLE_G ||
-            view->shader_swizzles.b != VK_CHANNEL_SWIZZLE_B ||
-            view->shader_swizzles.a != VK_CHANNEL_SWIZZLE_A) {
+        if (view->shader_swizzles.r != VK_COMPONENT_SWIZZLE_R ||
+            view->shader_swizzles.g != VK_COMPONENT_SWIZZLE_G ||
+            view->shader_swizzles.b != VK_COMPONENT_SWIZZLE_B ||
+            view->shader_swizzles.a != VK_COMPONENT_SWIZZLE_A) {
             intel_dev_log(dev, VK_DBG_REPORT_WARN_BIT,
                           (struct intel_base*)view, 0, 0,
                           "image data swizzling is ignored");

@@ -48,28 +48,28 @@ static int translate_blend_func(VkBlendOp func)
    };
 }
 
-static int translate_blend(VkBlend blend)
+static int translate_blend(VkBlendFactor blend)
 {
    switch (blend) {
-   case VK_BLEND_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
-   case VK_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
-   case VK_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
-   case VK_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
-   case VK_BLEND_DST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
-   case VK_BLEND_ONE_MINUS_DST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
-   case VK_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
-   case VK_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
-   case VK_BLEND_DST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
-   case VK_BLEND_ONE_MINUS_DST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
-   case VK_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
-   case VK_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
-   case VK_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
-   case VK_BLEND_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
-   case VK_BLEND_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
-   case VK_BLEND_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
-   case VK_BLEND_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
-   case VK_BLEND_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
-   case VK_BLEND_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
+   case VK_BLEND_FACTOR_ZERO:                     return GEN6_BLENDFACTOR_ZERO;
+   case VK_BLEND_FACTOR_ONE:                      return GEN6_BLENDFACTOR_ONE;
+   case VK_BLEND_FACTOR_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
+   case VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
+   case VK_BLEND_FACTOR_DST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
+   case VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
+   case VK_BLEND_FACTOR_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
+   case VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
+   case VK_BLEND_FACTOR_DST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
+   case VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
+   case VK_BLEND_FACTOR_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
+   case VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
+   case VK_BLEND_FACTOR_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
+   case VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA: return GEN6_BLENDFACTOR_INV_CONST_ALPHA;
+   case VK_BLEND_FACTOR_SRC_ALPHA_SATURATE:       return GEN6_BLENDFACTOR_SRC_ALPHA_SATURATE;
+   case VK_BLEND_FACTOR_SRC1_COLOR:               return GEN6_BLENDFACTOR_SRC1_COLOR;
+   case VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR:     return GEN6_BLENDFACTOR_INV_SRC1_COLOR;
+   case VK_BLEND_FACTOR_SRC1_ALPHA:               return GEN6_BLENDFACTOR_SRC1_ALPHA;
+   case VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA:     return GEN6_BLENDFACTOR_INV_SRC1_ALPHA;
    default:
       assert(!"unknown blend factor");
       return GEN6_BLENDFACTOR_ONE;
@@ -367,16 +367,16 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
     pipeline->rasterizerDiscardEnable = rs_state->rasterizerDiscardEnable;
     pipeline->depthBiasEnable = rs_state->depthBiasEnable;
 
-    switch (rs_state->fillMode) {
-    case VK_FILL_MODE_POINTS:
+    switch (rs_state->polygonMode) {
+    case VK_POLYGON_MODE_POINT:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_POINT |
                               GEN7_SF_DW1_BACKFACE_POINT;
         break;
-    case VK_FILL_MODE_WIREFRAME:
+    case VK_POLYGON_MODE_LINE:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_WIREFRAME |
                               GEN7_SF_DW1_BACKFACE_WIREFRAME;
         break;
-    case VK_FILL_MODE_SOLID:
+    case VK_POLYGON_MODE_FILL:
     default:
         pipeline->cmd_sf_fill |= GEN7_SF_DW1_FRONTFACE_SOLID |
                               GEN7_SF_DW1_BACKFACE_SOLID;
@@ -911,15 +911,15 @@ static void pipeline_build_depth_stencil(struct intel_pipeline *pipeline,
 
     if (info->db.stencilTestEnable) {
         pipeline->cmd_depth_stencil = 1 << 31 |
-               translate_compare_func(info->db.front.stencilCompareOp) << 28 |
-               translate_stencil_op(info->db.front.stencilFailOp) << 25 |
-               translate_stencil_op(info->db.front.stencilDepthFailOp) << 22 |
-               translate_stencil_op(info->db.front.stencilPassOp) << 19 |
+               translate_compare_func(info->db.front.compareOp) << 28 |
+               translate_stencil_op(info->db.front.failOp) << 25 |
+               translate_stencil_op(info->db.front.depthFailOp) << 22 |
+               translate_stencil_op(info->db.front.passOp) << 19 |
                1 << 15 |
-               translate_compare_func(info->db.back.stencilCompareOp) << 12 |
-               translate_stencil_op(info->db.back.stencilFailOp) << 9 |
-               translate_stencil_op(info->db.back.stencilDepthFailOp) << 6 |
-               translate_stencil_op(info->db.back.stencilPassOp) << 3;
+               translate_compare_func(info->db.back.compareOp) << 12 |
+               translate_stencil_op(info->db.back.failOp) << 9 |
+               translate_stencil_op(info->db.back.depthFailOp) << 6 |
+               translate_stencil_op(info->db.back.passOp) << 3;
      }
 
     pipeline->stencilTestEnable = info->db.stencilTestEnable;
@@ -1005,16 +1005,16 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
 
         if (att->blendEnable) {
             dw0 = 1 << 31 |
-                    translate_blend_func(att->blendOpAlpha) << 26 |
-                    translate_blend(att->srcBlendAlpha) << 20 |
-                    translate_blend(att->dstBlendAlpha) << 15 |
-                    translate_blend_func(att->blendOpColor) << 11 |
-                    translate_blend(att->srcBlendColor) << 5 |
-                    translate_blend(att->dstBlendColor);
+                    translate_blend_func(att->alphaBlendOp) << 26 |
+                    translate_blend(att->srcAlphaBlendFactor) << 20 |
+                    translate_blend(att->dstAlphaBlendFactor) << 15 |
+                    translate_blend_func(att->colorBlendOp) << 11 |
+                    translate_blend(att->srcColorBlendFactor) << 5 |
+                    translate_blend(att->dstColorBlendFactor);
 
-            if (att->blendOpAlpha != att->blendOpColor ||
-                att->srcBlendAlpha != att->srcBlendColor ||
-                att->dstBlendAlpha != att->dstBlendColor)
+            if (att->alphaBlendOp != att->colorBlendOp ||
+                att->srcAlphaBlendFactor != att->srcColorBlendFactor ||
+                att->dstAlphaBlendFactor != att->dstColorBlendFactor)
                 dw0 |= 1 << 30;
 
             pipeline->dual_source_blend_enable = icd_pipeline_cb_att_needs_dual_source_blending(att);
@@ -1049,13 +1049,13 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
                    logicop << GEN6_RT_DW1_LOGICOP_FUNC__SHIFT;
         }
 
-        if (!(att->channelWriteMask & 0x1))
+        if (!(att->colorWriteMask & 0x1))
             dw1 |= GEN6_RT_DW1_WRITE_DISABLE_R;
-        if (!(att->channelWriteMask & 0x2))
+        if (!(att->colorWriteMask & 0x2))
             dw1 |= GEN6_RT_DW1_WRITE_DISABLE_G;
-        if (!(att->channelWriteMask & 0x4))
+        if (!(att->colorWriteMask & 0x4))
             dw1 |= GEN6_RT_DW1_WRITE_DISABLE_B;
-        if (!(att->channelWriteMask & 0x8))
+        if (!(att->colorWriteMask & 0x8))
             dw1 |= GEN6_RT_DW1_WRITE_DISABLE_A;
 
         dw[2 * i] = dw0;
@@ -1106,17 +1106,17 @@ static void pipeline_build_state(struct intel_pipeline *pipeline,
         pipeline->state.depth_bounds.max_depth_bounds = info->db.maxDepthBounds;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK) {
-        pipeline->state.stencil.front.stencil_compare_mask = info->db.front.stencilCompareMask;
-        pipeline->state.stencil.back.stencil_compare_mask = info->db.back.stencilCompareMask;
+        pipeline->state.stencil.front.stencil_compare_mask = info->db.front.compareMask;
+        pipeline->state.stencil.back.stencil_compare_mask = info->db.back.compareMask;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK) {
 
-        pipeline->state.stencil.front.stencil_write_mask = info->db.front.stencilWriteMask;
-        pipeline->state.stencil.back.stencil_write_mask = info->db.back.stencilWriteMask;
+        pipeline->state.stencil.front.stencil_write_mask = info->db.front.writeMask;
+        pipeline->state.stencil.back.stencil_write_mask = info->db.back.writeMask;
     }
     if (info->use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE) {
-        pipeline->state.stencil.front.stencil_reference = info->db.front.stencilReference;
-        pipeline->state.stencil.back.stencil_reference = info->db.back.stencilReference;
+        pipeline->state.stencil.front.stencil_reference = info->db.front.reference;
+        pipeline->state.stencil.back.stencil_reference = info->db.back.reference;
     }
 
     pipeline->state.use_pipeline_dynamic_state = info->use_pipeline_dynamic_state;

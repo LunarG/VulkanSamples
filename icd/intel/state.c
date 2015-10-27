@@ -94,7 +94,7 @@ void intel_set_depth_bounds(
 void intel_set_stencil_compare_mask(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask)
+    uint32_t                            compareMask)
 {
     /* TODO: enable back facing stencil state */
     /* Some plumbing needs to be done if we want to support info_back.
@@ -115,36 +115,36 @@ void intel_set_stencil_compare_mask(
      * TODO We do not check these yet.
      */
     if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-        cmd->bind.state.stencil.front.stencil_compare_mask = stencilCompareMask;
+        cmd->bind.state.stencil.front.stencil_compare_mask = compareMask;
     }
     if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-        cmd->bind.state.stencil.back.stencil_compare_mask = stencilCompareMask;
+        cmd->bind.state.stencil.back.stencil_compare_mask = compareMask;
     }
 }
 
 void intel_set_stencil_write_mask(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask)
+    uint32_t                            writeMask)
 {
     if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-        cmd->bind.state.stencil.front.stencil_write_mask = stencilWriteMask;
+        cmd->bind.state.stencil.front.stencil_write_mask = writeMask;
     }
     if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-        cmd->bind.state.stencil.back.stencil_write_mask = stencilWriteMask;
+        cmd->bind.state.stencil.back.stencil_write_mask = writeMask;
     }
 }
 
 void intel_set_stencil_reference(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference)
+    uint32_t                            reference)
 {
     if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-        cmd->bind.state.stencil.front.stencil_reference = stencilReference;
+        cmd->bind.state.stencil.front.stencil_reference = reference;
     }
     if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-        cmd->bind.state.stencil.back.stencil_reference = stencilReference;
+        cmd->bind.state.stencil.back.stencil_reference = reference;
     }
 }
 
@@ -234,7 +234,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
 ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask)
+    uint32_t                            compareMask)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -242,13 +242,13 @@ ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
         return;
     }
 
-    intel_set_stencil_compare_mask(cmd, faceMask, stencilCompareMask);
+    intel_set_stencil_compare_mask(cmd, faceMask, compareMask);
 }
 
 ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask)
+    uint32_t                            writeMask)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -256,13 +256,13 @@ ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
         return;
     }
 
-    intel_set_stencil_write_mask(cmd, faceMask, stencilWriteMask);
+    intel_set_stencil_write_mask(cmd, faceMask, writeMask);
 }
 
 ICD_EXPORT void VKAPI vkCmdSetStencilReference(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference)
+    uint32_t                            reference)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -270,5 +270,5 @@ ICD_EXPORT void VKAPI vkCmdSetStencilReference(
         return;
     }
 
-    intel_set_stencil_reference(cmd, faceMask, stencilReference);
+    intel_set_stencil_reference(cmd, faceMask, reference);
 }

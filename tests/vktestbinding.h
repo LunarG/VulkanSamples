@@ -391,7 +391,7 @@ public:
 
     // vkGetImageSubresourceLayout()
     VkSubresourceLayout subresource_layout(const VkImageSubresource &subres) const;
-    VkSubresourceLayout subresource_layout(const VkImageSubresourceCopy &subres) const;
+    VkSubresourceLayout subresource_layout(const VkImageSubresourceLayers &subres) const;
 
     bool transparent() const;
     bool copyable() const { return (format_features_ & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT); }
@@ -421,8 +421,8 @@ public:
     static VkImageAspectFlagBits image_aspect(VkImageAspectFlags flags);
     static VkImageSubresource subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer);
     static VkImageSubresource subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer);
-    static VkImageSubresourceCopy subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
-    static VkImageSubresourceCopy subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
+    static VkImageSubresourceLayers subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
+    static VkImageSubresourceLayers subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size);
     static VkImageSubresourceRange subresource_range(VkImageAspectFlags aspect_mask, uint32_t base_mip_level, uint32_t mip_levels,
                                                      uint32_t base_array_layer, uint32_t num_layers);
     static VkImageSubresourceRange subresource_range(const VkImageCreateInfo &info, VkImageAspectFlags aspect_mask);
@@ -692,9 +692,9 @@ inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &rang
     return subresource(image_aspect(range.aspectMask), range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer);
 }
 
-inline VkImageSubresourceCopy Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
+inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
 {
-    VkImageSubresourceCopy subres = {};
+    VkImageSubresourceLayers subres = {};
     subres.aspect = aspect;
     subres.mipLevel = mip_level;
     subres.baseArrayLayer = array_layer;
@@ -723,7 +723,7 @@ inline VkImageAspectFlagBits Image::image_aspect(VkImageAspectFlags flags)
     return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-inline VkImageSubresourceCopy Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
+inline VkImageSubresourceLayers Image::subresource(const VkImageSubresourceRange &range, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
 {
     return subresource(image_aspect(range.aspectMask), range.baseMipLevel + mip_level, range.baseArrayLayer + array_layer, array_size);
 }

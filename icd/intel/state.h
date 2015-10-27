@@ -94,14 +94,14 @@ void intel_set_depth_bounds(
 void intel_set_stencil_compare_mask(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask);
+    uint32_t                            compareMask);
 void intel_set_stencil_write_mask(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask);
+    uint32_t                            writeMask);
 void intel_set_stencil_reference(
     struct intel_cmd                   *cmd,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference);
+    uint32_t                            reference);
 
 #endif /* STATE_H */

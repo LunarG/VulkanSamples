@@ -1133,16 +1133,16 @@ static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, P
             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) pSetLayouts[i], 0, DRAWSTATE_INVALID_LAYOUT, "DS",
                     "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call", (uint64_t) pSetLayouts[i]);
         } else {
-            uint32_t typeIndex = 0, typeCount = 0;
+            uint32_t typeIndex = 0, poolSizeCount = 0;
             for (j=0; j<pLayout->createInfo.bindingCount; ++j) {
                 typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBindings[j].descriptorType);
-                typeCount = pLayout->createInfo.pBindings[j].arraySize;
-                if (typeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
+                poolSizeCount = pLayout->createInfo.pBindings[j].arraySize;
+                if (poolSizeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) pLayout->layout, 0, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                         "Unable to allocate %u descriptors of type %s from pool %#" PRIxLEAST64 ". This pool only has %u descriptors of this type remaining.",
-                            typeCount, string_VkDescriptorType(pLayout->createInfo.pBindings[j].descriptorType), (uint64_t) pPoolNode->pool, pPoolNode->availableDescriptorTypeCount[typeIndex]);
+                            poolSizeCount, string_VkDescriptorType(pLayout->createInfo.pBindings[j].descriptorType), (uint64_t) pPoolNode->pool, pPoolNode->availableDescriptorTypeCount[typeIndex]);
                 } else { // Decrement available descriptors of this type
-                    pPoolNode->availableDescriptorTypeCount[typeIndex] -= typeCount;
+                    pPoolNode->availableDescriptorTypeCount[typeIndex] -= poolSizeCount;
                 }
             }
         }
@@ -1357,7 +1357,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
 static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
 {
     for (uint32_t i = 0; i < pPipe->cbStateCI.attachmentCount; i++) {
-        if (0 != pPipe->pAttachments[i].channelWriteMask) {
+        if (0 != pPipe->pAttachments[i].colorWriteMask) {
             pCB->status |= CBSTATUS_COLOR_BLEND_WRITE_ENABLE;
         }
     }
@@ -2216,11 +2216,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
         for (uint32_t i=0; i<count; ++i) {
             SET_NODE* pSet = dev_data->setMap[pDescriptorSets[i]]; // getSetNode() without locking
             LAYOUT_NODE* pLayout = pSet->pLayout;
-            uint32_t typeIndex = 0, typeCount = 0;
+            uint32_t typeIndex = 0, poolSizeCount = 0;
             for (uint32_t j=0; j<pLayout->createInfo.bindingCount; ++j) {
                 typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBindings[j].descriptorType);
-                typeCount = pLayout->createInfo.pBindings[j].arraySize;
-                pPoolNode->availableDescriptorTypeCount[typeIndex] += typeCount;
+                poolSizeCount = pLayout->createInfo.pBindings[j].arraySize;
+                pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
         }
     }
@@ -2516,7 +2516,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask)
+    uint32_t                            compareMask)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2526,10 +2526,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_SETSTENCILREADMASKSTATE);
             if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-                pCB->front.stencilCompareMask = stencilCompareMask;
+                pCB->front.compareMask = compareMask;
             }
             if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-                pCB->back.stencilCompareMask = stencilCompareMask;
+                pCB->back.compareMask = compareMask;
             }
             /* TODO: Do we need to track front and back separately? */
             /* TODO: We aren't capturing the faceMask, do we need to? */
@@ -2539,13 +2539,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, stencilCompareMask);
+        dev_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask)
+    uint32_t                            writeMask)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2555,10 +2555,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_SETSTENCILWRITEMASKSTATE);
             if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-                pCB->front.stencilWriteMask = stencilWriteMask;
+                pCB->front.writeMask = writeMask;
             }
             if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-                pCB->back.stencilWriteMask = stencilWriteMask;
+                pCB->back.writeMask = writeMask;
             }
             pCB->status |= CBSTATUS_STENCIL_WRITE_MASK_SET;
         } else {
@@ -2566,13 +2566,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, stencilWriteMask);
+        dev_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference)
+    uint32_t                            reference)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2582,10 +2582,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_SETSTENCILREFERENCESTATE);
             if (faceMask & VK_STENCIL_FACE_FRONT_BIT) {
-                pCB->front.stencilReference = stencilReference;
+                pCB->front.reference = reference;
             }
             if (faceMask & VK_STENCIL_FACE_BACK_BIT) {
-                pCB->back.stencilReference = stencilReference;
+                pCB->back.reference = reference;
             }
             pCB->status |= CBSTATUS_STENCIL_REFERENCE_SET;
         } else {
@@ -2593,7 +2593,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, stencilReference);
+        dev_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
@@ -3536,7 +3536,7 @@ static void deleteRenderPasses(layer_data* my_data)
     }
     my_data->renderPassMap.clear();
 }
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkRenderPassContents contents)
+VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3561,7 +3561,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
         dev_data->device_dispatch_table->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkRenderPassContents contents)
+VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);

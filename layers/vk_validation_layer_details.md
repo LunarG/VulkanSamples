@@ -107,7 +107,7 @@ The ParamChecker layer validates parameter values and flags errors for any value
 Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
- 2.  From AMD: we were using an image view with a swizzle of VK_CHANNEL_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
+ 2.  From AMD: we were using an image view with a swizzle of VK_COLOR_COMPONENT_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
  3. When querying VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES must provide enough memory for a all the queues on the device (not just 1 when device has multiple queues).
  4. INT & FLOAT bordercolors. Border color int/float selection must match associated texture format.
  5. Flag error on VkBufferCreateInfo if buffer size is 0

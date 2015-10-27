@@ -314,11 +314,11 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     pPacket = interpret_body_as_vkCreateDescriptorPool(pHeader);
     pPacket->device = device;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkDescriptorPoolCreateInfo), pCreateInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCounts), pCreateInfo->typeCount * sizeof(VkDescriptorTypeCount), pCreateInfo->pTypeCounts);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pPoolSizes), pCreateInfo->poolSizeCount * sizeof(VkDescriptorPoolSize), pCreateInfo->pPoolSizes);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pDescriptorPool), sizeof(VkDescriptorPool), pDescriptorPool);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pTypeCounts));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pPoolSizes));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocator));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pDescriptorPool));
@@ -947,7 +947,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateComputePipelines(
 VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
     VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin,
-    VkRenderPassContents contents)
+    VkSubpassContents contents)
 {
     vktrace_trace_packet_header* pHeader;
     packet_vkCmdBeginRenderPass* pPacket = NULL;

@@ -82,7 +82,7 @@ struct intel_img_view {
 
     struct intel_img *img;
 
-    VkChannelMapping shader_swizzles;
+    VkComponentMapping shader_swizzles;
 
     /* SURFACE_STATE */
     uint32_t cmd[8];

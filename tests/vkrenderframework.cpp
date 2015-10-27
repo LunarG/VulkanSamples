@@ -214,9 +214,9 @@ void VkRenderFramework::InitState()
     m_minDepthBounds = 0.f;
     m_maxDepthBounds = 1.f;
 
-    m_stencilCompareMask = 0xff;
-    m_stencilWriteMask = 0xff;
-    m_stencilReference = 0;
+    m_compareMask = 0xff;
+    m_writeMask = 0xff;
+    m_reference = 0;
 
     VkCommandPoolCreateInfo cmd_pool_info;
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -233,8 +233,8 @@ void VkRenderFramework::InitViewport(float width, float height)
 {
     VkViewport viewport;
     VkRect2D scissor;
-    viewport.originX  = 0;
-    viewport.originY  = 0;
+    viewport.x  = 0;
+    viewport.y  = 0;
     viewport.width    = 1.f * width;
     viewport.height   = 1.f * height;
     viewport.minDepth = 0.f;
@@ -439,7 +439,7 @@ VkDescriptorSetObj::~VkDescriptorSetObj()
 int VkDescriptorSetObj::AppendDummy()
 {
     /* request a descriptor but do not update it */
-    VkDescriptorTypeCount tc = {};
+    VkDescriptorPoolSize tc = {};
     tc.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
@@ -453,7 +453,7 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
            type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ||
            type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
-    VkDescriptorTypeCount tc = {};
+    VkDescriptorPoolSize tc = {};
     tc.type = type;
     tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
@@ -466,7 +466,7 @@ int VkDescriptorSetObj::AppendBuffer(VkDescriptorType type, VkConstantBufferObj 
 
 int VkDescriptorSetObj::AppendSamplerTexture( VkSamplerObj* sampler, VkTextureObj* texture)
 {
-    VkDescriptorTypeCount tc = {};
+    VkDescriptorPoolSize tc = {};
     tc.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     tc.descriptorCount = 1;
     m_type_counts.push_back(tc);
@@ -496,9 +496,9 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer
     // create VkDescriptorPool
     VkDescriptorPoolCreateInfo pool = {};
     pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool.typeCount = m_type_counts.size();
+    pool.poolSizeCount = m_type_counts.size();
     pool.maxSets = 1;
-    pool.pTypeCounts = m_type_counts.data();
+    pool.pPoolSizes = m_type_counts.data();
     init(*m_device, pool);
 
     // create VkDescriptorSetLayout
@@ -815,10 +815,10 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.image = VK_NULL_HANDLE;
     view.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view.format = tex_format;
-    view.channels.r = VK_CHANNEL_SWIZZLE_R;
-    view.channels.g = VK_CHANNEL_SWIZZLE_G;
-    view.channels.b = VK_CHANNEL_SWIZZLE_B;
-    view.channels.a = VK_CHANNEL_SWIZZLE_A;
+    view.channels.r = VK_COMPONENT_SWIZZLE_R;
+    view.channels.g = VK_COMPONENT_SWIZZLE_G;
+    view.channels.b = VK_COMPONENT_SWIZZLE_B;
+    view.channels.a = VK_COMPONENT_SWIZZLE_A;
     view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view.subresourceRange.baseMipLevel = 0;
     view.subresourceRange.levelCount = 1;
@@ -1128,11 +1128,11 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ia_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ia_state.primitiveRestartEnable = VK_FALSE;
 
-    m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+    m_rs_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     m_rs_state.pNext = VK_NULL_HANDLE;
     m_rs_state.depthClampEnable = VK_TRUE;
     m_rs_state.rasterizerDiscardEnable = VK_FALSE;
-    m_rs_state.fillMode = VK_FILL_MODE_SOLID;
+    m_rs_state.polygonMode = VK_POLYGON_MODE_FILL;
     m_rs_state.cullMode = VK_CULL_MODE_BACK_BIT;
     m_rs_state.frontFace = VK_FRONT_FACE_CLOCKWISE;
     m_rs_state.depthBiasEnable = VK_FALSE;
@@ -1172,14 +1172,14 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ds_state.depthWriteEnable     = VK_FALSE;
     m_ds_state.depthBoundsTestEnable = VK_FALSE;
     m_ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-    m_ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    m_ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    m_ds_state.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    m_ds_state.back.failOp = VK_STENCIL_OP_KEEP;
+    m_ds_state.back.passOp = VK_STENCIL_OP_KEEP;
+    m_ds_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
     m_ds_state.stencilTestEnable = VK_FALSE;
-    m_ds_state.back.stencilCompareMask = 0xff;
-    m_ds_state.back.stencilWriteMask = 0xff;
-    m_ds_state.back.stencilReference = 0;
+    m_ds_state.back.compareMask = 0xff;
+    m_ds_state.back.writeMask = 0xff;
+    m_ds_state.back.reference = 0;
     m_ds_state.minDepthBounds = 0.f;
     m_ds_state.maxDepthBounds = 1.f;
 
@@ -1505,7 +1505,7 @@ void VkCommandBufferObj::PrepareAttachments()
 
 void VkCommandBufferObj::BeginRenderPass(const VkRenderPassBeginInfo &info)
 {
-    vkCmdBeginRenderPass( handle(), &info, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass( handle(), &info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void VkCommandBufferObj::EndRenderPass()
@@ -1555,23 +1555,23 @@ void VkCommandBufferObj::SetDepthBounds(
 
 void VkCommandBufferObj::SetStencilReadMask(
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilCompareMask)
+    uint32_t                            compareMask)
 {
-    vkCmdSetStencilCompareMask( handle(), faceMask, stencilCompareMask);
+    vkCmdSetStencilCompareMask( handle(), faceMask, compareMask);
 }
 
 void VkCommandBufferObj::SetStencilWriteMask(
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilWriteMask)
+    uint32_t                            writeMask)
 {
-    vkCmdSetStencilWriteMask( handle(), faceMask, stencilWriteMask);
+    vkCmdSetStencilWriteMask( handle(), faceMask, writeMask);
 }
 
 void VkCommandBufferObj::SetStencilReference(
     VkStencilFaceFlags                  faceMask,
-    uint32_t                            stencilReference)
+    uint32_t                            reference)
 {
-    vkCmdSetStencilReference( handle(), faceMask, stencilReference);
+    vkCmdSetStencilReference( handle(), faceMask, reference);
 }
 
 void VkCommandBufferObj::AddRenderTarget(VkImageObj *renderTarget)

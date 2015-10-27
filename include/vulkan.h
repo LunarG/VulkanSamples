@@ -100,12 +100,12 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCommandPool)
 #define VK_FALSE                          0
 #define VK_QUEUE_FAMILY_IGNORED           (~0U)
 #define VK_SUBPASS_EXTERNAL               (~0U)
-#define VK_MAX_PHYSICAL_DEVICE_NAME       256
-#define VK_UUID_LENGTH                    16
+#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE       256
+#define VK_UUID_SIZE                    16
 #define VK_MAX_MEMORY_TYPES               32
 #define VK_MAX_MEMORY_HEAPS               16
-#define VK_MAX_EXTENSION_NAME             256
-#define VK_MAX_DESCRIPTION                256
+#define VK_MAX_EXTENSION_NAME_SIZE             256
+#define VK_MAX_DESCRIPTION_SIZE                256
 
 
 typedef enum {
@@ -155,7 +155,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO = 21,
     VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO = 22,
     VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO = 24,
     VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO = 25,
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO = 26,
     VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO = 27,
@@ -468,27 +468,27 @@ typedef enum {
 } VkImageViewType;
 
 typedef enum {
-    VK_CHANNEL_SWIZZLE_IDENTITY = 0,
-    VK_CHANNEL_SWIZZLE_ZERO = 1,
-    VK_CHANNEL_SWIZZLE_ONE = 2,
-    VK_CHANNEL_SWIZZLE_R = 3,
-    VK_CHANNEL_SWIZZLE_G = 4,
-    VK_CHANNEL_SWIZZLE_B = 5,
-    VK_CHANNEL_SWIZZLE_A = 6,
-    VK_CHANNEL_SWIZZLE_BEGIN_RANGE = VK_CHANNEL_SWIZZLE_IDENTITY,
-    VK_CHANNEL_SWIZZLE_END_RANGE = VK_CHANNEL_SWIZZLE_A,
-    VK_CHANNEL_SWIZZLE_RANGE_SIZE = (VK_CHANNEL_SWIZZLE_A - VK_CHANNEL_SWIZZLE_IDENTITY + 1),
-    VK_CHANNEL_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
-} VkChannelSwizzle;
+    VK_COMPONENT_SWIZZLE_IDENTITY = 0,
+    VK_COMPONENT_SWIZZLE_ZERO = 1,
+    VK_COMPONENT_SWIZZLE_ONE = 2,
+    VK_COMPONENT_SWIZZLE_R = 3,
+    VK_COMPONENT_SWIZZLE_G = 4,
+    VK_COMPONENT_SWIZZLE_B = 5,
+    VK_COMPONENT_SWIZZLE_A = 6,
+    VK_COMPONENT_SWIZZLE_BEGIN_RANGE = VK_COMPONENT_SWIZZLE_IDENTITY,
+    VK_COMPONENT_SWIZZLE_END_RANGE = VK_COMPONENT_SWIZZLE_A,
+    VK_COMPONENT_SWIZZLE_RANGE_SIZE = (VK_COMPONENT_SWIZZLE_A - VK_COMPONENT_SWIZZLE_IDENTITY + 1),
+    VK_COMPONENT_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
+} VkComponentSwizzle;
 
 typedef enum {
-    VK_VERTEX_INPUT_STEP_RATE_VERTEX = 0,
-    VK_VERTEX_INPUT_STEP_RATE_INSTANCE = 1,
-    VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE = VK_VERTEX_INPUT_STEP_RATE_VERTEX,
-    VK_VERTEX_INPUT_STEP_RATE_END_RANGE = VK_VERTEX_INPUT_STEP_RATE_INSTANCE,
-    VK_VERTEX_INPUT_STEP_RATE_RANGE_SIZE = (VK_VERTEX_INPUT_STEP_RATE_INSTANCE - VK_VERTEX_INPUT_STEP_RATE_VERTEX + 1),
-    VK_VERTEX_INPUT_STEP_RATE_MAX_ENUM = 0x7FFFFFFF
-} VkVertexInputStepRate;
+    VK_VERTEX_INPUT_RATE_VERTEX = 0,
+    VK_VERTEX_INPUT_RATE_INSTANCE = 1,
+    VK_VERTEX_INPUT_RATE_BEGIN_RANGE = VK_VERTEX_INPUT_RATE_VERTEX,
+    VK_VERTEX_INPUT_RATE_END_RANGE = VK_VERTEX_INPUT_RATE_INSTANCE,
+    VK_VERTEX_INPUT_RATE_RANGE_SIZE = (VK_VERTEX_INPUT_RATE_INSTANCE - VK_VERTEX_INPUT_RATE_VERTEX + 1),
+    VK_VERTEX_INPUT_RATE_MAX_ENUM = 0x7FFFFFFF
+} VkVertexInputRate;
 
 typedef enum {
     VK_PRIMITIVE_TOPOLOGY_POINT_LIST = 0,
@@ -509,14 +509,14 @@ typedef enum {
 } VkPrimitiveTopology;
 
 typedef enum {
-    VK_FILL_MODE_SOLID = 0,
-    VK_FILL_MODE_WIREFRAME = 1,
-    VK_FILL_MODE_POINTS = 2,
-    VK_FILL_MODE_BEGIN_RANGE = VK_FILL_MODE_SOLID,
-    VK_FILL_MODE_END_RANGE = VK_FILL_MODE_POINTS,
-    VK_FILL_MODE_RANGE_SIZE = (VK_FILL_MODE_POINTS - VK_FILL_MODE_SOLID + 1),
+    VK_POLYGON_MODE_FILL = 0,
+    VK_POLYGON_MODE_LINE = 1,
+    VK_POLYGON_MODE_POINT = 2,
+    VK_FILL_MODE_BEGIN_RANGE = VK_POLYGON_MODE_FILL,
+    VK_FILL_MODE_END_RANGE = VK_POLYGON_MODE_POINT,
+    VK_FILL_MODE_RANGE_SIZE = (VK_POLYGON_MODE_POINT - VK_POLYGON_MODE_FILL + 1),
     VK_FILL_MODE_MAX_ENUM = 0x7FFFFFFF
-} VkFillMode;
+} VkPolygonMode;
 
 typedef enum {
     VK_FRONT_FACE_COUNTER_CLOCKWISE = 0,
@@ -581,30 +581,30 @@ typedef enum {
 } VkLogicOp;
 
 typedef enum {
-    VK_BLEND_ZERO = 0,
-    VK_BLEND_ONE = 1,
-    VK_BLEND_SRC_COLOR = 2,
-    VK_BLEND_ONE_MINUS_SRC_COLOR = 3,
-    VK_BLEND_DST_COLOR = 4,
-    VK_BLEND_ONE_MINUS_DST_COLOR = 5,
-    VK_BLEND_SRC_ALPHA = 6,
-    VK_BLEND_ONE_MINUS_SRC_ALPHA = 7,
-    VK_BLEND_DST_ALPHA = 8,
-    VK_BLEND_ONE_MINUS_DST_ALPHA = 9,
-    VK_BLEND_CONSTANT_COLOR = 10,
-    VK_BLEND_ONE_MINUS_CONSTANT_COLOR = 11,
-    VK_BLEND_CONSTANT_ALPHA = 12,
-    VK_BLEND_ONE_MINUS_CONSTANT_ALPHA = 13,
-    VK_BLEND_SRC_ALPHA_SATURATE = 14,
-    VK_BLEND_SRC1_COLOR = 15,
-    VK_BLEND_ONE_MINUS_SRC1_COLOR = 16,
-    VK_BLEND_SRC1_ALPHA = 17,
-    VK_BLEND_ONE_MINUS_SRC1_ALPHA = 18,
-    VK_BLEND_BEGIN_RANGE = VK_BLEND_ZERO,
-    VK_BLEND_END_RANGE = VK_BLEND_ONE_MINUS_SRC1_ALPHA,
-    VK_BLEND_RANGE_SIZE = (VK_BLEND_ONE_MINUS_SRC1_ALPHA - VK_BLEND_ZERO + 1),
+    VK_BLEND_FACTOR_ZERO = 0,
+    VK_BLEND_FACTOR_ONE = 1,
+    VK_BLEND_FACTOR_SRC_COLOR = 2,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR = 3,
+    VK_BLEND_FACTOR_DST_COLOR = 4,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR = 5,
+    VK_BLEND_FACTOR_SRC_ALPHA = 6,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = 7,
+    VK_BLEND_FACTOR_DST_ALPHA = 8,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA = 9,
+    VK_BLEND_FACTOR_CONSTANT_COLOR = 10,
+    VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR = 11,
+    VK_BLEND_FACTOR_CONSTANT_ALPHA = 12,
+    VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA = 13,
+    VK_BLEND_FACTOR_SRC_ALPHA_SATURATE = 14,
+    VK_BLEND_FACTOR_SRC1_COLOR = 15,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR = 16,
+    VK_BLEND_FACTOR_SRC1_ALPHA = 17,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA = 18,
+    VK_BLEND_BEGIN_RANGE = VK_BLEND_FACTOR_ZERO,
+    VK_BLEND_END_RANGE = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA,
+    VK_BLEND_RANGE_SIZE = (VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA - VK_BLEND_FACTOR_ZERO + 1),
     VK_BLEND_MAX_ENUM = 0x7FFFFFFF
-} VkBlend;
+} VkBlendFactor;
 
 typedef enum {
     VK_BLEND_OP_ADD = 0,
@@ -743,13 +743,13 @@ typedef enum {
 } VkIndexType;
 
 typedef enum {
-    VK_RENDER_PASS_CONTENTS_INLINE = 0,
-    VK_RENDER_PASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = 1,
-    VK_RENDER_PASS_CONTENTS_BEGIN_RANGE = VK_RENDER_PASS_CONTENTS_INLINE,
-    VK_RENDER_PASS_CONTENTS_END_RANGE = VK_RENDER_PASS_CONTENTS_SECONDARY_COMMAND_BUFFERS,
-    VK_RENDER_PASS_CONTENTS_RANGE_SIZE = (VK_RENDER_PASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - VK_RENDER_PASS_CONTENTS_INLINE + 1),
-    VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
-} VkRenderPassContents;
+    VK_SUBPASS_CONTENTS_INLINE = 0,
+    VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = 1,
+    VK_SUBPASS_CONTENTS_BEGIN_RANGE = VK_SUBPASS_CONTENTS_INLINE,
+    VK_SUBPASS_CONTENTS_END_RANGE = VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS,
+    VK_SUBPASS_CONTENTS_RANGE_SIZE = (VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - VK_SUBPASS_CONTENTS_INLINE + 1),
+    VK_SUBPASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
+} VkSubpassContents;
 
 typedef VkFlags VkInstanceCreateFlags;
 
@@ -804,7 +804,7 @@ typedef VkFlags VkSampleCountFlags;
 typedef enum {
     VK_QUEUE_GRAPHICS_BIT = 0x00000001,
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
-    VK_QUEUE_DMA_BIT = 0x00000004,
+    VK_QUEUE_TRANSFER_BIT = 0x00000004,
     VK_QUEUE_SPARSE_BINDING_BIT = 0x00000008,
 } VkQueueFlagBits;
 typedef VkFlags VkQueueFlags;
@@ -935,11 +935,11 @@ typedef VkFlags VkPipelineDepthStencilStateCreateFlags;
 typedef VkFlags VkPipelineColorBlendStateCreateFlags;
 
 typedef enum {
-    VK_CHANNEL_R_BIT = 0x00000001,
-    VK_CHANNEL_G_BIT = 0x00000002,
-    VK_CHANNEL_B_BIT = 0x00000004,
-    VK_CHANNEL_A_BIT = 0x00000008,
-} VkChannelFlagBits;
+    VK_COLOR_COMPONENT_R_BIT = 0x00000001,
+    VK_COLOR_COMPONENT_G_BIT = 0x00000002,
+    VK_COLOR_COMPONENT_B_BIT = 0x00000004,
+    VK_COLOR_COMPONENT_A_BIT = 0x00000008,
+} VkColorComponentFlagBits;
 typedef VkFlags VkChannelFlags;
 typedef VkFlags VkPipelineDynamicStateCreateFlags;
 typedef VkFlags VkPipelineLayoutCreateFlags;
@@ -1041,7 +1041,7 @@ typedef enum {
 typedef VkFlags VkStencilFaceFlags;
 
 typedef enum {
-    VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
+    VK_QUERY_CONTROL_PRECISE_BIT = 0x00000001,
 } VkQueryControlFlagBits;
 typedef VkFlags VkQueryControlFlags;
 
@@ -1119,7 +1119,7 @@ typedef struct {
     VkBool32                                    multiDrawIndirect;
     VkBool32                                    depthClamp;
     VkBool32                                    depthBiasClamp;
-    VkBool32                                    fillModeNonSolid;
+    VkBool32                                    polygonModeNonSolid;
     VkBool32                                    depthBounds;
     VkBool32                                    wideLines;
     VkBool32                                    largePoints;
@@ -1129,7 +1129,7 @@ typedef struct {
     VkBool32                                    textureCompressionETC2;
     VkBool32                                    textureCompressionASTC_LDR;
     VkBool32                                    textureCompressionBC;
-    VkBool32                                    occlusionQueryNonConservative;
+    VkBool32                                    occlusionQueryPrecise;
     VkBool32                                    pipelineStatisticsQuery;
     VkBool32                                    vertexPipelineStoresAndAtomics;
     VkBool32                                    fragmentStoresAndAtomics;
@@ -1280,8 +1280,8 @@ typedef struct {
     float                                       pointSizeGranularity;
     float                                       lineWidthGranularity;
     VkBool32                                    strictLines;
-    VkDeviceSize                                recommendedBufferCopyOffsetAlignment;
-    VkDeviceSize                                recommendedBufferCopyRowPitchAlignment;
+    VkDeviceSize                                optimalBufferCopyOffsetAlignment;
+    VkDeviceSize                                optimalBufferCopyRowPitchAlignment;
 } VkPhysicalDeviceLimits;
 
 typedef struct {
@@ -1298,8 +1298,8 @@ typedef struct {
     uint32_t                                    vendorID;
     uint32_t                                    deviceID;
     VkPhysicalDeviceType                        deviceType;
-    char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
-    uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
+    char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    uint8_t                                     pipelineCacheUUID[VK_UUID_SIZE];
     VkPhysicalDeviceLimits                      limits;
     VkPhysicalDeviceSparseProperties            sparseProperties;
 } VkPhysicalDeviceProperties;
@@ -1351,15 +1351,15 @@ typedef struct {
 } VkDeviceCreateInfo;
 
 typedef struct {
-    char                                        extensionName[VK_MAX_EXTENSION_NAME];
+    char                                        extensionName[VK_MAX_EXTENSION_NAME_SIZE];
     uint32_t                                    specVersion;
 } VkExtensionProperties;
 
 typedef struct {
-    char                                        layerName[VK_MAX_EXTENSION_NAME];
+    char                                        layerName[VK_MAX_EXTENSION_NAME_SIZE];
     uint32_t                                    specVersion;
     uint32_t                                    implementationVersion;
-    char                                        description[VK_MAX_DESCRIPTION];
+    char                                        description[VK_MAX_DESCRIPTION_SIZE];
 } VkLayerProperties;
 
 typedef struct {
@@ -1544,11 +1544,11 @@ typedef struct {
 } VkSubresourceLayout;
 
 typedef struct {
-    VkChannelSwizzle                            r;
-    VkChannelSwizzle                            g;
-    VkChannelSwizzle                            b;
-    VkChannelSwizzle                            a;
-} VkChannelMapping;
+    VkComponentSwizzle                            r;
+    VkComponentSwizzle                            g;
+    VkComponentSwizzle                            b;
+    VkComponentSwizzle                            a;
+} VkComponentMapping;
 
 typedef struct {
     VkImageAspectFlags                          aspectMask;
@@ -1565,7 +1565,7 @@ typedef struct {
     VkImage                                     image;
     VkImageViewType                             viewType;
     VkFormat                                    format;
-    VkChannelMapping                            channels;
+    VkComponentMapping                            channels;
     VkImageSubresourceRange                     subresourceRange;
 } VkImageViewCreateInfo;
 
@@ -1618,7 +1618,7 @@ typedef struct {
 typedef struct {
     uint32_t                                    binding;
     uint32_t                                    stride;
-    VkVertexInputStepRate                       stepRate;
+    VkVertexInputRate                       inputRate;
 } VkVertexInputBindingDescription;
 
 typedef struct {
@@ -1654,8 +1654,8 @@ typedef struct {
 } VkPipelineTessellationStateCreateInfo;
 
 typedef struct {
-    float                                       originX;
-    float                                       originY;
+    float                                       x;
+    float                                       y;
     float                                       width;
     float                                       height;
     float                                       minDepth;
@@ -1693,7 +1693,7 @@ typedef struct {
     VkPipelineRasterizationStateCreateFlags     flags;
     VkBool32                                    depthClampEnable;
     VkBool32                                    rasterizerDiscardEnable;
-    VkFillMode                                  fillMode;
+    VkPolygonMode                                  polygonMode;
     VkCullModeFlags                             cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
@@ -1716,13 +1716,13 @@ typedef struct {
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct {
-    VkStencilOp                                 stencilFailOp;
-    VkStencilOp                                 stencilPassOp;
-    VkStencilOp                                 stencilDepthFailOp;
-    VkCompareOp                                 stencilCompareOp;
-    uint32_t                                    stencilCompareMask;
-    uint32_t                                    stencilWriteMask;
-    uint32_t                                    stencilReference;
+    VkStencilOp                                 failOp;
+    VkStencilOp                                 passOp;
+    VkStencilOp                                 depthFailOp;
+    VkCompareOp                                 compareOp;
+    uint32_t                                    compareMask;
+    uint32_t                                    writeMask;
+    uint32_t                                    reference;
 } VkStencilOpState;
 
 typedef struct {
@@ -1742,13 +1742,13 @@ typedef struct {
 
 typedef struct {
     VkBool32                                    blendEnable;
-    VkBlend                                     srcBlendColor;
-    VkBlend                                     dstBlendColor;
-    VkBlendOp                                   blendOpColor;
-    VkBlend                                     srcBlendAlpha;
-    VkBlend                                     dstBlendAlpha;
-    VkBlendOp                                   blendOpAlpha;
-    VkChannelFlags                              channelWriteMask;
+    VkBlendFactor                                     srcColorBlendFactor;
+    VkBlendFactor                                     dstColorBlendFactor;
+    VkBlendOp                                   colorBlendOp;
+    VkBlendFactor                                     srcAlphaBlendFactor;
+    VkBlendFactor                                     dstAlphaBlendFactor;
+    VkBlendOp                                   alphaBlendOp;
+    VkChannelFlags                              colorWriteMask;
 } VkPipelineColorBlendAttachmentState;
 
 typedef struct {
@@ -1856,15 +1856,15 @@ typedef struct {
 typedef struct {
     VkDescriptorType                            type;
     uint32_t                                    descriptorCount;
-} VkDescriptorTypeCount;
+} VkDescriptorPoolSize;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkDescriptorPoolCreateFlags                 flags;
     uint32_t                                    maxSets;
-    uint32_t                                    typeCount;
-    const VkDescriptorTypeCount*                pTypeCounts;
+    uint32_t                                    poolSizeCount;
+    const VkDescriptorPoolSize*                pPoolSizes;
 } VkDescriptorPoolCreateInfo;
 
 typedef struct {
@@ -2011,21 +2011,21 @@ typedef struct {
     uint32_t                                    mipLevel;
     uint32_t                                    baseArrayLayer;
     uint32_t                                    layerCount;
-} VkImageSubresourceCopy;
+} VkImageSubresourceLayers;
 
 typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
+    VkImageSubresourceLayers                      srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresourceCopy                      dstSubresource;
+    VkImageSubresourceLayers                      dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  extent;
 } VkImageCopy;
 
 typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
+    VkImageSubresourceLayers                      srcSubresource;
     VkOffset3D                                  srcOffset;
     VkExtent3D                                  srcExtent;
-    VkImageSubresourceCopy                      dstSubresource;
+    VkImageSubresourceLayers                      dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  dstExtent;
 } VkImageBlit;
@@ -2034,7 +2034,7 @@ typedef struct {
     VkDeviceSize                                bufferOffset;
     uint32_t                                    bufferRowLength;
     uint32_t                                    bufferImageHeight;
-    VkImageSubresourceCopy                      imageSubresource;
+    VkImageSubresourceLayers                      imageSubresource;
     VkOffset3D                                  imageOffset;
     VkExtent3D                                  imageExtent;
 } VkBufferImageCopy;
@@ -2068,9 +2068,9 @@ typedef struct {
 } VkClearRect;
 
 typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
+    VkImageSubresourceLayers                      srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresourceCopy                      dstSubresource;
+    VkImageSubresourceLayers                      dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  extent;
 } VkImageResolve;
@@ -2241,9 +2241,9 @@ typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCommandBuffer commandBuffer, float
 typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
 typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCommandBuffer commandBuffer, const float blendConstants[4]);
 typedef void (VKAPI *PFN_vkCmdSetDepthBounds)(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds);
-typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
-typedef void (VKAPI *PFN_vkCmdSetStencilWriteMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
-typedef void (VKAPI *PFN_vkCmdSetStencilReference)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference);
+typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask);
+typedef void (VKAPI *PFN_vkCmdSetStencilWriteMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask);
+typedef void (VKAPI *PFN_vkCmdSetStencilReference)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference);
 typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
 typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
 typedef void (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCommandBuffer commandBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
@@ -2274,8 +2274,8 @@ typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCommandBuffer commandBuffer, VkQ
 typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
-typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
-typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCommandBuffer commandBuffer, VkRenderPassContents contents);
+typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
+typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCommandBuffer commandBuffer, VkSubpassContents contents);
 typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCommandBuffer commandBuffer);
 typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers);
 
@@ -2830,17 +2830,17 @@ void VKAPI vkCmdSetDepthBounds(
 void VKAPI vkCmdSetStencilCompareMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilCompareMask);
+    uint32_t                                    compareMask);
 
 void VKAPI vkCmdSetStencilWriteMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilWriteMask);
+    uint32_t                                    writeMask);
 
 void VKAPI vkCmdSetStencilReference(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilReference);
+    uint32_t                                    reference);
 
 void VKAPI vkCmdBindDescriptorSets(
     VkCommandBuffer                             commandBuffer,
@@ -3064,11 +3064,11 @@ void VKAPI vkCmdPushConstants(
 void VKAPI vkCmdBeginRenderPass(
     VkCommandBuffer                             commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkRenderPassContents                        contents);
+    VkSubpassContents                        contents);
 
 void VKAPI vkCmdNextSubpass(
     VkCommandBuffer                             commandBuffer,
-    VkRenderPassContents                        contents);
+    VkSubpassContents                        contents);
 
 void VKAPI vkCmdEndRenderPass(
     VkCommandBuffer                             commandBuffer);

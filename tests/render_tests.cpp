@@ -763,7 +763,7 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
          sizeof(g_vbData[0]),              // stride;  Distance between vertices in bytes (0 = no advancement)
-         VK_VERTEX_INPUT_STEP_RATE_VERTEX // stepRate;       // Rate at which binding is incremented
+         VK_VERTEX_INPUT_RATE_VERTEX // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -842,7 +842,7 @@ TEST_F(VkRenderTest, TriangleMRT)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vb_data[0]),                     // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attrib;
@@ -860,7 +860,7 @@ TEST_F(VkRenderTest, TriangleMRT)
 
     VkPipelineColorBlendAttachmentState att = {};
     att.blendEnable = VK_FALSE;
-    att.channelWriteMask = 0xf;
+    att.colorWriteMask = 0xf;
     pipelineobj.AddColorAttachment(1, &att);
 
     ASSERT_VK_SUCCESS(BeginCommandBuffer());
@@ -951,7 +951,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -1044,7 +1044,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[1];
@@ -1132,7 +1132,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[1];
@@ -1230,7 +1230,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[1];
@@ -1319,7 +1319,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                           // binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[1];
@@ -1556,7 +1556,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -1659,7 +1659,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(vData[0]),                       // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -1752,7 +1752,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                    // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -1855,10 +1855,10 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
-    ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds_state.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.failOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.passOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 
@@ -1869,7 +1869,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BUF_ID,                            // Binding ID
         sizeof(g_vbData[0]),                     // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX       // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX       // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -2744,7 +2744,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkVertexInputBindingDescription vi_binding = {
         MESH_BIND_ID,                      // binding ID
         sizeof(g_vb_texture_Data[0]),               // stride;  Distance between vertices in bytes (0 = no advancement)
-        VK_VERTEX_INPUT_STEP_RATE_VERTEX  // stepRate;       // Rate at which binding is incremented
+        VK_VERTEX_INPUT_RATE_VERTEX  // inputRate;       // Rate at which binding is incremented
     };
 
     VkVertexInputAttributeDescription vi_attribs[2];
@@ -2766,10 +2766,10 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
-    ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds_state.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds_state.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.failOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.passOp = VK_STENCIL_OP_KEEP;
+    ds_state.back.compareOp = VK_COMPARE_OP_ALWAYS;
     ds_state.front = ds_state.back;
     pipelineobj.SetDepthStencil(&ds_state);
 

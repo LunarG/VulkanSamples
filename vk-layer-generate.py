@@ -157,7 +157,7 @@ class Subcommand(object):
         if "VkFormat" == vk_type:
             if cpp:
                 return ("%p", "&%s" % name)
-            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_CHANNEL_FORMAT(%s.channelFormat), string_VK_FORMAT_RANGE_SIZE(%s.numericFormat)" % (name, name))
+            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_COLOR_COMPONENT_FORMAT(%s.channelFormat), string_VK_FORMAT_RANGE_SIZE(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
         if vk_helper.is_type(vk_type, 'struct') and '*' not in vk_type:

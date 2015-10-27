@@ -395,7 +395,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     err = vkBeginCommandBuffer(demo->draw_cmd, &cmd_buf_info);
     assert(!err);
 
-    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(demo->draw_cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   demo->pipeline);
     vkCmdBindDescriptorSets(demo->draw_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, demo->pipeline_layout,
@@ -654,10 +654,10 @@ static void demo_prepare_buffers(struct demo *demo)
             .pNext = NULL,
             .format = demo->format,
             .channels = {
-                .r = VK_CHANNEL_SWIZZLE_R,
-                .g = VK_CHANNEL_SWIZZLE_G,
-                .b = VK_CHANNEL_SWIZZLE_B,
-                .a = VK_CHANNEL_SWIZZLE_A,
+                .r = VK_COMPONENT_SWIZZLE_R,
+                .g = VK_COMPONENT_SWIZZLE_G,
+                .b = VK_COMPONENT_SWIZZLE_B,
+                .a = VK_COMPONENT_SWIZZLE_A,
             },
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -954,10 +954,10 @@ static void demo_prepare_textures(struct demo *demo)
             .image = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
-            .channels = { VK_CHANNEL_SWIZZLE_R,
-                          VK_CHANNEL_SWIZZLE_G,
-                          VK_CHANNEL_SWIZZLE_B,
-                          VK_CHANNEL_SWIZZLE_A, },
+            .channels = { VK_COMPONENT_SWIZZLE_R,
+                          VK_COMPONENT_SWIZZLE_G,
+                          VK_COMPONENT_SWIZZLE_B,
+                          VK_COMPONENT_SWIZZLE_A, },
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
             .flags = 0,
         };
@@ -1040,7 +1040,7 @@ static void demo_prepare_vertices(struct demo *demo)
 
     demo->vertices.vi_bindings[0].binding = VERTEX_BUFFER_BIND_ID;
     demo->vertices.vi_bindings[0].stride = sizeof(vb[0]);
-    demo->vertices.vi_bindings[0].stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
+    demo->vertices.vi_bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     demo->vertices.vi_attrs[0].binding = VERTEX_BUFFER_BIND_ID;
     demo->vertices.vi_attrs[0].location = 0;
@@ -1330,8 +1330,8 @@ static void demo_prepare_pipeline(struct demo *demo)
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     memset(&rs, 0, sizeof(rs));
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
-    rs.fillMode = VK_FILL_MODE_SOLID;
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rs.depthClampEnable = VK_FALSE;
@@ -1342,7 +1342,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     VkPipelineColorBlendAttachmentState att_state[1];
     memset(att_state, 0, sizeof(att_state));
-    att_state[0].channelWriteMask = 0xf;
+    att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
@@ -1360,9 +1360,9 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.depthWriteEnable = VK_TRUE;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
-    ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds.back.failOp = VK_STENCIL_OP_KEEP;
+    ds.back.passOp = VK_STENCIL_OP_KEEP;
+    ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
     ds.stencilTestEnable = VK_FALSE;
     ds.front = ds.back;
 
@@ -1413,7 +1413,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
 static void demo_prepare_descriptor_pool(struct demo *demo)
 {
-    const VkDescriptorTypeCount type_count = {
+    const VkDescriptorPoolSize type_count = {
         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = DEMO_TEXTURE_COUNT,
     };
@@ -1421,8 +1421,8 @@ static void demo_prepare_descriptor_pool(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .pNext = NULL,
         .maxSets = 1,
-        .typeCount = 1,
-        .pTypeCounts = &type_count,
+        .poolSizeCount = 1,
+        .pPoolSizes = &type_count,
     };
     VkResult U_ASSERT_ONLY err;
 

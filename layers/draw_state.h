@@ -179,16 +179,16 @@ typedef struct _POOL_NODE {
     pool(pool), createInfo(*pCreateInfo), maxSets(pCreateInfo->maxSets), pSets(NULL),
     maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE)
     {
-        if (createInfo.typeCount) { // Shadow type struct from ptr into local struct
-            size_t typeCountSize = createInfo.typeCount * sizeof(VkDescriptorTypeCount);
-            createInfo.pTypeCounts = new VkDescriptorTypeCount[typeCountSize];
-            memcpy((void*)createInfo.pTypeCounts, pCreateInfo->pTypeCounts, typeCountSize);
+        if (createInfo.poolSizeCount) { // Shadow type struct from ptr into local struct
+            size_t poolSizeCountSize = createInfo.poolSizeCount * sizeof(VkDescriptorPoolSize);
+            createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
+            memcpy((void*)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
             // Now set max counts for each descriptor type based on count of that type times maxSets
             int32_t i=0;
-            for (i=0; i<createInfo.typeCount; ++i) {
-                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pTypeCounts[i].type);
-                uint32_t typeCount = createInfo.pTypeCounts[i].descriptorCount;
-                maxDescriptorTypeCount[typeIndex] += typeCount;
+            for (i=0; i<createInfo.poolSizeCount; ++i) {
+                uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
+                uint32_t poolSizeCount = createInfo.pPoolSizes[i].descriptorCount;
+                maxDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
             for (i=0; i<maxDescriptorTypeCount.size(); ++i) {
                 maxDescriptorTypeCount[i] *= createInfo.maxSets;
@@ -196,12 +196,12 @@ typedef struct _POOL_NODE {
                 availableDescriptorTypeCount[i] = maxDescriptorTypeCount[i];
             }
         } else {
-            createInfo.pTypeCounts = NULL; // Make sure this is NULL so we don't try to clean it up
+            createInfo.pPoolSizes = NULL; // Make sure this is NULL so we don't try to clean it up
         }
     }
     ~_POOL_NODE() {
-        if (createInfo.pTypeCounts) {
-            delete[] createInfo.pTypeCounts;
+        if (createInfo.pPoolSizes) {
+            delete[] createInfo.pPoolSizes;
         }
         // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
         //  need to migrate that struct to smart ptrs for auto-cleanup
@@ -296,9 +296,9 @@ typedef enum _CBStatusFlagBits
 } CBStatusFlagBits;
 
 typedef struct stencil_data {
-    uint32_t                     stencilCompareMask;
-    uint32_t                     stencilWriteMask;
-    uint32_t                     stencilReference;
+    uint32_t                     compareMask;
+    uint32_t                     writeMask;
+    uint32_t                     reference;
 } CBStencilData;
 
 // Cmd Buffer Wrapper Struct

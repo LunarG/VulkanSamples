@@ -206,7 +206,7 @@ struct intel_cmd_bind {
     const struct intel_render_pass *render_pass;
     const struct intel_render_pass_subpass *render_pass_subpass;
     const struct intel_fb *fb;
-    VkRenderPassContents render_pass_contents;
+    VkSubpassContents render_pass_contents;
 
     uint32_t draw_count;
     uint32_t wa_flags;

@@ -599,8 +599,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetGlobalExtensionInfo(
             ext_props = (VkExtensionProperties *) pData;
             ext_props->version = mtExts[extensionIndex].version;
             strncpy(ext_props->extensionName, mtExts[extensionIndex].name,
-                                        VK_MAX_EXTENSION_NAME);
-            ext_props->extensionName[VK_MAX_EXTENSION_NAME - 1] = '\0';
+                                        VK_MAX_EXTENSION_NAME_SIZE);
+            ext_props->extensionName[VK_MAX_EXTENSION_NAME_SIZE - 1] = '\0';
             break;
         default:
             return VK_ERROR_INVALID_VALUE;

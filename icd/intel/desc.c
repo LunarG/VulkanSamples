@@ -209,8 +209,8 @@ VkResult intel_desc_region_alloc(struct intel_desc_region *region,
     uint32_t i;
 
     /* calculate sizes needed */
-    for (i = 0; i < info->typeCount; i++) {
-        const VkDescriptorTypeCount *tc = &info->pTypeCounts[i];
+    for (i = 0; i < info->poolSizeCount; i++) {
+        const VkDescriptorPoolSize *tc = &info->pPoolSizes[i];
         struct intel_desc_offset size;
         VkResult ret;
 

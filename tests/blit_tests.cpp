@@ -70,7 +70,7 @@ private:
     bool walk(Action action, Image &img) const;
     bool walk_region(Action action, const VkBufferImageCopy &region, const VkSubresourceLayout &layout, void *data) const;
 
-    std::vector<uint8_t> pattern_hash(const VkImageSubresourceCopy &subres, const VkOffset3D &offset) const;
+    std::vector<uint8_t> pattern_hash(const VkImageSubresourceLayers &subres, const VkOffset3D &offset) const;
 
     static uint32_t hash_salt_;
 
@@ -269,7 +269,7 @@ bool ImageChecker::walk(Action action, Image &img) const
     return (it == regions_.end());
 }
 
-std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresourceCopy &subres, const VkOffset3D &offset) const
+std::vector<uint8_t> ImageChecker::pattern_hash(const VkImageSubresourceLayers &subres, const VkOffset3D &offset) const
 {
 #define HASH_BYTE(val, b) static_cast<uint8_t>((static_cast<uint32_t>(val) >> (b * 8)) & 0xff)
 #define HASH_BYTES(val) HASH_BYTE(val, 0), HASH_BYTE(val, 1), HASH_BYTE(val, 2), HASH_BYTE(val, 3)

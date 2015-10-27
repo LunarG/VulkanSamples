@@ -328,7 +328,7 @@ VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCommandBufferBeginInfo *
                 intel_render_pass(info->renderPass),
                 intel_fb(info->framebuffer),
                 info->subpass,
-                VK_RENDER_PASS_CONTENTS_INLINE);
+                VK_SUBPASS_CONTENTS_INLINE);
     }
 
     if (cmd->flags != info->flags) {
