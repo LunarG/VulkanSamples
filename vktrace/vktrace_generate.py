@@ -1384,7 +1384,7 @@ class Subcommand(object):
                         if lastName == '':
                             return '            // pPacket->%s should have been remapped with special case code' % (paramName)
                         pArray = '[pPacket->%s]' % lastName
-                        result = '            %s remapped%s%s;\n' % (cleanParamType, paramName, pArray)
+                        result = '            %s *remapped%s = new %s%s;\n' % (cleanParamType, paramName, cleanParamType, pArray)
                         result += '%s\n' % self.lineinfo.get()
                         result += '            for (uint32_t i = 0; i < pPacket->%s; i++) {\n' % lastName
                         if cleanParamType in  VulkNonDispObjects:
@@ -1703,6 +1703,12 @@ class Subcommand(object):
                     rbody.append('                // TODO this only works with a single instance used at any given time.')
                     rbody.append('                m_objMapper.clear_all_map_handles();')
                     rbody.append('            }')
+                elif 'MergePipelineCaches' in proto.name:
+                    rbody.append('            delete remappedpSrcCaches;')
+                elif 'FreeCommandBuffers' in proto.name:
+                    rbody.append('            delete remappedpCommandBuffers;')
+                elif 'CmdExecuteCommands' in proto.name:
+                    rbody.append('            delete remappedpCmdBuffers;')
                 elif 'AllocDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')

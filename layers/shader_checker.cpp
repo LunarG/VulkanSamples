@@ -1056,8 +1056,8 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     int geometry_stage = get_shader_stage_id(VK_SHADER_STAGE_GEOMETRY_BIT);
     int fragment_stage = get_shader_stage_id(VK_SHADER_STAGE_FRAGMENT_BIT);
 
-    shader_module const *shaders[fragment_stage + 1];  /* exclude CS */
-    memset(shaders, 0, sizeof(shaders));
+    shader_module **shaders = new shader_module*[fragment_stage + 1];  /* exclude CS */
+    memset(shaders, 0, sizeof(shader_module *) * (fragment_stage +1));
     render_pass const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     bool pass = true;
@@ -1144,6 +1144,8 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     if (shaders[fragment_stage] && rp) {
         pass = validate_fs_outputs_against_render_pass(dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
+
+    delete shaders;
 
     loader_platform_thread_unlock_mutex(&globalLock);
     return pass;

@@ -1974,7 +1974,7 @@ VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBu
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    VkCmdBuffer local_pCmdBuffers[pPacket->pAllocInfo->count];
+    VkCmdBuffer *local_pCmdBuffers = new VkCmdBuffer[pPacket->pAllocInfo->count];
     VkCmdPool local_CmdPool;
     local_CmdPool.handle = pPacket->pAllocInfo->cmdPool.handle;
     uint64_t remappedCmdPoolHandle = m_objMapper.remap_cmdpools(pPacket->pAllocInfo->cmdPool.handle);
@@ -1988,5 +1988,6 @@ VkResult vkReplay::manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBu
             m_objMapper.add_to_cmdbuffers_map(pPacket->pCmdBuffers[i], local_pCmdBuffers[i]);
         }
     }
+    delete local_pCmdBuffers;
     return replayResult;
 }
