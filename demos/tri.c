@@ -894,7 +894,7 @@ static void demo_prepare_textures(struct demo *demo)
             demo_prepare_texture_image(demo, tex_colors[i], &demo->textures[i],
                                        VK_IMAGE_TILING_OPTIMAL,
                                        (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
-                                       VK_MEMORY_PROPERTY_DEVICE_ONLY);
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
             demo_set_image_layout(demo, staging_texture.image,
                                    VK_IMAGE_ASPECT_COLOR_BIT,

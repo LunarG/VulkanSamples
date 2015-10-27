@@ -504,10 +504,10 @@ static
 bool ValidateEnumerator(VkMemoryPropertyFlagBits const& enumerator)
 {
     VkMemoryPropertyFlagBits allFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT |
-        VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-        VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT |
-        VK_MEMORY_PROPERTY_DEVICE_ONLY);
+        VK_MEMORY_PROPERTY_HOST_CACHED_BIT |
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -529,21 +529,21 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
     {
         strings.push_back("VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT");
     }
-    if(enumerator & VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT)
+    if(enumerator & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     {
-        strings.push_back("VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT");
+        strings.push_back("VK_MEMORY_PROPERTY_HOST_COHERENT_BIT");
     }
     if(enumerator & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
     {
         strings.push_back("VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT");
     }
-    if(enumerator & VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT)
+    if(enumerator & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
     {
-        strings.push_back("VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT");
+        strings.push_back("VK_MEMORY_PROPERTY_HOST_CACHED_BIT");
     }
-    if(enumerator & VK_MEMORY_PROPERTY_DEVICE_ONLY)
+    if(enumerator & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
     {
-        strings.push_back("VK_MEMORY_PROPERTY_DEVICE_ONLY");
+        strings.push_back("VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT");
     }
 
     std::string enumeratorString;
@@ -563,7 +563,7 @@ std::string EnumeratorString(VkMemoryPropertyFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkMemoryHeapFlagBits const& enumerator)
 {
-    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_HOST_LOCAL_BIT);
+    VkMemoryHeapFlagBits allFlags = (VkMemoryHeapFlagBits)(VK_MEMORY_HEAP_DEVICE_LOCAL_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -581,9 +581,9 @@ std::string EnumeratorString(VkMemoryHeapFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_HEAP_HOST_LOCAL_BIT)
+    if(enumerator & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
     {
-        strings.push_back("VK_MEMORY_HEAP_HOST_LOCAL_BIT");
+        strings.push_back("VK_MEMORY_HEAP_DEVICE_LOCAL_BIT");
     }
 
     std::string enumeratorString;
