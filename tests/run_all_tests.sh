@@ -6,6 +6,9 @@ cd $(dirname "$0")
 # Halt on error
 set -e
 
+# Verify that validation checks in source match documentation
+./vkvalidatelayerdoc.sh
+
 # vkbase tests that basic VK calls are working (don't return an error).
 ./vkbase
 
@@ -27,9 +30,4 @@ set -e
 
 # vktracereplay.sh tests vktrace trace and replay
 ./vktracereplay.sh
-
-# vk_layer_documentation_generate.py is run from the project root dir
-# the --validate option will verify that checks documented in layer header
-# files match those documented in layer/vk_validation_layer_details.md
-./vkvalidatelayerdoc.sh
 
