@@ -1858,7 +1858,6 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         pc_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
         pc_ci.initialDataSize = 0;
         pc_ci.pInitialData = 0;
-        pc_ci.maxSize = 0;
 
     VkPipeline pipeline;
     VkPipelineCache pipelineCache;
