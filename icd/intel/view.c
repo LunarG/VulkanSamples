@@ -1239,11 +1239,11 @@ void intel_img_view_init(struct intel_dev *dev,
     uint32_t mip_levels, array_size;
     struct intel_img *img = intel_img(info->image);
 
-    mip_levels = info->subresourceRange.numLevels;
+    mip_levels = info->subresourceRange.levelCount;
     if (mip_levels > img->mip_levels - info->subresourceRange.baseMipLevel)
         mip_levels = img->mip_levels - info->subresourceRange.baseMipLevel;
 
-    array_size = info->subresourceRange.numLayers;
+    array_size = info->subresourceRange.layerCount;
     if (array_size > img->array_size - info->subresourceRange.baseArrayLayer)
         array_size = img->array_size - info->subresourceRange.baseArrayLayer;
 
@@ -1329,34 +1329,34 @@ void intel_att_view_init(struct intel_dev *dev,
 
     att_view->mipLevel = info->subresourceRange.baseMipLevel;
     att_view->baseArrayLayer = info->subresourceRange.baseArrayLayer;
-    att_view->array_size = info->subresourceRange.numLayers;
+    att_view->array_size = info->subresourceRange.layerCount;
 
     view_type = img_type_to_view_type(img->type,
                                       info->subresourceRange.baseArrayLayer,
-                                      info->subresourceRange.numLayers);
+                                      info->subresourceRange.layerCount);
 
     att_view_init_for_input(att_view, dev->gpu, img, view_type, info->format,
                             info->subresourceRange.baseMipLevel,
                             info->subresourceRange.baseArrayLayer,
-                            info->subresourceRange.numLayers);
+                            info->subresourceRange.layerCount);
 
     if (img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         att_view_init_for_ds(att_view, dev->gpu, img, view_type, img->layout.format,
                              info->subresourceRange.baseMipLevel,
                              info->subresourceRange.baseArrayLayer,
-                             info->subresourceRange.numLayers);
+                             info->subresourceRange.layerCount);
     } else {
         att_view_init_for_rt(att_view, dev->gpu, img, view_type, info->format,
                              info->subresourceRange.baseMipLevel,
                              info->subresourceRange.baseArrayLayer,
-                             info->subresourceRange.numLayers);
+                             info->subresourceRange.layerCount);
     }
 }
 
 ICD_EXPORT VkResult VKAPI vkCreateBufferView(
     VkDevice                            device,
     const VkBufferViewCreateInfo*       pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkBufferView*                       pView)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1368,7 +1368,7 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
 ICD_EXPORT void VKAPI vkDestroyBufferView(
     VkDevice                            device,
     VkBufferView                        bufferView,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(bufferView);
@@ -1379,7 +1379,7 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
 ICD_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice                            device,
     const VkImageViewCreateInfo*        pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkImageView*                        pView)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1391,7 +1391,7 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
 ICD_EXPORT void VKAPI vkDestroyImageView(
     VkDevice                            device,
     VkImageView                         imageView,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(imageView);

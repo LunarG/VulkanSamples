@@ -112,7 +112,7 @@ VkResult intel_query_create(struct intel_dev *dev,
         break;
     }
 
-    VkMemoryAllocInfo mem_reqs;
+    VkMemoryAllocateInfo mem_reqs;
     mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_reqs.allocationSize = query->slot_stride * query->slot_count;
     mem_reqs.pNext = NULL;
@@ -219,7 +219,7 @@ VkResult intel_query_get_results(struct intel_query *query,
 ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
     VkDevice                                    device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkQueryPool*                                pQueryPool)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -231,7 +231,7 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
 ICD_EXPORT void VKAPI vkDestroyQueryPool(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(queryPool);

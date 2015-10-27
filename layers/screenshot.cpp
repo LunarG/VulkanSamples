@@ -74,11 +74,11 @@ typedef struct
 } ImageMapStruct;
 static unordered_map<VkImage, ImageMapStruct *> imageMap;
 
-// unordered map: associates a device with a queue, cmdPool, and physical device
+// unordered map: associates a device with a queue, commandPool, and physical device
 typedef struct
 {
     VkQueue  queue;
-    VkCmdPool cmdPool;
+    VkCommandPool commandPool;
     VkPhysicalDevice physicalDevice;
 } DeviceMapStruct;
 static unordered_map<VkDevice, DeviceMapStruct *> deviceMap;
@@ -139,7 +139,7 @@ static void writePPM( const char *filename, VkImage image1)
     int x, y;
     const char *ptr;
     VkDeviceMemory mem2;
-    VkCmdBuffer cmdBuffer;
+    VkCommandBuffer commandBuffer;
     VkDevice device = imageMap[image1]->device;
     VkPhysicalDevice physicalDevice = deviceMap[device]->physicalDevice;
     VkInstance instance = physDeviceMap[physicalDevice]->instance;
@@ -160,25 +160,25 @@ static void writePPM( const char *filename, VkImage image1)
         1,
         1,
         VK_IMAGE_TILING_LINEAR,
-        (VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
+        (VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
     };
-    VkMemoryAllocInfo memAllocInfo = {
+    VkMemoryAllocateInfo memAllocInfo = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
         NULL,
         0,     // allocationSize, queried later
         0      // memoryTypeIndex, queried later
     };
-    const VkCmdBufferAllocInfo allocCommandBufferInfo = {
-        VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
+    const VkCommandBufferAllocateInfo allocCommandBufferInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
         NULL,
-        deviceMap[device]->cmdPool,
-        VK_CMD_BUFFER_LEVEL_PRIMARY,
+        deviceMap[device]->commandPool,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         1
     };
-    const VkCmdBufferBeginInfo cmdBufferBeginInfo = {
-        VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+    const VkCommandBufferBeginInfo commandBufferBeginInfo = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         NULL,
-        VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     const VkImageCopy imageCopyRegion = {
         {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0},
@@ -193,7 +193,7 @@ static void writePPM( const char *filename, VkImage image1)
     VkLayerDispatchTable* pTableDevice = get_dispatch_table(screenshot_device_table_map, device);
     VkLayerDispatchTable* pTableQueue = get_dispatch_table(screenshot_device_table_map, queue);
     VkLayerInstanceDispatchTable* pInstanceTable;
-    VkLayerDispatchTable* pTableCmdBuffer;
+    VkLayerDispatchTable* pTableCommandBuffer;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
     if (imageMap.empty() || imageMap.find(image1) == imageMap.end())
@@ -222,26 +222,26 @@ static void writePPM( const char *filename, VkImage image1)
                                 &memAllocInfo.memoryTypeIndex);
     assert(pass);
 
-    err = pTableDevice->AllocMemory(device, &memAllocInfo, NULL, &mem2);
+    err = pTableDevice->AllocateMemory(device, &memAllocInfo, NULL, &mem2);
     assert(!err);
 
     err = pTableQueue->BindImageMemory(device, image2, mem2, 0);
     assert(!err);
 
-    err = pTableDevice->AllocCommandBuffers(device, &allocCommandBufferInfo,  &cmdBuffer);
+    err = pTableDevice->AllocateCommandBuffers(device, &allocCommandBufferInfo,  &commandBuffer);
     assert(!err);
 
-    screenshot_device_table_map.emplace(cmdBuffer, pTableDevice);
-    pTableCmdBuffer = screenshot_device_table_map[cmdBuffer];
+    screenshot_device_table_map.emplace(commandBuffer, pTableDevice);
+    pTableCommandBuffer = screenshot_device_table_map[commandBuffer];
 
-    err = pTableCmdBuffer->BeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo);
+    err = pTableCommandBuffer->BeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
     assert(!err);
 
     // TODO: We need to transition images to match these layouts, then restore the original layouts
-    pTableCmdBuffer->CmdCopyImage(cmdBuffer, image1, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                   image2, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL, 1, &imageCopyRegion);
+    pTableCommandBuffer->CmdCopyImage(commandBuffer, image1, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   image2, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
 
-    err = pTableCmdBuffer->EndCommandBuffer(cmdBuffer);
+    err = pTableCommandBuffer->EndCommandBuffer(commandBuffer);
     assert(!err);
 
     VkFence nullFence = { VK_NULL_HANDLE };
@@ -251,7 +251,7 @@ static void writePPM( const char *filename, VkImage image1)
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &cmdBuffer;
+    submit_info.pCommandBuffers = &commandBuffer;
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
@@ -309,7 +309,7 @@ static void writePPM( const char *filename, VkImage image1)
     // Clean up
     pTableDevice->UnmapMemory(device, mem2);
     pTableDevice->FreeMemory(device, mem2, NULL);
-    pTableDevice->FreeCommandBuffers(device, deviceMap[device]->cmdPool, 1, &cmdBuffer);
+    pTableDevice->FreeCommandBuffers(device, deviceMap[device]->commandPool, 1, &commandBuffer);
 }
 
 
@@ -336,7 +336,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkDevice                 *pDevice)
 {
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, *pDevice);
@@ -461,12 +461,12 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice  device,
-    const VkCmdPoolCreateInfo *pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
-    VkCmdPool *pCmdPool)
+    const VkCommandPoolCreateInfo *pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkCommandPool *pCommandPool)
 {
     VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCmdPool);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -475,13 +475,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
         return result;
     }
 
-    // Create a mapping from a device to a cmdPool
+    // Create a mapping from a device to a commandPool
     if (deviceMap[device] == NULL)
     {
         DeviceMapStruct *deviceMapElem = new DeviceMapStruct;
         deviceMap[device] = deviceMapElem;
     }
-    deviceMap[device]->cmdPool = *pCmdPool;
+    deviceMap[device]->commandPool = *pCommandPool;
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }

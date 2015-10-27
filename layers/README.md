@@ -10,7 +10,7 @@ vkEnumerateInstanceLayerProperties and vkEnumerateDeviceLayerProperties can be c
 available layers and their properties. Layers can intercept Vulkan instance level entry points
 in which case they are called an Instance Layer.  Layers can intercept device entry  points
 in which case they are called a Device Layer. Instance level entry points are those with VkInstance
-or VkPhysicalDevice as first parameter.  Device level entry points are those with VkDevice, VkCmdBuffer,
+or VkPhysicalDevice as first parameter.  Device level entry points are those with VkDevice, VkCommandBuffer,
 or VkQueue as the first parameter. Layers that want to intercept both instance and device
 level entrypoints are called Global Layers. vkXXXXGetProcAddr is used internally by the Layers and
 Loader to initialize dispatch tables. Device Layers are activated at vkCreateDevice time. Instance

@@ -35,7 +35,7 @@ int intel_debug = -1;
 
 void *intel_alloc(const void *handle,
                                 size_t size, size_t alignment,
-                                VkSystemAllocScope scope)
+                                VkSystemAllocationScope scope)
 {
     assert(intel_handle_validate(handle));
     return icd_instance_alloc(((const struct intel_handle *) handle)->instance->icd,
@@ -146,7 +146,7 @@ static void intel_instance_destroy(struct intel_instance *instance)
 
 static VkResult intel_instance_create(
         const VkInstanceCreateInfo* info,
-        const VkAllocCallbacks* allocator,
+        const VkAllocationCallbacks* allocator,
         struct intel_instance **pInstance)
 {
     struct intel_instance *instance;
@@ -155,12 +155,12 @@ static VkResult intel_instance_create(
 
     intel_debug_init();
 
-    icd = icd_instance_create(info->pAppInfo, allocator);
+    icd = icd_instance_create(info->pApplicationInfo, allocator);
     if (!icd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     instance = icd_instance_alloc(icd, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance) {
         icd_instance_destroy(icd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -204,12 +204,12 @@ static VkResult intel_instance_create(
 }
 
 enum intel_global_ext_type intel_gpu_lookup_global_extension(
-        const char *extName)
+        const char *extensionName)
 {
     enum intel_global_ext_type type;
 
     for (type = 0; type < ARRAY_SIZE(intel_global_exts); type++) {
-        if (compare_vk_extension_properties(&intel_global_exts[type], extName))
+        if (compare_vk_extension_properties(&intel_global_exts[type], extensionName))
             break;
     }
 
@@ -220,7 +220,7 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
 
 ICD_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkInstance*                             pInstance)
 {
     return intel_instance_create(pCreateInfo, pAllocator,
@@ -229,7 +229,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
 
 ICD_EXPORT void VKAPI vkDestroyInstance(
     VkInstance                                pInstance,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 

@@ -377,7 +377,7 @@ static const struct intel_dp_cap intel_dp_caps[] = {
 #undef CAP
 };
 
-static const int intel_color_mapping[VK_FORMAT_NUM] = {
+static const int intel_color_mapping[VK_FORMAT_RANGE_SIZE] = {
     [VK_FORMAT_R4G4_UNORM]           = 0,
     [VK_FORMAT_R4G4_USCALED]         = 0,
     [VK_FORMAT_R4G4B4A4_UNORM]       = 0,

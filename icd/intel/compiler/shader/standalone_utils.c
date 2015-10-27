@@ -38,7 +38,7 @@
 
 void *intel_alloc(const void *handle,
                                 size_t size, size_t alignment,
-                                VkSystemAllocScope scope)
+                                VkSystemAllocationScope scope)
 {
     assert(intel_handle_validate(handle));
     return icd_instance_alloc(((const struct intel_handle *) handle)->instance->icd,

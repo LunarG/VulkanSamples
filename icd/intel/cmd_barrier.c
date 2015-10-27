@@ -66,10 +66,10 @@ static uint32_t img_get_layout_ops(const struct intel_img *img,
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
         ops = READ_OP;
         break;
-    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
         ops = READ_OP;
         break;
-    case VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         ops = WRITE_OP;
         break;
     case VK_IMAGE_LAYOUT_UNDEFINED:
@@ -108,11 +108,11 @@ static uint32_t img_get_layout_caches(const struct intel_img *img,
         // Optimal layout when image is used for read only shader access
         caches = DATA_READ_CACHE | SAMPLER_CACHE;
         break;
-    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
         // Optimal layout when image is used only as source of transfer operations
         caches = MEM_CACHE | DATA_READ_CACHE | RENDER_CACHE | SAMPLER_CACHE;
         break;
-    case VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         // Optimal layout when image is used only as destination of transfer operations
         caches = MEM_CACHE | DATA_WRITE_CACHE | RENDER_CACHE;
         break;
@@ -266,15 +266,15 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdWaitEvents(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        sourceStageMask,
-    VkPipelineStageFlags                        destStageMask,
-    uint32_t                                    memBarrierCount,
-    const void* const*                          ppMemBarriers)
+    VkPipelineStageFlags                        dstStageMask,
+    uint32_t                                    memoryBarrierCount,
+    const void* const*                          ppMemoryBarriers)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     /* This hardware will always wait at VK_PIPELINE_STAGE_TOP_OF_PIPE.
      * Passing a stageMask specifying other stages
@@ -290,18 +290,18 @@ ICD_EXPORT void VKAPI vkCmdWaitEvents(
      */
     cmd_memory_barriers(cmd,
             GEN6_PIPE_CONTROL_CS_STALL,
-            memBarrierCount, ppMemBarriers);
+            memoryBarrierCount, ppMemoryBarriers);
 }
 
 ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
-        VkCmdBuffer                                 cmdBuffer,
+        VkCommandBuffer                                 commandBuffer,
         VkPipelineStageFlags                        srcStageMask,
-        VkPipelineStageFlags                        destStageMask,
+        VkPipelineStageFlags                        dstStageMask,
     VkDependencyFlags                           dependencyFlags,
-        uint32_t                                    memBarrierCount,
-        const void* const*                          ppMemBarriers)
+        uint32_t                                    memoryBarrierCount,
+        const void* const*                          ppMemoryBarriers)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     uint32_t pipe_control_flags = 0;
 
     /* This hardware will always wait at VK_WAIT_EVENT_TOP_OF_PIPE.
@@ -315,7 +315,7 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      */
 
     if ((srcStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) ||
-            (destStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS)){
+            (dstStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS)){
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
     }
 
@@ -324,5 +324,5 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      */
     cmd_memory_barriers(cmd,
             pipe_control_flags,
-            memBarrierCount, ppMemBarriers);
+            memoryBarrierCount, ppMemoryBarriers);
 }

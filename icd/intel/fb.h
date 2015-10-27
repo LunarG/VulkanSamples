@@ -97,13 +97,13 @@ static inline struct intel_render_pass *intel_render_pass_from_obj(struct intel_
 
 VkResult intel_fb_create(struct intel_dev *dev,
                          const VkFramebufferCreateInfo *pInfo,
-                         const VkAllocCallbacks *allocator,
+                         const VkAllocationCallbacks *allocator,
                          struct intel_fb **fb_ret);
 void intel_fb_destroy(struct intel_fb *fb);
 
 VkResult intel_render_pass_create(struct intel_dev *dev,
                                   const VkRenderPassCreateInfo *pInfo,
-                                  const VkAllocCallbacks *allocator,
+                                  const VkAllocationCallbacks *allocator,
                                   struct intel_render_pass **rp_ret);
 void intel_render_pass_destroy(struct intel_render_pass *rp);
 

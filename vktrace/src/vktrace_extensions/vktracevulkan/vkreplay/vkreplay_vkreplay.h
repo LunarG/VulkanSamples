@@ -113,7 +113,7 @@ private:
     void manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket);
     VkResult manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket);
     void manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket);
-    VkResult manually_replay_vkAllocDescriptorSets(packet_vkAllocDescriptorSets* pPacket);
+    VkResult manually_replay_vkAllocateDescriptorSets(packet_vkAllocateDescriptorSets* pPacket);
     VkResult manually_replay_vkFreeDescriptorSets(packet_vkFreeDescriptorSets* pPacket);
     void manually_replay_vkCmdBindDescriptorSets(packet_vkCmdBindDescriptorSets* pPacket);
     void manually_replay_vkCmdBindVertexBuffers(packet_vkCmdBindVertexBuffers* pPacket);
@@ -125,9 +125,9 @@ private:
     VkResult manually_replay_vkCreateRenderPass(packet_vkCreateRenderPass* pPacket);
     void manually_replay_vkCmdBeginRenderPass(packet_vkCmdBeginRenderPass* pPacket);
     VkResult manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuffer* pPacket);
-    VkResult manually_replay_vkAllocCommandBuffers(packet_vkAllocCommandBuffers* pPacket);
+    VkResult manually_replay_vkAllocateCommandBuffers(packet_vkAllocateCommandBuffers* pPacket);
     VkResult manually_replay_vkWaitForFences(packet_vkWaitForFences* pPacket);
-    VkResult manually_replay_vkAllocMemory(packet_vkAllocMemory* pPacket);
+    VkResult manually_replay_vkAllocateMemory(packet_vkAllocateMemory* pPacket);
     void manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket);
     VkResult manually_replay_vkMapMemory(packet_vkMapMemory* pPacket);
     void manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket);

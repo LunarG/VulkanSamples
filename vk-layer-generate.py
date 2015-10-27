@@ -157,7 +157,7 @@ class Subcommand(object):
         if "VkFormat" == vk_type:
             if cpp:
                 return ("%p", "&%s" % name)
-            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_CHANNEL_FORMAT(%s.channelFormat), string_VK_FORMAT_NUM(%s.numericFormat)" % (name, name))
+            return ("{%s.channelFormat = %%s, %s.numericFormat = %%s}" % (name, name), "string_VK_CHANNEL_FORMAT(%s.channelFormat), string_VK_FORMAT_RANGE_SIZE(%s.numericFormat)" % (name, name))
         if output_param:
             return ("%p", "(void*)*%s" % name)
         if vk_helper.is_type(vk_type, 'struct') and '*' not in vk_type:
@@ -231,7 +231,7 @@ class Subcommand(object):
             ggep_body.append('    {')
             ggep_body.append('        "%s",' % layer)
             ggep_body.append('        VK_API_VERSION, // specVersion')
-            ggep_body.append('        VK_MAKE_VERSION(0, 1, 0), // implVersion')
+            ggep_body.append('        VK_MAKE_VERSION(0, 1, 0), // implementationVersion')
             ggep_body.append('        "layer: %s",' % layer)
             ggep_body.append('    }')
             ggep_body.append('};')
@@ -846,30 +846,30 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('    return retVal;')
         header_txt.append('}')
         header_txt.append('')
-        header_txt.append('void interpret_memBarriers(const void* const* ppMemBarriers, uint32_t memBarrierCount)')
+        header_txt.append('void interpret_memBarriers(const void* const* ppMemoryBarriers, uint32_t memoryBarrierCount)')
         header_txt.append('{')
-        header_txt.append('    if (ppMemBarriers) {')
+        header_txt.append('    if (ppMemoryBarriers) {')
         header_txt.append('        string tmp_str;')
-        header_txt.append('        for (uint32_t i = 0; i < memBarrierCount; i++) {')
-        header_txt.append('            switch(*(VkStructureType*)ppMemBarriers[i])')
+        header_txt.append('        for (uint32_t i = 0; i < memoryBarrierCount; i++) {')
+        header_txt.append('            switch(*(VkStructureType*)ppMemoryBarriers[i])')
         header_txt.append('            {')
         header_txt.append('                case VK_STRUCTURE_TYPE_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkmemorybarrier((VkMemoryBarrier*)ppMemBarriers[i], "    ");')
+        header_txt.append('                    tmp_str = vk_print_vkmemorybarrier((VkMemoryBarrier*)ppMemoryBarriers[i], "    ");')
         header_txt.append('                    break;')
         header_txt.append('                case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkbuffermemorybarrier((VkBufferMemoryBarrier*)ppMemBarriers[i], "    ");')
+        header_txt.append('                    tmp_str = vk_print_vkbuffermemorybarrier((VkBufferMemoryBarrier*)ppMemoryBarriers[i], "    ");')
         header_txt.append('                    break;')
         header_txt.append('                case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:')
-        header_txt.append('                    tmp_str = vk_print_vkimagememorybarrier((VkImageMemoryBarrier*)ppMemBarriers[i], "    ");')
+        header_txt.append('                    tmp_str = vk_print_vkimagememorybarrier((VkImageMemoryBarrier*)ppMemoryBarriers[i], "    ");')
         header_txt.append('                    break;')
         header_txt.append('                default:')
         header_txt.append('                    break;')
         header_txt.append('            }')
         header_txt.append('')
         header_txt.append('            if (StreamControl::writeAddress == true) {')
-        header_txt.append('                (*outputStream) << "   ppMemBarriers[" << i << "] (" << &ppMemBarriers[i] << ")" << endl << tmp_str << endl;')
+        header_txt.append('                (*outputStream) << "   ppMemoryBarriers[" << i << "] (" << &ppMemoryBarriers[i] << ")" << endl << tmp_str << endl;')
         header_txt.append('            } else {')
-        header_txt.append('                (*outputStream) << "   ppMemBarriers[" << i << "] (address)" << endl << "    address" << endl;')
+        header_txt.append('                (*outputStream) << "   ppMemoryBarriers[" << i << "] (address)" << endl << "    address" << endl;')
         header_txt.append('            }')
         header_txt.append('        }')
         header_txt.append('    }')
@@ -970,7 +970,7 @@ class APIDumpSubcommand(Subcommand):
         funcs = []
         sp_param_dict = {} # Store 'index' for struct param to print, or an name of binding "Count" param for array to print
         create_params = 0 # Num of params at end of function that are created and returned as output values
-        if 'AllocDescriptorSets' in proto.name:
+        if 'AllocateDescriptorSets' in proto.name:
             create_params = -1
         elif 'Create' in proto.name or 'Alloc' in proto.name or 'MapMemory' in proto.name:
             create_params = -1
@@ -1053,9 +1053,9 @@ class APIDumpSubcommand(Subcommand):
                     log_func += '\n%s(*outputStream) << "   %s (" << %s << ")" << endl << tmp_str << endl;' % (indent, local_name, local_name)
                     indent = indent[4:]
                     log_func += '\n%s}' % (indent)
-                elif 'memBarrierCount' == sp_param_dict[sp_index]: # call helper function
-                    log_func += '\n%sif (ppMemBarriers) {' % (indent)
-                    log_func += '\n%s    interpret_memBarriers(ppMemBarriers, memBarrierCount);' % (indent)
+                elif 'memoryBarrierCount' == sp_param_dict[sp_index]: # call helper function
+                    log_func += '\n%sif (ppMemoryBarriers) {' % (indent)
+                    log_func += '\n%s    interpret_memBarriers(ppMemoryBarriers, memoryBarrierCount);' % (indent)
                     log_func += '\n%s}' % (indent)
                 else: # We have a count value stored to iterate over an array
                     print_cast = ''
@@ -1368,7 +1368,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('%s' % self.lineinfo.get())
         gedi_txt.append('void vkDestroyInstance(')
         gedi_txt.append('VkInstance instance,')
-        gedi_txt.append('const VkAllocCallbacks* pAllocator)')
+        gedi_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedi_txt.append('{')
         gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
         gedi_txt.append('    validate_object(instance, instance);')
@@ -1417,7 +1417,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('%s' % self.lineinfo.get())
         gedd_txt.append('void vkDestroyDevice(')
         gedd_txt.append('VkDevice device,')
-        gedd_txt.append('const VkAllocCallbacks* pAllocator)')
+        gedd_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedd_txt.append('{')
         gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
         gedd_txt.append('    validate_object(device, device);')
@@ -1458,7 +1458,7 @@ class ObjectTrackerSubcommand(Subcommand):
         cbv_txt.append('%s' % self.lineinfo.get())
         for o in ['VkPipeline',
                   'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
-            cbv_txt.append('static VkBool32 validate_object(VkCmdBuffer dispatchable_object, %s object)' % (o))
+            cbv_txt.append('static VkBool32 validate_object(VkCommandBuffer dispatchable_object, %s object)' % (o))
             cbv_txt.append('{')
             cbv_txt.append('    if (%sMap.find((void*)object) == %sMap.end()) {' % (o, o))
             cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
@@ -1480,7 +1480,7 @@ class ObjectTrackerSubcommand(Subcommand):
         for objectName, objectTypeEnum in obj_type_mapping.items():
             obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
         # Command Buffer Object doesn't follow the rule.
-        obj_type_mapping['VkCmdBuffer'] = "VK_OBJECT_TYPE_COMMAND_BUFFER"
+        obj_type_mapping['VkCommandBuffer'] = "VK_OBJECT_TYPE_COMMAND_BUFFER"
         obj_type_mapping['VkShaderModule'] = "VK_OBJECT_TYPE_SHADER_MODULE"
 
         explicit_object_tracker_functions = [
@@ -1490,7 +1490,7 @@ class ObjectTrackerSubcommand(Subcommand):
             "CreateDevice",
             "GetDeviceQueue",
             "QueueBindSparse",
-            "AllocDescriptorSets",
+            "AllocateDescriptorSets",
             "FreeDescriptorSets",
             "MapMemory",
             "UnmapMemory",
@@ -1678,7 +1678,7 @@ class ObjectTrackerSubcommand(Subcommand):
 class ThreadingSubcommand(Subcommand):
     thread_check_dispatchable_objects = [
         "VkQueue",
-        "VkCmdBuffer",
+        "VkCommandBuffer",
     ]
     thread_check_nondispatchable_objects = [
         "VkDeviceMemory",
@@ -1693,7 +1693,7 @@ class ThreadingSubcommand(Subcommand):
         'VkPhysicalDevice' : 'VK_OBJECT_TYPE_PHYSICAL_DEVICE',
         'VkDevice' : 'VK_OBJECT_TYPE_DEVICE',
         'VkQueue' : 'VK_OBJECT_TYPE_QUEUE',
-        'VkCmdBuffer' : 'VK_OBJECT_TYPE_COMMAND_BUFFER',
+        'VkCommandBuffer' : 'VK_OBJECT_TYPE_COMMAND_BUFFER',
         'VkFence' : 'VK_OBJECT_TYPE_FENCE',
         'VkDeviceMemory' : 'VK_OBJECT_TYPE_DEVICE_MEMORY',
         'VkBuffer' : 'VK_OBJECT_TYPE_BUFFER',
@@ -1714,7 +1714,7 @@ class ThreadingSubcommand(Subcommand):
         'VkDescriptorPool' : 'VK_OBJECT_TYPE_DESCRIPTOR_POOL',
         'VkDescriptorSet' : 'VK_OBJECT_TYPE_DESCRIPTOR_SET',
         'VkFramebuffer' : 'VK_OBJECT_TYPE_FRAMEBUFFER',
-        'VkCmdPool' : 'VK_OBJECT_TYPE_CMD_POOL',
+        'VkCommandPool' : 'VK_OBJECT_TYPE_COMMAND_POOL',
     }
     def generate_useObject(self, ty):
         obj_type = self.thread_check_object_types[ty]
@@ -1817,13 +1817,13 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'
-                     '    for (uint32_t i=0; i<memRangeCount; i++) {\n'
-                     '        useObject((const void *) %s, pMemRanges[i].mem);\n' % proto.params[0].name +
+                     '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
+                     '        useObject((const void *) %s, pMemoryRanges[i].mem);\n' % proto.params[0].name +
                      '    }\n'
                      '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                      '    %s pDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
-                     '    for (uint32_t i=0; i<memRangeCount; i++) {\n'
-                     '        finishUsingObject(pMemRanges[i].mem);\n'
+                     '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
+                     '        finishUsingObject(pMemoryRanges[i].mem);\n'
                      '    }\n'
                      '%s' % (stmt) +
                      '}')
@@ -1853,7 +1853,7 @@ class ThreadingSubcommand(Subcommand):
         elif proto.params[0].ty == "VkPhysicalDevice":
             return None
         # Functions changing command buffers need thread safe use of first parameter
-        if proto.params[0].ty == "VkCmdBuffer":
+        if proto.params[0].ty == "VkCommandBuffer":
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'

@@ -41,7 +41,7 @@ extern "C"
 // ------------------------------------------------------------------------------------------------
 // Objects
 
-VK_DEFINE_NONDISP_HANDLE(VkSwapchainKHR);
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR);
 
 // ------------------------------------------------------------------------------------------------
 // Enumeration constants

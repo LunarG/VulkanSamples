@@ -87,7 +87,7 @@ struct app_dev {
     VkDevice obj;
 
 
-    VkFormatProperties format_props[VK_FORMAT_NUM];
+    VkFormatProperties format_props[VK_FORMAT_RANGE_SIZE];
 };
 
 struct layer_extension_list {
@@ -342,7 +342,7 @@ static void app_dev_init_formats(struct app_dev *dev)
 {
     VkFormat f;
 
-    for (f = 0; f < VK_FORMAT_NUM; f++) {
+    for (f = 0; f < VK_FORMAT_RANGE_SIZE; f++) {
         const VkFormat fmt = f;
 
         vkGetPhysicalDeviceFormatProperties(dev->gpu->obj, fmt, &dev->format_props[f]);
@@ -459,7 +459,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
         VkBool32 extension_found = 0;
         for (uint32_t j = 0; j < gpu->device_extension_count; j++) {
             VkExtensionProperties *ext_prop = &gpu->device_extensions[j];
-            if (!strcmp(known_extensions[i], ext_prop->extName)) {
+            if (!strcmp(known_extensions[i], ext_prop->extensionName)) {
 
                 extension_found = 1;
                 enabled_extension_count++;
@@ -522,8 +522,8 @@ static void app_create_instance(struct app_instance *inst)
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = APP_SHORT_NAME,
-        .appVersion = 1,
+        .pApplicationName = APP_SHORT_NAME,
+        .applicationVersion = 1,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 1,
         .apiVersion = VK_API_VERSION,
@@ -531,7 +531,7 @@ static void app_create_instance(struct app_instance *inst)
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
-        .pAppInfo = &app_info,
+        .pApplicationInfo = &app_info,
         .enabledLayerNameCount = 0,
         .ppEnabledLayerNames = NULL,
         .enabledExtensionNameCount = 0,
@@ -597,7 +597,7 @@ static void app_create_instance(struct app_instance *inst)
         VkBool32 extension_found = 0;
         for (uint32_t j = 0; j < inst->global_extension_count; j++) {
             VkExtensionProperties *extension_prop = &inst->global_extensions[j];
-            if (!strcmp(known_extensions[i], extension_prop->extName)) {
+            if (!strcmp(known_extensions[i], extension_prop->extensionName)) {
 
                 extension_found = 1;
                 global_extension_count++;
@@ -711,8 +711,8 @@ static void app_dev_dump_format_props(const struct app_dev *dev, VkFormat fmt)
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT"            : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT)      ? "\n\t\tVK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT"      : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)    ? "\n\t\tVK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT"    : ""),
-               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SOURCE_BIT)                 ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SOURCE_BIT"                 : ""),
-               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DESTINATION_BIT"            : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_SRC_BIT)                 ? "\n\t\tVK_FORMAT_FEATURE_BLIT_SRC_BIT"                 : ""),
+               ((features[i].flags & VK_FORMAT_FEATURE_BLIT_DST_BIT)            ? "\n\t\tVK_FORMAT_FEATURE_BLIT_DST_BIT"            : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)        ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT"        : ""),
                ((features[i].flags & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) ? "\n\t\tVK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT" : ""),
@@ -728,7 +728,7 @@ app_dev_dump(const struct app_dev *dev)
 {
     VkFormat fmt;
 
-    for (fmt = 0; fmt < VK_FORMAT_NUM; fmt++) {
+    for (fmt = 0; fmt < VK_FORMAT_RANGE_SIZE; fmt++) {
         app_dev_dump_format_props(dev, fmt);
     }
 }
@@ -753,7 +753,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tgeometryShader                          = %u\n", features->geometryShader                         );
     printf("\ttessellationShader                      = %u\n", features->tessellationShader                     );
     printf("\tsampleRateShading                       = %u\n", features->sampleRateShading                      );
-    printf("\tdualSourceBlend                         = %u\n", features->dualSourceBlend                        );
+    printf("\tdualSrcBlend                         = %u\n", features->dualSrcBlend                        );
     printf("\tlogicOp                                 = %u\n", features->logicOp                                );
     printf("\tmultiDrawIndirect                       = %u\n", features->multiDrawIndirect                      );
     printf("\tdepthClip                               = %u\n", features->depthClamp                              );
@@ -846,7 +846,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxVertexInputAttributeOffset           = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputAttributeOffset          );
     printf("\t\tmaxVertexInputBindingStride             = 0x%" PRIxLEAST32 "\n", limits->maxVertexInputBindingStride            );
     printf("\t\tmaxVertexOutputComponents               = 0x%" PRIxLEAST32 "\n", limits->maxVertexOutputComponents              );
-    printf("\t\tmaxTessellationGenLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenLevel                        );
+    printf("\t\tmaxTessellationGenerationLevel                         = 0x%" PRIxLEAST32 "\n", limits->maxTessellationGenerationLevel                        );
     printf("\t\tmaxTessellationPatchSize                        = 0x%" PRIxLEAST32 "\n", limits->maxTessellationPatchSize                       );
     printf("\t\tmaxTessellationControlPerVertexInputComponents  = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexInputComponents );
     printf("\t\tmaxTessellationControlPerVertexOutputComponents = 0x%" PRIxLEAST32 "\n", limits->maxTessellationControlPerVertexOutputComponents);
@@ -861,7 +861,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxGeometryTotalOutputComponents        = 0x%" PRIxLEAST32 "\n", limits->maxGeometryTotalOutputComponents       );
     printf("\t\tmaxFragmentInputComponents              = 0x%" PRIxLEAST32 "\n", limits->maxFragmentInputComponents             );
     printf("\t\tmaxFragmentOutputAttachments                = 0x%" PRIxLEAST32 "\n", limits->maxFragmentOutputAttachments               );
-    printf("\t\tmaxFragmentDualSourceAttachments            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSourceAttachments           );
+    printf("\t\tmaxFragmentDualSrcAttachments            = 0x%" PRIxLEAST32 "\n", limits->maxFragmentDualSrcAttachments           );
     printf("\t\tmaxFragmentCombinedOutputResources      = 0x%" PRIxLEAST32 "\n", limits->maxFragmentCombinedOutputResources     );
     printf("\t\tmaxComputeSharedMemorySize              = 0x%" PRIxLEAST32 "\n", limits->maxComputeSharedMemorySize             );
     printf("\t\tmaxComputeWorkGroupCount[0]             = 0x%" PRIxLEAST32 "\n", limits->maxComputeWorkGroupCount[0]            );
@@ -962,7 +962,7 @@ static void app_dump_extensions(
 
         printf("%s\t", indent);
         printf("%-32s: extension revision %2d",
-                       ext_prop->extName, ext_prop->specVersion);
+                       ext_prop->extensionName, ext_prop->specVersion);
     }
     printf("\n");
     fflush(stdout);
@@ -1022,7 +1022,7 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
         extract_version(layer_info->layer_properties.specVersion, &major, &minor, &patch);
         snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        extract_version(layer_info->layer_properties.implVersion, &major, &minor, &patch);
+        extract_version(layer_info->layer_properties.implementationVersion, &major, &minor, &patch);
         snprintf(layer_version, sizeof(layer_version), "%d.%d.%d", major, minor, patch);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
                layer_info->layer_properties.layerName,
@@ -1078,7 +1078,7 @@ int main(int argc, char **argv)
 
         extract_version(layer_prop->specVersion, &major, &minor, &patch);
         snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        extract_version(layer_prop->implVersion, &major, &minor, &patch);
+        extract_version(layer_prop->implementationVersion, &major, &minor, &patch);
         snprintf(layer_version, sizeof(layer_version), "%d.%d.%d", major, minor, patch);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
                layer_prop->layerName, (char*) layer_prop->description, spec_version, layer_version);

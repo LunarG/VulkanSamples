@@ -75,10 +75,10 @@ static int translate_compare_func(VkCompareOp func)
     case VK_COMPARE_OP_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
     case VK_COMPARE_OP_LESS:          return GEN6_COMPAREFUNCTION_LESS;
     case VK_COMPARE_OP_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case VK_COMPARE_OP_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_OP_LESS_OR_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
     case VK_COMPARE_OP_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
     case VK_COMPARE_OP_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case VK_COMPARE_OP_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_OP_GREATER_OR_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
     case VK_COMPARE_OP_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
@@ -398,7 +398,7 @@ void intel_sampler_destroy(struct intel_sampler *sampler)
 ICD_EXPORT VkResult VKAPI vkCreateSampler(
     VkDevice                                  device,
     const VkSamplerCreateInfo*              pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkSampler*                                pSampler)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -410,7 +410,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
 ICD_EXPORT void VKAPI vkDestroySampler(
     VkDevice                                device,
     VkSampler                                 sampler,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(sampler);

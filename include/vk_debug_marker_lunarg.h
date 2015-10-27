@@ -60,8 +60,8 @@ extern "C"
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCmdBuffer cmdBuffer, const char* pMarker);
-typedef void (VKAPI *PFN_vkCmdDbgMarkerEnd)(VkCmdBuffer cmdBuffer);
+typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCommandBuffer commandBuffer, const char* pMarker);
+typedef void (VKAPI *PFN_vkCmdDbgMarkerEnd)(VkCommandBuffer commandBuffer);
 typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t tagSize, const void* pTag);
 typedef VkResult (VKAPI *PFN_vkDbgSetObjectName)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t nameSize, const char* pName);
 
@@ -69,11 +69,11 @@ typedef VkResult (VKAPI *PFN_vkDbgSetObjectName)(VkDevice device, VkDbgObjectTyp
 
 // DebugMarker extension entrypoints
 void VKAPI vkCmdDbgMarkerBegin(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     const char*                         pMarker);
 
 void VKAPI vkCmdDbgMarkerEnd(
-    VkCmdBuffer                         cmdBuffer);
+    VkCommandBuffer                         commandBuffer);
 
 VkResult VKAPI vkDbgSetObjectTag(
     VkDevice                            device,

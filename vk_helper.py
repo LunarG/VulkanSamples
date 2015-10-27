@@ -364,6 +364,12 @@ def get_struct_name_from_struct_type(struct_type):
         else:
             struct_name += caps_struct_name[char_idx].lower()
         char_idx += 1
+
+    if struct_name.endswith("AllocInfo"):
+        struct_name = struct_name[:-9] + "AllocateInfo"
+    if struct_name.endswith("RasterStateCreateInfo"):
+        struct_name = struct_name[:-21] + "RasterizationStateCreateInfo"
+
     return struct_name
 
 # class for writing common file elements
@@ -1248,7 +1254,7 @@ class StructWrapperGen:
                 if self.struct_dict[s][m]['dyn_array']:
                     if self.struct_dict[s][m]['full_type'].count('*') > 1:
                         if not is_type(self.struct_dict[s][m]['type'], 'struct') and not 'char' in self.struct_dict[s][m]['type'].lower():
-                            if 'ppMemBarriers' == self.struct_dict[s][m]['name']:
+                            if 'ppMemoryBarriers' == self.struct_dict[s][m]['name']:
                                 # TODO : For now be conservative and consider all memBarrier ptrs as largest possible struct
                                 sh_funcs.append('%sstructSize += pStruct->%s*(sizeof(%s*) + sizeof(VkImageMemoryBarrier));' % (indent, self.struct_dict[s][m]['array_size'], self.struct_dict[s][m]['type']))
                             else:

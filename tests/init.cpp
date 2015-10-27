@@ -94,15 +94,15 @@ protected:
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = "base";
-        this->app_info.appVersion = 1;
+        this->app_info.pApplicationName = "base";
+        this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
         VkInstanceCreateInfo inst_info = {};
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
-        inst_info.pAppInfo = &app_info;
+        inst_info.pApplicationInfo = &app_info;
         inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
         inst_info.enabledExtensionNameCount = 0;
@@ -138,10 +138,10 @@ protected:
     }
 };
 
-TEST_F(VkTest, AllocMemory) {
+TEST_F(VkTest, AllocateMemory) {
     VkResult err;
     bool pass;
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     VkDeviceMemory gpu_mem;
     uint8_t *pData;
 
@@ -155,7 +155,7 @@ TEST_F(VkTest, AllocMemory) {
     pass = m_device->phy().set_memory_type(((1 << mem_props.memoryTypeCount) - 1), &alloc_info, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
     ASSERT_TRUE(pass);
 
-    err = vkAllocMemory(device(), &alloc_info, NULL, &gpu_mem);
+    err = vkAllocateMemory(device(), &alloc_info, NULL, &gpu_mem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkMapMemory(device(), gpu_mem, 0, 0, 0, (void **) &pData);
@@ -408,11 +408,11 @@ void VkTest::CreateImageTest()
 
     if (mem_req.size) {
 
-        //        VkResult VKAPI vkAllocMemory(
+        //        VkResult VKAPI vkAllocateMemory(
         //            VkDevice                                  device,
-        //            const VkMemoryAllocInfo*                pAllocInfo,
-        //            VkDeviceMemory*                             pMem);
-        VkMemoryAllocInfo mem_info = {};
+        //            const VkMemoryAllocateInfo*                pAllocateInfo,
+        //            VkDeviceMemory*                             pMemory);
+        VkMemoryAllocateInfo mem_info = {};
 
         mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_info.pNext = NULL;
@@ -422,7 +422,7 @@ void VkTest::CreateImageTest()
         pass = m_device->phy().set_memory_type(mem_req.memoryTypeBits, &mem_info, 0);
         ASSERT_TRUE(pass);
 
-        err = vkAllocMemory(device(), &mem_info, NULL, &image_mem);
+        err = vkAllocateMemory(device(), &mem_info, NULL, &image_mem);
         ASSERT_VK_SUCCESS(err);
 
         err = vkBindImageMemory(device(), image, image_mem, 0);
@@ -453,9 +453,9 @@ void VkTest::CreateImageTest()
     viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.numLayers = 1;
+    viewInfo.subresourceRange.layerCount = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.numLevels = 1;
+    viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 //    VkResult VKAPI vkCreateImageView(
@@ -484,35 +484,35 @@ TEST_F(VkTest, CreateImage) {
 void VkTest::CreateCommandBufferTest()
 {
     VkResult err;
-    VkCmdBufferAllocInfo info = {};
-    VkCmdPool cmdPool;
-    VkCmdBuffer cmdBuffer;
+    VkCommandBufferAllocateInfo info = {};
+    VkCommandPool commandPool;
+    VkCommandBuffer commandBuffer;
 
-//    typedef struct VkCmdBufferCreateInfo_
+//    typedef struct VkCommandBufferCreateInfo_
 //    {
-//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO
+//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO
 //        const void*                             pNext;
 //        VK_QUEUE_TYPE                          queueType;
 //        VkFlags                               flags;
-//    } VkCmdBufferAllocInfo;
+//    } VkCommandBufferAllocateInfo;
 
-    VkCmdPoolCreateInfo cmd_pool_info;
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+    VkCommandPoolCreateInfo cmd_pool_info;
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     cmd_pool_info.pNext = NULL,
     cmd_pool_info.queueFamilyIndex = graphics_queue_node_index;
     cmd_pool_info.flags = 0,
-    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &cmdPool);
+    err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &commandPool);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandPool failed";
 
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
-    info.cmdPool = cmdPool;
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    info.commandPool = commandPool;
     info.bufferCount = 1;
-    info.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
-    err = vkAllocCommandBuffers(device(), &info, &cmdBuffer);
-    ASSERT_VK_SUCCESS(err) << "vkAllocCommandBuffers failed";
+    info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    err = vkAllocateCommandBuffers(device(), &info, &commandBuffer);
+    ASSERT_VK_SUCCESS(err) << "vkAllocateCommandBuffers failed";
 
-    vkFreeCommandBuffers(device(), cmdPool, 1, &cmdBuffer);
-    vkDestroyCommandPool(device(), cmdPool, NULL);
+    vkFreeCommandBuffers(device(), commandPool, 1, &commandBuffer);
+    vkDestroyCommandPool(device(), commandPool, NULL);
 }
 
 TEST_F(VkTest, TestCommandBuffer) {

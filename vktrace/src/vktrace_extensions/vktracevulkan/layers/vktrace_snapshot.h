@@ -120,8 +120,8 @@ static const char* string_VK_OBJECT_TYPE(VkDbgObjectType type) {
             return "PIPELINE_CACHE";
         case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
             return "SWAP_CHAIN_WSI";
-        case VK_OBJECT_TYPE_CMD_POOL:
-            return "CMD_POOL";
+        case VK_OBJECT_TYPE_COMMAND_POOL:
+            return "COMMAND_POOL";
         default:
             return "UNKNOWN";
     }

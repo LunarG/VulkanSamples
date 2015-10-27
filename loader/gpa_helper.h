@@ -73,8 +73,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkQueueWaitIdle;
     if (!strcmp(name, "DeviceWaitIdle"))
         return (void*) vkDeviceWaitIdle;
-    if (!strcmp(name, "AllocMemory"))
-        return (void*) vkAllocMemory;
+    if (!strcmp(name, "AllocateMemory"))
+        return (void*) vkAllocateMemory;
     if (!strcmp(name, "FreeMemory"))
         return (void*) vkFreeMemory;
     if (!strcmp(name, "MapMemory"))
@@ -189,8 +189,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))
         return (void*) vkResetDescriptorPool;
-    if (!strcmp(name, "AllocDescriptorSets"))
-        return (void*) vkAllocDescriptorSets;
+    if (!strcmp(name, "AllocateDescriptorSets"))
+        return (void*) vkAllocateDescriptorSets;
     if (!strcmp(name, "FreeDescriptorSets"))
         return (void*) vkFreeDescriptorSets;
     if (!strcmp(name, "UpdateDescriptorSets"))
@@ -211,8 +211,8 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkDestroyCommandPool;
     if (!strcmp(name, "ResetCommandPool"))
         return (void*) vkResetCommandPool;
-    if (!strcmp(name, "AllocCommandBuffers"))
-        return (void*) vkAllocCommandBuffers;
+    if (!strcmp(name, "AllocateCommandBuffers"))
+        return (void*) vkAllocateCommandBuffers;
     if (!strcmp(name, "FreeCommandBuffers"))
         return (void*) vkFreeCommandBuffers;
     if (!strcmp(name, "BeginCommandBuffer"))
@@ -356,8 +356,8 @@ static inline void *loader_non_passthrough_gdpa(const char *name)
         return (void*) vkDestroyDevice;
     if (!strcmp(name, "GetDeviceQueue"))
         return (void*) vkGetDeviceQueue;
-    if (!strcmp(name, "AllocCommandBuffers"))
-        return (void*) vkAllocCommandBuffers;
+    if (!strcmp(name, "AllocateCommandBuffers"))
+        return (void*) vkAllocateCommandBuffers;
 
     return NULL;
 }

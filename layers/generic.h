@@ -48,7 +48,7 @@ static const VkLayerProperties globalLayerProps[] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Generic",
     }
 };
@@ -57,7 +57,7 @@ static const VkLayerProperties deviceLayerProps[] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Generic",
     }
 };

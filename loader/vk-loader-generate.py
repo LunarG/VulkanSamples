@@ -49,7 +49,7 @@ class Subcommand(object):
         # Dont be cute trying to use a general rule to programmatically populate this list
         # it just obsfucates what is going on!
         wsi_creates_dispatchable_object = ["CreateSwapchainKHR"]
-        creates_dispatchable_object = ["CreateDevice", "GetDeviceQueue", "AllocCommandBuffers"] + wsi_creates_dispatchable_object
+        creates_dispatchable_object = ["CreateDevice", "GetDeviceQueue", "AllocateCommandBuffers"] + wsi_creates_dispatchable_object
         if name in creates_dispatchable_object:
             return True
         else:

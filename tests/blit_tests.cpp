@@ -143,8 +143,8 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info, const std::vector<VkIm
     VkDeviceSize offset = 0;
     for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
          it != ranges.end(); it++) {
-        for (uint32_t lv = 0; lv < it->numLevels; lv++) {
-            for (uint32_t layer = 0; layer < it->numLayers; layer++) {
+        for (uint32_t lv = 0; lv < it->levelCount; lv++) {
+            for (uint32_t layer = 0; layer < it->layerCount; layer++) {
                 VkBufferImageCopy region = {};
                 region.bufferOffset = offset;
                 region.imageSubresource = Image::subresource(*it, lv, layer, 1);
@@ -305,7 +305,7 @@ size_t get_format_size(VkFormat format)
         VkFormat format;
         size_t size;
         uint32_t channel_count;
-    } format_table[VK_FORMAT_NUM] = {
+    } format_table[VK_FORMAT_RANGE_SIZE] = {
         { VK_FORMAT_UNDEFINED,             0,  0 },
         { VK_FORMAT_R4G4_UNORM,            1,  2 },
         { VK_FORMAT_R4G4_USCALED,          1,  2 },
@@ -484,7 +484,7 @@ size_t get_format_size(VkFormat format)
     };
     if (format_table_unverified)
     {
-        for (unsigned int i = 0; i < VK_FORMAT_NUM; i++)
+        for (unsigned int i = 0; i < VK_FORMAT_RANGE_SIZE; i++)
         {
             assert(format_table[i].format == i);
         }
@@ -518,8 +518,8 @@ protected:
     VkCmdBlitTest() :
         dev_(environment->default_device()),
         queue_(*dev_.graphics_queues()[0]),
-        pool_(dev_, vk_testing::CmdPool::create_info(dev_.graphics_queue_node_index_)),
-        cmd_(dev_, vk_testing::CmdBuffer::create_info(pool_.handle()))
+        pool_(dev_, vk_testing::CommandPool::create_info(dev_.graphics_queue_node_index_)),
+        cmd_(dev_, vk_testing::CommandBuffer::create_info(pool_.handle()))
     {
         // make sure every test uses a different pattern
         vk_testing::ImageChecker::hash_salt_generate();
@@ -535,8 +535,8 @@ protected:
 
     vk_testing::Device &dev_;
     vk_testing::Queue &queue_;
-    vk_testing::CmdPool pool_;
-    vk_testing::CmdBuffer cmd_;
+    vk_testing::CommandPool pool_;
+    vk_testing::CommandBuffer cmd_;
 
     /* TODO: We should be able to remove these now */
     std::vector<VkDeviceMemory> mem_refs_;
@@ -739,9 +739,9 @@ TEST_F(VkCmdCopyBufferTest, MultiAlignments)
         const VkBufferCopy &r = regions[i];
 
         for (int j = 0; j < r.size; j++) {
-            EXPECT_EQ(r.srcOffset + j, data[r.destOffset + j]) <<
+            EXPECT_EQ(r.srcOffset + j, data[r.dstOffset + j]) <<
                 "Region is: " << i << "\n" <<
-                "Offset is: " << r.destOffset + j;
+                "Offset is: " << r.dstOffset + j;
         }
     }
     dst.memory().unmap();
@@ -870,7 +870,7 @@ protected:
         // copy in and tile
         cmd_.begin();
         vkCmdCopyBufferToImage(cmd_.handle(), in_buf.handle(),
-                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -893,7 +893,7 @@ protected:
         // copy out and linearize
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.handle(),
-                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 out_buf.handle(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
@@ -933,7 +933,7 @@ protected:
         cmd_.begin();
         vkCmdCopyBufferToImage(cmd_.handle(),
                 buf.handle(),
-                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
 
@@ -972,8 +972,8 @@ TEST_F(VkCmdCopyBufferToImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
-                         VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
         test_copy_memory_to_image(img_info);
     }
@@ -1003,7 +1003,7 @@ protected:
 
         cmd_.begin();
         vkCmdCopyImageToBuffer(cmd_.handle(),
-                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
+                img.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 buf.handle(),
                 checker.regions().size(), &checker.regions()[0]);
         cmd_.end();
@@ -1043,8 +1043,8 @@ TEST_F(VkCmdCopyImageToBufferTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT |
-                         VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT; // Going to fill it before copy
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_DST_BIT; // Going to fill it before copy
 
         test_copy_image_to_memory(img_info);
     }
@@ -1075,8 +1075,8 @@ protected:
             src_regions.push_back(src_region);
 
             dst_region.bufferOffset = src_offset;
-            dst_region.imageSubresource = it->destSubresource;
-            dst_region.imageOffset = it->destOffset;
+            dst_region.imageSubresource = it->dstSubresource;
+            dst_region.imageOffset = it->dstOffset;
             dst_region.imageExtent = it->extent;
             dst_regions.push_back(dst_region);
 
@@ -1103,8 +1103,8 @@ protected:
 
         cmd_.begin();
         vkCmdCopyImage(cmd_.handle(),
-                        src.handle(), VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                        dst.handle(), VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        src.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        dst.handle(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         copies.size(), &copies[0]);
         cmd_.end();
 
@@ -1131,11 +1131,11 @@ TEST_F(VkCmdCopyImageTest, Basic)
         img_info.extent.width = 64;
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
-        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        img_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         VkImageCopy copy = {};
         copy.srcSubresource = vk_testing::Image::subresource(VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1);
-        copy.destSubresource = copy.srcSubresource;
+        copy.dstSubresource = copy.srcSubresource;
         copy.extent = img_info.extent;
 
         test_copy_image(img_info, img_info, std::vector<VkImageCopy>(&copy, &copy + 1));
@@ -1225,7 +1225,7 @@ protected:
             p_to_clear.push_back(&to_clear.back());
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *it));
             p_to_xfer.push_back(&to_xfer.back());
         }
 
@@ -1291,7 +1291,7 @@ TEST_F(VkCmdClearColorImageTest, Basic)
         img_info.extent.height = 64;
         img_info.tiling = it->tiling;
         img_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                         VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT; // Going to check contents
+                         VK_IMAGE_USAGE_TRANSFER_SRC_BIT; // Going to check contents
 
         const VkImageSubresourceRange range =
             vk_testing::Image::subresource_range(img_info, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1405,7 +1405,7 @@ protected:
 
             to_xfer.push_back(img.image_memory_barrier(all_cache_outputs, all_cache_inputs,
                     VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, *it));
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *it));
         }
         for (std::vector<VkImageSubresourceRange>::const_iterator it = ranges.begin();
              it != ranges.end(); it++) {

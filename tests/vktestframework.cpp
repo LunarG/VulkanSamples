@@ -91,7 +91,7 @@ enum TOptions {
 
 typedef struct _SwapchainBuffers {
     VkImage image;
-    VkCmdBuffer cmd;
+    VkCommandBuffer cmd;
     VkImageView view;
 } SwapchainBuffers;
 
@@ -115,8 +115,8 @@ public:
 protected:
     vk_testing::Device                    &m_device;
     vk_testing::Queue                     &m_queue;
-    vk_testing::CmdPool                    m_cmdpool;
-    vk_testing::CmdBuffer                  m_cmdbuf;
+    vk_testing::CommandPool                    m_cmdpool;
+    vk_testing::CommandBuffer                  m_cmdbuf;
 
 private:
 #ifdef _WIN32
@@ -308,7 +308,7 @@ void VkTestFramework::WritePPM( const char *basename, VkImageObj *image )
     VkImageObj displayImage(image->device());
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    displayImage.init(image->extent().width, image->extent().height, image->format(), VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, VK_IMAGE_TILING_LINEAR, reqs);
+    displayImage.init(image->extent().width, image->extent().height, image->format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, reqs);
     displayImage.CopyImage(*image);
 
     filename.append(basename);
@@ -425,7 +425,7 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     VkImageObj displayImage(image->device());
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-    displayImage.init(image->extent().width, image->extent().height, image->format(), VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, VK_IMAGE_TILING_LINEAR, reqs);
+    displayImage.init(image->extent().width, image->extent().height, image->format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_TILING_LINEAR, reqs);
 
     displayImage.CopyImage(*image);
 
@@ -498,8 +498,8 @@ void VkTestFramework::RecordImage(VkImageObj * image)
 TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
    m_device(device),
    m_queue(*m_device.graphics_queues()[0]),
-   m_cmdpool(m_device, vk_testing::CmdPool::create_info(m_device.graphics_queue_node_index_)),
-   m_cmdbuf(m_device, vk_testing::CmdBuffer::create_info(m_cmdpool.handle()))
+   m_cmdpool(m_device, vk_testing::CommandPool::create_info(m_device.graphics_queue_node_index_)),
+   m_cmdbuf(m_device, vk_testing::CommandBuffer::create_info(m_cmdpool.handle()))
 {
     m_quit = false;
     m_pause = false;
@@ -547,14 +547,14 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
     memoryBarrier.inputMask = 0;
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
-    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    memoryBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     memoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     memoryBarrier.subresourceRange.baseMipLevel = 0;
-    memoryBarrier.subresourceRange.numLevels = 1;
+    memoryBarrier.subresourceRange.levelCount = 1;
     memoryBarrier.subresourceRange.baseArrayLayer = 0;
-    memoryBarrier.subresourceRange.numLayers = 1;
+    memoryBarrier.subresourceRange.layerCount = 1;
     memoryBarrier.image = m_buffers[m_current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -567,16 +567,16 @@ void  TestFrameworkVkPresent::Display()
 
     vkCmdCopyBufferToImage(m_cmdbuf.handle(),
         buf.handle(),
-        m_buffers[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+        m_buffers[m_current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1, &region);
 
-    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL;
+    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
     m_cmdbuf.end();
 
-    VkCmdBuffer cmdBufs[1];
+    VkCommandBuffer cmdBufs[1];
     cmdBufs[0] = m_cmdbuf.handle();
 
     // Wait for the present complete semaphore to be signaled to ensure
@@ -910,7 +910,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
     }
 
     // We want to blit to the swap chain, ensure the driver supports it.  Color is always supported, per WSI spec.
-    assert((surfProperties.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) != 0);
+    assert((surfProperties.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) != 0);
 
     VkSwapchainCreateInfoKHR swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -921,7 +921,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
     swap_chain.imageColorSpace = m_color_space;
     swap_chain.imageExtent.width = swapchainExtent.width;
     swap_chain.imageExtent.height = swapchainExtent.height;
-    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
@@ -958,9 +958,9 @@ void TestFrameworkVkPresent::CreateSwapchain()
         color_image_view.format = m_format;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.numLevels = 1;
+        color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.numLayers = 1;
+        color_image_view.subresourceRange.layerCount = 1;
 
         m_buffers[i].image = swapchainImages[i];
 
@@ -981,10 +981,10 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
 {
     VkResult U_ASSERT_ONLY err;
 
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     cmd_buf_info.renderPass = { VK_NULL_HANDLE };
     cmd_buf_info.subpass = 0;
     cmd_buf_info.framebuffer = { VK_NULL_HANDLE };
@@ -1002,11 +1002,11 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.numLevels = 1;
+    image_memory_barrier.subresourceRange.levelCount = 1;
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.numLayers = 1;
+    image_memory_barrier.subresourceRange.layerCount = 1;
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
         image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
     }
@@ -1026,7 +1026,7 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     err = vkEndCommandBuffer(m_cmdbuf.handle());
     assert(!err);
 
-    const VkCmdBuffer cmd_bufs[] = { m_cmdbuf.handle() };
+    const VkCommandBuffer cmd_bufs[] = { m_cmdbuf.handle() };
     VkFence nullFence = { VK_NULL_HANDLE };
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

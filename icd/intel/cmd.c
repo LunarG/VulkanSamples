@@ -194,7 +194,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
         struct intel_cmd_item *items;
 
         items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
-                0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!items) {
             writer->item_used = 0;
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -259,12 +259,12 @@ static void cmd_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_cmd_create(struct intel_dev *dev,
-                            const VkCmdBufferAllocInfo *info,
+                            const VkCommandBufferAllocateInfo *info,
                             struct intel_cmd **cmd_ret)
 {
     int pipeline_select;
     struct intel_cmd *cmd;
-    struct intel_cmd_pool *pool = intel_cmd_pool(info->cmdPool);
+    struct intel_cmd_pool *pool = intel_cmd_pool(info->commandPool);
 
     switch (pool->queue_family_index) {
     case INTEL_GPU_ENGINE_3D:
@@ -286,7 +286,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
 
     cmd->dev = dev;
     cmd->scratch_bo = dev->cmd_scratch_bo;
-    cmd->primary = (info->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+    cmd->primary = (info->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     cmd->pipeline_select = pipeline_select;
 
     /*
@@ -296,7 +296,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
      */
     cmd->reloc_count = dev->gpu->batch_buffer_reloc_count;
     cmd->relocs = intel_alloc(cmd, sizeof(cmd->relocs[0]) * cmd->reloc_count,
-            4096, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            4096, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!cmd->relocs) {
         intel_cmd_destroy(cmd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -315,7 +315,7 @@ void intel_cmd_destroy(struct intel_cmd *cmd)
     intel_base_destroy(&cmd->obj.base);
 }
 
-VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo *info)
+VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCommandBufferBeginInfo *info)
 {
     VkResult ret;
     uint32_t i;
@@ -441,13 +441,13 @@ static void pool_destroy(struct intel_obj *obj)
 }
 
 VkResult intel_cmd_pool_create(struct intel_dev *dev,
-                            const VkCmdPoolCreateInfo *info,
+                            const VkCommandPoolCreateInfo *info,
                             struct intel_cmd_pool **cmd_pool_ret)
 {
     struct intel_cmd_pool *cmd_pool;
 
     cmd_pool = (struct intel_cmd_pool *) intel_base_create(&dev->base.handle,
-            sizeof(*cmd_pool), dev->base.dbg, VK_OBJECT_TYPE_CMD_POOL, info, 0);
+            sizeof(*cmd_pool), dev->base.dbg, VK_OBJECT_TYPE_COMMAND_POOL, info, 0);
     if (!cmd_pool)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -471,27 +471,27 @@ void intel_cmd_pool_destroy(struct intel_cmd_pool *cmd_pool)
 
 ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice                                    device,
-    const VkCmdPoolCreateInfo*                  pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
-    VkCmdPool*                                  pCmdPool)
+    const VkCommandPoolCreateInfo*                  pCreateInfo,
+    const VkAllocationCallbacks*                     pAllocator,
+    VkCommandPool*                                  pCommandPool)
 {
     struct intel_dev *dev = intel_dev(device);
 
     return intel_cmd_pool_create(dev, pCreateInfo,
-            (struct intel_cmd_pool **) pCmdPool);
+            (struct intel_cmd_pool **) pCommandPool);
 }
 
 ICD_EXPORT void VKAPI vkDestroyCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool,
-    const VkAllocCallbacks*                     pAllocator)
+    VkCommandPool                                   commandPool,
+    const VkAllocationCallbacks*                     pAllocator)
 {
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool,
-    VkCmdPoolResetFlags                         flags)
+    VkCommandPool                                   commandPool,
+    VkCommandPoolResetFlags                         flags)
 {
     // TODO
     return VK_SUCCESS;
@@ -500,7 +500,7 @@ ICD_EXPORT VkResult VKAPI vkResetCommandPool(
 void intel_free_cmd_buffers(
     struct intel_cmd_pool              *cmd_pool,
     uint32_t                            count,
-    const VkCmdBuffer                  *cmd_bufs)
+    const VkCommandBuffer                  *cmd_bufs)
 {
     for (uint32_t i = 0; i < count; i++) {
         struct intel_obj *obj = intel_obj(cmd_bufs[i]);
@@ -509,23 +509,23 @@ void intel_free_cmd_buffers(
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
+ICD_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
     VkDevice                            device,
-    const VkCmdBufferAllocInfo*         pAllocInfo,
-    VkCmdBuffer*                        pCmdBuffers)
+    const VkCommandBufferAllocateInfo*         pAllocateInfo,
+    VkCommandBuffer*                        pCommandBuffers)
 {
     struct intel_dev *dev = intel_dev(device);
-    struct intel_cmd_pool *pool = intel_cmd_pool(pAllocInfo->cmdPool);
+    struct intel_cmd_pool *pool = intel_cmd_pool(pAllocateInfo->commandPool);
     uint32_t num_allocated = 0;
     VkResult res;
 
-    for (uint32_t i = 0; i < pAllocInfo->bufferCount; i++) {
-        res = intel_cmd_create(dev, pAllocInfo,
-            (struct intel_cmd **) &pCmdBuffers[i]);
+    for (uint32_t i = 0; i < pAllocateInfo->bufferCount; i++) {
+        res = intel_cmd_create(dev, pAllocateInfo,
+            (struct intel_cmd **) &pCommandBuffers[i]);
         if (res != VK_SUCCESS) {
             intel_free_cmd_buffers(pool,
                                    num_allocated,
-                                   pCmdBuffers);
+                                   pCommandBuffers);
             return res;
         }
         num_allocated++;
@@ -536,35 +536,35 @@ ICD_EXPORT VkResult VKAPI vkAllocCommandBuffers(
 
 ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     VkDevice                            device,
-    VkCmdPool                           cmdPool,
+    VkCommandPool                           commandPool,
     uint32_t                            commandBufferCount,
-    const VkCmdBuffer*                  pCmdBuffers)
+    const VkCommandBuffer*                  pCommandBuffers)
 {
-    intel_free_cmd_buffers(intel_cmd_pool(cmdPool), commandBufferCount, pCmdBuffers);
+    intel_free_cmd_buffers(intel_cmd_pool(commandPool), commandBufferCount, pCommandBuffers);
 }
 
 ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
-    VkCmdBuffer                              cmdBuffer,
-    const VkCmdBufferBeginInfo            *info)
+    VkCommandBuffer                              commandBuffer,
+    const VkCommandBufferBeginInfo            *info)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     return intel_cmd_begin(cmd, info);
 }
 
 ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
-    VkCmdBuffer                              cmdBuffer)
+    VkCommandBuffer                              commandBuffer)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     return intel_cmd_end(cmd);
 }
 
 ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                              cmdBuffer,
-    VkCmdBufferResetFlags                    flags)
+    VkCommandBuffer                              commandBuffer,
+    VkCommandBufferResetFlags                    flags)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     cmd_reset(cmd);
 

@@ -40,7 +40,7 @@ static const VkLayerProperties globalLayerProps[] = {
     {
         "Swapchain",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Swapchain",
     }
 };
@@ -49,7 +49,7 @@ static const VkLayerProperties deviceLayerProps[] = {
     {
         "Swapchain",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Swapchain",
     }
 };

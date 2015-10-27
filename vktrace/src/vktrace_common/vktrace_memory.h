@@ -35,13 +35,13 @@
 
 static void* vktrace_malloc(size_t size)
 {
-    void* pMem;
+    void* pMemory;
     if (size == 0)
         return NULL;
 
-    pMem = malloc(size);
+    pMemory = malloc(size);
 
-    return pMem;
+    return pMemory;
 }
 
 static void vktrace_free(void* ptr)
@@ -52,12 +52,12 @@ static void vktrace_free(void* ptr)
 
 static void * vktrace_realloc(void *ptr,size_t size)
 {
-    void *pMem;
+    void *pMemory;
     if (size == 0)
         return NULL;
 
-    pMem = realloc(ptr, size);
-    return pMem;
+    pMemory = realloc(ptr, size);
+    return pMemory;
 }
 
 static char* vktrace_allocate_and_copy(const char* _src)

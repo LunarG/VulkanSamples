@@ -46,18 +46,18 @@ for ext in vulkan.extensions_all:
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
-        self.extName = argv
+        self.extensionName = argv
         self.headers = headers
         self.objects = objects
         self.protos = protos
         self.lineinfo = sourcelineinfo()
 
     def run(self):
-        print(self.generate(self.extName))
+        print(self.generate(self.extensionName))
 
-    def generate(self, extName):
+    def generate(self, extensionName):
         copyright = self.generate_copyright()
-        header = self.generate_header(extName)
+        header = self.generate_header(extensionName)
         body = self.generate_body()
         footer = self.generate_footer()
         contents = []
@@ -99,7 +99,7 @@ class Subcommand(object):
  * DEALINGS IN THE SOFTWARE.
  */"""
 
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         return "\n".join(["#include <" + h + ">" for h in self.headers])
 
     def generate_body(self):
@@ -123,11 +123,11 @@ class Subcommand(object):
         func_protos.append('#endif')
         return "\n".join(func_protos)
 
-    def _generate_trace_func_protos_ext(self, extName):
+    def _generate_trace_func_protos_ext(self, extensionName):
         func_protos = []
         func_protos.append('// Hooked function prototypes\n')
         for ext in vulkan.extensions_all:
-            if (extName.lower() == ext.name.lower()):
+            if (extensionName.lower() == ext.name.lower()):
                 for proto in ext.protos:
                     func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
@@ -166,7 +166,7 @@ class Subcommand(object):
         #   big case to handle is when ptrs to structs have embedded data that needs to be accounted for in packet
         custom_ptr_dict = {'VkDeviceCreateInfo': {'add_txt': 'add_VkDeviceCreateInfo_to_packet(pHeader, (VkDeviceCreateInfo**) &(pPacket->pCreateInfo), pCreateInfo)',
                                                   'finalize_txt': ''},
-                           'VkApplicationInfo': {'add_txt': 'add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&(pPacket->pAppInfo), pAppInfo)',
+                           'VkApplicationInfo': {'add_txt': 'add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&(pPacket->pApplicationInfo), pApplicationInfo)',
                                                  'finalize_txt': ''},
                            'VkPhysicalDevice': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pGpus), *pGpuCount*sizeof(VkPhysicalDevice), pGpus)',
                                                 'finalize_txt': 'default'},
@@ -216,9 +216,9 @@ class Subcommand(object):
                                                                      '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts), pCreateInfo->setLayoutCount * sizeof(VkDescriptorSetLayout), pCreateInfo->pSetLayouts);',
                                                      'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSetLayouts));\n'
                                                                      '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkMemoryAllocInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo), sizeof(VkMemoryAllocInfo), pAllocInfo);\n'
-                                                            '    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocInfo->pNext), pAllocInfo->pNext)',
-                                            'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocInfo))'},
+                           'VkMemoryAllocateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocateInfo), sizeof(VkMemoryAllocateInfo), pAllocateInfo);\n'
+                                                            '    add_alloc_memory_to_trace_packet(pHeader, (void**)&(pPacket->pAllocateInfo->pNext), pAllocateInfo->pNext)',
+                                            'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocateInfo))'},
 #                          'VkGraphicsPipelineCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfos), count*sizeof(VkGraphicsPipelineCreateInfo), pCreateInfos);\n'
 #                                                                      '    add_VkGraphicsPipelineCreateInfos_to_trace_packet(pHeader, (VkGraphicsPipelineCreateInfo*)pPacket->pCreateInfos, pCreateInfos, count)',
 #                                                      'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfos))'},
@@ -273,7 +273,7 @@ class Subcommand(object):
         return ptr_param_list
 
     # Take a list of params and return a list of packet size elements
-    def _get_packet_size(self, extName, params):
+    def _get_packet_size(self, extensionName, params):
         ps = [] # List of elements to be added together to account for packet size for given params
         skip_list = [] # store params that are already accounted for so we don't count them twice
         # Dict of specific params with unique custom sizes
@@ -282,11 +282,11 @@ class Subcommand(object):
                             'VkSwapchainCreateInfoKHR' : 'vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo)',
                             }
         size_func_suffix = ''
-        if extName.lower() != "vk_core":
-            size_func_suffix = '_%s' % extName.lower()
+        if extensionName.lower() != "vk_core":
+            size_func_suffix = '_%s' % extensionName.lower()
         for p in params:
             #First handle custom cases
-            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocInfo'] and 'khr' not in p.ty.lower():
+            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocateInfo'] and 'khr' not in p.ty.lower():
                 ps.append('get_struct_chain_size%s((void*)%s)' % (size_func_suffix, p.name))
                 skip_list.append(p.name)
             elif p.name in custom_size_dict:
@@ -347,10 +347,10 @@ class Subcommand(object):
     # Assign packet values
     # FINISH packet
     # return result if needed
-    def _generate_trace_funcs(self, extName):
+    def _generate_trace_funcs(self, extensionName):
         func_body = []
-        manually_written_hooked_funcs = ['AllocMemory',
-                                         'AllocDescriptorSets',
+        manually_written_hooked_funcs = ['AllocateMemory',
+                                         'AllocateDescriptorSets',
                                          'CreateDescriptorPool',
                                          'CreateDevice',
                                          'CreateFramebuffer',
@@ -393,7 +393,7 @@ class Subcommand(object):
 
         # process each of the entrypoint prototypes
         for ext in vulkan.extensions_all:
-            if ext.name.lower() == extName.lower():
+            if ext.name.lower() == extensionName.lower():
                 for proto in ext.protos:
                     if proto.name in manually_written_hooked_funcs:
                         func_body.append( '// __HOOKED_vk%s is manually written. Look in vktrace_lib_trace.cpp\n' % proto.name)
@@ -418,7 +418,7 @@ class Subcommand(object):
                             else:
                                 raw_packet_update_list.append('    pPacket->%s = %s;' % (p.name, p.name))
                         # Get list of packet size modifiers due to ptr params
-                        packet_size = self._get_packet_size(extName, proto.params)
+                        packet_size = self._get_packet_size(extensionName, proto.params)
                         ptr_packet_update_list = self._get_packet_ptr_param_list(proto.params)
                         func_body[-1] = func_body[-1].replace(',', ')')
                         # End of function declaration portion, begin function body
@@ -439,7 +439,7 @@ class Subcommand(object):
 
                         # call down the layer chain and get return value (if there is one)
                         # Note: this logic doesn't work for CreateInstance or CreateDevice but those are handwritten
-                        if extName == 'vk_debug_marker_lunarg':
+                        if extensionName == 'vk_debug_marker_lunarg':
                             table_txt = 'mdd(%s)->debugMarkerTable' % proto.params[0].name
                         elif proto.params[0].ty in ['VkInstance', 'VkPhysicalDevice']:
                            table_txt = 'mid(%s)->instTable' % proto.params[0].name
@@ -543,9 +543,9 @@ class Subcommand(object):
         pid_enum.append('static void add_VkApplicationInfo_to_packet(vktrace_trace_packet_header*  pHeader, VkApplicationInfo** ppStruct, const VkApplicationInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkApplicationInfo), pInStruct);')
-        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pAppName), strlen(pInStruct->pAppName) + 1, pInStruct->pAppName);')
+        pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pApplicationName), strlen(pInStruct->pApplicationName) + 1, pInStruct->pApplicationName);')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->pEngineName), strlen(pInStruct->pEngineName) + 1, pInStruct->pEngineName);')
-        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pAppName));')
+        pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pApplicationName));')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&((*ppStruct)->pEngineName));')
         pid_enum.append('    vktrace_finalize_buffer_address(pHeader, (void**)&*ppStruct);')
         pid_enum.append('};\n')
@@ -553,7 +553,7 @@ class Subcommand(object):
         pid_enum.append('static void add_VkInstanceCreateInfo_to_packet(vktrace_trace_packet_header* pHeader, VkInstanceCreateInfo** ppStruct, VkInstanceCreateInfo *pInStruct)')
         pid_enum.append('{')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)ppStruct, sizeof(VkInstanceCreateInfo), pInStruct);')
-        pid_enum.append('    add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&((*ppStruct)->pAppInfo), pInStruct->pAppInfo);')
+        pid_enum.append('    add_VkApplicationInfo_to_packet(pHeader, (VkApplicationInfo**)&((*ppStruct)->pApplicationInfo), pInStruct->pApplicationInfo);')
         # TODO138 : This is an initial pass at getting the extension/layer arrays correct, needs to be validated.
         pid_enum.append('    uint32_t i, siz = 0;')
         pid_enum.append('    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppStruct)->ppEnabledLayerNames), pInStruct->enabledLayerNameCount * sizeof(char*), pInStruct->ppEnabledLayerNames);')
@@ -624,10 +624,10 @@ class Subcommand(object):
         pid_enum.append('    uint32_t i;')
         pid_enum.append('    if (pVkInstanceCreateInfo != NULL)')
         pid_enum.append('    {')
-        pid_enum.append('        pVkInstanceCreateInfo->pAppInfo = (VkApplicationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo);')
-        pid_enum.append('        VkApplicationInfo** ppAppInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pAppInfo;')
-        pid_enum.append('        (*ppAppInfo)->pAppName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pAppName);')
-        pid_enum.append('        (*ppAppInfo)->pEngineName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pAppInfo->pEngineName);')
+        pid_enum.append('        pVkInstanceCreateInfo->pApplicationInfo = (VkApplicationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pApplicationInfo);')
+        pid_enum.append('        VkApplicationInfo** ppApplicationInfo = (VkApplicationInfo**) &pVkInstanceCreateInfo->pApplicationInfo;')
+        pid_enum.append('        (*ppApplicationInfo)->pApplicationName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pApplicationInfo->pApplicationName);')
+        pid_enum.append('        (*ppApplicationInfo)->pEngineName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->pApplicationInfo->pEngineName);')
         pid_enum.append('        if (pVkInstanceCreateInfo->enabledLayerNameCount > 0)')
         pid_enum.append('        {')
         pid_enum.append('            pVkInstanceCreateInfo->ppEnabledLayerNames = (const char* const*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pVkInstanceCreateInfo->ppEnabledLayerNames);')
@@ -699,10 +699,10 @@ class Subcommand(object):
         # Custom txt for given function and parameter.  First check if param is NULL, then insert txt if not
         # First some common code used by both CmdWaitEvents & CmdPipelineBarrier
         mem_barrier_interp = ['uint32_t i = 0;\n',
-                              'for (i = 0; i < pPacket->memBarrierCount; i++) {\n',
-                              '    void** ppMB = (void**)&(pPacket->ppMemBarriers[i]);\n',
-                              '    *ppMB = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppMemBarriers[i]);\n',
-                              '    //VkMemoryBarrier* pBarr = (VkMemoryBarrier*)pPacket->ppMemBarriers[i];\n',
+                              'for (i = 0; i < pPacket->memoryBarrierCount; i++) {\n',
+                              '    void** ppMB = (void**)&(pPacket->ppMemoryBarriers[i]);\n',
+                              '    *ppMB = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppMemoryBarriers[i]);\n',
+                              '    //VkMemoryBarrier* pBarr = (VkMemoryBarrier*)pPacket->ppMemoryBarriers[i];\n',
                               '    // TODO : Could fix up the pNext ptrs here if they were finalized and if we cared by switching on Barrier type and remapping\n',
                               '}']
         create_rp_interp = ['VkRenderPassCreateInfo* pInfo = (VkRenderPassCreateInfo*)pPacket->pCreateInfo;\n',
@@ -751,7 +751,7 @@ class Subcommand(object):
                             '// Viewport State\n',
                             'pNonConst->pViewportState = (const VkPipelineViewportStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pViewportState);\n',
                             '// Raster State\n',
-                            'pNonConst->pRasterState = (const VkPipelineRasterStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pRasterState);\n',
+                            'pNonConst->pRasterizationState = (const VkPipelineRasterizationStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pRasterizationState);\n',
                             '// MultiSample State\n',
                             'pNonConst->pMultisampleState = (const VkPipelineMultisampleStateCreateInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfos[i].pMultisampleState);\n',
                             '// DepthStencil State\n',
@@ -786,8 +786,8 @@ class Subcommand(object):
                                                        'pInfo->pSetLayouts = (VkDescriptorSetLayout*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pSetLayouts);\n']},
                              'CreateDescriptorPool' : {'param': 'pCreateInfo', 'txt': ['VkDescriptorPoolCreateInfo* pInfo = (VkDescriptorPoolCreateInfo*)pPacket->pCreateInfo;\n',
                                                        'pInfo->pTypeCounts = (VkDescriptorTypeCount*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pTypeCounts);\n']},
-                             'CmdWaitEvents' : {'param': 'ppMemBarriers', 'txt': mem_barrier_interp},
-                             'CmdPipelineBarrier' : {'param': 'ppMemBarriers', 'txt': mem_barrier_interp},
+                             'CmdWaitEvents' : {'param': 'ppMemoryBarriers', 'txt': mem_barrier_interp},
+                             'CmdPipelineBarrier' : {'param': 'ppMemoryBarriers', 'txt': mem_barrier_interp},
                              'CreateDescriptorSetLayout' : {'param': 'pCreateInfo', 'txt': ['if (pPacket->pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO) {\n',
                                                                                          '    VkDescriptorSetLayoutCreateInfo* pNext = (VkDescriptorSetLayoutCreateInfo*)pPacket->pCreateInfo;\n',
                                                                                          '    do\n','    {\n',
@@ -819,17 +819,17 @@ class Subcommand(object):
                                                                                          '     vktrace_LogError("CreateDescriptorSetLayout must have pCreateInfo->stype of VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO.");\n',
                                                                                          '     pPacket->header = NULL;\n',
                                                                                          '}']},
-#                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['if (pPacket->pBeginInfo->sType == VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO) {\n',
+#                             'BeginCommandBuffer' : {'param': 'pBeginInfo', 'txt': ['if (pPacket->pBeginInfo->sType == VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO) {\n',
 #                                                                                         '    // need to make a non-const pointer to the pointer so that we can properly change the original pointer to the interpretted one\n',
-#                                                                                         '    VkCmdBufferGraphicsBeginInfo** ppNext = (VkCmdBufferGraphicsBeginInfo**)&(pPacket->pBeginInfo->pNext);\n',
-#                                                                                         '    *ppNext = (VkCmdBufferGraphicsBeginInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
-#                                                                                         '    VkCmdBufferGraphicsBeginInfo* pNext = *ppNext;\n',
+#                                                                                         '    VkCommandBufferGraphicsBeginInfo** ppNext = (VkCommandBufferGraphicsBeginInfo**)&(pPacket->pBeginInfo->pNext);\n',
+#                                                                                         '    *ppNext = (VkCommandBufferGraphicsBeginInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pBeginInfo->pNext);\n',
+#                                                                                         '    VkCommandBufferGraphicsBeginInfo* pNext = *ppNext;\n',
 #                                                                                         '    while (NULL != pNext)\n', '    {\n',
 #                                                                                         '        switch(pNext->sType)\n', '        {\n',
-#                                                                                         '            case VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO:\n',
+#                                                                                         '            case VK_STRUCTURE_TYPE_COMMAND_BUFFER_GRAPHICS_BEGIN_INFO:\n',
 #                                                                                         '            {\n',
-#                                                                                         '                ppNext = (VkCmdBufferGraphicsBeginInfo**) &pNext->pNext;\n',
-#                                                                                         '                *ppNext = (VkCmdBufferGraphicsBeginInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
+#                                                                                         '                ppNext = (VkCommandBufferGraphicsBeginInfo**) &pNext->pNext;\n',
+#                                                                                         '                *ppNext = (VkCommandBufferGraphicsBeginInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pNext->pNext);\n',
 #                                                                                         '                break;\n',
 #                                                                                         '            }\n',
 #                                                                                         '            default:\n',
@@ -839,24 +839,24 @@ class Subcommand(object):
 #                                                                                         '                pNext->pNext = NULL;\n',
 #                                                                                         '            }\n',
 #                                                                                         '        }\n',
-#                                                                                         '        pNext = (VkCmdBufferGraphicsBeginInfo*)pNext->pNext;\n',
+#                                                                                         '        pNext = (VkCommandBufferGraphicsBeginInfo*)pNext->pNext;\n',
 #                                                                                         '    }\n',
 #                                                                                         '} else {\n',
 #                                                                                         '    // This is unexpected.\n',
-#                                                                                         '    vktrace_LogError("BeginCommandBuffer must have BeginInfo stype of VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO.");\n',
+#                                                                                         '    vktrace_LogError("BeginCommandBuffer must have BeginInfo stype of VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO.");\n',
 #                                                                                         '    pPacket->header = NULL;\n',
 #                                                                                         '}']},
-                             'AllocMemory' : {'param': 'pAllocInfo', 'txt': ['if (pPacket->pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {\n',
-                                                                                         '    VkMemoryAllocInfo** ppNext = (VkMemoryAllocInfo**) &(pPacket->pAllocInfo->pNext);\n',
-                                                                                         '    *ppNext = (VkMemoryAllocInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocInfo->pNext);\n',
+                             'AllocateMemory' : {'param': 'pAllocateInfo', 'txt': ['if (pPacket->pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {\n',
+                                                                                         '    VkMemoryAllocateInfo** ppNext = (VkMemoryAllocateInfo**) &(pPacket->pAllocateInfo->pNext);\n',
+                                                                                         '    *ppNext = (VkMemoryAllocateInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pAllocateInfo->pNext);\n',
                                                                                          '} else {\n',
                                                                                          '    // This is unexpected.\n',
-                                                                                         '    vktrace_LogError("AllocMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',
+                                                                                         '    vktrace_LogError("AllocateMemory must have AllocInfo stype of VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO.");\n',
                                                                                          '    pPacket->header = NULL;\n',
                                                                                          '}']},
-                             'AllocDescriptorSets' : {'param': 'pAllocInfo', 'txt':
-                                                                               ['VkDescriptorSetLayout **ppDescSetLayout = (VkDescriptorSetLayout **) &pPacket->pAllocInfo->pSetLayouts;\n'
-                                                                                '        *ppDescSetLayout = (VkDescriptorSetLayout *) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pAllocInfo->pSetLayouts));']},
+                             'AllocateDescriptorSets' : {'param': 'pAllocateInfo', 'txt':
+                                                                               ['VkDescriptorSetLayout **ppDescSetLayout = (VkDescriptorSetLayout **) &pPacket->pAllocateInfo->pSetLayouts;\n'
+                                                                                '        *ppDescSetLayout = (VkDescriptorSetLayout *) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pAllocateInfo->pSetLayouts));']},
                              'UpdateDescriptorSets' : {'param': 'pDescriptorWrites', 'txt':
                                                                                [ 'uint32_t i;\n',
                                                                                  'for (i = 0; i < pPacket->descriptorWriteCount; i++) {\n',
@@ -894,8 +894,8 @@ class Subcommand(object):
                              'QueueSubmit' : {'param': 'pSubmits', 'txt':
                                                                                [ 'uint32_t i;\n',
                                                                                  'for (i = 0; i < pPacket->submitCount; i++) {\n',
-                                                                                 '   VkCmdBuffer** ppCBs = (VkCmdBuffer**)&pPacket->pSubmits[i].pCommandBuffers;\n',
-                                                                                 '   *ppCBs = (VkCmdBuffer*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pCommandBuffers);\n',
+                                                                                 '   VkCommandBuffer** ppCBs = (VkCommandBuffer**)&pPacket->pSubmits[i].pCommandBuffers;\n',
+                                                                                 '   *ppCBs = (VkCommandBuffer*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pCommandBuffers);\n',
                                                                                  '   VkSemaphore** ppSems = (VkSemaphore**)&pPacket->pSubmits[i].pWaitSemaphores;\n',
                                                                                  '   *ppSems = (VkSemaphore*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pSubmits[i].pWaitSemaphores);\n',
                                                                                  '   ppSems = (VkSemaphore**)&pPacket->pSubmits[i].pSignalSemaphores;\n',
@@ -913,7 +913,7 @@ class Subcommand(object):
                              'CreateShader' : {'param': 'pCreateInfo', 'txt': ['void** ppName = (void**)&(pPacket->pCreateInfo->pName);\n',
                                                                                '*ppName = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pName);']},
                              'FlushMappedMemoryRanges' : {'param': 'ppData', 'txt': ['uint32_t i = 0;\n',
-                                                                                     'for (i = 0; i < pPacket->memRangeCount; i++)\n',
+                                                                                     'for (i = 0; i < pPacket->memoryRangeCount; i++)\n',
                                                                                      '{\n',
                                                                                      '    pPacket->ppData[i] = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppData[i]);\n',
                                                                                      '}']}}
@@ -965,7 +965,7 @@ class Subcommand(object):
                 if_body.append('}\n')
         return "\n".join(if_body)
 
-    def _generate_interp_funcs_ext(self, extName):
+    def _generate_interp_funcs_ext(self, extensionName):
         if_body = []
         custom_case_dict = { 'QueuePresentKHR' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapchains = (VkSwapchainKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapchains));\n',
                                                                                    'pPacket->pPresentInfo->imageIndices = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
@@ -975,7 +975,7 @@ class Subcommand(object):
                                                      '(*ppQFI) = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
                             }
         for ext in vulkan.extensions_all:
-            if ext.name.lower() == extName.lower():
+            if ext.name.lower() == extensionName.lower():
                 for proto in ext.protos:
                     if_body.append('typedef struct packet_vk%s {' % proto.name)
                     if_body.append('    vktrace_trace_packet_header* pHeader;')
@@ -1049,7 +1049,7 @@ class Subcommand(object):
         rof_body.append('        return m_pendingAlloc;')
         rof_body.append('    }')
         rof_body.append('')
-        rof_body.append('    void setAllocInfo(const VkMemoryAllocInfo *info, const bool pending)')
+        rof_body.append('    void setAllocInfo(const VkMemoryAllocateInfo *info, const bool pending)')
         rof_body.append('    {')
         rof_body.append('        m_pendingAlloc = pending;')
         rof_body.append('        m_allocInfo = *info;')
@@ -1182,7 +1182,7 @@ class Subcommand(object):
         rc_body.append('        uint8_t* pData;')
         rc_body.append('    };')
         rc_body.append('    std::vector<MapRange> m_mapRange;')
-        rc_body.append('    VkMemoryAllocInfo m_allocInfo;')
+        rc_body.append('    VkMemoryAllocateInfo m_allocInfo;')
         rc_body.append('};')
         rc_body.append('')
         rc_body.append('typedef struct _imageObj {')
@@ -1447,7 +1447,7 @@ class Subcommand(object):
 
     # Generate main replay case statements where actual replay API call is dispatched based on input packet data
     def _generate_replay(self):
-        manually_replay_funcs = ['AllocMemory',
+        manually_replay_funcs = ['AllocateMemory',
                                  'BeginCommandBuffer',
                                  'CreateDescriptorSetLayout',
                                  'CreateDevice',
@@ -1488,7 +1488,7 @@ class Subcommand(object):
                                  'WaitForFences',
                                  'DbgCreateMsgCallback',
                                  'DbgDestroyMsgCallback',
-                                 'AllocCommandBuffers',
+                                 'AllocateCommandBuffers',
                                  ]
 
         # validate the manually_replay_funcs list
@@ -1508,7 +1508,7 @@ class Subcommand(object):
         # Functions that create views are unique from other create functions
         create_view_list = ['CreateBufferView', 'CreateImageView', 'CreateComputePipeline']
         # Functions to treat as "Create' that don't have 'Create' in the name
-        special_create_list = ['LoadPipeline', 'LoadPipelineDerivative', 'AllocMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocDescriptorSets']
+        special_create_list = ['LoadPipeline', 'LoadPipelineDerivative', 'AllocateMemory', 'GetDeviceQueue', 'PinSystemMemory', 'AllocateDescriptorSets']
         # A couple funcs use do while loops
         do_while_dict = {'GetFenceStatus': 'replayResult != pPacket->result  && pPacket->result == VK_SUCCESS', 'GetEventStatus': '(pPacket->result == VK_EVENT_SET || pPacket->result == VK_EVENT_RESET) && replayResult != pPacket->result'}
         rbody = []
@@ -1566,20 +1566,20 @@ class Subcommand(object):
                         rbody.append('            createInfo.image = m_objMapper.remap_images(pPacket->pCreateInfo->image);')
                     rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif create_func: # Declare local var to store created handle into
-                    if 'AllocDescriptorSets' == proto.name:
+                    if 'AllocateDescriptorSets' == proto.name:
                         p_ty = proto.params[-1].ty.strip('*').replace('const ', '')
-                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->pAllocInfo->setLayoutCount * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
-                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocInfo->setLayoutCount * sizeof(VkDescriptorSetLayout));')
-                        rbody.append('            VkDescriptorSetAllocInfo local_AllocInfo, *local_pAllocInfo = &local_AllocInfo;')
+                        rbody.append('            %s* local_%s = (%s*)malloc(pPacket->pAllocateInfo->setLayoutCount * sizeof(%s));' % (p_ty, proto.params[-1].name, p_ty, p_ty))
+                        rbody.append('            VkDescriptorSetLayout* local_pSetLayouts = (VkDescriptorSetLayout*)malloc(pPacket->pAllocateInfo->setLayoutCount * sizeof(VkDescriptorSetLayout));')
+                        rbody.append('            VkDescriptorSetAllocateInfo local_AllocInfo, *local_pAllocateInfo = &local_AllocInfo;')
                         rbody.append('            VkDescriptorPool local_descPool;')
-                        rbody.append('            local_descPool = m_objMapper.remap_descriptorpools(pPacket->pAllocInfo->descriptorPool);')
-                        rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocInfo->setLayoutCount; i++)')
+                        rbody.append('            local_descPool = m_objMapper.remap_descriptorpools(pPacket->pAllocateInfo->descriptorPool);')
+                        rbody.append('            for (uint32_t i = 0; i < pPacket->pAllocateInfo->setLayoutCount; i++)')
                         rbody.append('            {')
                         rbody.append('                local_pSetLayouts[i] = m_objMapper.remap_descriptorsetlayouts(pPacket->%s->pSetLayouts[i]);' % (proto.params[-2].name))
                         rbody.append('            }')
-                        rbody.append('            memcpy(local_pAllocInfo, pPacket->pAllocInfo, sizeof(VkDescriptorSetAllocInfo));')
-                        rbody.append('            local_pAllocInfo->pSetLayouts = local_pSetLayouts;')
-                        rbody.append('            local_pAllocInfo->descriptorPool = local_descPool;')
+                        rbody.append('            memcpy(local_pAllocateInfo, pPacket->pAllocateInfo, sizeof(VkDescriptorSetAllocateInfo));')
+                        rbody.append('            local_pAllocateInfo->pSetLayouts = local_pSetLayouts;')
+                        rbody.append('            local_pAllocateInfo->descriptorPool = local_descPool;')
                     else:
                         rbody.append('            %s local_%s;' % (proto.params[-1].ty.strip('*').replace('const ', ''), proto.params[-1].name))
                 elif proto.name == 'ResetFences':
@@ -1626,7 +1626,7 @@ class Subcommand(object):
                 for p in proto.params:
                     # For last param of Create funcs, pass address of param
                     if create_func:
-                        if proto.name == 'AllocDescriptorSets' and ((p.name == proto.params[-2].name) or (p.name == proto.params[-1].name)):
+                        if proto.name == 'AllocateDescriptorSets' and ((p.name == proto.params[-2].name) or (p.name == proto.params[-1].name)):
                             rr_string += 'local_%s, ' % p.name
                         elif p.name == proto.params[-1].name:
                             rr_string += '&local_%s, ' % p.name
@@ -1649,7 +1649,7 @@ class Subcommand(object):
                     rr_string = ', '.join(rr_list)
                     # this is a sneaky shortcut to use generic create code below to add_to_map
                     create_func = True
-                elif proto.name == 'AllocDescriptorSets':
+                elif proto.name == 'AllocateDescriptorSets':
                     rr_string = rr_string.replace('pPacket->pSetLayouts', 'pLocalDescSetLayouts')
                 elif proto.name == 'ResetFences':
                    rr_string = rr_string.replace('pPacket->pFences', 'fences')
@@ -1691,11 +1691,11 @@ class Subcommand(object):
                 elif 'FreeCommandBuffers' in proto.name:
                     rbody.append('            delete remappedpCommandBuffers;')
                 elif 'CmdExecuteCommands' in proto.name:
-                    rbody.append('            delete remappedpCmdBuffers;')
-                elif 'AllocDescriptorSets' in proto.name:
+                    rbody.append('            delete remappedpCommandBuffers;')
+                elif 'AllocateDescriptorSets' in proto.name:
                     rbody.append('            if (replayResult == VK_SUCCESS)')
                     rbody.append('            {')
-                    rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocInfo->setLayoutCount; i++) {')
+                    rbody.append('                for (uint32_t i = 0; i < pPacket->pAllocateInfo->setLayoutCount; i++) {')
                     rbody.append('                    m_objMapper.add_to_descriptorsets_map(pPacket->%s[i], local_%s[i]);' % (proto.params[-1].name, proto.params[-1].name))
                     rbody.append('                }')
                     rbody.append('            }')
@@ -1710,8 +1710,8 @@ class Subcommand(object):
                     clean_type = proto.params[-1].ty.strip('*').replace('const ', '')
                     VkNonDispObjType = [o for o in vulkan.object_non_dispatch_list]
                     rbody.append('                m_objMapper.add_to_%ss_map(*(pPacket->%s), local_%s);' % (clean_type.lower()[2:], proto.params[-1].name, proto.params[-1].name))
-                    if 'AllocMemory' == proto.name:
-                        rbody.append('                m_objMapper.add_entry_to_mapData(local_%s, pPacket->pAllocInfo->allocationSize);' % (proto.params[-1].name))
+                    if 'AllocateMemory' == proto.name:
+                        rbody.append('                m_objMapper.add_entry_to_mapData(local_%s, pPacket->pAllocateInfo->allocationSize);' % (proto.params[-1].name))
                     if ret_value:
                         rbody.append('            }')
                 elif proto.name in do_while_dict:
@@ -1732,7 +1732,7 @@ class Subcommand(object):
         return "\n".join(rbody)
 
 class VktraceTraceHeader(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
         header_txt.append('#include "vktrace_vk_packet_id.h"\n\n')
@@ -1750,7 +1750,7 @@ class VktraceTraceHeader(Subcommand):
         return "\n".join(body)
 
 class VktraceTraceC(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#include "vktrace_platform.h"')
         header_txt.append('#include "vktrace_common.h"')
@@ -1778,12 +1778,12 @@ class VktraceTraceC(Subcommand):
 
     def generate_body(self):
         body = [self._generate_init_funcs(),
-                self._generate_trace_funcs(self.extName)]
+                self._generate_trace_funcs(self.extensionName)]
 
         return "\n".join(body)
 
 class VktracePacketID(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "vktrace_trace_packet_utils.h"')
@@ -1830,7 +1830,7 @@ class VktracePacketID(Subcommand):
         return "\n".join(body)
 
 class VktraceCoreTracePackets(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "vulkan.h"')
@@ -1844,56 +1844,56 @@ class VktraceCoreTracePackets(Subcommand):
         return "\n".join(body)
 
 class VktraceExtTraceHeader(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include "vulkan.h"')
-        header_txt.append('#include "%s.h"' % extName.lower())
+        header_txt.append('#include "%s.h"' % extensionName.lower())
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_trace_func_protos_ext(self.extName)]
+        body = [self._generate_trace_func_protos_ext(self.extensionName)]
 
         return "\n".join(body)
 
 class VktraceExtTraceC(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#include "vktrace_platform.h"')
         header_txt.append('#include "vktrace_common.h"')
-        if extName == "vk_ext_khr_device_swapchain":
+        if extensionName == "vk_ext_khr_device_swapchain":
             header_txt.append('#include "vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vktrace_vk_%s.h"' % extName.lower())
-        header_txt.append('#include "vktrace_vk_%s_packets.h"' % extName.lower())
+        header_txt.append('#include "vktrace_vk_%s.h"' % extensionName.lower())
+        header_txt.append('#include "vktrace_vk_%s_packets.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
-        header_txt.append('#include "%s_struct_size_helper.h"' % extName.lower())
-        if extName == 'vk_debug_marker_lunarg':
+        header_txt.append('#include "%s_struct_size_helper.h"' % extensionName.lower())
+        if extensionName == 'vk_debug_marker_lunarg':
             header_txt.append('#include "vk_debug_marker_layer.h"\n')
 
         header_txt.append('#include "vktrace_lib_helpers.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_trace_funcs(self.extName)]
+        body = [self._generate_trace_funcs(self.extensionName)]
 
         return "\n".join(body)
 
 class VktraceExtTracePackets(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
-        header_txt.append('#include "%s.h"' % extName.lower())
+        header_txt.append('#include "%s.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
 
     def generate_body(self):
-        body = [self._generate_interp_funcs_ext(self.extName)]
+        body = [self._generate_interp_funcs_ext(self.extensionName)]
 
         return "\n".join(body)
 
 class VktraceReplayVkFuncPtrs(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
@@ -1910,7 +1910,7 @@ class VktraceReplayVkFuncPtrs(Subcommand):
         return "\n".join(body)
 
 class VktraceReplayObjMapperHeader(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
         header_txt.append('#include <set>')
@@ -1929,7 +1929,7 @@ class VktraceReplayObjMapperHeader(Subcommand):
         return "\n".join(body)
 
 class VktraceReplayC(Subcommand):
-    def generate_header(self, extName):
+    def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#include "vkreplay_vkreplay.h"\n')
         header_txt.append('#include "vkreplay.h"\n')

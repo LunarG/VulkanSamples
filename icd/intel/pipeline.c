@@ -55,12 +55,12 @@ static int translate_blend(VkBlend blend)
    case VK_BLEND_ONE:                      return GEN6_BLENDFACTOR_ONE;
    case VK_BLEND_SRC_COLOR:                return GEN6_BLENDFACTOR_SRC_COLOR;
    case VK_BLEND_ONE_MINUS_SRC_COLOR:      return GEN6_BLENDFACTOR_INV_SRC_COLOR;
-   case VK_BLEND_DEST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
-   case VK_BLEND_ONE_MINUS_DEST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
+   case VK_BLEND_DST_COLOR:               return GEN6_BLENDFACTOR_DST_COLOR;
+   case VK_BLEND_ONE_MINUS_DST_COLOR:     return GEN6_BLENDFACTOR_INV_DST_COLOR;
    case VK_BLEND_SRC_ALPHA:                return GEN6_BLENDFACTOR_SRC_ALPHA;
    case VK_BLEND_ONE_MINUS_SRC_ALPHA:      return GEN6_BLENDFACTOR_INV_SRC_ALPHA;
-   case VK_BLEND_DEST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
-   case VK_BLEND_ONE_MINUS_DEST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
+   case VK_BLEND_DST_ALPHA:               return GEN6_BLENDFACTOR_DST_ALPHA;
+   case VK_BLEND_ONE_MINUS_DST_ALPHA:     return GEN6_BLENDFACTOR_INV_DST_ALPHA;
    case VK_BLEND_CONSTANT_COLOR:           return GEN6_BLENDFACTOR_CONST_COLOR;
    case VK_BLEND_ONE_MINUS_CONSTANT_COLOR: return GEN6_BLENDFACTOR_INV_CONST_COLOR;
    case VK_BLEND_CONSTANT_ALPHA:           return GEN6_BLENDFACTOR_CONST_ALPHA;
@@ -82,10 +82,10 @@ static int translate_compare_func(VkCompareOp func)
     case VK_COMPARE_OP_NEVER:         return GEN6_COMPAREFUNCTION_NEVER;
     case VK_COMPARE_OP_LESS:          return GEN6_COMPAREFUNCTION_LESS;
     case VK_COMPARE_OP_EQUAL:         return GEN6_COMPAREFUNCTION_EQUAL;
-    case VK_COMPARE_OP_LESS_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
+    case VK_COMPARE_OP_LESS_OR_EQUAL:    return GEN6_COMPAREFUNCTION_LEQUAL;
     case VK_COMPARE_OP_GREATER:       return GEN6_COMPAREFUNCTION_GREATER;
     case VK_COMPARE_OP_NOT_EQUAL:     return GEN6_COMPAREFUNCTION_NOTEQUAL;
-    case VK_COMPARE_OP_GREATER_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
+    case VK_COMPARE_OP_GREATER_OR_EQUAL: return GEN6_COMPAREFUNCTION_GEQUAL;
     case VK_COMPARE_OP_ALWAYS:        return GEN6_COMPAREFUNCTION_ALWAYS;
     default:
       assert(!"unknown compare_func");
@@ -99,11 +99,11 @@ static int translate_stencil_op(VkStencilOp op)
     case VK_STENCIL_OP_KEEP:       return GEN6_STENCILOP_KEEP;
     case VK_STENCIL_OP_ZERO:       return GEN6_STENCILOP_ZERO;
     case VK_STENCIL_OP_REPLACE:    return GEN6_STENCILOP_REPLACE;
-    case VK_STENCIL_OP_INC_CLAMP:  return GEN6_STENCILOP_INCRSAT;
-    case VK_STENCIL_OP_DEC_CLAMP:  return GEN6_STENCILOP_DECRSAT;
+    case VK_STENCIL_OP_INCREMENT_AND_CLAMP:  return GEN6_STENCILOP_INCRSAT;
+    case VK_STENCIL_OP_DECREMENT_AND_CLAMP:  return GEN6_STENCILOP_DECRSAT;
     case VK_STENCIL_OP_INVERT:     return GEN6_STENCILOP_INVERT;
-    case VK_STENCIL_OP_INC_WRAP:   return GEN6_STENCILOP_INCR;
-    case VK_STENCIL_OP_DEC_WRAP:   return GEN6_STENCILOP_DECR;
+    case VK_STENCIL_OP_INCREMENT_AND_WRAP:   return GEN6_STENCILOP_INCR;
+    case VK_STENCIL_OP_DECREMENT_AND_WRAP:   return GEN6_STENCILOP_DECR;
     default:
       assert(!"unknown stencil op");
       return GEN6_STENCILOP_KEEP;
@@ -117,7 +117,7 @@ struct intel_pipeline_create_info {
     VkPipelineInputAssemblyStateCreateInfo ia;
     VkPipelineDepthStencilStateCreateInfo  db;
     VkPipelineColorBlendStateCreateInfo    cb;
-    VkPipelineRasterStateCreateInfo        rs;
+    VkPipelineRasterizationStateCreateInfo        rs;
     VkPipelineTessellationStateCreateInfo  tess;
     VkPipelineMultisampleStateCreateInfo   ms;
     VkPipelineViewportStateCreateInfo      vp;
@@ -207,7 +207,7 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     struct intel_pipeline_shader *sh;
     VkResult ret;
 
-    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
+    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));
@@ -326,16 +326,16 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
     case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN:
         pipeline->prim_type = GEN6_3DPRIM_TRIFAN;
         break;
-    case VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY:
         pipeline->prim_type = GEN6_3DPRIM_LINELIST_ADJ;
         break;
-    case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY:
         pipeline->prim_type = GEN6_3DPRIM_LINESTRIP_ADJ;
         break;
-    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY:
         pipeline->prim_type = GEN6_3DPRIM_TRILIST_ADJ;
         break;
-    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ:
+    case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
     case VK_PRIMITIVE_TOPOLOGY_PATCH:
@@ -360,7 +360,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
 static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
                                           const struct intel_pipeline_create_info* info)
 {
-    const VkPipelineRasterStateCreateInfo *rs_state = &info->rs;
+    const VkPipelineRasterizationStateCreateInfo *rs_state = &info->rs;
     bool ccw;
 
     pipeline->depthClipEnable = !rs_state->depthClampEnable;
@@ -383,7 +383,7 @@ static VkResult pipeline_build_rs_state(struct intel_pipeline *pipeline,
         break;
     }
 
-    ccw = (rs_state->frontFace == VK_FRONT_FACE_CCW);
+    ccw = (rs_state->frontFace == VK_FRONT_FACE_COUNTER_CLOCKWISE);
     /* flip the winding order */
 
     if (ccw) {
@@ -956,7 +956,7 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    pipeline->sample_count = (info->ms.rasterSamples <= 1) ? 1 : info->ms.rasterSamples;
+    pipeline->sample_count = (info->ms.rasterizationSamples <= 1) ? 1 : info->ms.rasterizationSamples;
 
     pipeline->alphaToCoverageEnable = info->ms.alphaToCoverageEnable;
     pipeline->alphaToOneEnable = info->ms.alphaToOneEnable;
@@ -969,7 +969,7 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
     dw[0] = cmd | (cmd_len - 2);
     if (info->ms.pSampleMask) {
         /* "Bit B of mask word M corresponds to sample 32*M + B."
-         * "The array is sized to a length of ceil(rasterSamples / 32) words."
+         * "The array is sized to a length of ceil(rasterizationSamples / 32) words."
          * "If pSampleMask is NULL, it is treated as if the mask has all bits enabled,"
          * "i.e. no coverage is removed from primitives."
          */
@@ -1007,14 +1007,14 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
             dw0 = 1 << 31 |
                     translate_blend_func(att->blendOpAlpha) << 26 |
                     translate_blend(att->srcBlendAlpha) << 20 |
-                    translate_blend(att->destBlendAlpha) << 15 |
+                    translate_blend(att->dstBlendAlpha) << 15 |
                     translate_blend_func(att->blendOpColor) << 11 |
                     translate_blend(att->srcBlendColor) << 5 |
-                    translate_blend(att->destBlendColor);
+                    translate_blend(att->dstBlendColor);
 
             if (att->blendOpAlpha != att->blendOpColor ||
                 att->srcBlendAlpha != att->srcBlendColor ||
-                att->destBlendAlpha != att->destBlendColor)
+                att->dstBlendAlpha != att->dstBlendColor)
                 dw0 |= 1 << 30;
 
             pipeline->dual_source_blend_enable = icd_pipeline_cb_att_needs_dual_source_blending(att);
@@ -1028,11 +1028,11 @@ static void pipeline_build_cb(struct intel_pipeline *pipeline,
             case VK_LOGIC_OP_AND:              logicop = GEN6_LOGICOP_AND; break;
             case VK_LOGIC_OP_AND_REVERSE:      logicop = GEN6_LOGICOP_AND_REVERSE; break;
             case VK_LOGIC_OP_AND_INVERTED:     logicop = GEN6_LOGICOP_AND_INVERTED; break;
-            case VK_LOGIC_OP_NOOP:             logicop = GEN6_LOGICOP_NOOP; break;
+            case VK_LOGIC_OP_NO_OP:             logicop = GEN6_LOGICOP_NOOP; break;
             case VK_LOGIC_OP_XOR:              logicop = GEN6_LOGICOP_XOR; break;
             case VK_LOGIC_OP_OR:               logicop = GEN6_LOGICOP_OR; break;
             case VK_LOGIC_OP_NOR:              logicop = GEN6_LOGICOP_NOR; break;
-            case VK_LOGIC_OP_EQUIV:            logicop = GEN6_LOGICOP_EQUIV; break;
+            case VK_LOGIC_OP_EQUIVALENT:            logicop = GEN6_LOGICOP_EQUIV; break;
             case VK_LOGIC_OP_INVERT:           logicop = GEN6_LOGICOP_INVERT; break;
             case VK_LOGIC_OP_OR_REVERSE:       logicop = GEN6_LOGICOP_OR_REVERSE; break;
             case VK_LOGIC_OP_COPY_INVERTED:    logicop = GEN6_LOGICOP_COPY_INVERTED; break;
@@ -1196,7 +1196,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
      * Do we need to set safe defaults in case the app doesn't provide all of
      * the necessary create infos?
      */
-    info->ms.rasterSamples    = 1;
+    info->ms.rasterizationSamples    = 1;
     info->ms.pSampleMask = NULL;
 
     memcpy(&info->graphics, vkinfo, sizeof (info->graphics));
@@ -1242,8 +1242,8 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     if (vkinfo->pColorBlendState != NULL) {
         memcpy(&info->cb, vkinfo->pColorBlendState, sizeof (info->cb));
     }
-    if (vkinfo->pRasterState != NULL) {
-        memcpy(&info->rs, vkinfo->pRasterState, sizeof (info->rs));
+    if (vkinfo->pRasterizationState != NULL) {
+        memcpy(&info->rs, vkinfo->pRasterizationState, sizeof (info->rs));
     }
     if (vkinfo->pTessellationState != NULL) {
         memcpy(&info->tess, vkinfo->pTessellationState, sizeof (info->tess));
@@ -1336,7 +1336,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
         return ret;
     }
 
-    VkMemoryAllocInfo mem_reqs;
+    VkMemoryAllocateInfo mem_reqs;
     mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_reqs.allocationSize = pipeline->scratch_size;
     mem_reqs.pNext = NULL;
@@ -1350,7 +1350,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
 ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkPipelineCache*                            pPipelineCache)
 {
 
@@ -1362,7 +1362,7 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
 void VKAPI vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 {
 }
 
@@ -1377,7 +1377,7 @@ ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
 
 ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
     VkDevice                                    device,
-    VkPipelineCache                             destCache,
+    VkPipelineCache                             dstCache,
     uint32_t                                    srcCacheCount,
     const VkPipelineCache*                      pSrcCaches)
 {
@@ -1389,7 +1389,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
     const VkGraphicsPipelineCreateInfo*       pCreateInfos,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkPipeline*                               pPipelines)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1418,7 +1418,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
     const VkComputePipelineCreateInfo*        pCreateInfos,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkPipeline*                               pPipelines)
 {
     return VK_ERROR_VALIDATION_FAILED;
@@ -1427,7 +1427,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
 ICD_EXPORT void VKAPI vkDestroyPipeline(
     VkDevice                                device,
     VkPipeline                              pipeline,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(pipeline);

@@ -126,7 +126,7 @@ static inline bool intel_handle_validate_type(const void *handle,
 
 void *intel_alloc(const void *handle,
                   size_t size, size_t alignment,
-                  VkSystemAllocScope scope);
+                  VkSystemAllocationScope scope);
 
 void intel_free(const void *handle, void *ptr);
 

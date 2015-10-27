@@ -181,7 +181,7 @@ struct loader_instance {
     bool debug_report_enabled;
     VkLayerDbgFunctionNode *DbgFunctionHead;
 
-    VkAllocCallbacks alloc_callbacks;
+    VkAllocationCallbacks alloc_callbacks;
 
     bool wsi_swapchain_enabled;
 };
@@ -265,12 +265,12 @@ VkResult loader_validate_instance_extensions(
 /* instance layer chain termination entrypoint definitions */
 VkResult VKAPI loader_CreateInstance(
         const VkInstanceCreateInfo*             pCreateInfo,
-        const VkAllocCallbacks*                 pAllocator,
+        const VkAllocationCallbacks*                 pAllocator,
         VkInstance*                             pInstance);
 
 void VKAPI loader_DestroyInstance(
         VkInstance                              instance,
-        const VkAllocCallbacks*                 pAllocator);
+        const VkAllocationCallbacks*                 pAllocator);
 
 VkResult VKAPI loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
@@ -328,7 +328,7 @@ void VKAPI loader_GetPhysicalDeviceMemoryProperties (
 VkResult VKAPI loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
-        const VkAllocCallbacks*                 pAllocator,
+        const VkAllocationCallbacks*                 pAllocator,
         VkDevice*                               pDevice);
 
 /* helper function definitions */
@@ -393,13 +393,13 @@ void loader_activate_instance_layer_extensions(struct loader_instance *inst);
 void* loader_heap_alloc(
         const struct loader_instance *instance,
         size_t                       size,
-        VkSystemAllocScope           allocScope);
+        VkSystemAllocationScope           allocationScope);
 
 void loader_heap_free(
         const struct loader_instance *instance,
-        void                         *pMem);
+        void                         *pMemory);
 
 void *loader_tls_heap_alloc(size_t size);
 
-void loader_tls_heap_free(void *pMem);
+void loader_tls_heap_free(void *pMemory);
 #endif /* LOADER_H */

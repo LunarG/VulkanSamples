@@ -92,7 +92,7 @@ VkResult intel_event_create(struct intel_dev *dev,
                               struct intel_event **event_ret)
 {
     struct intel_event *event;
-    VkMemoryAllocInfo mem_reqs;
+    VkMemoryAllocateInfo mem_reqs;
 
     event = (struct intel_event *) intel_base_create(&dev->base.handle,
             sizeof(*event), dev->base.dbg, VK_OBJECT_TYPE_EVENT, info, 0);
@@ -142,7 +142,7 @@ VkResult intel_event_get_status(struct intel_event *event)
 ICD_EXPORT VkResult VKAPI vkCreateEvent(
     VkDevice                                  device,
     const VkEventCreateInfo*                pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkEvent*                                  pEvent)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -154,7 +154,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
 ICD_EXPORT void VKAPI vkDestroyEvent(
     VkDevice                                device,
     VkEvent                                 event,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(event);

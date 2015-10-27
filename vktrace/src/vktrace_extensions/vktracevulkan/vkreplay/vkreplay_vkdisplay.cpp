@@ -64,7 +64,7 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
 {
 #if 0
     VkApplicationInfo appInfo = {};
-    appInfo.pAppName = APP_NAME;
+    appInfo.pApplicationName = APP_NAME;
     appInfo.pEngineName = "";
     appInfo.apiVersion = VK_API_VERSION;
     VkResult res = vkInitAndEnumerateGpus(&appInfo, NULL, VK_MAX_PHYSICAL_GPUS, &m_gpuCount, m_gpus);
@@ -111,12 +111,12 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
     std::vector<float> queue_priorities (dqci.queueCount, 0.0);
     dqci.pQueuePriorities = queue_priorities.data();
     // create the device enabling validation level 4
-    const char * const * extNames = &m_extensions[0];
+    const char * const * extensionNames = &m_extensions[0];
     VkDeviceCreateInfo info = {};
     info.requestedQueueCount = 1;
     info.pRequestedQueues = &dqci;
     info.enabledExtensionNameCount = static_cast <uint32_t> (m_extensions.size());
-    info.ppEnabledExtensionNames = extNames;
+    info.ppEnabledExtensionNames = extensionNames;
     info.flags = VK_DEVICE_CREATE_VALIDATION;
     info.maxValidationLevel = VK_VALIDATION_LEVEL_4;
     bool32_t vkTrue = VK_TRUE;

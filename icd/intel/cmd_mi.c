@@ -109,12 +109,12 @@ static void cmd_query_pipeline_statistics(struct intel_cmd *cmd,
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginQuery(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot,
     VkQueryControlFlags                         flags)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
     const VkDeviceSize offset = query->slot_stride * slot;
@@ -134,11 +134,11 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndQuery(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
     const VkDeviceSize offset = query->slot_stride * slot;
@@ -158,7 +158,7 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
 }
 
 ICD_EXPORT void VKAPI vkCmdResetQueryPool(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
@@ -183,34 +183,34 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
 }
 
 ICD_EXPORT void VKAPI vkCmdSetEvent(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_event *event = intel_event(event_);
 
     cmd_write_event_value(cmd, event, stageMask, 1);
 }
 
 ICD_EXPORT void VKAPI vkCmdResetEvent(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_event *event = intel_event(event_);
 
     cmd_write_event_value(cmd, event, stageMask, 0);
 }
 
 ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset,
+    VkBuffer                                    dstBuffer,
+    VkDeviceSize                                dstOffset,
     VkDeviceSize                                stride,
     VkFlags                                     flags)
 {
@@ -218,12 +218,12 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
 }
 
 ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_query *query = intel_query(queryPool);
     struct intel_bo *bo = query->obj.mem->bo;
     const VkDeviceSize offset = query->slot_stride * slot;

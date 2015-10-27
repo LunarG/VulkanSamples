@@ -149,11 +149,11 @@ void intel_set_stencil_reference(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetViewport(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
         return;
@@ -163,11 +163,11 @@ ICD_EXPORT void VKAPI vkCmdSetViewport(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetScissor(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
         return;
@@ -177,10 +177,10 @@ ICD_EXPORT void VKAPI vkCmdSetScissor(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetLineWidth(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     float                                    line_width)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
         return;
@@ -190,12 +190,12 @@ ICD_EXPORT void VKAPI vkCmdSetLineWidth(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetDepthBias(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
     float                               depthBiasSlopeFactor)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BIAS) {
         return;
@@ -205,10 +205,10 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBias(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     const float                         blendConstants[4])
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_BLEND_CONSTANTS) {
         return;
@@ -218,11 +218,11 @@ ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     float                               minDepthBounds,
     float                               maxDepthBounds)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_DEPTH_BOUNDS) {
         return;
@@ -232,11 +232,11 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilCompareMask)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_COMPARE_MASK) {
         return;
@@ -246,11 +246,11 @@ ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilWriteMask)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_WRITE_MASK) {
         return;
@@ -260,11 +260,11 @@ ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
 }
 
 ICD_EXPORT void VKAPI vkCmdSetStencilReference(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilReference)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     if (cmd->bind.state.use_pipeline_dynamic_state & INTEL_USE_PIPELINE_DYNAMIC_STENCIL_REFERENCE) {
         return;

@@ -2099,7 +2099,7 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
         void *entries;
 
         entries = intel_alloc(cmd, sizeof(cache->entries[0]) * count, 0,
-                VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (entries) {
             if (cache->entries) {
                 memcpy(entries, cache->entries,
@@ -3300,7 +3300,7 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->set_offsets = intel_alloc(cmd,
                 sizeof(data->set_offsets[0]) * pipeline_layout->layout_count,
-                sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!data->set_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->set_offset_count = 0;
@@ -3316,7 +3316,7 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->dynamic_offsets = intel_alloc(cmd,
                 sizeof(data->dynamic_offsets[0]) * pipeline_layout->total_dynamic_desc_count,
-                sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!data->dynamic_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->dynamic_offset_count = 0;
@@ -3637,11 +3637,11 @@ static void cmd_exec(struct intel_cmd *cmd, struct intel_bo *bo)
 }
 
 ICD_EXPORT void VKAPI vkCmdBindPipeline(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipeline                                pipeline)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     switch (pipelineBindPoint) {
     case VK_PIPELINE_BIND_POINT_COMPUTE:
@@ -3658,7 +3658,7 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
 
 
 ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
-    VkCmdBuffer                             cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipelineLayout                        layout,
     uint32_t                                firstSet,
@@ -3667,7 +3667,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     uint32_t                                dynamicOffsetCount,
     const uint32_t*                         pDynamicOffsets)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_pipeline_layout *pipeline_layout;
     struct intel_cmd_dset_data *data;
     uint32_t offset_count = 0;
@@ -3701,13 +3701,13 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
 
 
 ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     for (uint32_t i = 0; i < bindingCount; i++) {
         struct intel_buf *buf = intel_buf(pBuffers[i]);
@@ -3716,46 +3716,46 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
 }
 
 ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
     VkIndexType                              indexType)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     struct intel_buf *buf = intel_buf(buffer);
 
     cmd_bind_index_data(cmd, buf, offset, indexType);
 }
 
 ICD_EXPORT void VKAPI vkCmdDraw(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstVertex,
     uint32_t                                    firstInstance)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     cmd_draw(cmd, firstVertex, vertexCount,
             firstInstance, instanceCount, false, 0);
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexed(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstIndex,
     int32_t                                     vertexOffset,
     uint32_t                                    firstInstance)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     cmd_draw(cmd, firstIndex, indexCount,
             firstInstance, instanceCount, true, vertexOffset);
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndirect(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
     uint32_t                                    drawCount,
@@ -3765,7 +3765,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
     uint32_t                                    drawCount,
@@ -3775,7 +3775,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatch(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z)
@@ -3784,7 +3784,7 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
 }
 
 ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset)
 {
@@ -3792,7 +3792,7 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
 }
 
 void VKAPI vkCmdPushConstants(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
     uint32_t                                    offset,
@@ -3812,11 +3812,11 @@ void VKAPI vkGetRenderAreaGranularity(
 }
 
 ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
     VkRenderPassContents                        contents)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_render_pass *rp =
         intel_render_pass(pRenderPassBegin->renderPass);
     const struct intel_fb *fb = intel_fb(pRenderPassBegin->framebuffer);
@@ -3836,9 +3836,9 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 
         view = fb->views[i];
         range.baseMipLevel = view->mipLevel;
-        range.numLevels = 1;
+        range.levelCount = 1;
         range.baseArrayLayer = view->baseArrayLayer;
-        range.numLayers = view->array_size;
+        range.layerCount = view->array_size;
         range.aspectMask = 0;
 
         if (view->is_rt) {
@@ -3846,7 +3846,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
             if (att->clear_on_load) {
                 range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-                cmd_meta_clear_color_image(cmdBuffer, view->img,
+                cmd_meta_clear_color_image(commandBuffer, view->img,
                         att->initial_layout, &clear_val->color, 1, &range);
             }
         } else {
@@ -3860,7 +3860,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
             }
 
             if (range.aspectMask) {
-                cmd_meta_clear_depth_stencil_image(cmdBuffer,
+                cmd_meta_clear_depth_stencil_image(commandBuffer,
                         view->img, att->initial_layout,
                         clear_val->depthStencil.depth, clear_val->depthStencil.stencil,
                         1, &range);
@@ -3870,10 +3870,10 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
 }
 
 ICD_EXPORT void VKAPI vkCmdNextSubpass(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     VkRenderPassContents                        contents)
 {
-    struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+    struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_render_pass *rp = cmd->bind.render_pass;
 
     /* TODOVV */
@@ -3886,27 +3886,27 @@ ICD_EXPORT void VKAPI vkCmdNextSubpass(
 }
 
 ICD_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer                              cmdBuffer)
+    VkCommandBuffer                              commandBuffer)
 {
-   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+   struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
    cmd_end_render_pass(cmd);
 }
 
 ICD_EXPORT void VKAPI vkCmdExecuteCommands(
-    VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    cmdBuffersCount,
-    const VkCmdBuffer*                          pCmdBuffers)
+    VkCommandBuffer                                 commandBuffer,
+    uint32_t                                    commandBuffersCount,
+    const VkCommandBuffer*                          pCommandBuffers)
 {
-   struct intel_cmd *cmd = intel_cmd(cmdBuffer);
+   struct intel_cmd *cmd = intel_cmd(commandBuffer);
    uint32_t i;
 
    /* TODOVV */
    assert(!(!cmd->bind.render_pass || cmd->bind.render_pass_contents !=
-           VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS) && "Invalid RenderPass");
+           VK_RENDER_PASS_CONTENTS_SECONDARY_COMMAND_BUFFERS) && "Invalid RenderPass");
 
-   for (i = 0; i < cmdBuffersCount; i++) {
-       const struct intel_cmd *secondary = intel_cmd(pCmdBuffers[i]);
+   for (i = 0; i < commandBuffersCount; i++) {
+       const struct intel_cmd *secondary = intel_cmd(pCommandBuffers[i]);
 
        /* TODOVV: Move test to validation layer */
        assert(!(secondary->primary) && "Cannot be primary command buffer");

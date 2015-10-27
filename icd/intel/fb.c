@@ -38,7 +38,7 @@ static void fb_destroy(struct intel_obj *obj)
 
 VkResult intel_fb_create(struct intel_dev *dev,
                          const VkFramebufferCreateInfo *info,
-                         const VkAllocCallbacks *allocator,
+                         const VkAllocationCallbacks *allocator,
                          struct intel_fb **fb_ret)
 {
     struct intel_fb *fb;
@@ -51,7 +51,7 @@ VkResult intel_fb_create(struct intel_dev *dev,
 
     fb->view_count = info->attachmentCount;
     fb->views = intel_alloc(fb, sizeof(fb->views[0]) * fb->view_count, 0,
-            VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!fb->views) {
         intel_fb_destroy(fb);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -98,7 +98,7 @@ static void render_pass_destroy(struct intel_obj *obj)
 
 VkResult intel_render_pass_create(struct intel_dev *dev,
                                   const VkRenderPassCreateInfo *info,
-                                  const VkAllocCallbacks *allocator,
+                                  const VkAllocationCallbacks *allocator,
                                   struct intel_render_pass **rp_ret)
 {
     struct intel_render_pass *rp;
@@ -118,7 +118,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     rp->attachments = intel_alloc(rp,
             sizeof(rp->attachments[0]) * rp->attachment_count +
             sizeof(rp->subpasses[0]) * rp->subpass_count, 0,
-            VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!rp->attachments) {
         intel_render_pass_destroy(rp);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -208,7 +208,7 @@ void intel_render_pass_destroy(struct intel_render_pass *rp)
 ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
     VkDevice                                  device,
     const VkFramebufferCreateInfo*          pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkFramebuffer*                            pFramebuffer)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -220,7 +220,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
 ICD_EXPORT void VKAPI vkDestroyFramebuffer(
     VkDevice                                device,
     VkFramebuffer                           framebuffer,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(framebuffer);
@@ -231,7 +231,7 @@ ICD_EXPORT void VKAPI vkDestroyFramebuffer(
 ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
     VkDevice                                  device,
     const VkRenderPassCreateInfo*          pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkRenderPass*                            pRenderPass)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -243,7 +243,7 @@ ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
 ICD_EXPORT void VKAPI vkDestroyRenderPass(
     VkDevice                                device,
     VkRenderPass                           renderPass,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 {
     struct intel_obj *obj = intel_obj(renderPass);
 

@@ -534,7 +534,7 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
                     const VkImageSubresourceRange *range);
 
 void cmd_meta_clear_color_image(
-    VkCmdBuffer                         cmdBuffer,
+    VkCommandBuffer                         commandBuffer,
     struct intel_img                   *img,
     VkImageLayout                       imageLayout,
     const VkClearColorValue            *pClearColor,
@@ -542,7 +542,7 @@ void cmd_meta_clear_color_image(
     const VkImageSubresourceRange      *pRanges);
 
 void cmd_meta_clear_depth_stencil_image(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     struct intel_img*                        img,
     VkImageLayout                            imageLayout,
     float                                       depth,

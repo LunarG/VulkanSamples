@@ -259,11 +259,11 @@ static void add_alloc_memory_to_trace_packet(vktrace_trace_packet_header* pHeade
     return;
 }
 
-static size_t calculate_memory_barrier_size(uint32_t mbCount, const void* const* ppMemBarriers)
+static size_t calculate_memory_barrier_size(uint32_t mbCount, const void* const* ppMemoryBarriers)
 {
     uint32_t i, siz=0;
     for (i = 0; i < mbCount; i++) {
-        VkMemoryBarrier *pNext = (VkMemoryBarrier *) ppMemBarriers[i];
+        VkMemoryBarrier *pNext = (VkMemoryBarrier *) ppMemoryBarriers[i];
         switch (pNext->sType) {
             case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
                 siz += sizeof(VkMemoryBarrier);
@@ -358,9 +358,9 @@ static void add_VkGraphicsPipelineCreateInfos_to_trace_packet(vktrace_trace_pack
             }
 
             // Raster State
-            if (pParam[i].pRasterState) {
-                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i].pRasterState);
-                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
+            if (pParam[i].pRasterizationState) {
+                vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterizationState), sizeof(VkPipelineRasterizationStateCreateInfo), pParam[i].pRasterizationState);
+                vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterizationState));
             }
             // MultiSample State
             if (pParam[i].pMultisampleState) {
@@ -429,8 +429,8 @@ static void add_VkComputePipelineCreateInfos_to_trace_packet(vktrace_trace_packe
             vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pViewportState));
 
             // Raster State
-            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterState), sizeof(VkPipelineRasterStateCreateInfo), pParam[i]->pRasterState);
-            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterState));
+            vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pRasterizationState), sizeof(VkPipelineRasterizationStateCreateInfo), pParam[i]->pRasterizationState);
+            vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pRasterizationState));
 
             // MultiSample State
             vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pMultisampleState), sizeof(VkPipelineMultisampleStateCreateInfo), pParam[i]->pMultisampleState);

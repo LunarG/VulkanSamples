@@ -32,7 +32,7 @@
 static const struct icd_format_info {
     size_t size;
     uint32_t channel_count;
-} icd_format_table[VK_FORMAT_NUM] = {
+} icd_format_table[VK_FORMAT_RANGE_SIZE] = {
     [VK_FORMAT_UNDEFINED]            = { 0,  0 },
     [VK_FORMAT_R4G4_UNORM]           = { 1,  2 },
     [VK_FORMAT_R4G4_USCALED]         = { 1,  2 },

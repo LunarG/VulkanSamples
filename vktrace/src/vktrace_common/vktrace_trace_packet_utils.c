@@ -127,10 +127,10 @@ vktrace_trace_packet_header* vktrace_create_trace_packet(uint8_t tracer_id, uint
 {
     // Always allocate at least enough space for the packet header
     uint64_t total_packet_size = sizeof(vktrace_trace_packet_header) + packet_size + additional_buffers_size;
-    void* pMem = vktrace_malloc((size_t)total_packet_size);
-    memset(pMem, 0, (size_t)total_packet_size);
+    void* pMemory = vktrace_malloc((size_t)total_packet_size);
+    memset(pMemory, 0, (size_t)total_packet_size);
 
-    vktrace_trace_packet_header* pHeader = (vktrace_trace_packet_header*)pMem;
+    vktrace_trace_packet_header* pHeader = (vktrace_trace_packet_header*)pMemory;
     pHeader->size = total_packet_size;
     pHeader->global_packet_index = g_packet_index++;
     pHeader->tracer_id = tracer_id;
@@ -143,7 +143,7 @@ vktrace_trace_packet_header* vktrace_create_trace_packet(uint8_t tracer_id, uint
     pHeader->next_buffers_offset = sizeof(vktrace_trace_packet_header) + packet_size; // initial offset is from start of header to after the packet body
     if (total_packet_size > sizeof(vktrace_trace_packet_header))
     {
-        pHeader->pBody = (uintptr_t)(((char*)pMem) + sizeof(vktrace_trace_packet_header));
+        pHeader->pBody = (uintptr_t)(((char*)pMemory) + sizeof(vktrace_trace_packet_header));
     }
     return pHeader;
 }
@@ -236,7 +236,7 @@ vktrace_trace_packet_header* vktrace_read_trace_packet(FileLike* pFile)
     // offset to after size
     // read the rest of the packet
     uint64_t total_packet_size = 0;
-    void* pMem;
+    void* pMemory;
     vktrace_trace_packet_header* pHeader;
 
     if (vktrace_FileLike_ReadRaw(pFile, &total_packet_size, sizeof(uint64_t)) == FALSE)
@@ -246,8 +246,8 @@ vktrace_trace_packet_header* vktrace_read_trace_packet(FileLike* pFile)
     }
 
     // allocate space
-    pMem = vktrace_malloc((size_t)total_packet_size);
-    pHeader = (vktrace_trace_packet_header*)pMem;
+    pMemory = vktrace_malloc((size_t)total_packet_size);
+    pHeader = (vktrace_trace_packet_header*)pMemory;
 
     if (pHeader != NULL)
     {

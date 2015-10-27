@@ -50,5 +50,5 @@ extern const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT];
 
 bool compare_vk_extension_properties(
         const VkExtensionProperties *op1,
-        const char                  *extName);
+        const char                  *extensionName);
 #endif /* EXTENSION_INFO_H */

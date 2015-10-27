@@ -33,7 +33,7 @@
 
 static void * VKAPI default_alloc(void *user_data, size_t size,
                                    size_t alignment,
-                                   VkSystemAllocScope allocScope)
+                                   VkSystemAllocationScope allocationScope)
 {
     if (alignment <= 1) {
         return malloc(size);
@@ -66,10 +66,10 @@ static void VKAPI default_free(void *user_data, void *ptr)
 }
 
 struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
-                                         const VkAllocCallbacks *alloc_cb)
+                                         const VkAllocationCallbacks *alloc_cb)
 {
-    static const VkAllocCallbacks default_alloc_cb = {
-        .pfnAlloc = default_alloc,
+    static const VkAllocationCallbacks default_alloc_cb = {
+        .pfnAllocation = default_alloc,
         .pfnFree = default_free,
     };
     struct icd_instance *instance;
@@ -79,17 +79,17 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
     if (!alloc_cb)
         alloc_cb = &default_alloc_cb;
 
-    instance = alloc_cb->pfnAlloc(alloc_cb->pUserData, sizeof(*instance), 0,
-            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
+    instance = alloc_cb->pfnAllocation(alloc_cb->pUserData, sizeof(*instance), 0,
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance)
         return NULL;
 
     memset(instance, 0, sizeof(*instance));
 
-    name = (app_info->pAppName) ? app_info->pAppName : "unnamed";
+    name = (app_info->pApplicationName) ? app_info->pApplicationName : "unnamed";
     len = strlen(name);
-    instance->name = alloc_cb->pfnAlloc(alloc_cb->pUserData, len + 1, 0,
-            VK_SYSTEM_ALLOC_SCOPE_INSTANCE);
+    instance->name = alloc_cb->pfnAllocation(alloc_cb->pUserData, len + 1, 0,
+            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance->name) {
         alloc_cb->pfnFree(alloc_cb->pUserData, instance);
         return NULL;
@@ -133,7 +133,7 @@ VkResult icd_instance_create_logger(
 //    }
 
     logger = icd_instance_alloc(instance, sizeof(*logger), 0,
-            VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!logger)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

@@ -35,7 +35,7 @@ typedef struct _VULKAN_FORMAT_INFO {
 
 // Set up data structure with number of bytes and number of channels
 // for each Vulkan format.
-static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_NUM] = {
+static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 0,  0 }, //    [VK_FORMAT_UNDEFINED]
     { 1,  2 }, //    [VK_FORMAT_R4G4_UNORM]
     { 1,  2 }, //    [VK_FORMAT_R4G4_USCALED]

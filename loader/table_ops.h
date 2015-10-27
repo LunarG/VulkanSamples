@@ -43,7 +43,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->QueueSubmit = (PFN_vkQueueSubmit) gpa(dev, "vkQueueSubmit");
     table->QueueWaitIdle = (PFN_vkQueueWaitIdle) gpa(dev, "vkQueueWaitIdle");
     table->DeviceWaitIdle = (PFN_vkDeviceWaitIdle) gpa(dev, "vkDeviceWaitIdle");
-    table->AllocMemory = (PFN_vkAllocMemory) gpa(dev, "vkAllocMemory");
+    table->AllocateMemory = (PFN_vkAllocateMemory) gpa(dev, "vkAllocateMemory");
     table->FreeMemory = (PFN_vkFreeMemory) gpa(dev, "vkFreeMemory");
     table->MapMemory = (PFN_vkMapMemory) gpa(dev, "vkMapMemory");
     table->UnmapMemory = (PFN_vkUnmapMemory) gpa(dev, "vkUnmapMemory");
@@ -100,7 +100,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateDescriptorPool = (PFN_vkCreateDescriptorPool) gpa(dev, "vkCreateDescriptorPool");
     table->DestroyDescriptorPool = (PFN_vkDestroyDescriptorPool) gpa(dev, "vkDestroyDescriptorPool");
     table->ResetDescriptorPool = (PFN_vkResetDescriptorPool) gpa(dev, "vkResetDescriptorPool");
-    table->AllocDescriptorSets = (PFN_vkAllocDescriptorSets) gpa(dev, "vkAllocDescriptorSets");
+    table->AllocateDescriptorSets = (PFN_vkAllocateDescriptorSets) gpa(dev, "vkAllocateDescriptorSets");
     table->FreeDescriptorSets = (PFN_vkFreeDescriptorSets) gpa(dev, "vkFreeDescriptorSets");
     table->UpdateDescriptorSets = (PFN_vkUpdateDescriptorSets) gpa(dev, "vkUpdateDescriptorSets");
     table->CreateFramebuffer = (PFN_vkCreateFramebuffer) gpa(dev, "vkCreateFramebuffer");
@@ -111,7 +111,7 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->CreateCommandPool = (PFN_vkCreateCommandPool) gpa(dev, "vkCreateCommandPool");
     table->DestroyCommandPool = (PFN_vkDestroyCommandPool) gpa(dev, "vkDestroyCommandPool");
     table->ResetCommandPool = (PFN_vkResetCommandPool) gpa(dev, "vkResetCommandPool");
-    table->AllocCommandBuffers = (PFN_vkAllocCommandBuffers) gpa(dev, "vkAllocCommandBuffers");
+    table->AllocateCommandBuffers = (PFN_vkAllocateCommandBuffers) gpa(dev, "vkAllocateCommandBuffers");
     table->FreeCommandBuffers = (PFN_vkFreeCommandBuffers) gpa(dev, "vkFreeCommandBuffers");
     table->BeginCommandBuffer = (PFN_vkBeginCommandBuffer) gpa(dev, "vkBeginCommandBuffer");
     table->EndCommandBuffer = (PFN_vkEndCommandBuffer) gpa(dev, "vkEndCommandBuffer");
@@ -195,8 +195,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->QueueWaitIdle;
     if (!strcmp(name, "DeviceWaitIdle"))
         return (void *) table->DeviceWaitIdle;
-    if (!strcmp(name, "AllocMemory"))
-        return (void *) table->AllocMemory;
+    if (!strcmp(name, "AllocateMemory"))
+        return (void *) table->AllocateMemory;
     if (!strcmp(name, "FreeMemory"))
         return (void *) table->FreeMemory;
     if (!strcmp(name, "MapMemory"))
@@ -309,8 +309,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->DestroyDescriptorPool;
     if (!strcmp(name, "ResetDescriptorPool"))
         return (void *) table->ResetDescriptorPool;
-    if (!strcmp(name, "AllocDescriptorSets"))
-        return (void *) table->AllocDescriptorSets;
+    if (!strcmp(name, "AllocateDescriptorSets"))
+        return (void *) table->AllocateDescriptorSets;
     if (!strcmp(name, "FreeDescriptorSets"))
         return (void *) table->FreeDescriptorSets;
     if (!strcmp(name, "UpdateDescriptorSets"))
@@ -331,8 +331,8 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->DestroyCommandPool;
     if (!strcmp(name, "ResetCommandPool"))
         return (void *) table->ResetCommandPool;
-    if (!strcmp(name, "AllocCommandBuffers"))
-        return (void *) table->AllocCommandBuffers;
+    if (!strcmp(name, "AllocateCommandBuffers"))
+        return (void *) table->AllocateCommandBuffers;
     if (!strcmp(name, "FreeCommandBuffers"))
         return (void *) table->FreeCommandBuffers;
     if (!strcmp(name, "BeginCommandBuffer"))

@@ -266,32 +266,32 @@ class VkRenderTest : public VkRenderFramework
 public:
 
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                 VkConstantBufferObj *constantBuffer, VkCommandBufferObj *cmdBuffer);
-    void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet);
+                                 VkConstantBufferObj *constantBuffer, VkCommandBufferObj *commandBuffer);
+    void GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet);
     void GenericDrawPreparation(VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
-             { GenericDrawPreparation(m_cmdBuffer, pipelineobj, descriptorSet); }
+             { GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet); }
     void InitDepthStencil();
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, const bool rotate);
 
-    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
-    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer, VkCmdBufferBeginInfo *beginInfo);
-    VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &commandBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &commandBuffer, VkCommandBufferBeginInfo *beginInfo);
+    VkResult EndCommandBuffer(VkCommandBufferObj &commandBuffer);
     /* Convenience functions that use built-in command buffer */
-    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
-    VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *beginInfo) { return BeginCommandBuffer(*m_cmdBuffer, beginInfo); }
-    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
+    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_commandBuffer); }
+    VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *beginInfo) { return BeginCommandBuffer(*m_commandBuffer, beginInfo); }
+    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_commandBuffer); }
     void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        { m_cmdBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
+        { m_commandBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
-        { m_cmdBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
-    void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
+        { m_commandBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
+    void QueueCommandBuffer() { m_commandBuffer->QueueCommandBuffer(); }
     void RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
                                  VkConstantBufferObj *constantBuffer)
-        {RotateTriangleVSUniform(Projection, View, Model, constantBuffer, m_cmdBuffer); }
+        {RotateTriangleVSUniform(Projection, View, Model, constantBuffer, m_commandBuffer); }
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
-        { m_cmdBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
+        { m_commandBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset)
-        { m_cmdBuffer->BindIndexBuffer(indexBuffer, offset); }
+        { m_commandBuffer->BindIndexBuffer(indexBuffer, offset); }
 
 
 
@@ -307,8 +307,8 @@ protected:
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = "render_tests";
-        this->app_info.appVersion = 1;
+        this->app_info.pApplicationName = "render_tests";
+        this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
@@ -322,77 +322,77 @@ protected:
     }
 };
 
-VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &commandBuffer)
 {
     VkResult result;
 
-    result = cmdBuffer.BeginCommandBuffer();
+    result = commandBuffer.BeginCommandBuffer();
 
     /*
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
     if (VK_SUCCESS == result && renderPass()) {
-        cmdBuffer.BeginRenderPass(renderPassBeginInfo());
+        commandBuffer.BeginRenderPass(renderPassBeginInfo());
     }
 
     return result;
 }
 
-VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer, VkCmdBufferBeginInfo *beginInfo)
+VkResult VkRenderTest::BeginCommandBuffer(VkCommandBufferObj &commandBuffer, VkCommandBufferBeginInfo *beginInfo)
 {
     VkResult result;
 
-    result = cmdBuffer.BeginCommandBuffer(beginInfo);
+    result = commandBuffer.BeginCommandBuffer(beginInfo);
 
     /*
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
     if (VK_SUCCESS == result && renderPass()) {
-        cmdBuffer.BeginRenderPass(renderPassBeginInfo());
+        commandBuffer.BeginRenderPass(renderPassBeginInfo());
     }
 
     return result;
 }
 
-VkResult VkRenderTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkRenderTest::EndCommandBuffer(VkCommandBufferObj &commandBuffer)
 {
     VkResult result;
 
     if (renderPass()) {
-        cmdBuffer.EndRenderPass();
+        commandBuffer.EndRenderPass();
     }
 
-    result = cmdBuffer.EndCommandBuffer();
+    result = commandBuffer.EndCommandBuffer();
 
     return result;
 }
 
 
-void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
+void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet)
 {
     if (!m_clear_via_load_op) {
         if (m_depthStencil->Initialized()) {
-            cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
+            commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
         } else {
-            cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+            commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
         }
     }
 
-    cmdBuffer->PrepareAttachments();
-    cmdBuffer->SetViewport(m_viewports.size(), m_viewports.data());
-    cmdBuffer->SetScissor(m_scissors.size(), m_scissors.data());
+    commandBuffer->PrepareAttachments();
+    commandBuffer->SetViewport(m_viewports.size(), m_viewports.data());
+    commandBuffer->SetScissor(m_scissors.size(), m_scissors.data());
 
-    descriptorSet.CreateVKDescriptorSet(cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(commandBuffer);
     VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     ASSERT_VK_SUCCESS(err);
-    cmdBuffer->BindPipeline(pipelineobj);
-    cmdBuffer->BindDescriptorSet(descriptorSet);
+    commandBuffer->BindPipeline(pipelineobj);
+    commandBuffer->BindDescriptorSet(descriptorSet);
 }
 
 void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View, glm::mat4 Model,
-                                            VkConstantBufferObj *constantBuffer, VkCommandBufferObj *cmdBuffer)
+                                            VkConstantBufferObj *constantBuffer, VkCommandBufferObj *commandBuffer)
 {
     int i;
     glm::mat4 MVP;
@@ -410,7 +410,7 @@ void VkRenderTest::RotateTriangleVSUniform(glm::mat4 Projection, glm::mat4 View,
         constantBuffer->memory().unmap();
 
         // submit the command buffer to the universal queue
-        cmdBuffer->QueueCommandBuffer();
+        commandBuffer->QueueCommandBuffer();
 
         err = vkQueueWaitIdle( m_device->m_queue );
         ASSERT_VK_SUCCESS( err );
@@ -503,9 +503,9 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCmdBufferBeginInfo cbBeginInfo;
-    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
-    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCommandBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
@@ -1406,9 +1406,9 @@ TEST_F(VkRenderTest, TriangleVSUniform)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    VkCmdBufferBeginInfo cbBeginInfo;
-    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
-    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCommandBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
@@ -1852,7 +1852,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
     VkPipelineDepthStencilStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
-    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
@@ -2763,7 +2763,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
     VkPipelineDepthStencilStateCreateInfo ds_state;
     ds_state.depthTestEnable = VK_TRUE;
     ds_state.depthWriteEnable = VK_TRUE;
-    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds_state.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds_state.depthBoundsTestEnable = VK_FALSE;
     ds_state.stencilTestEnable = VK_FALSE;
     ds_state.back.stencilDepthFailOp = VK_STENCIL_OP_KEEP;
@@ -2775,9 +2775,9 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget(m_depthStencil->BindInfo()));
 
-    VkCmdBufferBeginInfo cbBeginInfo;
-    memset(&cbBeginInfo, 0, sizeof(VkCmdBufferBeginInfo));
-    cbBeginInfo.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cbBeginInfo;
+    memset(&cbBeginInfo, 0, sizeof(VkCommandBufferBeginInfo));
+    cbBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cbBeginInfo.flags = 0;
     ASSERT_VK_SUCCESS(BeginCommandBuffer(&cbBeginInfo));
 
@@ -4137,7 +4137,7 @@ TEST_F(VkRenderTest, RenderPassAttachmentClear)
     color_attachment.clearValue.color.float32[3] = 0;
     color_attachment.colorAttachment = 0;
     VkClearRect clear_rect = { { { 0, 0 }, { (int)m_width, (int)m_height } } };
-    vkCmdClearAttachments(m_cmdBuffer->handle(), 1, &color_attachment,
+    vkCmdClearAttachments(m_commandBuffer->handle(), 1, &color_attachment,
                           1, &clear_rect);
 
     EndCommandBuffer();

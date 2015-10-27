@@ -97,13 +97,13 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     case VK_OBJECT_TYPE_DESCRIPTOR_SET:
         /* no create info */
         break;
-    case VK_OBJECT_TYPE_CMD_POOL:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO);
-        shallow_copy = sizeof(VkCmdPoolCreateInfo);
+    case VK_OBJECT_TYPE_COMMAND_POOL:
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO);
+        shallow_copy = sizeof(VkCommandPoolCreateInfo);
         break;
     case VK_OBJECT_TYPE_COMMAND_BUFFER:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO);
-        shallow_copy = sizeof(VkCmdBufferAllocInfo);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO);
+        shallow_copy = sizeof(VkCommandBufferAllocateInfo);
         break;
     case VK_OBJECT_TYPE_PIPELINE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
@@ -137,7 +137,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
 
     if (shallow_copy) {
         dbg->create_info = intel_alloc(handle, shallow_copy, 0,
-                VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dbg->create_info)
             return false;
 
@@ -146,13 +146,13 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     } else if (info.header->struct_type ==
             VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
         size_t size;
-        const VkMemoryAllocInfo *src = info.ptr;
-        VkMemoryAllocInfo *dst;
+        const VkMemoryAllocateInfo *src = info.ptr;
+        VkMemoryAllocateInfo *dst;
         uint8_t *d;
         size = sizeof(*src);
 
         dbg->create_info_size = size;
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
@@ -182,7 +182,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += strlen(src->ppEnabledExtensionNames[i]) + 1;
         }
 
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dst)
             return false;
 
@@ -239,7 +239,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     assert(dbg_size >= sizeof(*dbg));
 
-    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!dbg)
         return NULL;
 
@@ -284,7 +284,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 
     assert(obj_size >= sizeof(*base));
 
-    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!base)
         return NULL;
 
@@ -336,12 +336,12 @@ ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkDeviceMemory                              mem_,
-    VkDeviceSize                                memOffset)
+    VkDeviceSize                                memoryOffset)
 {
     struct intel_obj *obj = intel_obj(buffer);
     struct intel_mem *mem = intel_mem(mem_);
 
-    intel_obj_bind_mem(obj, mem, memOffset);
+    intel_obj_bind_mem(obj, mem, memoryOffset);
 
     return VK_SUCCESS;
 }
@@ -350,12 +350,12 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
     VkDevice                                    device,
     VkImage                                     image,
     VkDeviceMemory                              mem_,
-    VkDeviceSize                                memOffset)
+    VkDeviceSize                                memoryOffset)
 {
     struct intel_obj *obj = intel_obj(image);
     struct intel_mem *mem = intel_mem(mem_);
 
-    intel_obj_bind_mem(obj, mem, memOffset);
+    intel_obj_bind_mem(obj, mem, memoryOffset);
 
     return VK_SUCCESS;
 }

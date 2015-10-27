@@ -44,21 +44,21 @@ expected_layers = ['DrawState', 'MemTracker', 'ParamChecker', 'ObjectTracker']
 expected_errors = {'XglRenderTest.CubeWithVertexFetchAndMVP' : ['{OBJTRACK}ERROR : OBJ ERROR : DEPTH_STENCIL_VIEW',
                                                                 '{OBJTRACK}ERROR : OBJ ERROR : GPU_MEMORY',
                                                                 '{OBJTRACK}ERROR : OBJ ERROR : IMAGE'],
-                   'XglRenderTest.CubeWithVertexFetchAndMVPAndTexture' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER',
+                   'XglRenderTest.CubeWithVertexFetchAndMVPAndTexture' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER',
                                                                           '{OBJTRACK}ERROR : OBJ ERROR : DEPTH_STENCIL_VIEW',
                                                                           '{OBJTRACK}ERROR : OBJ ERROR : GPU_MEMORY',
                                                                           '{OBJTRACK}ERROR : OBJ ERROR : IMAGE'],
                    'XglTest.Fence' : ['{OBJTRACK}ERROR : OBJECT VALIDATION WARNING: FENCE'],
                    #'XglRenderTest.VKTriangle_OutputLocation' : ['{OBJTRACK}ERROR : vkQueueSubmit Memory reference count'],
-                   'XglRenderTest.TriangleWithVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.TriangleMRT' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.QuadWithIndexedVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER', '{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.GreyandRedCirclesonBlue' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.RedCirclesonBlue' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.GreyCirclesonBlueFade' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.GreyCirclesonBlueDiscard' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.TriVertFetchAndVertID' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],
-                   'XglRenderTest.TriVertFetchDeadAttr' : ['{OBJTRACK}ERROR : OBJ ERROR : CMD_BUFFER'],}
+                   'XglRenderTest.TriangleWithVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.TriangleMRT' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.QuadWithIndexedVertexFetch' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER', '{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.GreyandRedCirclesonBlue' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.RedCirclesonBlue' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.GreyCirclesonBlueFade' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.GreyCirclesonBlueDiscard' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.TriVertFetchAndVertID' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],
+                   'XglRenderTest.TriVertFetchDeadAttr' : ['{OBJTRACK}ERROR : OBJ ERROR : COMMAND_BUFFER'],}
 
 # Verify that expected errors are hit
 # Return True if all expected errors for any matched tests are found and no unexpected errors are found

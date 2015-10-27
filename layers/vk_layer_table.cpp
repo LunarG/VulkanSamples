@@ -128,7 +128,7 @@ VkLayerInstanceDispatchTable *get_dispatch_table(instance_table_map &map, void* 
  * are created from that "parent" object. Thus use pointer to dispatch table
  * as the key to these table maps.
  *    Instance -> PhysicalDevice
- *    Device -> CmdBuffer or Queue
+ *    Device -> CommandBuffer or Queue
  * If use the object themselves as key to map then implies Create entrypoints have to be intercepted
  * and a new key inserted into map */
 VkLayerInstanceDispatchTable * initInstanceTable(instance_table_map &map, const VkBaseLayerObject *instancew)

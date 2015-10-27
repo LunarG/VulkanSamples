@@ -54,8 +54,8 @@ class DescriptorSetLayout;
 class PipelineLayout;
 class DescriptorSetPool;
 class DescriptorSet;
-class CmdBuffer;
-class CmdPool;
+class CommandBuffer;
+class CommandPool;
 
 std::vector<VkLayerProperties> GetGlobalLayers();
 std::vector<VkExtensionProperties> GetGlobalExtensions();
@@ -124,7 +124,7 @@ public:
     VkPhysicalDeviceMemoryProperties memory_properties() const;
     std::vector<VkQueueFamilyProperties> queue_properties() const;
 
-    bool set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkMemoryPropertyFlags properties,
+    bool set_memory_type(const uint32_t type_bits, VkMemoryAllocateInfo *info, const VkMemoryPropertyFlags properties,
                              const VkMemoryPropertyFlags forbid = 0) const;
 
     // vkEnumerateDeviceExtensionProperties()
@@ -224,9 +224,9 @@ public:
     explicit Queue(VkQueue queue, int index) : Handle(queue) {family_index_ = index;}
 
     // vkQueueSubmit()
-    void submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence);
-    void submit(const CmdBuffer &cmd, Fence &fence);
-    void submit(const CmdBuffer &cmd);
+    void submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence);
+    void submit(const CommandBuffer &cmd, Fence &fence);
+    void submit(const CommandBuffer &cmd);
 
     // vkQueueWaitIdle()
     void wait();
@@ -241,8 +241,8 @@ class DeviceMemory : public internal::NonDispHandle<VkDeviceMemory> {
 public:
     ~DeviceMemory();
 
-    // vkAllocMemory()
-    void init(const Device &dev, const VkMemoryAllocInfo &info);
+    // vkAllocateMemory()
+    void init(const Device &dev, const VkMemoryAllocateInfo &info);
 
     // vkMapMemory()
     const void *map(VkFlags flags) const;
@@ -253,7 +253,7 @@ public:
     // vkUnmapMemory()
     void unmap() const;
 
-    static VkMemoryAllocInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
+    static VkMemoryAllocateInfo alloc_info(VkDeviceSize size, uint32_t memory_type_index);
 };
 
 class Fence : public internal::NonDispHandle<VkFence> {
@@ -323,9 +323,9 @@ public:
     void init(const Device &dev, const VkBufferCreateInfo &info) { init(dev, info, 0); }
     void init(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags mem_props) { init(dev, create_info(size, 0), mem_props); }
     void init(const Device &dev, VkDeviceSize size) { init(dev, size, 0); }
-    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT), reqs); }
-    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
-    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT | VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT), reqs); }
+    void init_as_src(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT), reqs); }
+    void init_as_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs); }
+    void init_as_src_and_dst(const Device &dev, VkDeviceSize size, VkMemoryPropertyFlags &reqs) { init(dev, create_info(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT), reqs); }
     void init_no_mem(const Device &dev, const VkBufferCreateInfo &info);
 
     // get the internal memory
@@ -537,7 +537,7 @@ public:
     void setDynamicUsage(bool isDynamic) { dynamic_usage_ = isDynamic; }
     bool getDynamicUsage() { return dynamic_usage_; }
 
-    // vkAllocDescriptorSets()
+    // vkAllocateDescriptorSets()
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, const std::vector<const DescriptorSetLayout *> &layouts);
     std::vector<DescriptorSet *> alloc_sets(const Device &dev, const DescriptorSetLayout &layout, uint32_t count);
     DescriptorSet *alloc_sets(const Device &dev, const DescriptorSetLayout &layout);
@@ -560,56 +560,56 @@ private:
     DescriptorPool* containing_pool_;
 };
 
-class CmdPool : public internal::NonDispHandle<VkCmdPool> {
+class CommandPool : public internal::NonDispHandle<VkCommandPool> {
 public:
-    ~CmdPool();
+    ~CommandPool();
 
-    explicit CmdPool() : NonDispHandle() {}
-    explicit CmdPool(const Device &dev, const VkCmdPoolCreateInfo &info) { init(dev, info); }
+    explicit CommandPool() : NonDispHandle() {}
+    explicit CommandPool(const Device &dev, const VkCommandPoolCreateInfo &info) { init(dev, info); }
 
-    void init(const Device &dev, const VkCmdPoolCreateInfo &info);
+    void init(const Device &dev, const VkCommandPoolCreateInfo &info);
 
-    static VkCmdPoolCreateInfo create_info(uint32_t queue_family_index);
+    static VkCommandPoolCreateInfo create_info(uint32_t queue_family_index);
 };
 
-inline VkCmdPoolCreateInfo CmdPool::create_info(uint32_t queue_family_index)
+inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_index)
 {
-    VkCmdPoolCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+    VkCommandPoolCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     info.queueFamilyIndex = queue_family_index;
     return info;
 }
 
-class CmdBuffer : public internal::Handle<VkCmdBuffer> {
+class CommandBuffer : public internal::Handle<VkCommandBuffer> {
 public:
-    ~CmdBuffer();
+    ~CommandBuffer();
 
-    explicit CmdBuffer() : Handle() {}
-    explicit CmdBuffer(const Device &dev, const VkCmdBufferAllocInfo &info) { init(dev, info); }
+    explicit CommandBuffer() : Handle() {}
+    explicit CommandBuffer(const Device &dev, const VkCommandBufferAllocateInfo &info) { init(dev, info); }
 
-    // vkAllocCommandBuffers()
-    void init(const Device &dev, const VkCmdBufferAllocInfo &info);
+    // vkAllocateCommandBuffers()
+    void init(const Device &dev, const VkCommandBufferAllocateInfo &info);
 
     // vkBeginCommandBuffer()
-    void begin(const VkCmdBufferBeginInfo *info);
+    void begin(const VkCommandBufferBeginInfo *info);
     void begin();
 
     // vkEndCommandBuffer()
     // vkResetCommandBuffer()
     void end();
-    void reset(VkCmdBufferResetFlags flags);
-    void reset() { reset(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT); }
+    void reset(VkCommandBufferResetFlags flags);
+    void reset() { reset(VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT); }
 
-    static VkCmdBufferAllocInfo create_info(VkCmdPool const &pool);
+    static VkCommandBufferAllocateInfo create_info(VkCommandPool const &pool);
 
 private:
     VkDevice dev_handle_;
-    VkCmdPool cmd_pool_;
+    VkCommandPool cmd_pool_;
 };
 
-inline VkMemoryAllocInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
+inline VkMemoryAllocateInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
 {
-    VkMemoryAllocInfo info = {};
+    VkMemoryAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     info.allocationSize = size;
     info.memoryTypeIndex = memory_type_index;
@@ -698,7 +698,7 @@ inline VkImageSubresourceCopy Image::subresource(VkImageAspectFlagBits aspect, u
     subres.aspect = aspect;
     subres.mipLevel = mip_level;
     subres.baseArrayLayer = array_layer;
-    subres.numLayers = array_size;
+    subres.layerCount = array_size;
     return subres;
 }
 
@@ -734,9 +734,9 @@ inline VkImageSubresourceRange Image::subresource_range(VkImageAspectFlags aspec
     VkImageSubresourceRange range = {};
     range.aspectMask = aspect_mask;
     range.baseMipLevel = base_mip_level;
-    range.numLevels = mip_levels;
+    range.levelCount = mip_levels;
     range.baseArrayLayer = base_array_layer;
-    range.numLayers = num_layers;
+    range.layerCount = num_layers;
     return range;
 }
 
@@ -813,9 +813,9 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
 {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.destSet = set.handle();
-    write.destBinding = binding;
-    write.destArrayElement = array_element;
+    write.dstSet = set.handle();
+    write.dstBinding = binding;
+    write.dstArrayElement = array_element;
     write.descriptorCount = count;
     write.descriptorType = type;
     write.pImageInfo = image_info;
@@ -827,9 +827,9 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
 {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.destSet = set.handle();
-    write.destBinding = binding;
-    write.destArrayElement = array_element;
+    write.dstSet = set.handle();
+    write.dstBinding = binding;
+    write.dstArrayElement = array_element;
     write.descriptorCount = count;
     write.descriptorType = type;
     write.pBufferInfo = buffer_info;
@@ -841,9 +841,9 @@ inline VkWriteDescriptorSet Device::write_descriptor_set(const DescriptorSet &se
 {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.destSet = set.handle();
-    write.destBinding = binding;
-    write.destArrayElement = array_element;
+    write.dstSet = set.handle();
+    write.dstBinding = binding;
+    write.dstArrayElement = array_element;
     write.descriptorCount = count;
     write.descriptorType = type;
     write.pTexelBufferView = buffer_views;
@@ -877,19 +877,19 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
     copy.srcSet = src_set.handle();
     copy.srcBinding = src_binding;
     copy.srcArrayElement = src_array_element;
-    copy.destSet = dst_set.handle();
-    copy.destBinding = dst_binding;
-    copy.destArrayElement = dst_array_element;
+    copy.dstSet = dst_set.handle();
+    copy.dstBinding = dst_binding;
+    copy.dstArrayElement = dst_array_element;
     copy.descriptorCount = count;
 
     return copy;
 }
 
-inline VkCmdBufferAllocInfo CmdBuffer::create_info(VkCmdPool const &pool)
+inline VkCommandBufferAllocateInfo CommandBuffer::create_info(VkCommandPool const &pool)
 {
-    VkCmdBufferAllocInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
-    info.cmdPool = pool;
+    VkCommandBufferAllocateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    info.commandPool = pool;
     info.bufferCount = 1;
     return info;
 }

@@ -37,7 +37,7 @@ static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: APIDump",
     }
 };
@@ -47,7 +47,7 @@ static const VkLayerProperties layerDevProps[LAYER_DEV_PROPS_ARRAY_SIZE] = {
     {
         "Generic",
         VK_API_VERSION,                 // specVersion
-        VK_MAKE_VERSION(0, 1, 0),       // implVersion
+        VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: APIDump",
     }
 };

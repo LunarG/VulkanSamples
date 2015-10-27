@@ -138,7 +138,7 @@ static loader_platform_thread_mutex globalLock;
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkDescriptorSetLayout* pSetLayout)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -159,7 +159,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkPipelineLayout*                           pPipelineLayout)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -604,7 +604,7 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         VkDevice device,
         const VkShaderModuleCreateInfo *pCreateInfo,
-        const VkAllocCallbacks* pAllocator,
+        const VkAllocationCallbacks* pAllocator,
         VkShaderModule *pShaderModule)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -629,7 +629,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
         VkDevice device,
         const VkShaderCreateInfo *pCreateInfo,
-        const VkAllocCallbacks* pAllocator,
+        const VkAllocationCallbacks* pAllocator,
         VkShader *pShader)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -644,7 +644,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
         VkDevice device,
         const VkRenderPassCreateInfo *pCreateInfo,
-        const VkAllocCallbacks* pAllocator,
+        const VkAllocationCallbacks* pAllocator,
         VkRenderPass *pRenderPass)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1135,7 +1135,7 @@ vkCreateGraphicsPipelines(VkDevice device,
                          VkPipelineCache pipelineCache,
                          uint32_t count,
                          const VkGraphicsPipelineCreateInfo *pCreateInfos,
-                         const VkAllocCallbacks* pAllocator,
+                         const VkAllocationCallbacks* pAllocator,
                          VkPipeline *pPipelines)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1156,7 +1156,7 @@ vkCreateGraphicsPipelines(VkDevice device,
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
@@ -1168,7 +1168,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 
 /* hook DextroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
+VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
@@ -1179,7 +1179,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocCallbac
 
 VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkInstance*                                 pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
@@ -1200,7 +1200,7 @@ VkResult VKAPI vkCreateInstance(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
+VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);

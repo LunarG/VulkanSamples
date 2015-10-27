@@ -121,7 +121,7 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
     const uint32_t sampler_count = 1024*1024;
     struct intel_desc_region *region;
 
-    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
+    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!region)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -134,14 +134,14 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
             region->sampler_desc_size * sampler_count);
 
     region->surfaces = intel_alloc(dev, region->size.surface,
-            64, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
+            64, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!region->surfaces) {
         intel_free(dev, region);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     region->samplers = intel_alloc(dev, region->size.sampler,
-            64, VK_SYSTEM_ALLOC_SCOPE_DEVICE);
+            64, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!region->samplers) {
         intel_free(dev, region->surfaces);
         intel_free(dev, region);
@@ -476,7 +476,7 @@ static bool desc_set_img_layout_read_only(VkImageLayout layout)
     switch (layout) {
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-    case VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL:
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
         return true;
     default:
         return false;
@@ -562,7 +562,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->bindingCount, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            info->bindingCount, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!layout->bindings)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -618,7 +618,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
                         sizeof(binding->immutable_samplers[0]) * lb->arraySize,
-                        0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                        0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
                 if (!binding->immutable_samplers)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -705,7 +705,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->layouts = intel_alloc(pipeline_layout,
                                            sizeof(pipeline_layout->layouts[0]) * count,
-                                           0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+                                           0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pipeline_layout->layouts) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -713,7 +713,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->dynamic_desc_indices = intel_alloc(pipeline_layout,
             sizeof(pipeline_layout->dynamic_desc_indices[0]) * count,
-            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pipeline_layout->dynamic_desc_indices) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -748,7 +748,7 @@ void intel_pipeline_layout_destroy(struct intel_pipeline_layout *pipeline_layout
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice                                   device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkDescriptorSetLayout*                   pSetLayout)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -760,7 +760,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
 ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     VkDevice                                device,
     VkDescriptorSetLayout                   descriptorSetLayout,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(descriptorSetLayout);
@@ -771,7 +771,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
 ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                device,
     const VkPipelineLayoutCreateInfo*       pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkPipelineLayout*                       pPipelineLayout)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -784,7 +784,7 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
 ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     VkDevice                                device,
     VkPipelineLayout                        pipelineLayout,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(pipelineLayout);
@@ -795,7 +795,7 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
 ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice                                    device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkDescriptorPool*                           pDescriptorPool)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -807,7 +807,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
 ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     VkDevice                                device,
     VkDescriptorPool                        descriptorPool,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
 {
     struct intel_obj *obj = intel_obj(descriptorPool);
@@ -827,19 +827,19 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocDescriptorSets(
+ICD_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
     VkDevice                                    device,
-    const VkDescriptorSetAllocInfo*             pAllocInfo,
+    const VkDescriptorSetAllocateInfo*             pAllocateInfo,
     VkDescriptorSet*                            pDescriptorSets)
 {
-    struct intel_desc_pool *pool = intel_desc_pool(pAllocInfo->descriptorPool);
+    struct intel_desc_pool *pool = intel_desc_pool(pAllocateInfo->descriptorPool);
     struct intel_dev *dev = pool->dev;
     VkResult ret = VK_SUCCESS;
     uint32_t i;
 
-    for (i = 0; i < pAllocInfo->setLayoutCount; i++) {
+    for (i = 0; i < pAllocateInfo->setLayoutCount; i++) {
         const struct intel_desc_layout *layout =
-            intel_desc_layout((VkDescriptorSetLayout) pAllocInfo->pSetLayouts[i]);
+            intel_desc_layout((VkDescriptorSetLayout) pAllocateInfo->pSetLayouts[i]);
 
         ret = intel_desc_set_create(dev, pool, layout,
                 (struct intel_desc_set **) &pDescriptorSets[i]);
@@ -876,12 +876,12 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
     for (i = 0; i < descriptorWriteCount; i++) {
         const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
-        struct intel_desc_set *set = intel_desc_set(write->destSet);
+        struct intel_desc_set *set = intel_desc_set(write->dstSet);
         const struct intel_desc_layout_binding *binding;
         struct intel_desc_iter iter;
 
-        desc_iter_init_for_writing(&iter, set, write->destBinding,
-                    write->destArrayElement);
+        desc_iter_init_for_writing(&iter, set, write->dstBinding,
+                    write->dstArrayElement);
 
         switch (write->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -896,7 +896,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
             }
             break;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            binding = &set->layout->bindings[write->destBinding];
+            binding = &set->layout->bindings[write->dstBinding];
 
             /* write the shared immutable sampler */
             if (binding->shared_immutable_sampler) {
@@ -918,7 +918,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                     intel_img_view(info->imageView);
                 const struct intel_sampler *sampler =
                     (binding->immutable_samplers) ?
-                    binding->immutable_samplers[write->destArrayElement + j] :
+                    binding->immutable_samplers[write->dstArrayElement + j] :
                     intel_sampler(info->sampler);
 
                 desc_set_write_combined_image_sampler(set, &iter,
@@ -984,14 +984,14 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     for (i = 0; i < descriptorCopyCount; i++) {
         const VkCopyDescriptorSet *copy = &pDescriptorCopies[i];
         const struct intel_desc_set *src_set = intel_desc_set(copy->srcSet);
-        const struct intel_desc_set *dst_set = intel_desc_set(copy->destSet);
+        const struct intel_desc_set *dst_set = intel_desc_set(copy->dstSet);
         struct intel_desc_iter src_iter, dst_iter;
         struct intel_desc_offset src_begin, dst_begin;
 
         desc_iter_init_for_writing(&src_iter, src_set,
                     copy->srcBinding, copy->srcArrayElement);
         desc_iter_init_for_writing(&dst_iter, dst_set,
-                    copy->destBinding, copy->destArrayElement);
+                    copy->dstBinding, copy->dstArrayElement);
 
         /* save the begin offsets */
         src_begin = src_iter.begin;

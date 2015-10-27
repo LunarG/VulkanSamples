@@ -39,7 +39,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
-    DRAWSTATE_INVALID_CMD_BUFFER,               // Invalid CmdBuffer referenced
+    DRAWSTATE_INVALID_COMMAND_BUFFER,               // Invalid CommandBuffer referenced
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -52,10 +52,10 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_UPDATE_INDEX,             // Index of requested update is invalid for specified descriptors set
     DRAWSTATE_INVALID_UPDATE_STRUCT,            // Struct in DS Update tree is of invalid type
     DRAWSTATE_NUM_SAMPLES_MISMATCH,             // Number of samples in bound PSO does not match number in FB of current RenderPass
-    DRAWSTATE_NO_END_CMD_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that cmdBuffer
-    DRAWSTATE_NO_BEGIN_CMD_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
-    DRAWSTATE_CMD_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
-    DRAWSTATE_INVALID_SECONDARY_CMD_BUFFER,     // vkCmdExecuteCommands() called with a primary cmdBuffer in pCmdBuffers array
+    DRAWSTATE_NO_END_COMMAND_BUFFER,                // Must call vkEndCommandBuffer() before QueueSubmit on that commandBuffer
+    DRAWSTATE_NO_BEGIN_COMMAND_BUFFER,              // Binding cmds or calling End on CB that never had vkBeginCommandBuffer() called on it
+    DRAWSTATE_COMMAND_BUFFER_SINGLE_SUBMIT_VIOLATION, // Cmd Buffer created with VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT flag is submitted multiple times
+    DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER,     // vkCmdExecuteCommands() called with a primary commandBuffer in pCommandBuffers array
     DRAWSTATE_VIEWPORT_NOT_BOUND,               // Draw submitted with no viewport state bound
     DRAWSTATE_SCISSOR_NOT_BOUND,                // Draw submitted with no scissor state bound
     DRAWSTATE_LINE_WIDTH_NOT_BOUND,             // Draw submitted with no line width state bound
@@ -69,7 +69,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
-    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CmdBuffer, should use RenderPass Ops instead
+    DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
     DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
@@ -110,7 +110,7 @@ typedef struct _PIPELINE_NODE {
     VkPipelineInputAssemblyStateCreateInfo  iaStateCI;
     VkPipelineTessellationStateCreateInfo   tessStateCI;
     VkPipelineViewportStateCreateInfo       vpStateCI;
-    VkPipelineRasterStateCreateInfo         rsStateCI;
+    VkPipelineRasterizationStateCreateInfo         rsStateCI;
     VkPipelineMultisampleStateCreateInfo    msStateCI;
     VkPipelineColorBlendStateCreateInfo     cbStateCI;
     VkPipelineDepthStencilStateCreateInfo   dsStateCI;
@@ -303,9 +303,9 @@ typedef struct stencil_data {
 
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
-    VkCmdBuffer                  cmdBuffer;
-    VkCmdBufferAllocInfo        createInfo;
-    VkCmdBufferBeginInfo         beginInfo;
+    VkCommandBuffer                  commandBuffer;
+    VkCommandBufferAllocateInfo        createInfo;
+    VkCommandBufferBeginInfo         beginInfo;
     VkFence                      fence;    // fence tracking this cmd buffer
     uint64_t                     numCmds;  // number of cmds in this CB
     uint64_t                     drawCount[NUM_DRAW_TYPES]; // Count of each type of draw in this CB
@@ -334,6 +334,6 @@ typedef struct _GLOBAL_CB_NODE {
     VkRenderPass                 activeRenderPass;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
-    VkCmdBufferLevel             level;
+    VkCommandBufferLevel             level;
     vector<VkDescriptorSet>      boundDescriptorSets;
 } GLOBAL_CB_NODE;

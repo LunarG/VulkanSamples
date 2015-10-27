@@ -235,7 +235,7 @@ struct intel_cmd_pool {
     uint32_t create_flags;
 };
 
-static inline struct intel_cmd_pool *intel_cmd_pool(VkCmdPool pool)
+static inline struct intel_cmd_pool *intel_cmd_pool(VkCommandPool pool)
 {
     return *(struct intel_cmd_pool **) &pool;
 }
@@ -251,14 +251,14 @@ static inline struct intel_cmd_pool *intel_cmd_pool_from_obj(struct intel_obj *o
 }
 
 VkResult intel_cmd_pool_create(struct intel_dev *dev,
-                            const VkCmdPoolCreateInfo *info,
+                            const VkCommandPoolCreateInfo *info,
                             struct intel_cmd_pool **cmd_pool_ret);
 void intel_cmd_pool_destroy(struct intel_cmd_pool *pool);
 
 void intel_free_cmd_buffers(
         struct intel_cmd_pool              *cmd_pool,
         uint32_t                            count,
-        const VkCmdBuffer                  *cmd_bufs);
+        const VkCommandBuffer                  *cmd_bufs);
 
 struct intel_cmd {
     struct intel_obj obj;
@@ -281,7 +281,7 @@ struct intel_cmd {
     struct intel_cmd_bind bind;
 };
 
-static inline struct intel_cmd *intel_cmd(VkCmdBuffer cmd)
+static inline struct intel_cmd *intel_cmd(VkCommandBuffer cmd)
 {
     return (struct intel_cmd *) cmd;
 }
@@ -292,11 +292,11 @@ static inline struct intel_cmd *intel_cmd_from_obj(struct intel_obj *obj)
 }
 
 VkResult intel_cmd_create(struct intel_dev *dev,
-                            const VkCmdBufferAllocInfo *info,
+                            const VkCommandBufferAllocateInfo *info,
                             struct intel_cmd **cmd_ret);
 void intel_cmd_destroy(struct intel_cmd *cmd);
 
-VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCmdBufferBeginInfo* pBeginInfo);
+VkResult intel_cmd_begin(struct intel_cmd *cmd, const VkCommandBufferBeginInfo* pBeginInfo);
 VkResult intel_cmd_end(struct intel_cmd *cmd);
 
 void intel_cmd_decode(struct intel_cmd *cmd, bool decode_inst_writer);

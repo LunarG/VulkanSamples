@@ -29,7 +29,7 @@
 #include "mem.h"
 
 VkResult intel_mem_alloc(struct intel_dev *dev,
-                           const VkMemoryAllocInfo *info,
+                           const VkMemoryAllocateInfo *info,
                            struct intel_mem **mem_ret)
 {
     struct intel_mem *mem;
@@ -62,21 +62,21 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocMemory(
+ICD_EXPORT VkResult VKAPI vkAllocateMemory(
     VkDevice                                device,
-    const VkMemoryAllocInfo*                pAllocInfo,
-    const VkAllocCallbacks*                     pAllocator,
-    VkDeviceMemory*                         pMem)
+    const VkMemoryAllocateInfo*                pAllocateInfo,
+    const VkAllocationCallbacks*                     pAllocator,
+    VkDeviceMemory*                         pMemory)
 {
     struct intel_dev *dev = intel_dev(device);
 
-    return intel_mem_alloc(dev, pAllocInfo, (struct intel_mem **) pMem);
+    return intel_mem_alloc(dev, pAllocateInfo, (struct intel_mem **) pMemory);
 }
 
 ICD_EXPORT void VKAPI vkFreeMemory(
     VkDevice                                  device,
     VkDeviceMemory                            mem_,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 {
     struct intel_mem *mem = intel_mem(mem_);
 
@@ -110,16 +110,16 @@ ICD_EXPORT void VKAPI vkUnmapMemory(
 
 ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
     VkDevice                                  device,
-    uint32_t                                  memRangeCount,
-    const VkMappedMemoryRange*                pMemRanges)
+    uint32_t                                  memoryRangeCount,
+    const VkMappedMemoryRange*                pMemoryRanges)
 {
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                  device,
-    uint32_t                                  memRangeCount,
-    const VkMappedMemoryRange*                pMemRanges)
+    uint32_t                                  memoryRangeCount,
+    const VkMappedMemoryRange*                pMemoryRanges)
 {
     return VK_SUCCESS;
 }

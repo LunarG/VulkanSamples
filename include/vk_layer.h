@@ -35,7 +35,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkQueueSubmit QueueSubmit;
     PFN_vkQueueWaitIdle QueueWaitIdle;
     PFN_vkDeviceWaitIdle DeviceWaitIdle;
-    PFN_vkAllocMemory AllocMemory;
+    PFN_vkAllocateMemory AllocateMemory;
     PFN_vkFreeMemory FreeMemory;
     PFN_vkMapMemory MapMemory;
     PFN_vkUnmapMemory UnmapMemory;
@@ -92,7 +92,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateDescriptorPool CreateDescriptorPool;
     PFN_vkDestroyDescriptorPool DestroyDescriptorPool;
     PFN_vkResetDescriptorPool ResetDescriptorPool;
-    PFN_vkAllocDescriptorSets AllocDescriptorSets;
+    PFN_vkAllocateDescriptorSets AllocateDescriptorSets;
     PFN_vkFreeDescriptorSets FreeDescriptorSets;
     PFN_vkUpdateDescriptorSets UpdateDescriptorSets;
     PFN_vkCreateFramebuffer CreateFramebuffer;
@@ -103,7 +103,7 @@ typedef struct VkLayerDispatchTable_
     PFN_vkCreateCommandPool CreateCommandPool;
     PFN_vkDestroyCommandPool DestroyCommandPool;
     PFN_vkResetCommandPool ResetCommandPool;
-    PFN_vkAllocCommandBuffers AllocCommandBuffers;
+    PFN_vkAllocateCommandBuffers AllocateCommandBuffers;
     PFN_vkFreeCommandBuffers FreeCommandBuffers;
     PFN_vkBeginCommandBuffer BeginCommandBuffer;
     PFN_vkEndCommandBuffer EndCommandBuffer;

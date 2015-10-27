@@ -46,20 +46,20 @@ struct icd_instance_logger {
 struct icd_instance {
     char *name;
 
-    VkAllocCallbacks alloc_cb;
+    VkAllocationCallbacks alloc_cb;
 
     struct icd_instance_logger *loggers;
 };
 
 struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
-                                         const VkAllocCallbacks *alloc_cb);
+                                         const VkAllocationCallbacks *alloc_cb);
 void icd_instance_destroy(struct icd_instance *instance);
 
 static inline void *icd_instance_alloc(const struct icd_instance *instance,
                                        size_t size, size_t alignment,
-                                       VkSystemAllocScope scope)
+                                       VkSystemAllocationScope scope)
 {
-    return instance->alloc_cb.pfnAlloc(instance->alloc_cb.pUserData,
+    return instance->alloc_cb.pfnAllocation(instance->alloc_cb.pUserData,
             size, alignment, scope);
 }
 

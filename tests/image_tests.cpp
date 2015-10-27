@@ -88,15 +88,15 @@ protected:
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = "base";
-        this->app_info.appVersion = 1;
+        this->app_info.pApplicationName = "base";
+        this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
         VkInstanceCreateInfo inst_info = {};
         inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         inst_info.pNext = NULL;
-        inst_info.pAppInfo = &app_info;
+        inst_info.pApplicationInfo = &app_info;
         inst_info.enabledLayerNameCount = 0;
         inst_info.ppEnabledLayerNames = NULL;
         inst_info.enabledExtensionNameCount = 0;
@@ -196,8 +196,8 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     //        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT                       = 0x00000008,
     //typedef enum VkImageUsageFlags_
     //{
-    //    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = 0x00000001,   // Can be used as a source of transfer operations
-    //    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                 = 0x00000002,   // Can be used as a destination of transfer operations
+    //    VK_IMAGE_USAGE_TRANSFER_SRC_BIT                      = 0x00000001,   // Can be used as a source of transfer operations
+    //    VK_IMAGE_USAGE_TRANSFER_DST_BIT                 = 0x00000002,   // Can be used as a destination of transfer operations
     //    VK_IMAGE_USAGE_SAMPLED_BIT                              = 0x00000004,   // Can be sampled from (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
     //    VK_IMAGE_USAGE_STORAGE_BIT                              = 0x00000008,   // Can be used as storage image (STORAGE_IMAGE descriptor type)
     //    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = 0x00000010,   // Can be used as framebuffer color attachment
@@ -216,7 +216,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
 
     VkMemoryRequirements mem_req;
 
-    VkMemoryAllocInfo mem_info = {};
+    VkMemoryAllocateInfo mem_info = {};
     mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_info.pNext = NULL;
 
@@ -230,7 +230,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     ASSERT_TRUE(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(device(), &mem_info, NULL, &m_image_mem);
+    err = vkAllocateMemory(device(), &mem_info, NULL, &m_image_mem);
     ASSERT_VK_SUCCESS(err);
 
     /* bind memory */
@@ -289,9 +289,9 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     viewInfo.channels.a = VK_CHANNEL_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.numLayers = 1;
+    viewInfo.subresourceRange.layerCount = 1;
     viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.numLevels = 1;
+    viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     //    VkResult VKAPI vkCreateImageView(

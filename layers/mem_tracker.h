@@ -99,9 +99,9 @@ struct MT_MEM_OBJ_INFO {
     void*                       object;             // Dispatchable object used to create this memory (device of swapchain)
     uint32_t                    refCount;           // Count of references (obj bindings or CB use)
     VkDeviceMemory              mem;
-    VkMemoryAllocInfo           allocInfo;
+    VkMemoryAllocateInfo           allocInfo;
     list<MT_OBJ_HANDLE_TYPE>    pObjBindings;       // list container of objects bound to this memory
-    list<VkCmdBuffer>           pCmdBufferBindings; // list container of cmd buffers that reference this mem object
+    list<VkCommandBuffer>           pCommandBufferBindings; // list container of cmd buffers that reference this mem object
 };
 
 // This only applies to Buffers and Images, which can have memory bound to them
@@ -115,10 +115,10 @@ struct MT_OBJ_BINDING_INFO {
 
 // Track all command buffers
 typedef struct _MT_CB_INFO {
-    VkCmdBufferAllocInfo        createInfo;
-    VkPipeline                  pipelines[VK_PIPELINE_BIND_POINT_NUM];
+    VkCommandBufferAllocateInfo       createInfo;
+    VkPipeline                  pipelines[VK_PIPELINE_BIND_POINT_RANGE_SIZE];
     uint32_t                    attachmentCount;
-    VkCmdBuffer                 cmdBuffer;
+    VkCommandBuffer                 commandBuffer;
     uint64_t                    fenceId;
     VkFence                     lastSubmittedFence;
     VkQueue                     lastSubmittedQueue;
@@ -139,7 +139,7 @@ struct MT_FENCE_INFO {
 struct MT_QUEUE_INFO {
     uint64_t                    lastRetiredId;
     uint64_t                    lastSubmittedId;
-    list<VkCmdBuffer>           pQueueCmdBuffers;
+    list<VkCommandBuffer>           pQueueCommandBuffers;
     list<VkDeviceMemory>        pMemRefList;
 };
 

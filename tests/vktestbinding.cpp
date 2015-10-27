@@ -70,9 +70,9 @@ std::vector<T> make_handles(const std::vector<S> &v)
     return handles;
 }
 
-VkMemoryAllocInfo get_resource_alloc_info(const vk_testing::Device &dev, const VkMemoryRequirements &reqs, VkMemoryPropertyFlags mem_props)
+VkMemoryAllocateInfo get_resource_alloc_info(const vk_testing::Device &dev, const VkMemoryRequirements &reqs, VkMemoryPropertyFlags mem_props)
 {
-    VkMemoryAllocInfo info = vk_testing::DeviceMemory::alloc_info(reqs.size, 0);
+    VkMemoryAllocateInfo info = vk_testing::DeviceMemory::alloc_info(reqs.size, 0);
     dev.phy().set_memory_type(reqs.memoryTypeBits, &info, mem_props);
 
     return info;
@@ -207,7 +207,7 @@ std::vector<VkExtensionProperties> PhysicalDevice::extensions(const char *pLayer
     return exts;
 }
 
-bool PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocInfo *info, const VkFlags properties, const VkFlags forbid) const
+bool PhysicalDevice::set_memory_type(const uint32_t type_bits, VkMemoryAllocateInfo *info, const VkFlags properties, const VkFlags forbid) const
 {
      uint32_t type_mask = type_bits;
      // Search memtypes to find first index with those properties
@@ -392,9 +392,9 @@ void Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &wri
     vkUpdateDescriptorSets(handle(), writes.size(), writes.data(), copies.size(), copies.data());
 }
 
-void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
+void Queue::submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence)
 {
-    const std::vector<VkCmdBuffer> cmd_handles = make_handles<VkCmdBuffer>(cmds);
+    const std::vector<VkCommandBuffer> cmd_handles = make_handles<VkCommandBuffer>(cmds);
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
@@ -408,12 +408,12 @@ void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
     EXPECT(vkQueueSubmit(handle(), 1, &submit_info, fence.handle()) == VK_SUCCESS);
 }
 
-void Queue::submit(const CmdBuffer &cmd, Fence &fence)
+void Queue::submit(const CommandBuffer &cmd, Fence &fence)
 {
-    submit(std::vector<const CmdBuffer*>(1, &cmd), fence);
+    submit(std::vector<const CommandBuffer*>(1, &cmd), fence);
 }
 
-void Queue::submit(const CmdBuffer &cmd)
+void Queue::submit(const CommandBuffer &cmd)
 {
     Fence fence;
     submit(cmd, fence);
@@ -430,9 +430,9 @@ DeviceMemory::~DeviceMemory()
         vkFreeMemory(device(), handle(), NULL);
 }
 
-void DeviceMemory::init(const Device &dev, const VkMemoryAllocInfo &info)
+void DeviceMemory::init(const Device &dev, const VkMemoryAllocateInfo &info)
 {
-    NON_DISPATCHABLE_HANDLE_INIT(vkAllocMemory, dev, &info);
+    NON_DISPATCHABLE_HANDLE_INIT(vkAllocateMemory, dev, &info);
 }
 
 const void *DeviceMemory::map(VkFlags flags) const
@@ -749,12 +749,12 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const
     std::vector<VkDescriptorSet> set_handles;
     set_handles.resize(layout_handles.size());
 
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = layout_handles.size();
     alloc_info.descriptorPool = handle();
     alloc_info.pSetLayouts = layout_handles.data();
-    VkResult err = vkAllocDescriptorSets(device(), &alloc_info, set_handles.data());
+    VkResult err = vkAllocateDescriptorSets(device(), &alloc_info, set_handles.data());
     EXPECT(err == VK_SUCCESS);
 
     std::vector<DescriptorSet *> sets;
@@ -788,46 +788,46 @@ DescriptorSet::~DescriptorSet()
     }
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(CmdPool, vkDestroyCommandPool)
+NON_DISPATCHABLE_HANDLE_DTOR(CommandPool, vkDestroyCommandPool)
 
-void CmdPool::init(const Device &dev, const VkCmdPoolCreateInfo &info)
+void CommandPool::init(const Device &dev, const VkCommandPoolCreateInfo &info)
 {
     NON_DISPATCHABLE_HANDLE_INIT(vkCreateCommandPool, dev, &info);
 }
 
 
-CmdBuffer::~CmdBuffer()
+CommandBuffer::~CommandBuffer()
 {
     if (initialized()) {
-        VkCmdBuffer cmds[] = { handle() };
+        VkCommandBuffer cmds[] = { handle() };
         vkFreeCommandBuffers(dev_handle_, cmd_pool_, 1, cmds);
     }
 }
 
-void CmdBuffer::init(const Device &dev, const VkCmdBufferAllocInfo &info)
+void CommandBuffer::init(const Device &dev, const VkCommandBufferAllocateInfo &info)
 {
-    VkCmdBuffer cmd;
+    VkCommandBuffer cmd;
 
-    // Make sure cmdPool is set
-    assert(info.cmdPool);
+    // Make sure commandPool is set
+    assert(info.commandPool);
 
-    if (EXPECT(vkAllocCommandBuffers(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
+    if (EXPECT(vkAllocateCommandBuffers(dev.handle(), &info, &cmd) == VK_SUCCESS)) {
         Handle::init(cmd);
         dev_handle_ = dev.handle();
-        cmd_pool_ = info.cmdPool;
+        cmd_pool_ = info.commandPool;
     }
 }
 
-void CmdBuffer::begin(const VkCmdBufferBeginInfo *info)
+void CommandBuffer::begin(const VkCommandBufferBeginInfo *info)
 {
     EXPECT(vkBeginCommandBuffer(handle(), info) == VK_SUCCESS);
 }
 
-void CmdBuffer::begin()
+void CommandBuffer::begin()
 {
-    VkCmdBufferBeginInfo info = {};
-    info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo info = {};
+    info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     info.renderPass = VK_NULL_HANDLE;
     info.subpass = 0;
     info.framebuffer = VK_NULL_HANDLE;
@@ -835,12 +835,12 @@ void CmdBuffer::begin()
     begin(&info);
 }
 
-void CmdBuffer::end()
+void CommandBuffer::end()
 {
     EXPECT(vkEndCommandBuffer(handle()) == VK_SUCCESS);
 }
 
-void CmdBuffer::reset(VkCmdBufferResetFlags flags)
+void CommandBuffer::reset(VkCommandBufferResetFlags flags)
 {
     EXPECT(vkResetCommandBuffer(handle(), flags) == VK_SUCCESS);
 }

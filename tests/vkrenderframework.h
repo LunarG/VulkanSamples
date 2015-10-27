@@ -106,8 +106,8 @@ protected:
     VkPhysicalDevice                    objs[16];
     uint32_t                            gpu_count;
     VkDeviceObj                        *m_device;
-    VkCmdPool                           m_cmdPool;
-    VkCommandBufferObj                 *m_cmdBuffer;
+    VkCommandPool                           m_commandPool;
+    VkCommandBufferObj                 *m_commandBuffer;
     VkRenderPass                        m_renderPass;
     VkFramebuffer                       m_framebuffer;
     std::vector<VkViewport>             m_viewports;
@@ -145,8 +145,8 @@ protected:
     virtual void SetUp() {
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = "base";
-        this->app_info.appVersion = 1;
+        this->app_info.pApplicationName = "base";
+        this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
@@ -165,15 +165,15 @@ class VkConstantBufferObj;
 class VkPipelineObj;
 class VkDescriptorSetObj;
 
-class VkCommandBufferObj : public vk_testing::CmdBuffer
+class VkCommandBufferObj : public vk_testing::CommandBuffer
 {
 public:
-    VkCommandBufferObj(VkDeviceObj *device, VkCmdPool pool);
-    VkCmdBuffer GetBufferHandle();
+    VkCommandBufferObj(VkDeviceObj *device, VkCommandPool pool);
+    VkCommandBuffer GetBufferHandle();
     VkResult BeginCommandBuffer();
-    VkResult BeginCommandBuffer(VkCmdBufferBeginInfo *pInfo);
+    VkResult BeginCommandBuffer(VkCommandBufferBeginInfo *pInfo);
     VkResult EndCommandBuffer();
-    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+    void PipelineBarrier(VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
     void AddRenderTarget(VkImageObj *renderTarget);
     void AddDepthStencil();
     void ClearAllBuffers(VkClearColorValue clear_color, float depth_clear_color, uint32_t stencil_clear_color, VkDepthStencilObj *depthStencilObj);
@@ -198,9 +198,9 @@ public:
     void SetStencilReadMask(VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
     void SetStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
     void SetStencilReference(VkStencilFaceFlags faceMask, uint32_t stencilReference);
-    void UpdateBuffer(VkBuffer buffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t *pData);
-    void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
-    void ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
+    void UpdateBuffer(VkBuffer buffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t *pData);
+    void CopyImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
+    void ResolveImage(VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 
 protected:
     VkDeviceObj                        *m_device;
@@ -231,7 +231,7 @@ public:
             VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_MEMORY_INPUT_TRANSFER_BIT);
 
-    void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset, uint32_t binding);
+    void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset, uint32_t binding);
 
     VkDescriptorBufferInfo              m_descriptorBufferInfo;
 
@@ -240,7 +240,7 @@ protected:
     vk_testing::BufferView              m_bufferView;
     int                                 m_numVertices;
     int                                 m_stride;
-    vk_testing::CmdPool                *m_cmdPool;
+    vk_testing::CommandPool                *m_commandPool;
     VkCommandBufferObj                 *m_commandBuffer;
     vk_testing::Fence                   m_fence;
 };
@@ -250,7 +250,7 @@ class VkIndexBufferObj : public VkConstantBufferObj
 public:
     VkIndexBufferObj(VkDeviceObj *device);
     void CreateAndInitBuffer(int numIndexes, VkIndexType dataFormat, const void* data);
-    void Bind(VkCmdBuffer cmdBuffer, VkDeviceSize offset);
+    void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset);
     VkIndexType GetIndexType();
 
 protected:
@@ -383,7 +383,7 @@ public:
     int AppendDummy();
     int AppendBuffer(VkDescriptorType type, VkConstantBufferObj &constantBuffer);
     int AppendSamplerTexture(VkSamplerObj* sampler, VkTextureObj* texture);
-    void CreateVKDescriptorSet(VkCommandBufferObj *cmdBuffer);
+    void CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer);
 
     VkDescriptorSet GetDescriptorSetHandle() const;
     VkPipelineLayout GetPipelineLayout() const;
@@ -442,7 +442,7 @@ public:
 protected:
     VkPipelineVertexInputStateCreateInfo          m_vi_state;
     VkPipelineInputAssemblyStateCreateInfo        m_ia_state;
-    VkPipelineRasterStateCreateInfo               m_rs_state;
+    VkPipelineRasterizationStateCreateInfo               m_rs_state;
     VkPipelineColorBlendStateCreateInfo           m_cb_state;
     VkPipelineDepthStencilStateCreateInfo         m_ds_state;
     VkPipelineViewportStateCreateInfo             m_vp_state;

@@ -71,8 +71,8 @@ static inline bool icd_pipeline_cb_att_needs_dual_source_blending(const VkPipeli
 {
     if (icd_blend_mode_is_dual_src(att->srcBlendColor) ||
         icd_blend_mode_is_dual_src(att->srcBlendAlpha) ||
-        icd_blend_mode_is_dual_src(att->destBlendColor) ||
-        icd_blend_mode_is_dual_src(att->destBlendAlpha)) {
+        icd_blend_mode_is_dual_src(att->dstBlendColor) ||
+        icd_blend_mode_is_dual_src(att->dstBlendAlpha)) {
         return true;
     }
     return false;

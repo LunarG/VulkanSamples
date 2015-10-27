@@ -345,7 +345,7 @@ static inline void pipe_interface_free(const void *handle, void *ptr)
 
 static inline void *pipe_interface_alloc(const void *handle,
                                                     size_t size, size_t alignment,
-                                                    VkSystemAllocScope scope)
+                                                    VkSystemAllocationScope scope)
 {
     if (standaloneCompiler)
         return calloc(size, sizeof(char));
@@ -369,7 +369,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
     uint32_t surface_count, i;
 
     rmap = (struct intel_pipeline_rmap *)
-        pipe_interface_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+        pipe_interface_alloc(gpu, sizeof(*rmap), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!rmap)
         return NULL;
 
@@ -390,7 +390,7 @@ static struct intel_pipeline_rmap *rmap_create(const struct intel_gpu *gpu,
 
     rmap->slots = (struct intel_pipeline_rmap_slot *)
         pipe_interface_alloc(gpu, sizeof(rmap->slots[0]) * rmap->slot_count,
-            0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!rmap->slots) {
         pipe_interface_free(gpu, rmap);
         return NULL;
@@ -638,7 +638,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         {
             pipe_shader->codeSize = get_vs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
             if (!pipe_shader->pCode) {
                 status = VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -709,7 +709,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
         {
             pipe_shader->codeSize = get_gs_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
             if (!pipe_shader->pCode) {
                 status = VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -786,7 +786,7 @@ VkResult intel_pipeline_shader_compile(struct intel_pipeline_shader *pipe_shader
 
             pipe_shader->codeSize = get_wm_program_size(brw->shader_prog);
 
-            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+            pipe_shader->pCode = pipe_interface_alloc(gpu, pipe_shader->codeSize, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
             if (!pipe_shader->pCode) {
                 status = VK_ERROR_OUT_OF_HOST_MEMORY;

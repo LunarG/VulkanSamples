@@ -40,7 +40,7 @@ struct intel_mem {
 };
 
 VkResult intel_mem_alloc(struct intel_dev *dev,
-                           const VkMemoryAllocInfo *info,
+                           const VkMemoryAllocateInfo *info,
                            struct intel_mem **mem_ret);
 void intel_mem_free(struct intel_mem *mem);
 

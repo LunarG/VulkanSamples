@@ -147,26 +147,26 @@ static VkBool32 myDbgFunc(
 class VkLayerTest : public VkRenderFramework
 {
 public:
-    VkResult BeginCommandBuffer(VkCommandBufferObj &cmdBuffer);
-    VkResult EndCommandBuffer(VkCommandBufferObj &cmdBuffer);
+    VkResult BeginCommandBuffer(VkCommandBufferObj &commandBuffer);
+    VkResult EndCommandBuffer(VkCommandBufferObj &commandBuffer);
     void VKTriangleTest(const char *vertShaderText, const char *fragShaderText, BsoFailSelect failMask);
-    void GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask);
+    void GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask);
     void GenericDrawPreparation(VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet,  BsoFailSelect failMask)
-             { GenericDrawPreparation(m_cmdBuffer, pipelineobj, descriptorSet, failMask); }
+             { GenericDrawPreparation(m_commandBuffer, pipelineobj, descriptorSet, failMask); }
 
     /* Convenience functions that use built-in command buffer */
-    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_cmdBuffer); }
-    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_cmdBuffer); }
+    VkResult BeginCommandBuffer() { return BeginCommandBuffer(*m_commandBuffer); }
+    VkResult EndCommandBuffer() { return EndCommandBuffer(*m_commandBuffer); }
     void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        { m_cmdBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
+        { m_commandBuffer->Draw(vertexCount, instanceCount, firstVertex, firstInstance); }
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
-        { m_cmdBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
-    void QueueCommandBuffer() { m_cmdBuffer->QueueCommandBuffer(); }
-    void QueueCommandBuffer(const VkFence& fence) { m_cmdBuffer->QueueCommandBuffer(fence); }
+        { m_commandBuffer->DrawIndexed(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance); }
+    void QueueCommandBuffer() { m_commandBuffer->QueueCommandBuffer(); }
+    void QueueCommandBuffer(const VkFence& fence) { m_commandBuffer->QueueCommandBuffer(fence); }
     void BindVertexBuffer(VkConstantBufferObj *vertexBuffer, VkDeviceSize offset, uint32_t binding)
-        { m_cmdBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
+        { m_commandBuffer->BindVertexBuffer(vertexBuffer, offset, binding); }
     void BindIndexBuffer(VkIndexBufferObj *indexBuffer, VkDeviceSize offset)
-        { m_cmdBuffer->BindIndexBuffer(indexBuffer, offset); }
+        { m_commandBuffer->BindIndexBuffer(indexBuffer, offset); }
 protected:
         ErrorMonitor               *m_errorMonitor;
 
@@ -182,7 +182,7 @@ protected:
          * any extension / layer that utilizes that feature also needs
          * to be enabled at create instance time.
          */
-        // Use Threading layer first to protect others from ThreadCmdBufferCollision test
+        // Use Threading layer first to protect others from ThreadCommandBufferCollision test
         instance_layer_names.push_back("Threading");
         instance_layer_names.push_back("ObjectTracker");
         instance_layer_names.push_back("MemTracker");
@@ -201,8 +201,8 @@ protected:
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
-        this->app_info.pAppName = "layer_tests";
-        this->app_info.appVersion = 1;
+        this->app_info.pApplicationName = "layer_tests";
+        this->app_info.applicationVersion = 1;
         this->app_info.pEngineName = "unittest";
         this->app_info.engineVersion = 1;
         this->app_info.apiVersion = VK_API_VERSION;
@@ -220,32 +220,32 @@ protected:
     }
 };
 
-VkResult VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkLayerTest::BeginCommandBuffer(VkCommandBufferObj &commandBuffer)
 {
     VkResult result;
 
-    result = cmdBuffer.BeginCommandBuffer();
+    result = commandBuffer.BeginCommandBuffer();
 
     /*
      * For render test all drawing happens in a single render pass
      * on a single command buffer.
      */
     if (VK_SUCCESS == result && renderPass()) {
-        cmdBuffer.BeginRenderPass(renderPassBeginInfo());
+        commandBuffer.BeginRenderPass(renderPassBeginInfo());
     }
 
     return result;
 }
 
-VkResult VkLayerTest::EndCommandBuffer(VkCommandBufferObj &cmdBuffer)
+VkResult VkLayerTest::EndCommandBuffer(VkCommandBufferObj &commandBuffer)
 {
     VkResult result;
 
     if (renderPass()) {
-        cmdBuffer.EndRenderPass();
+        commandBuffer.EndRenderPass();
     }
 
-    result = cmdBuffer.EndCommandBuffer();
+    result = commandBuffer.EndCommandBuffer();
 
     return result;
 }
@@ -345,15 +345,15 @@ void VkLayerTest::VKTriangleTest(const char *vertShaderText, const char *fragSha
     QueueCommandBuffer();
 }
 
-void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask)
+void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPipelineObj &pipelineobj, VkDescriptorSetObj &descriptorSet, BsoFailSelect failMask)
 {
     if (m_depthStencil->Initialized()) {
-        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
+        commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, m_depthStencil);
     } else {
-        cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+        commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
     }
 
-    cmdBuffer->PrepareAttachments();
+    commandBuffer->PrepareAttachments();
     // Make sure depthWriteEnable is set so that Depth fail test will work correctly
     // Make sure stencilTestEnable is set so that Stencil fail test will work correctly
     VkStencilOpState stencil = {};
@@ -376,11 +376,11 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
     pipelineobj.SetDepthStencil(&ds_ci);
     pipelineobj.SetViewport(m_viewports);
     pipelineobj.SetScissor(m_scissors);
-    descriptorSet.CreateVKDescriptorSet(cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(commandBuffer);
     VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
     ASSERT_VK_SUCCESS(err);
-    cmdBuffer->BindPipeline(pipelineobj);
-    cmdBuffer->BindDescriptorSet(descriptorSet);
+    commandBuffer->BindPipeline(pipelineobj);
+    commandBuffer->BindDescriptorSet(descriptorSet);
 }
 
 // ********************************************************************************************************************
@@ -388,7 +388,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *cmdBuffer, VkPipeli
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 #if MEM_TRACKER_TESTS
-TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
+TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
     VkFlags msgFlags;
@@ -406,7 +406,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     buffer.init_as_dst(*m_device, (VkDeviceSize)20, reqs);
 
     BeginCommandBuffer();
-    m_cmdBuffer->FillBuffer(buffer.handle(), 0, 4, 0x11111111);
+    m_commandBuffer->FillBuffer(buffer.handle(), 0, 4, 0x11111111);
     EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
@@ -419,7 +419,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
@@ -428,7 +428,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 
     m_errorMonitor->ClearState();
     // Introduce failure by calling begin again before checking fence
-    vkResetCommandBuffer(m_cmdBuffer->handle(), 0);
+    vkResetCommandBuffer(m_commandBuffer->handle(), 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling ResetCommandBuffer on an active Command Buffer";
@@ -437,7 +437,7 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
     }
 }
 
-TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
+TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
     VkFlags msgFlags;
@@ -453,7 +453,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     BeginCommandBuffer();
-    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
     EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
@@ -466,7 +466,7 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
@@ -475,15 +475,15 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 
     m_errorMonitor->ClearState();
 
-    VkCmdBufferBeginInfo info = {};
-    info.flags       = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    info.sType       = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo info = {};
+    info.flags       = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    info.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     info.renderPass  = VK_NULL_HANDLE;
     info.subpass     = 0;
     info.framebuffer = VK_NULL_HANDLE;
 
     // Introduce failure by calling BCB again before checking fence
-    vkBeginCommandBuffer(m_cmdBuffer->handle(), &info);
+    vkBeginCommandBuffer(m_commandBuffer->handle(), &info);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling BeginCommandBuffer on an active Command Buffer";
@@ -526,7 +526,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
@@ -549,7 +549,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     }
 
     // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Try to bind free memory that has been freed
@@ -602,7 +602,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 //        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
 //        .flags           = 0,
 //    };
-//    VkMemoryAllocInfo mem_alloc = {
+//    VkMemoryAllocateInfo mem_alloc = {
 //        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
 //        .pNext           = NULL,
 //        .allocationSize  = 0,
@@ -623,7 +623,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 //    ASSERT_VK_SUCCESS(err);
 //
 //    // allocate memory
-//    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem);
+//    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
 //    ASSERT_VK_SUCCESS(err);
 //
 //    // Bind memory to Image object
@@ -675,7 +675,7 @@ TEST_F(VkLayerTest, RebindMemory)
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
         mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
@@ -695,9 +695,9 @@ TEST_F(VkLayerTest, RebindMemory)
     ASSERT_TRUE(pass);
 
     // allocate 2 memory objects
-    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem1);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem1);
     ASSERT_VK_SUCCESS(err);
-    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem2);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem2);
     ASSERT_VK_SUCCESS(err);
 
     // Bind first memory object to Image object
@@ -734,7 +734,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     BeginCommandBuffer();
-    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
     EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
@@ -746,7 +746,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
@@ -793,7 +793,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device);
+    VkCommandBufferObj commandBuffer(m_device);
     BeginCommandBuffer();
 
     const VkExtent3D e3d = {
@@ -880,12 +880,12 @@ TEST_F(VkLayerTest, PipelineNotBound)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -901,10 +901,10 @@ TEST_F(VkLayerTest, PipelineNotBound)
     VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CommandBuffer";
     if (!strstr(msgString.c_str(),"Invalid VkPipeline Object ")) {
         FAIL() << "Error received was not 'Invalid VkPipeline Object 0xbaadb1be' but instead it was '" << msgString.c_str() << "'";
     }
@@ -948,7 +948,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
         mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
@@ -967,7 +967,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     ASSERT_TRUE(pass);
 
     // allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, free memory before binding
@@ -1021,7 +1021,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
         mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
@@ -1039,7 +1039,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     ASSERT_TRUE(pass);
 
     // Allocate memory
-    err = vkAllocMemory(m_device->device(), &mem_alloc, NULL, &mem);
+    err = vkAllocateMemory(m_device->device(), &mem_alloc, NULL, &mem);
     ASSERT_VK_SUCCESS(err);
 
     // Introduce validation failure, destroy Image object before binding
@@ -1100,12 +1100,12 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
@@ -1113,8 +1113,8 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destBinding = 0;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
     descriptor_write.descriptorCount = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
     descriptor_write.pTexelBufferView = &view;
@@ -1283,7 +1283,7 @@ TEST_F(VkLayerTest, StencilReferenceNotSet)
     }
 }
 
-TEST_F(VkLayerTest, CmdBufferTwoSubmits)
+TEST_F(VkLayerTest, CommandBufferTwoSubmits)
 {
     vk_testing::Fence testFence;
     VkFlags msgFlags;
@@ -1298,9 +1298,9 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     ASSERT_NO_FATAL_FAILURE(InitViewport());
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
-    // We luck out b/c by default the framework creates CB w/ the VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set
+    // We luck out b/c by default the framework creates CB w/ the VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set
     BeginCommandBuffer();
-    m_cmdBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
+    m_commandBuffer->ClearAllBuffers(m_clear_color, m_depth_clear_color, m_stencil_clear_color, NULL);
     EndCommandBuffer();
 
     testFence.init(*m_device, fenceInfo);
@@ -1313,7 +1313,7 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
     submit_info.pSignalSemaphores = NULL;
 
@@ -1326,8 +1326,8 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after re-submitting Command Buffer that was created with one-time submit flag";
-    if (!strstr(msgString.c_str(),"was begun w/ VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
-        FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set...'";
+    if (!strstr(msgString.c_str(),"was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted")) {
+        FAIL() << "Error received was not 'CB (0xaddress) was created w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set...'";
     }
 }
 
@@ -1374,17 +1374,17 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterSamples = 1;
+        pipe_ms_state_ci.rasterizationSamples = 1;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -1408,18 +1408,18 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     pipe.SetMSAA(&pipe_ms_state_ci);
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
     m_errorMonitor->ClearState();
-    // Calls AllocCommandBuffers
-    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    memset(&cmd_buf_info, 0, sizeof(VkCmdBufferBeginInfo));
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    // Calls AllocateCommandBuffers
+    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    memset(&cmd_buf_info, 0, sizeof(VkCommandBufferBeginInfo));
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
-    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
+    vkCmdBindPipeline(commandBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding pipeline to CmdBuffer w/o active RenderPass";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding pipeline to CommandBuffer w/o active RenderPass";
     if (!strstr(msgString.c_str(),"Incorrectly binding graphics pipeline ")) {
         FAIL() << "Error received was not 'Incorrectly binding graphics pipeline (0x<handle>) without an active RenderPass' but rather '" << msgString.c_str() << "'";
     }
@@ -1474,12 +1474,12 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after alloc descriptor from pool w/o requested type";
@@ -1536,12 +1536,12 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     err = vkFreeDescriptorSets(m_device->device(), ds_pool, 1, &descriptorSet);
@@ -1598,12 +1598,12 @@ TEST_F(VkLayerTest, InvalidPipeline)
 //
 //    ASSERT_NO_FATAL_FAILURE(InitState());
 //    m_errorMonitor->ClearState();
-//    VkCommandBufferObj cmdBuffer(m_device);
+//    VkCommandBufferObj commandBuffer(m_device);
 //    BeginCommandBuffer();
 //    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
-//    vkCmdBindPipeline(cmdBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
+//    vkCmdBindPipeline(commandBuffer.GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
 //    msgFlags = m_errorMonitor->GetState(&msgString);
-//    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CmdBuffer";
+//    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding invalid pipeline to CommandBuffer";
 //    if (!strstr(msgString.c_str(),"Attempt to bind Pipeline ")) {
 //        FAIL() << "Error received was not 'Attempt to bind Pipeline 0xbaadb1be that doesn't exist!'";
 //    }
@@ -1611,7 +1611,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
 
 TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 {
-    // Create and update CmdBuffer then call QueueSubmit w/o calling End on CmdBuffer
+    // Create and update CommandBuffer then call QueueSubmit w/o calling End on CommandBuffer
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
@@ -1651,12 +1651,12 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1679,8 +1679,8 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
-    vkCmdBindDescriptorSets(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not warn after binding a DescriptorSet that was never updated.";
@@ -1693,24 +1693,24 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
-TEST_F(VkLayerTest, NoBeginCmdBuffer)
+TEST_F(VkLayerTest, NoBeginCommandBuffer)
 {
     VkFlags         msgFlags;
     std::string     msgString;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
-    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
     // Call EndCommandBuffer() w/o calling BeginCommandBuffer()
-    vkEndCommandBuffer(cmdBuffer.GetBufferHandle());
+    vkEndCommandBuffer(commandBuffer.GetBufferHandle());
     msgFlags = m_errorMonitor->GetState(&msgString);
-    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after ending a CmdBuffer w/o calling BeginCommandBuffer()";
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after ending a CommandBuffer w/o calling BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"You must call vkBeginCommandBuffer() before this call to ")) {
         FAIL() << "Error received was not 'You must call vkBeginCommandBuffer() before this call to vkEndCommandBuffer()'";
     }
 }
 
-TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
+TEST_F(VkLayerTest, PrimaryCommandBufferFramebufferAndRenderpass)
 {
     VkFlags         msgFlags;
     std::string     msgString;
@@ -1718,53 +1718,53 @@ TEST_F(VkLayerTest, PrimaryCmdBufferFramebufferAndRenderpass)
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
 
-    // Calls AllocCommandBuffers
-    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+    // Calls AllocateCommandBuffers
+    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
 
     // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     cmd_buf_info.renderPass = (VkRenderPass)0xcadecade;
     cmd_buf_info.framebuffer = (VkFramebuffer)0xcadecade;
 
 
     // The error should be caught by validation of the BeginCommandBuffer call
-    vkBeginCommandBuffer(cmdBuffer.GetBufferHandle(), &cmd_buf_info);
+    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error passing a non-NULL Framebuffer and Renderpass to BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"may not specify framebuffer or renderpass parameters")) {
-        FAIL() << "Error received was not 'vkAllocCommandBuffers():  Primary Command Buffer may not specify framebuffer or renderpass parameters'";
+        FAIL() << "Error received was not 'vkAllocateCommandBuffers():  Primary Command Buffer may not specify framebuffer or renderpass parameters'";
     }
 }
 
-TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
+TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
 {
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
-    VkCmdBuffer     draw_cmd;
+    VkCommandBuffer     draw_cmd;
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     m_errorMonitor->ClearState();
 
-    VkCmdBufferAllocInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
+    VkCommandBufferAllocateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
     cmd.pNext = NULL;
-    cmd.cmdPool = m_cmdPool;
-    cmd.level = VK_CMD_BUFFER_LEVEL_SECONDARY;
+    cmd.commandPool = m_commandPool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     cmd.bufferCount = 1;
 
-    err = vkAllocCommandBuffers(m_device->device(), &cmd, &draw_cmd);
+    err = vkAllocateCommandBuffers(m_device->device(), &cmd, &draw_cmd);
     ASSERT_VK_SUCCESS(err);
 
     // Force the failure by not setting the Renderpass and Framebuffer fields
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
@@ -1772,9 +1772,9 @@ TEST_F(VkLayerTest, SecondaryCmdBufferFramebufferAndRenderpass)
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error passing NULL Framebuffer/Renderpass to BeginCommandBuffer()";
     if (!strstr(msgString.c_str(),"must specify framebuffer and renderpass parameters")) {
-        FAIL() << "Error received was not 'vkAllocCommandBuffers():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
+        FAIL() << "Error received was not 'vkAllocateCommandBuffers():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
     }
-    vkFreeCommandBuffers(m_device->device(), m_cmdPool, 1, &draw_cmd);
+    vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &draw_cmd);
 }
 
 TEST_F(VkLayerTest, InvalidPipelineCreateState)
@@ -1820,12 +1820,12 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1920,7 +1920,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    err = vkAllocDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_NON_FREE, 1, &ds_layout, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), ds_pool, VK_DESCRIPTOR_SET_USAGE_NON_FREE, 1, &ds_layout, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1968,7 +1968,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
         gp_ci.pInputAssemblyState = &iaCI;
         gp_ci.pTessellationState = &tsCI;
         gp_ci.pViewportState = NULL;
-        gp_ci.pRasterState = NULL;
+        gp_ci.pRasterizationState = NULL;
         gp_ci.pMultisampleState = NULL;
         gp_ci.pDepthStencilState = NULL;
         gp_ci.pColorBlendState = NULL;
@@ -2043,12 +2043,12 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -2152,12 +2152,12 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -2260,12 +2260,12 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -2315,7 +2315,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 	ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-	VkPipelineRasterStateCreateInfo rs_ci = {};
+	VkPipelineRasterizationStateCreateInfo rs_ci = {};
 	rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
 	rs_ci.pNext = nullptr;
 
@@ -2330,7 +2330,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
         gp_ci.pVertexInputState = &vi_ci;
         gp_ci.pInputAssemblyState = &ia_ci;
         gp_ci.pViewportState = &vp_state_ci;
-        gp_ci.pRasterState = &rs_ci;
+        gp_ci.pRasterizationState = &rs_ci;
         gp_ci.pColorBlendState = &cb_ci;
         gp_ci.pDynamicState = &dyn_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
@@ -2360,10 +2360,10 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
     ASSERT_VK_SUCCESS(err);
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     VkRect2D scissors[2] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetScissor(m_cmdBuffer->GetBufferHandle(), 2, scissors);
+    vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 2, scissors);
     Draw(1, 0, 0, 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -2418,12 +2418,12 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -2473,7 +2473,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     ia_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia_ci.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-    VkPipelineRasterStateCreateInfo rs_ci = {};
+    VkPipelineRasterizationStateCreateInfo rs_ci = {};
     rs_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs_ci.pNext = nullptr;
 
@@ -2488,7 +2488,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
         gp_ci.pVertexInputState = &vi_ci;
         gp_ci.pInputAssemblyState = &ia_ci;
         gp_ci.pViewportState = &vp_state_ci;
-        gp_ci.pRasterState = &rs_ci;
+        gp_ci.pRasterizationState = &rs_ci;
         gp_ci.pColorBlendState = &cb_ci;
         gp_ci.pDynamicState = &dyn_state_ci;
         gp_ci.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
@@ -2518,10 +2518,10 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     err = vkCreateGraphicsPipelines(m_device->device(), pipelineCache, 1, &gp_ci, NULL, &pipeline);
     ASSERT_VK_SUCCESS(err);
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     VkViewport viewports[2] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetViewport(m_cmdBuffer->GetBufferHandle(), 2, viewports);
+    vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 2, viewports);
     Draw(1, 0, 0, 0);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -2548,7 +2548,7 @@ TEST_F(VkLayerTest, NullRenderPass)
 
     BeginCommandBuffer();
     // Don't care about RenderPass handle b/c error should be flagged before that
-    vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), NULL, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding NULL RenderPass.";
@@ -2575,7 +2575,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
         rp_begin.renderPass = renderPass();
         rp_begin.framebuffer = framebuffer();
 
-    vkCmdBeginRenderPass(m_cmdBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(m_commandBuffer->GetBufferHandle(), &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/i an active RenderPass.";
@@ -2598,10 +2598,10 @@ TEST_F(VkLayerTest, FillBufferWithinRenderPass)
     BeginCommandBuffer();
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    vk_testing::Buffer destBuffer;
-    destBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
+    vk_testing::Buffer dstBuffer;
+    dstBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
 
-    m_cmdBuffer->FillBuffer(destBuffer.handle(), 0, 4, 0x11111111);
+    m_commandBuffer->FillBuffer(dstBuffer.handle(), 0, 4, 0x11111111);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
@@ -2625,14 +2625,14 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass)
     BeginCommandBuffer();
 
     VkMemoryPropertyFlags reqs = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    vk_testing::Buffer destBuffer;
-    destBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
+    vk_testing::Buffer dstBuffer;
+    dstBuffer.init_as_dst(*m_device, (VkDeviceSize)1024, reqs);
 
-    VkDeviceSize    destOffset = 0;
+    VkDeviceSize    dstOffset = 0;
     VkDeviceSize    dataSize   = 1024;
     const uint32_t *pData      = NULL;
 
-    vkCmdUpdateBuffer(m_cmdBuffer->GetBufferHandle(), destBuffer.handle(), destOffset, dataSize, pData);
+    vkCmdUpdateBuffer(m_commandBuffer->GetBufferHandle(), dstBuffer.handle(), dstOffset, dataSize, pData);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) <<
@@ -2674,14 +2674,14 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
     image_create_info.tiling                = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage                 = VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    vk_testing::Image destImage;
-    destImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
+    vk_testing::Image dstImage;
+    dstImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
 
     const VkImageSubresourceRange range =
         vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    vkCmdClearColorImage(m_cmdBuffer->GetBufferHandle(),
-                         destImage.handle(),
+    vkCmdClearColorImage(m_commandBuffer->GetBufferHandle(),
+                         dstImage.handle(),
                          VK_IMAGE_LAYOUT_GENERAL,
                          &clear_color,
                          1,
@@ -2718,14 +2718,14 @@ TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass)
     image_create_info.tiling             = VK_IMAGE_TILING_OPTIMAL;
     image_create_info.usage              = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-    vk_testing::Image destImage;
-    destImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
+    vk_testing::Image dstImage;
+    dstImage.init(*m_device, (const VkImageCreateInfo&)image_create_info, reqs);
 
     const VkImageSubresourceRange range =
         vk_testing::Image::subresource_range(image_create_info, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    vkCmdClearDepthStencilImage(m_cmdBuffer->GetBufferHandle(),
-                                destImage.handle(),
+    vkCmdClearDepthStencilImage(m_commandBuffer->GetBufferHandle(),
+                                dstImage.handle(),
                                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                 &clear_value,
                                 1,
@@ -2751,7 +2751,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     m_errorMonitor->ClearState();
 
     // Start no RenderPass
-    err = m_cmdBuffer->BeginCommandBuffer();
+    err = m_commandBuffer->BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
 
     VkClearAttachment color_attachment;
@@ -2762,7 +2762,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     color_attachment.clearValue.color.float32[3] = 0;
     color_attachment.colorAttachment = 0;
     VkClearRect clear_rect  = { { { 0, 0 }, { 32, 32 } } };
-    vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(),
+    vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(),
                           1, &color_attachment,
                           1, &clear_rect);
 
@@ -2806,9 +2806,9 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError)
 
     BeginCommandBuffer();
     ASSERT_VK_SUCCESS(err);
-    //vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    //vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Should error before calling to driver so don't care about actual data
-    vkCmdBindIndexBuffer(m_cmdBuffer->GetBufferHandle(), ib, 7, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(m_commandBuffer->GetBufferHandle(), ib, 7, VK_INDEX_TYPE_UINT16);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
@@ -2831,8 +2831,8 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB)
 
     BeginCommandBuffer();
     //ASSERT_VK_SUCCESS(err);
-    VkCmdBuffer primCB = m_cmdBuffer->GetBufferHandle();
-    vkCmdExecuteCommands(m_cmdBuffer->GetBufferHandle(), 1, &primCB);
+    VkCommandBuffer primCB = m_commandBuffer->GetBufferHandle();
+    vkCmdExecuteCommands(m_commandBuffer->GetBufferHandle(), 1, &primCB);
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after vkCmdBindVertexBuffers() w/o active RenderPass.";
@@ -2882,12 +2882,12 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -2918,7 +2918,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
+    descriptor_write.dstSet = descriptorSet;
     descriptor_write.descriptorCount = 1;
     // This is a mismatched type for the layout which expects BUFFER
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -2979,12 +2979,12 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -3015,8 +3015,8 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destArrayElement = 1; /* This index out of bounds for the update */
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstArrayElement = 1; /* This index out of bounds for the update */
     descriptor_write.descriptorCount = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -3076,12 +3076,12 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -3112,8 +3112,8 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destBinding = 2;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 2;
     descriptor_write.descriptorCount = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -3173,12 +3173,12 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -3209,7 +3209,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = (VkStructureType)0x99999999; /* Intentionally broken struct type */
-    descriptor_write.destSet = descriptorSet;
+    descriptor_write.dstSet = descriptorSet;
     descriptor_write.descriptorCount = 1;
     // This is the wrong type, but out of bounds will be flagged first
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -3269,12 +3269,12 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSampler sampler = (VkSampler) 0xbaadbeef; // Sampler with invalid handle
@@ -3286,8 +3286,8 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destBinding = 0;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
     descriptor_write.descriptorCount = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     descriptor_write.pImageInfo = &descriptor_info;
@@ -3344,12 +3344,12 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -3384,8 +3384,8 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destBinding = 0;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
     descriptor_write.descriptorCount = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor_write.pImageInfo = &descriptor_info;
@@ -3450,12 +3450,12 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkSamplerCreateInfo sampler_ci = {};
@@ -3486,8 +3486,8 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(VkWriteDescriptorSet));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.destSet = descriptorSet;
-    descriptor_write.destBinding = 1; // SAMPLER binding from layout above
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 1; // SAMPLER binding from layout above
     descriptor_write.descriptorCount = 1;
     descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     descriptor_write.pImageInfo = &info;
@@ -3499,8 +3499,8 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy_ds_update.srcSet = descriptorSet;
     copy_ds_update.srcBinding = 1; // copy from SAMPLER binding
-    copy_ds_update.destSet = descriptorSet;
-    copy_ds_update.destBinding = 0; // ERROR : copy to UNIFORM binding
+    copy_ds_update.dstSet = descriptorSet;
+    copy_ds_update.dstBinding = 0; // ERROR : copy to UNIFORM binding
     copy_ds_update.descriptorCount = 1; // copy 1 descriptor
     vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
 
@@ -3514,8 +3514,8 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy_ds_update.srcSet = descriptorSet;
     copy_ds_update.srcBinding = 3; // ERROR : Invalid binding for matching layout
-    copy_ds_update.destSet = descriptorSet;
-    copy_ds_update.destBinding = 0;
+    copy_ds_update.dstSet = descriptorSet;
+    copy_ds_update.dstBinding = 0;
     copy_ds_update.descriptorCount = 1; // copy 1 descriptor
     vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
 
@@ -3529,8 +3529,8 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
     copy_ds_update.srcSet = descriptorSet;
     copy_ds_update.srcBinding = 1;
-    copy_ds_update.destSet = descriptorSet;
-    copy_ds_update.destBinding = 0;
+    copy_ds_update.dstSet = descriptorSet;
+    copy_ds_update.dstBinding = 0;
     copy_ds_update.descriptorCount = 5; // ERROR copy 5 descriptors (out of bounds for layout)
     vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
 
@@ -3547,7 +3547,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
 
 TEST_F(VkLayerTest, NumSamplesMismatch)
 {
-    // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount
+    // Create CommandBuffer where MSAA samples doesn't match RenderPass sampleCount
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
@@ -3587,18 +3587,18 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterSamples = 4;
+        pipe_ms_state_ci.rasterizationSamples = 4;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -3623,7 +3623,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after binding RenderPass w/ mismatched MSAA from PSO.";
@@ -3638,7 +3638,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
 
 TEST_F(VkLayerTest, ClearCmdNoDraw)
 {
-    // Create CmdBuffer where we add ClearCmd for FB Color attachment prior to issuing a Draw
+    // Create CommandBuffer where we add ClearCmd for FB Color attachment prior to issuing a Draw
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
@@ -3679,18 +3679,18 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterSamples = 4;
+        pipe_ms_state_ci.rasterizationSamples = 4;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -3728,7 +3728,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     color_attachment.colorAttachment = 0;
     VkClearRect clear_rect = { { { 0, 0 }, { (int)m_width, (int)m_height } } };
 
-    vkCmdClearAttachments(m_cmdBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
+    vkCmdClearAttachments(m_commandBuffer->GetBufferHandle(), 1, &color_attachment, 1, &clear_rect);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_NE(0, msgFlags & VK_DBG_REPORT_WARN_BIT) << "Did not receive error after issuing Clear Cmd on FB color attachment prior to Draw Cmd.";
     if (!strstr(msgString.c_str(),"vkCmdClearAttachments() issued on CB object ")) {
@@ -3742,7 +3742,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
 
 TEST_F(VkLayerTest, VtxBufferBadIndex)
 {
-    // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount
+    // Create CommandBuffer where MSAA samples doesn't match RenderPass sampleCount
     VkFlags         msgFlags;
     std::string     msgString;
     VkResult        err;
@@ -3784,18 +3784,18 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterSamples = 1;
+        pipe_ms_state_ci.rasterizationSamples = 1;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -3822,7 +3822,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     pipe.CreateVKPipeline(pipeline_layout, renderPass());
 
     BeginCommandBuffer();
-    vkCmdBindPipeline(m_cmdBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // Don't care about actual data, just need to get to draw to flag error
     static const float vbo_data[3] = {1.f, 0.f, 1.f};
     VkConstantBufferObj vbo(m_device, sizeof(vbo_data), sizeof(float), (const void*) &vbo_data);
@@ -3844,7 +3844,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
 #if THREADING_TESTS
 #if GTEST_IS_THREADSAFE
 struct thread_data_struct {
-    VkCmdBuffer cmdBuffer;
+    VkCommandBuffer commandBuffer;
     VkEvent event;
     bool bailout;
 };
@@ -3855,7 +3855,7 @@ extern "C" void *AddToCommandBuffer(void *arg)
     std::string msgString;
 
     for (int i = 0; i<10000; i++) {
-        vkCmdSetEvent(data->cmdBuffer, data->event, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS);
+        vkCmdSetEvent(data->commandBuffer, data->event, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS);
         if (data->bailout) {
             break;
         }
@@ -3863,7 +3863,7 @@ extern "C" void *AddToCommandBuffer(void *arg)
     return NULL;
 }
 
-TEST_F(VkLayerTest, ThreadCmdBufferCollision)
+TEST_F(VkLayerTest, ThreadCommandBufferCollision)
 {
     VkFlags msgFlags;
     std::string msgString;
@@ -3875,11 +3875,11 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
 
     m_errorMonitor->ClearState();
 
-    // Calls AllocCommandBuffers
-    VkCommandBufferObj cmdBuffer(m_device, m_cmdPool);
+    // Calls AllocateCommandBuffers
+    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
 
     // Avoid creating RenderPass
-    cmdBuffer.BeginCommandBuffer();
+    commandBuffer.BeginCommandBuffer();
 
     VkEventCreateInfo event_info;
     VkEvent event;
@@ -3895,7 +3895,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     ASSERT_VK_SUCCESS(err);
 
     struct thread_data_struct data;
-    data.cmdBuffer = cmdBuffer.GetBufferHandle();
+    data.commandBuffer = commandBuffer.GetBufferHandle();
     data.event = event;
     data.bailout = false;
     m_errorMonitor->SetBailout(&data.bailout);
@@ -3905,7 +3905,7 @@ TEST_F(VkLayerTest, ThreadCmdBufferCollision)
     AddToCommandBuffer(&data);
 
     test_platform_thread_join(thread, NULL);
-    cmdBuffer.EndCommandBuffer();
+    commandBuffer.EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err from using one VkCommandBufferObj in two threads";
@@ -4053,7 +4053,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4102,7 +4102,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4153,7 +4153,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4211,7 +4211,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4260,7 +4260,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4319,7 +4319,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4379,7 +4379,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4430,7 +4430,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4483,7 +4483,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4533,7 +4533,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 
     VkDescriptorSetObj descriptorSet(m_device);
     descriptorSet.AppendDummy();
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     m_errorMonitor->ClearState();
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
@@ -4586,7 +4586,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
     ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
 
     VkDescriptorSetObj descriptorSet(m_device);
-    descriptorSet.CreateVKDescriptorSet(m_cmdBuffer);
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
 
     pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
 
@@ -4707,14 +4707,14 @@ TEST_F(VkLayerTest, UpdateBufferAlignment)
 
     BeginCommandBuffer();
     // Introduce failure by using offset that is not multiple of 4
-    m_cmdBuffer->UpdateBuffer(buffer.handle(), 1, 4, updateData);
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 1, 4, updateData);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling UpdateBuffer with bad offset";
-    if (!strstr(msgString.c_str(),"destOffset, is not a multiple of 4")) {
-        FAIL() << "Error received was not 'vkCmdUpdateBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4'";
+    if (!strstr(msgString.c_str(),"dstOffset, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdUpdateBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4'";
     }
     // Introduce failure by using size that is not multiple of 4
-    m_cmdBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
+    m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling UpdateBuffer with bad size";
     if (!strstr(msgString.c_str(),"dataSize, is not a multiple of 4")) {
@@ -4736,14 +4736,14 @@ TEST_F(VkLayerTest, FillBufferAlignment)
 
     BeginCommandBuffer();
     // Introduce failure by using offset that is not multiple of 4
-    m_cmdBuffer->FillBuffer(buffer.handle(), 1, 4, 0x11111111);
+    m_commandBuffer->FillBuffer(buffer.handle(), 1, 4, 0x11111111);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling FillBuffer with bad offset";
-    if (!strstr(msgString.c_str(),"destOffset, is not a multiple of 4")) {
-        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize destOffset, is not a multiple of 4'";
+    if (!strstr(msgString.c_str(),"dstOffset, is not a multiple of 4")) {
+        FAIL() << "Error received was not 'vkCmdFillBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4'";
     }
     // Introduce failure by using size that is not multiple of 4
-    m_cmdBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
+    m_commandBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
     msgFlags = m_errorMonitor->GetState(&msgString);
     ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive an err after calling FillBuffer with bad size";
     if (!strstr(msgString.c_str(),"size, is not a multiple of 4")) {
@@ -4794,9 +4794,9 @@ TEST_F(VkLayerTest, InvalidImageView)
         image_view_create_info.image = image;
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         image_view_create_info.format = tex_format;
-        image_view_create_info.subresourceRange.numLayers = 1;
+        image_view_create_info.subresourceRange.layerCount = 1;
         image_view_create_info.subresourceRange.baseMipLevel = 10; // cause an error
-        image_view_create_info.subresourceRange.numLevels = 1;
+        image_view_create_info.subresourceRange.levelCount = 1;
         image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     VkImageView view;
@@ -4848,7 +4848,7 @@ TEST_F(VkLayerTest, InvalidImageViewAspect)
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         image_view_create_info.format = tex_format;
         image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.numLevels = 1;
+        image_view_create_info.subresourceRange.levelCount = 1;
         // Cause an error by setting an invalid image aspect
         image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_METADATA_BIT;
 
@@ -4874,7 +4874,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
 
     // Create two images of different types and try to copy between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -4891,20 +4891,20 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -4914,19 +4914,19 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -4934,21 +4934,21 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
     copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
-    copyRegion.srcSubresource.numLayers = 0;
+    copyRegion.srcSubresource.layerCount = 0;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
-    copyRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyRegion.destSubresource.mipLevel = 0;
-    copyRegion.destSubresource.baseArrayLayer = 0;
-    copyRegion.destSubresource.numLayers = 0;
-    copyRegion.destOffset.x = 0;
-    copyRegion.destOffset.y = 0;
-    copyRegion.destOffset.z = 0;
+    copyRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 0;
+    copyRegion.dstOffset.x = 0;
+    copyRegion.dstOffset.y = 0;
+    copyRegion.dstOffset.z = 0;
     copyRegion.extent.width = 1;
     copyRegion.extent.height = 1;
     copyRegion.extent.depth = 1;
-    m_cmdBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -4958,7 +4958,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -4980,7 +4980,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
 
     // Create two images of different types and try to copy between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -4997,20 +4997,20 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -5020,19 +5020,19 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -5040,21 +5040,21 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
-    copyRegion.srcSubresource.numLayers = 0;
+    copyRegion.srcSubresource.layerCount = 0;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
-    copyRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    copyRegion.destSubresource.mipLevel = 0;
-    copyRegion.destSubresource.baseArrayLayer = 0;
-    copyRegion.destSubresource.numLayers = 0;
-    copyRegion.destOffset.x = 0;
-    copyRegion.destOffset.y = 0;
-    copyRegion.destOffset.z = 0;
+    copyRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.mipLevel = 0;
+    copyRegion.dstSubresource.baseArrayLayer = 0;
+    copyRegion.dstSubresource.layerCount = 0;
+    copyRegion.dstOffset.x = 0;
+    copyRegion.dstOffset.y = 0;
+    copyRegion.dstOffset.z = 0;
     copyRegion.extent.width = 1;
     copyRegion.extent.height = 1;
     copyRegion.extent.depth = 1;
-    m_cmdBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+    m_commandBuffer->CopyImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -5064,7 +5064,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -5081,7 +5081,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
 
     // Create two images of sample count 1 and try to Resolve between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -5098,20 +5098,20 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
         image_create_info.arrayLayers = 1;
         image_create_info.samples = 1;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
     ASSERT_VK_SUCCESS(err);
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -5121,19 +5121,19 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -5144,21 +5144,21 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
-    resolveRegion.srcSubresource.numLayers = 0;
+    resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    resolveRegion.destSubresource.mipLevel = 0;
-    resolveRegion.destSubresource.baseArrayLayer = 0;
-    resolveRegion.destSubresource.numLayers = 0;
-    resolveRegion.destOffset.x = 0;
-    resolveRegion.destOffset.y = 0;
-    resolveRegion.destOffset.z = 0;
+    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.mipLevel = 0;
+    resolveRegion.dstSubresource.baseArrayLayer = 0;
+    resolveRegion.dstSubresource.layerCount = 0;
+    resolveRegion.dstOffset.x = 0;
+    resolveRegion.dstOffset.y = 0;
+    resolveRegion.dstOffset.z = 0;
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -5168,7 +5168,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -5185,7 +5185,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
 
     // Create two images of sample count 2 and try to Resolve between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -5203,7 +5203,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
@@ -5211,13 +5211,13 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -5227,19 +5227,19 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -5250,21 +5250,21 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
-    resolveRegion.srcSubresource.numLayers = 0;
+    resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    resolveRegion.destSubresource.mipLevel = 0;
-    resolveRegion.destSubresource.baseArrayLayer = 0;
-    resolveRegion.destSubresource.numLayers = 0;
-    resolveRegion.destOffset.x = 0;
-    resolveRegion.destOffset.y = 0;
-    resolveRegion.destOffset.z = 0;
+    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.mipLevel = 0;
+    resolveRegion.dstSubresource.baseArrayLayer = 0;
+    resolveRegion.dstSubresource.layerCount = 0;
+    resolveRegion.dstOffset.x = 0;
+    resolveRegion.dstOffset.y = 0;
+    resolveRegion.dstOffset.z = 0;
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -5274,7 +5274,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -5291,7 +5291,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
 
     // Create two images of different types and try to copy between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -5309,7 +5309,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
@@ -5318,14 +5318,14 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         // Set format to something other than source image
         image_create_info.format = VK_FORMAT_R32_SFLOAT;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.samples = 1;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -5335,19 +5335,19 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -5358,21 +5358,21 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
-    resolveRegion.srcSubresource.numLayers = 0;
+    resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    resolveRegion.destSubresource.mipLevel = 0;
-    resolveRegion.destSubresource.baseArrayLayer = 0;
-    resolveRegion.destSubresource.numLayers = 0;
-    resolveRegion.destOffset.x = 0;
-    resolveRegion.destOffset.y = 0;
-    resolveRegion.destOffset.z = 0;
+    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.mipLevel = 0;
+    resolveRegion.dstSubresource.baseArrayLayer = 0;
+    resolveRegion.dstSubresource.layerCount = 0;
+    resolveRegion.dstOffset.x = 0;
+    resolveRegion.dstOffset.y = 0;
+    resolveRegion.dstOffset.z = 0;
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -5382,7 +5382,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -5399,7 +5399,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
 
     // Create two images of different types and try to copy between them
     VkImage               srcImage;
-    VkImage               destImage;
+    VkImage               dstImage;
     VkDeviceMemory        srcMem;
     VkDeviceMemory        destMem;
     VkMemoryRequirements  memReqs;
@@ -5417,7 +5417,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.samples = 2;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &srcImage);
@@ -5425,14 +5425,14 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
 
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
         // Note: Some implementations expect color attachment usage for any multisample surface
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.samples = 1;
 
-    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &destImage);
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
 
     // Allocate memory
-    VkMemoryAllocInfo memAlloc = {};
+    VkMemoryAllocateInfo memAlloc = {};
         memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
@@ -5442,19 +5442,19 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &srcMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &srcMem);
     ASSERT_VK_SUCCESS(err);
 
-    vkGetImageMemoryRequirements(m_device->device(), destImage, &memReqs);
+    vkGetImageMemoryRequirements(m_device->device(), dstImage, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
     ASSERT_TRUE(pass);
-    err = vkAllocMemory(m_device->device(), &memAlloc, NULL, &destMem);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &destMem);
     ASSERT_VK_SUCCESS(err);
 
     err = vkBindImageMemory(m_device->device(), srcImage, srcMem, 0);
     ASSERT_VK_SUCCESS(err);
-    err = vkBindImageMemory(m_device->device(), destImage, destMem, 0);
+    err = vkBindImageMemory(m_device->device(), dstImage, destMem, 0);
     ASSERT_VK_SUCCESS(err);
 
     BeginCommandBuffer();
@@ -5465,21 +5465,21 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
-    resolveRegion.srcSubresource.numLayers = 0;
+    resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    resolveRegion.destSubresource.mipLevel = 0;
-    resolveRegion.destSubresource.baseArrayLayer = 0;
-    resolveRegion.destSubresource.numLayers = 0;
-    resolveRegion.destOffset.x = 0;
-    resolveRegion.destOffset.y = 0;
-    resolveRegion.destOffset.z = 0;
+    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.mipLevel = 0;
+    resolveRegion.dstSubresource.baseArrayLayer = 0;
+    resolveRegion.dstSubresource.layerCount = 0;
+    resolveRegion.dstOffset.x = 0;
+    resolveRegion.dstOffset.y = 0;
+    resolveRegion.dstOffset.z = 0;
     resolveRegion.extent.width = 1;
     resolveRegion.extent.height = 1;
     resolveRegion.extent.depth = 1;
-    m_cmdBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, destImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
+    m_commandBuffer->ResolveImage(srcImage, VK_IMAGE_LAYOUT_GENERAL, dstImage, VK_IMAGE_LAYOUT_GENERAL, 1, &resolveRegion);
     EndCommandBuffer();
 
     msgFlags = m_errorMonitor->GetState(&msgString);
@@ -5489,7 +5489,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     }
 
     vkDestroyImage(m_device->device(), srcImage, NULL);
-    vkDestroyImage(m_device->device(), destImage, NULL);
+    vkDestroyImage(m_device->device(), dstImage, NULL);
     vkFreeMemory(m_device->device(), srcMem, NULL);
     vkFreeMemory(m_device->device(), destMem, NULL);
 }
@@ -5537,12 +5537,12 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
     ASSERT_VK_SUCCESS(err);
 
     VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocInfo alloc_info = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
     VkImage               image_bad;
@@ -5582,8 +5582,8 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
         image_view_create_info.format = tex_format_bad;
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.numLayers = 1;
-        image_view_create_info.subresourceRange.numLevels = 1;
+        image_view_create_info.subresourceRange.layerCount = 1;
+        image_view_create_info.subresourceRange.levelCount = 1;
         image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
     VkImageView view;

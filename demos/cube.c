@@ -106,7 +106,7 @@ struct texture_object {
     VkImage image;
     VkImageLayout imageLayout;
 
-    VkMemoryAllocInfo mem_alloc;
+    VkMemoryAllocateInfo mem_alloc;
     VkDeviceMemory mem;
     VkImageView view;
     int32_t tex_width, tex_height;
@@ -302,7 +302,7 @@ VkBool32 dbgFunc(
 
 typedef struct _SwapchainBuffers {
     VkImage image;
-    VkCmdBuffer cmd;
+    VkCommandBuffer cmd;
     VkImageView view;
 } SwapchainBuffers;
 
@@ -350,13 +350,13 @@ struct demo {
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
 
-    VkCmdPool cmd_pool;
+    VkCommandPool cmd_pool;
 
     struct {
         VkFormat format;
 
         VkImage image;
-        VkMemoryAllocInfo mem_alloc;
+        VkMemoryAllocateInfo mem_alloc;
         VkDeviceMemory mem;
         VkImageView view;
     } depth;
@@ -365,12 +365,12 @@ struct demo {
 
     struct {
         VkBuffer buf;
-        VkMemoryAllocInfo mem_alloc;
+        VkMemoryAllocateInfo mem_alloc;
         VkDeviceMemory mem;
         VkDescriptorBufferInfo buffer_info;
     } uniform_data;
 
-    VkCmdBuffer cmd;  // Buffer for initialization commands
+    VkCommandBuffer cmd;  // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;
     VkDescriptorSetLayout desc_layout;
     VkPipelineCache pipelineCache;
@@ -437,7 +437,7 @@ static void demo_flush_init_cmd(struct demo *demo)
     err = vkEndCommandBuffer(demo->cmd);
     assert(!err);
 
-    const VkCmdBuffer cmd_bufs[] = { demo->cmd };
+    const VkCommandBuffer cmd_bufs[] = { demo->cmd };
     VkFence nullFence = VK_NULL_HANDLE;
     VkSubmitInfo submit_info = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -470,19 +470,19 @@ static void demo_set_image_layout(
     VkResult U_ASSERT_ONLY err;
 
     if (demo->cmd == VK_NULL_HANDLE) {
-        const VkCmdBufferAllocInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
+        const VkCommandBufferAllocateInfo cmd = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
             .pNext = NULL,
-            .cmdPool = demo->cmd_pool,
-            .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
+            .commandPool = demo->cmd_pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
             .bufferCount = 1,
         };
 
-        err = vkAllocCommandBuffers(demo->device, &cmd, &demo->cmd);
+        err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->cmd);
         assert(!err);
 
-        VkCmdBufferBeginInfo cmd_buf_info = {
-            .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+        VkCommandBufferBeginInfo cmd_buf_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .pNext = NULL,
             .flags = 0,
             .renderPass = VK_NULL_HANDLE,
@@ -504,7 +504,7 @@ static void demo_set_image_layout(
         .subresourceRange = { aspectMask, 0, 1, 0, 0 }
     };
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
         image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
     }
@@ -522,10 +522,10 @@ static void demo_set_image_layout(
     vkCmdPipelineBarrier(demo->cmd, src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 }
 
-static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
+static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
 {
-    const VkCmdBufferBeginInfo cmd_buf_info = {
-        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+    const VkCommandBufferBeginInfo cmd_buf_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = NULL,
         .flags = 0,
         .renderPass = VK_NULL_HANDLE,
@@ -587,7 +587,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCmdBuffer cmd_buf)
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
     };
 
@@ -854,9 +854,9 @@ static void demo_prepare_buffers(struct demo *demo)
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
-                .numLevels = 1,
+                .levelCount = 1,
                 .baseArrayLayer = 0,
-                .numLayers = 1
+                .layerCount = 1
             },
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .flags = 0,
@@ -904,9 +904,9 @@ static void demo_prepare_depth(struct demo *demo)
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,
-            .numLevels = 1,
+            .levelCount = 1,
             .baseArrayLayer = 0,
-            .numLayers = 1
+            .layerCount = 1
         },
         .flags = 0,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
@@ -939,7 +939,7 @@ static void demo_prepare_depth(struct demo *demo)
     assert(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &demo->depth.mem_alloc,
+    err = vkAllocateMemory(demo->device, &demo->depth.mem_alloc,
             NULL, &demo->depth.mem);
     assert(!err);
 
@@ -1064,7 +1064,7 @@ static void demo_prepare_texture_image(struct demo *demo,
     assert(pass);
 
     /* allocate memory */
-    err = vkAllocMemory(demo->device, &tex_obj->mem_alloc, NULL,
+    err = vkAllocateMemory(demo->device, &tex_obj->mem_alloc, NULL,
                 &(tex_obj->mem));
     assert(!err);
 
@@ -1130,38 +1130,38 @@ static void demo_prepare_textures(struct demo *demo)
 
             memset(&staging_texture, 0, sizeof(staging_texture));
             demo_prepare_texture_image(demo, tex_files[i], &staging_texture,
-                                       VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                                       VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
             demo_prepare_texture_image(demo, tex_files[i], &demo->textures[i],
                                        VK_IMAGE_TILING_OPTIMAL,
-                                       (VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
+                                       (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
                                        VK_MEMORY_PROPERTY_DEVICE_ONLY);
 
             demo_set_image_layout(demo, staging_texture.image,
                                    VK_IMAGE_ASPECT_COLOR_BIT,
                                    staging_texture.imageLayout,
-                                   VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
+                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
             demo_set_image_layout(demo, demo->textures[i].image,
                                    VK_IMAGE_ASPECT_COLOR_BIT,
                                    demo->textures[i].imageLayout,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
             VkImageCopy copy_region = {
                 .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
                 .srcOffset = { 0, 0, 0 },
-                .destSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
-                .destOffset = { 0, 0, 0 },
+                .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+                .dstOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };
             vkCmdCopyImage(demo->cmd,
-                            staging_texture.image, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                            demo->textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                            staging_texture.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                            demo->textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             1, &copy_region);
 
             demo_set_image_layout(demo, demo->textures[i].image,
                                    VK_IMAGE_ASPECT_COLOR_BIT,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                    demo->textures[i].imageLayout);
 
             demo_flush_init_cmd(demo);
@@ -1265,7 +1265,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
                                       &demo->uniform_data.mem_alloc.memoryTypeIndex);
     assert(pass);
 
-    err = vkAllocMemory(demo->device, &demo->uniform_data.mem_alloc,
+    err = vkAllocateMemory(demo->device, &demo->uniform_data.mem_alloc,
             NULL, &(demo->uniform_data.mem));
     assert(!err);
 
@@ -1554,12 +1554,12 @@ static void demo_prepare_pipeline(struct demo *demo)
     VkPipelineCacheCreateInfo pipelineCache;
     VkPipelineVertexInputStateCreateInfo   vi;
     VkPipelineInputAssemblyStateCreateInfo ia;
-    VkPipelineRasterStateCreateInfo        rs;
+    VkPipelineRasterizationStateCreateInfo        rs;
     VkPipelineColorBlendStateCreateInfo    cb;
     VkPipelineDepthStencilStateCreateInfo  ds;
     VkPipelineViewportStateCreateInfo      vp;
     VkPipelineMultisampleStateCreateInfo   ms;
-    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo       dynamicState;
     VkResult U_ASSERT_ONLY err;
 
@@ -1583,7 +1583,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rs.depthClampEnable = VK_FALSE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
@@ -1608,7 +1608,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
-    ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
     ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
@@ -1619,7 +1619,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&ms, 0, sizeof(ms));
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = 1;
+    ms.rasterizationSamples = 1;
 
     // Two stages: vs and fs
     pipeline.stageCount = 2;
@@ -1640,7 +1640,7 @@ static void demo_prepare_pipeline(struct demo *demo)
 
     pipeline.pVertexInputState   = &vi;
     pipeline.pInputAssemblyState = &ia;
-    pipeline.pRasterState        = &rs;
+    pipeline.pRasterizationState        = &rs;
     pipeline.pColorBlendState    = &cb;
     pipeline.pMultisampleState   = &ms;
     pipeline.pViewportState      = &vp;
@@ -1695,14 +1695,14 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
-    VkDescriptorSetAllocInfo alloc_info = {
+    VkDescriptorSetAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
         .pNext = NULL,
         .descriptorPool = demo->desc_pool,
         .setLayoutCount = 1,
         .pSetLayouts = &demo->desc_layout
     };
-    err = vkAllocDescriptorSets(demo->device, &alloc_info, &demo->desc_set);
+    err = vkAllocateDescriptorSets(demo->device, &alloc_info, &demo->desc_set);
     assert(!err);
 
     memset(&tex_descs, 0, sizeof(tex_descs));
@@ -1715,14 +1715,14 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     memset(&writes, 0, sizeof(writes));
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[0].destSet = demo->desc_set;
+    writes[0].dstSet = demo->desc_set;
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &demo->uniform_data.buffer_info;
 
     writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[1].destSet = demo->desc_set;
-    writes[1].destBinding = 1;
+    writes[1].dstSet = demo->desc_set;
+    writes[1].dstBinding = 1;
     writes[1].descriptorCount = DEMO_TEXTURE_COUNT;
     writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     writes[1].pImageInfo = tex_descs;
@@ -1762,8 +1762,8 @@ static void demo_prepare(struct demo *demo)
 {
     VkResult U_ASSERT_ONLY err;
 
-    const VkCmdPoolCreateInfo cmd_pool_info = {
-        .sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+    const VkCommandPoolCreateInfo cmd_pool_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = demo->graphics_queue_node_index,
         .flags = 0,
@@ -1771,11 +1771,11 @@ static void demo_prepare(struct demo *demo)
     err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL, &demo->cmd_pool);
     assert(!err);
 
-    const VkCmdBufferAllocInfo cmd = {
-        .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO,
+    const VkCommandBufferAllocateInfo cmd = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
         .pNext = NULL,
-        .cmdPool = demo->cmd_pool,
-        .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
+        .commandPool = demo->cmd_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .bufferCount = 1,
     };
 
@@ -1789,7 +1789,7 @@ static void demo_prepare(struct demo *demo)
     demo_prepare_pipeline(demo);
 
     for (uint32_t i = 0; i < demo->swapchainImageCount; i++) {
-        err = vkAllocCommandBuffers(demo->device, &cmd, &demo->buffers[i].cmd);
+        err = vkAllocateCommandBuffers(demo->device, &cmd, &demo->buffers[i].cmd);
         assert(!err);
     }
 
@@ -2237,11 +2237,11 @@ static void demo_init_vk(struct demo *demo)
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp("VK_EXT_KHR_swapchain", instance_extensions[i].extName)) {
+        if (!strcmp("VK_EXT_KHR_swapchain", instance_extensions[i].extensionName)) {
             swapchainExtFound = 1;
             extension_names[enabled_extension_count++] = "VK_EXT_KHR_swapchain";
         }
-        if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extName)) {
+        if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
                 extension_names[enabled_extension_count++] = VK_DEBUG_REPORT_EXTENSION_NAME;
             }
@@ -2259,8 +2259,8 @@ static void demo_init_vk(struct demo *demo)
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = NULL,
-        .pAppName = APP_SHORT_NAME,
-        .appVersion = 0,
+        .pApplicationName = APP_SHORT_NAME,
+        .applicationVersion = 0,
         .pEngineName = APP_SHORT_NAME,
         .engineVersion = 0,
         .apiVersion = VK_API_VERSION,
@@ -2268,7 +2268,7 @@ static void demo_init_vk(struct demo *demo)
     VkInstanceCreateInfo inst_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = NULL,
-        .pAppInfo = &app,
+        .pApplicationInfo = &app,
         .enabledLayerNameCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? instance_validation_layers : NULL),
         .enabledExtensionNameCount = enabled_extension_count,
@@ -2346,7 +2346,7 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp("VK_EXT_KHR_device_swapchain", device_extensions[i].extName)) {
+        if (!strcmp("VK_EXT_KHR_device_swapchain", device_extensions[i].extensionName)) {
             swapchainExtFound = 1;
             extension_names[enabled_extension_count++] = "VK_EXT_KHR_device_swapchain";
         }

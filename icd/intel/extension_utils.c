@@ -30,25 +30,25 @@
 
 const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {
-        .extName = VK_DEBUG_REPORT_EXTENSION_NAME,
+        .extensionName = VK_DEBUG_REPORT_EXTENSION_NAME,
         .specVersion = VK_DEBUG_REPORT_EXTENSION_REVISION,
     },
     {
-        .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
         .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
     }
 };
 
 const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
     {
-        .extName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
+        .extensionName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
         .specVersion = VK_EXT_KHR_DEVICE_SWAPCHAIN_REVISION,
     }
 };
 
 bool compare_vk_extension_properties(
         const VkExtensionProperties *op1,
-        const char *extName)
+        const char *extensionName)
 {
-    return strcmp(op1->extName, extName) == 0 ? true : false;
+    return strcmp(op1->extensionName, extensionName) == 0 ? true : false;
 }

@@ -42,7 +42,7 @@
 typedef void (VKAPI *PFN_stringCallback)(char *message);
 
 static const VkExtensionProperties debug_report_extension_info = {
-        .extName = VK_DEBUG_REPORT_EXTENSION_NAME,
+        .extensionName = VK_DEBUG_REPORT_EXTENSION_NAME,
         .specVersion = VK_DEBUG_REPORT_EXTENSION_REVISION,
 };
 
@@ -74,7 +74,7 @@ static VkResult debug_report_DbgCreateMsgCallback(
         void* pUserData,
         VkDbgMsgCallback* pMsgCallback)
 {
-    VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc((struct loader_instance *)instance, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOC_SCOPE_OBJECT);
+    VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc((struct loader_instance *)instance, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

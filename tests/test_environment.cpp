@@ -18,8 +18,8 @@ Environment::Environment() :
     default_dev_(0)
 {
     app_.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_.pAppName = "vk_testing";
-    app_.appVersion = 1;
+    app_.pApplicationName = "vk_testing";
+    app_.applicationVersion = 1;
     app_.pEngineName = "vk_testing";
     app_.engineVersion = 1;
     app_.apiVersion = VK_API_VERSION;
@@ -78,7 +78,7 @@ void Environment::SetUp()
     for (uint32_t i = 0; i < instance_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < instance_extensions.size(); j++) {
-            if (!strcmp(instance_extension_names[i], instance_extensions[j].extName)) {
+            if (!strcmp(instance_extension_names[i], instance_extensions[j].extensionName)) {
                 extFound = 1;
             }
         }
@@ -86,7 +86,7 @@ void Environment::SetUp()
     }
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_;
+    inst_info.pApplicationInfo = &app_;
     inst_info.enabledExtensionNameCount = instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = (instance_extension_names.size()) ? &instance_extension_names[0] : NULL;
     inst_info.enabledLayerNameCount = 0;
@@ -106,7 +106,7 @@ void Environment::SetUp()
     for (uint32_t i = 0; i < device_extension_names.size(); i++) {
         extFound = 0;
         for (uint32_t j = 0; j < device_extensions.size(); j++) {
-            if (!strcmp(device_extension_names[i], device_extensions[j].extName)) {
+            if (!strcmp(device_extension_names[i], device_extensions[j].extensionName)) {
                 extFound = 1;
             }
         }

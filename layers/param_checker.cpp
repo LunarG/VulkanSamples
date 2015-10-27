@@ -287,8 +287,8 @@ bool ValidateEnumerator(VkFormatFeatureFlagBits const& enumerator)
         VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT |
         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_FORMAT_FEATURE_BLIT_SOURCE_BIT |
-        VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT);
+        VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+        VK_FORMAT_FEATURE_BLIT_DST_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -346,13 +346,13 @@ std::string EnumeratorString(VkFormatFeatureFlagBits const& enumerator)
     {
         strings.push_back("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_BLIT_SOURCE_BIT)
+    if(enumerator & VK_FORMAT_FEATURE_BLIT_SRC_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_BLIT_SOURCE_BIT");
+        strings.push_back("VK_FORMAT_FEATURE_BLIT_SRC_BIT");
     }
-    if(enumerator & VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT)
+    if(enumerator & VK_FORMAT_FEATURE_BLIT_DST_BIT)
     {
-        strings.push_back("VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT");
+        strings.push_back("VK_FORMAT_FEATURE_BLIT_DST_BIT");
     }
 
     std::string enumeratorString;
@@ -377,9 +377,9 @@ bool ValidateEnumerator(VkImageUsageFlagBits const& enumerator)
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_STORAGE_BIT |
         VK_IMAGE_USAGE_SAMPLED_BIT |
-        VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT |
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-        VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT);
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -417,17 +417,17 @@ std::string EnumeratorString(VkImageUsageFlagBits const& enumerator)
     {
         strings.push_back("VK_IMAGE_USAGE_SAMPLED_BIT");
     }
-    if(enumerator & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT)
+    if(enumerator & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
     {
-        strings.push_back("VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+        strings.push_back("VK_IMAGE_USAGE_TRANSFER_DST_BIT");
     }
     if(enumerator & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
     {
         strings.push_back("VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT");
     }
-    if(enumerator & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT)
+    if(enumerator & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
     {
-        strings.push_back("VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+        strings.push_back("VK_IMAGE_USAGE_TRANSFER_SRC_BIT");
     }
 
     std::string enumeratorString;
@@ -888,9 +888,9 @@ bool ValidateEnumerator(VkBufferUsageFlagBits const& enumerator)
         VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
         VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
         VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT |
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     if(enumerator & (~allFlags))
     {
@@ -929,17 +929,17 @@ std::string EnumeratorString(VkBufferUsageFlagBits const& enumerator)
     {
         strings.push_back("VK_BUFFER_USAGE_STORAGE_BUFFER_BIT");
     }
-    if(enumerator & VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT)
+    if(enumerator & VK_BUFFER_USAGE_TRANSFER_DST_BIT)
     {
-        strings.push_back("VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+        strings.push_back("VK_BUFFER_USAGE_TRANSFER_DST_BIT");
     }
     if(enumerator & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT)
     {
         strings.push_back("VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT");
     }
-    if(enumerator & VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT)
+    if(enumerator & VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
     {
-        strings.push_back("VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
+        strings.push_back("VK_BUFFER_USAGE_TRANSFER_SRC_BIT");
     }
     if(enumerator & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
     {
@@ -1506,10 +1506,10 @@ std::string EnumeratorString(VkMemoryInputFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkCmdPoolCreateFlagBits const& enumerator)
+bool ValidateEnumerator(VkCommandPoolCreateFlagBits const& enumerator)
 {
-    VkCmdPoolCreateFlagBits allFlags = (VkCmdPoolCreateFlagBits)(VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
-        VK_CMD_POOL_CREATE_TRANSIENT_BIT);
+    VkCommandPoolCreateFlagBits allFlags = (VkCommandPoolCreateFlagBits)(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1519,7 +1519,7 @@ bool ValidateEnumerator(VkCmdPoolCreateFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkCmdPoolCreateFlagBits const& enumerator)
+std::string EnumeratorString(VkCommandPoolCreateFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1527,13 +1527,13 @@ std::string EnumeratorString(VkCmdPoolCreateFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
+    if(enumerator & VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
     {
-        strings.push_back("VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT");
+        strings.push_back("VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT");
     }
-    if(enumerator & VK_CMD_POOL_CREATE_TRANSIENT_BIT)
+    if(enumerator & VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
     {
-        strings.push_back("VK_CMD_POOL_CREATE_TRANSIENT_BIT");
+        strings.push_back("VK_COMMAND_POOL_CREATE_TRANSIENT_BIT");
     }
 
     std::string enumeratorString;
@@ -1551,9 +1551,9 @@ std::string EnumeratorString(VkCmdPoolCreateFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkCmdPoolResetFlagBits const& enumerator)
+bool ValidateEnumerator(VkCommandPoolResetFlagBits const& enumerator)
 {
-    VkCmdPoolResetFlagBits allFlags = (VkCmdPoolResetFlagBits)(VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT);
+    VkCommandPoolResetFlagBits allFlags = (VkCommandPoolResetFlagBits)(VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1563,7 +1563,7 @@ bool ValidateEnumerator(VkCmdPoolResetFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
+std::string EnumeratorString(VkCommandPoolResetFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1571,9 +1571,9 @@ std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT)
+    if(enumerator & VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT)
     {
-        strings.push_back("VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT");
+        strings.push_back("VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT");
     }
 
     std::string enumeratorString;
@@ -1591,11 +1591,11 @@ std::string EnumeratorString(VkCmdPoolResetFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkCmdBufferUsageFlags const& enumerator)
+bool ValidateEnumerator(VkCommandBufferUsageFlags const& enumerator)
 {
-    VkCmdBufferUsageFlags allFlags = (VkCmdBufferUsageFlags)(VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
-        VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT |
-        VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+    VkCommandBufferUsageFlags allFlags = (VkCommandBufferUsageFlags)(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT |
+        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT |
+        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1605,7 +1605,7 @@ bool ValidateEnumerator(VkCmdBufferUsageFlags const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkCmdBufferUsageFlags const& enumerator)
+std::string EnumeratorString(VkCommandBufferUsageFlags const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1613,17 +1613,17 @@ std::string EnumeratorString(VkCmdBufferUsageFlags const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)
+    if(enumerator & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_USAGE_SIMULTANEOUS_USE_BIT");
+        strings.push_back("VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT");
     }
-    if(enumerator & VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+    if(enumerator & VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT");
+        strings.push_back("VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT");
     }
-    if(enumerator & VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)
+    if(enumerator & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT");
+        strings.push_back("VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT");
     }
 
     std::string enumeratorString;
@@ -1641,9 +1641,9 @@ std::string EnumeratorString(VkCmdBufferUsageFlags const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkCmdBufferResetFlagBits const& enumerator)
+bool ValidateEnumerator(VkCommandBufferResetFlagBits const& enumerator)
 {
-    VkCmdBufferResetFlagBits allFlags = (VkCmdBufferResetFlagBits)(VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    VkCommandBufferResetFlagBits allFlags = (VkCommandBufferResetFlagBits)(VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1653,7 +1653,7 @@ bool ValidateEnumerator(VkCmdBufferResetFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkCmdBufferResetFlagBits const& enumerator)
+std::string EnumeratorString(VkCommandBufferResetFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1661,9 +1661,9 @@ std::string EnumeratorString(VkCmdBufferResetFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT)
+    if(enumerator & VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)
     {
-        strings.push_back("VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT");
+        strings.push_back("VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT");
     }
 
     std::string enumeratorString;
@@ -1777,7 +1777,7 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, *pInstance);
@@ -1796,7 +1796,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
 
 VK_LAYER_EXPORT void VKAPI vkDestroyInstance(
     VkInstance instance,
-    const VkAllocCallbacks* pAllocator)
+    const VkAllocationCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
@@ -2042,7 +2042,7 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkDevice* pDevice)
 {
     /*
@@ -2066,7 +2066,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 
 VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     VkDevice device,
-    const VkAllocCallbacks* pAllocator)
+    const VkAllocationCallbacks* pAllocator)
 {
     layer_debug_report_destroy_device(device);
 
@@ -2210,16 +2210,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     return result;
 }
 
-bool PreAllocMemory(
+bool PreAllocateMemory(
     VkDevice device,
-    const VkMemoryAllocInfo* pAllocInfo)
+    const VkMemoryAllocateInfo* pAllocateInfo)
 {
-    if(pAllocInfo != nullptr)
+    if(pAllocateInfo != nullptr)
     {
-    if(pAllocInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO)
+    if(pAllocateInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocMemory parameter, VkStructureType pAllocInfo->sType, is an invalid enumerator");
+        "vkAllocateMemory parameter, VkStructureType pAllocateInfo->sType, is an invalid enumerator");
         return false;
     }
     }
@@ -2227,19 +2227,19 @@ bool PreAllocMemory(
     return true;
 }
 
-bool PostAllocMemory(
+bool PostAllocateMemory(
     VkDevice device,
-    VkDeviceMemory* pMem,
+    VkDeviceMemory* pMemory,
     VkResult result)
 {
 
-    if(pMem != nullptr)
+    if(pMemory != nullptr)
     {
     }
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkAllocMemory parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkAllocateMemory parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -2247,17 +2247,17 @@ bool PostAllocMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
+VK_LAYER_EXPORT VkResult VKAPI vkAllocateMemory(
     VkDevice device,
-    const VkMemoryAllocInfo* pAllocInfo,
-    const VkAllocCallbacks* pAllocator,
-    VkDeviceMemory* pMem)
+    const VkMemoryAllocateInfo* pAllocateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkDeviceMemory* pMemory)
 {
-    PreAllocMemory(device, pAllocInfo);
+    PreAllocateMemory(device, pAllocateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocMemory(device, pAllocInfo, pAllocator, pMem);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
 
-    PostAllocMemory(device, pMem, result);
+    PostAllocateMemory(device, pMemory, result);
 
     return result;
 }
@@ -2307,14 +2307,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
 
 bool PreFlushMappedMemoryRanges(
     VkDevice device,
-    const VkMappedMemoryRange* pMemRanges)
+    const VkMappedMemoryRange* pMemoryRanges)
 {
-    if(pMemRanges != nullptr)
+    if(pMemoryRanges != nullptr)
     {
-    if(pMemRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
+    if(pMemoryRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkFlushMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is an invalid enumerator");
+        "vkFlushMappedMemoryRanges parameter, VkStructureType pMemoryRanges->sType, is an invalid enumerator");
         return false;
     }
     }
@@ -2324,7 +2324,7 @@ bool PreFlushMappedMemoryRanges(
 
 bool PostFlushMappedMemoryRanges(
     VkDevice device,
-    uint32_t memRangeCount,
+    uint32_t memoryRangeCount,
     VkResult result)
 {
 
@@ -2341,28 +2341,28 @@ bool PostFlushMappedMemoryRanges(
 
 VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
     VkDevice device,
-    uint32_t memRangeCount,
-    const VkMappedMemoryRange* pMemRanges)
+    uint32_t memoryRangeCount,
+    const VkMappedMemoryRange* pMemoryRanges)
 {
-    PreFlushMappedMemoryRanges(device, pMemRanges);
+    PreFlushMappedMemoryRanges(device, pMemoryRanges);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-    PostFlushMappedMemoryRanges(device, memRangeCount, result);
+    PostFlushMappedMemoryRanges(device, memoryRangeCount, result);
 
     return result;
 }
 
 bool PreInvalidateMappedMemoryRanges(
     VkDevice device,
-    const VkMappedMemoryRange* pMemRanges)
+    const VkMappedMemoryRange* pMemoryRanges)
 {
-    if(pMemRanges != nullptr)
+    if(pMemoryRanges != nullptr)
     {
-    if(pMemRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
+    if(pMemoryRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkInvalidateMappedMemoryRanges parameter, VkStructureType pMemRanges->sType, is an invalid enumerator");
+        "vkInvalidateMappedMemoryRanges parameter, VkStructureType pMemoryRanges->sType, is an invalid enumerator");
         return false;
     }
     }
@@ -2372,7 +2372,7 @@ bool PreInvalidateMappedMemoryRanges(
 
 bool PostInvalidateMappedMemoryRanges(
     VkDevice device,
-    uint32_t memRangeCount,
+    uint32_t memoryRangeCount,
     VkResult result)
 {
 
@@ -2389,14 +2389,14 @@ bool PostInvalidateMappedMemoryRanges(
 
 VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice device,
-    uint32_t memRangeCount,
-    const VkMappedMemoryRange* pMemRanges)
+    uint32_t memoryRangeCount,
+    const VkMappedMemoryRange* pMemoryRanges)
 {
-    PreInvalidateMappedMemoryRanges(device, pMemRanges);
+    PreInvalidateMappedMemoryRanges(device, pMemoryRanges);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 
-    PostInvalidateMappedMemoryRanges(device, memRangeCount, result);
+    PostInvalidateMappedMemoryRanges(device, memoryRangeCount, result);
 
     return result;
 }
@@ -2429,7 +2429,7 @@ bool PostBindBufferMemory(
     VkDevice device,
     VkBuffer buffer,
     VkDeviceMemory mem,
-    VkDeviceSize memOffset,
+    VkDeviceSize memoryOffset,
     VkResult result)
 {
 
@@ -2450,11 +2450,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindBufferMemory(
     VkDevice device,
     VkBuffer buffer,
     VkDeviceMemory mem,
-    VkDeviceSize memOffset)
+    VkDeviceSize memoryOffset)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->BindBufferMemory(device, buffer, mem, memOffset);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->BindBufferMemory(device, buffer, mem, memoryOffset);
 
-    PostBindBufferMemory(device, buffer, mem, memOffset, result);
+    PostBindBufferMemory(device, buffer, mem, memoryOffset, result);
 
     return result;
 }
@@ -2463,7 +2463,7 @@ bool PostBindImageMemory(
     VkDevice device,
     VkImage image,
     VkDeviceMemory mem,
-    VkDeviceSize memOffset,
+    VkDeviceSize memoryOffset,
     VkResult result)
 {
 
@@ -2484,11 +2484,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemory(
     VkDevice device,
     VkImage image,
     VkDeviceMemory mem,
-    VkDeviceSize memOffset)
+    VkDeviceSize memoryOffset)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->BindImageMemory(device, image, mem, memOffset);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->BindImageMemory(device, image, mem, memoryOffset);
 
-    PostBindImageMemory(device, image, mem, memOffset, result);
+    PostBindImageMemory(device, image, mem, memoryOffset, result);
 
     return result;
 }
@@ -2735,7 +2735,7 @@ bool PostCreateFence(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     VkDevice device,
     const VkFenceCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkFence* pFence)
 {
     PreCreateFence(device, pCreateInfo);
@@ -2905,7 +2905,7 @@ bool PostCreateSemaphore(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkDevice device,
     const VkSemaphoreCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkSemaphore* pSemaphore)
 {
     PreCreateSemaphore(device, pCreateInfo);
@@ -2957,7 +2957,7 @@ bool PostCreateEvent(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkEvent* pEvent)
 {
     PreCreateEvent(device, pCreateInfo);
@@ -3100,7 +3100,7 @@ bool PostCreateQueryPool(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
     VkDevice device,
     const VkQueryPoolCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkQueryPool* pQueryPool)
 {
     PreCreateQueryPool(device, pCreateInfo);
@@ -3209,7 +3209,7 @@ bool PostCreateBuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     VkDevice device,
     const VkBufferCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkBuffer* pBuffer)
 {
     PreCreateBuffer(device, pCreateInfo);
@@ -3268,7 +3268,7 @@ bool PostCreateBufferView(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkBufferView* pView)
 {
     PreCreateBufferView(device, pCreateInfo);
@@ -3351,7 +3351,7 @@ bool PostCreateImage(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     VkDevice device,
     const VkImageCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkImage* pImage)
 {
     PreCreateImage(device, pCreateInfo);
@@ -3490,7 +3490,7 @@ bool PostCreateImageView(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     VkDevice device,
     const VkImageViewCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkImageView* pView)
 {
     PreCreateImageView(device, pCreateInfo);
@@ -3543,7 +3543,7 @@ bool PostCreateShaderModule(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
     VkDevice device,
     const VkShaderModuleCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkShaderModule* pShaderModule)
 {
     PreCreateShaderModule(device, pCreateInfo);
@@ -3595,7 +3595,7 @@ bool PostCreateShader(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
     VkDevice device,
     const VkShaderCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkShader* pShader)
 {
     PreCreateShader(device, pCreateInfo);
@@ -3650,7 +3650,7 @@ bool PostCreatePipelineCache(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
     VkDevice device,
     const VkPipelineCacheCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkPipelineCache* pPipelineCache)
 {
     PreCreatePipelineCache(device, pCreateInfo);
@@ -3715,7 +3715,7 @@ bool PreMergePipelineCaches(
 
 bool PostMergePipelineCaches(
     VkDevice device,
-    VkPipelineCache destCache,
+    VkPipelineCache dstCache,
     uint32_t srcCacheCount,
     VkResult result)
 {
@@ -3734,15 +3734,15 @@ bool PostMergePipelineCaches(
 
 VK_LAYER_EXPORT VkResult VKAPI vkMergePipelineCaches(
     VkDevice device,
-    VkPipelineCache destCache,
+    VkPipelineCache dstCache,
     uint32_t srcCacheCount,
     const VkPipelineCache* pSrcCaches)
 {
     PreMergePipelineCaches(device, pSrcCaches);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->MergePipelineCaches(device, destCache, srcCacheCount, pSrcCaches);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
 
-    PostMergePipelineCaches(device, destCache, srcCacheCount, result);
+    PostMergePipelineCaches(device, dstCache, srcCacheCount, result);
 
     return result;
 }
@@ -3840,32 +3840,32 @@ bool PreCreateGraphicsPipelines(
         return false;
     }
     }
-    if(pCreateInfos->pRasterState != nullptr)
+    if(pCreateInfos->pRasterizationState != nullptr)
     {
-    if(pCreateInfos->pRasterState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO)
+    if(pCreateInfos->pRasterizationState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterState->sType, is an invalid enumerator");
+        "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterizationState->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfos->pRasterState->fillMode > VK_FILL_MODE_END_RANGE)
+    if(pCreateInfos->pRasterizationState->fillMode < VK_FILL_MODE_BEGIN_RANGE ||
+        pCreateInfos->pRasterizationState->fillMode > VK_FILL_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkFillMode pCreateInfos->pRasterState->fillMode, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkFillMode pCreateInfos->pRasterizationState->fillMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK)
+    if(pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterState->cullMode, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
-        pCreateInfos->pRasterState->frontFace > VK_FRONT_FACE_END_RANGE)
+    if(pCreateInfos->pRasterizationState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
+        pCreateInfos->pRasterizationState->frontFace > VK_FRONT_FACE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkFrontFace pCreateInfos->pRasterState->frontFace, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkFrontFace pCreateInfos->pRasterizationState->frontFace, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3975,11 +3975,11 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendColor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->destBlendColor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->destBlendColor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstBlendColor < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstBlendColor > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->destBlendColor, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->dstBlendColor, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->blendOpColor < VK_BLEND_OP_BEGIN_RANGE ||
@@ -3996,11 +3996,11 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->srcBlendAlpha, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha < VK_BLEND_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha > VK_BLEND_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->destBlendAlpha, is an unrecognized enumerator");
+        "vkCreateGraphicsPipelines parameter, VkBlend pCreateInfos->pColorBlendState->pAttachments->dstBlendAlpha, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->blendOpAlpha < VK_BLEND_OP_BEGIN_RANGE ||
@@ -4051,7 +4051,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
     VkPipelineCache pipelineCache,
     uint32_t count,
     const VkGraphicsPipelineCreateInfo* pCreateInfos,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkPipeline* pPipelines)
 {
     PreCreateGraphicsPipelines(device, pCreateInfos);
@@ -4124,7 +4124,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
     VkPipelineCache pipelineCache,
     uint32_t count,
     const VkComputePipelineCreateInfo* pCreateInfos,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkPipeline* pPipelines)
 {
     PreCreateComputePipelines(device, pCreateInfos);
@@ -4182,7 +4182,7 @@ bool PostCreatePipelineLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkPipelineLayout* pPipelineLayout)
 {
     PreCreatePipelineLayout(device, pCreateInfo);
@@ -4290,7 +4290,7 @@ bool PostCreateSampler(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
     VkDevice device,
     const VkSamplerCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkSampler* pSampler)
 {
     PreCreateSampler(device, pCreateInfo);
@@ -4355,7 +4355,7 @@ bool PostCreateDescriptorSetLayout(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkDescriptorSetLayout* pSetLayout)
 {
     PreCreateDescriptorSetLayout(device, pCreateInfo);
@@ -4420,7 +4420,7 @@ bool PostCreateDescriptorPool(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkDescriptorPool* pDescriptorPool)
 {
     PreCreateDescriptorPool(device, pCreateInfo);
@@ -4461,7 +4461,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(
     return result;
 }
 
-bool PreAllocDescriptorSets(
+bool PreAllocateDescriptorSets(
     VkDevice device,
     const VkDescriptorSetLayout* pSetLayouts)
 {
@@ -4472,7 +4472,7 @@ bool PreAllocDescriptorSets(
     return true;
 }
 
-bool PostAllocDescriptorSets(
+bool PostAllocateDescriptorSets(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     uint32_t count,
@@ -4487,7 +4487,7 @@ bool PostAllocDescriptorSets(
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkAllocDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkAllocateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -4495,16 +4495,16 @@ bool PostAllocDescriptorSets(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocDescriptorSets(
+VK_LAYER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
     VkDevice device,
-    const VkDescriptorSetAllocInfo* pAllocInfo,
+    const VkDescriptorSetAllocateInfo* pAllocateInfo,
     VkDescriptorSet* pDescriptorSets)
 {
-    PreAllocDescriptorSets(device, pAllocInfo->pSetLayouts);
+    PreAllocateDescriptorSets(device, pAllocateInfo->pSetLayouts);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocDescriptorSets(device, pAllocInfo, pDescriptorSets);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 
-    PostAllocDescriptorSets(device, pAllocInfo->descriptorPool, pAllocInfo->setLayoutCount, pDescriptorSets, result);
+    PostAllocateDescriptorSets(device, pAllocateInfo->descriptorPool, pAllocateInfo->setLayoutCount, pDescriptorSets, result);
 
     return result;
 }
@@ -4656,7 +4656,7 @@ bool PostCreateFramebuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkFramebuffer* pFramebuffer)
 {
     PreCreateFramebuffer(device, pCreateInfo);
@@ -4821,7 +4821,7 @@ bool PostCreateRenderPass(
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
+    const VkAllocationCallbacks* pAllocator,
     VkRenderPass* pRenderPass)
 {
     PreCreateRenderPass(device, pCreateInfo);
@@ -4859,11 +4859,11 @@ VK_LAYER_EXPORT void VKAPI vkGetRenderAreaGranularity(
 
 bool PreCreateCommandPool(
     VkDevice device,
-    const VkCmdPoolCreateInfo* pCreateInfo)
+    const VkCommandPoolCreateInfo* pCreateInfo)
 {
     if(pCreateInfo != nullptr)
     {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateCommandPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
@@ -4876,11 +4876,11 @@ bool PreCreateCommandPool(
 
 bool PostCreateCommandPool(
     VkDevice device,
-    VkCmdPool* pCmdPool,
+    VkCommandPool* pCommandPool,
     VkResult result)
 {
 
-    if(pCmdPool != nullptr)
+    if(pCommandPool != nullptr)
     {
     }
 
@@ -4896,23 +4896,23 @@ bool PostCreateCommandPool(
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     VkDevice device,
-    const VkCmdPoolCreateInfo* pCreateInfo,
-    const VkAllocCallbacks* pAllocator,
-    VkCmdPool* pCmdPool)
+    const VkCommandPoolCreateInfo* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkCommandPool* pCommandPool)
 {
     PreCreateCommandPool(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCmdPool);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
-    PostCreateCommandPool(device, pCmdPool, result);
+    PostCreateCommandPool(device, pCommandPool, result);
 
     return result;
 }
 
 bool PostResetCommandPool(
     VkDevice device,
-    VkCmdPool cmdPool,
-    VkCmdPoolResetFlags flags,
+    VkCommandPool commandPool,
+    VkCommandPoolResetFlags flags,
     VkResult result)
 {
 
@@ -4930,33 +4930,33 @@ bool PostResetCommandPool(
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(
     VkDevice device,
-    VkCmdPool cmdPool,
-    VkCmdPoolResetFlags flags)
+    VkCommandPool commandPool,
+    VkCommandPoolResetFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetCommandPool(device, cmdPool, flags);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->ResetCommandPool(device, commandPool, flags);
 
-    PostResetCommandPool(device, cmdPool, flags, result);
+    PostResetCommandPool(device, commandPool, flags, result);
 
     return result;
 }
 
 bool PreCreateCommandBuffer(
     VkDevice device,
-    const VkCmdBufferAllocInfo* pCreateInfo)
+    const VkCommandBufferAllocateInfo* pCreateInfo)
 {
     if(pCreateInfo != nullptr)
     {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocCommandBuffers parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
+        "vkAllocateCommandBuffers parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->level < VK_CMD_BUFFER_LEVEL_BEGIN_RANGE ||
-        pCreateInfo->level > VK_CMD_BUFFER_LEVEL_END_RANGE)
+    if(pCreateInfo->level < VK_COMMAND_BUFFER_LEVEL_BEGIN_RANGE ||
+        pCreateInfo->level > VK_COMMAND_BUFFER_LEVEL_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkAllocCommandBuffers parameter, VkCmdBufferLevel pCreateInfo->level, is an unrecognized enumerator");
+        "vkAllocateCommandBuffers parameter, VkCommandBufferLevel pCreateInfo->level, is an unrecognized enumerator");
         return false;
     }
     }
@@ -4966,17 +4966,17 @@ bool PreCreateCommandBuffer(
 
 bool PostCreateCommandBuffer(
     VkDevice device,
-    VkCmdBuffer* pCmdBuffer,
+    VkCommandBuffer* pCommandBuffer,
     VkResult result)
 {
 
-    if(pCmdBuffer != nullptr)
+    if(pCommandBuffer != nullptr)
     {
     }
 
     if(result < VK_SUCCESS)
     {
-        std::string reason = "vkAllocCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
+        std::string reason = "vkAllocateCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
@@ -4984,29 +4984,29 @@ bool PostCreateCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
+VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
     VkDevice device,
-    const VkCmdBufferAllocInfo* pCreateInfo,
-    VkCmdBuffer* pCmdBuffer)
+    const VkCommandBufferAllocateInfo* pCreateInfo,
+    VkCommandBuffer* pCommandBuffer)
 {
     PreCreateCommandBuffer(device, pCreateInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
 
-    PostCreateCommandBuffer(device, pCmdBuffer, result);
+    PostCreateCommandBuffer(device, pCommandBuffer, result);
 
     return result;
 }
 
 bool PreBeginCommandBuffer(
-    VkCmdBuffer cmdBuffer,
-    const VkCmdBufferBeginInfo* pBeginInfo)
+    VkCommandBuffer commandBuffer,
+    const VkCommandBufferBeginInfo* pBeginInfo)
 {
     if(pBeginInfo != nullptr)
     {
-    if(pBeginInfo->sType != VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO)
+    if(pBeginInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkBeginCommandBuffer parameter, VkStructureType pBeginInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -5016,14 +5016,14 @@ bool PreBeginCommandBuffer(
 }
 
 bool PostBeginCommandBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkResult result)
 {
 
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBeginCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
@@ -5031,27 +5031,27 @@ bool PostBeginCommandBuffer(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
-    VkCmdBuffer cmdBuffer,
-    const VkCmdBufferBeginInfo* pBeginInfo)
+    VkCommandBuffer commandBuffer,
+    const VkCommandBufferBeginInfo* pBeginInfo)
 {
-    PreBeginCommandBuffer(cmdBuffer, pBeginInfo);
+    PreBeginCommandBuffer(commandBuffer, pBeginInfo);
 
-    VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
+    VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->BeginCommandBuffer(commandBuffer, pBeginInfo);
 
-    PostBeginCommandBuffer(cmdBuffer, result);
+    PostBeginCommandBuffer(commandBuffer, result);
 
     return result;
 }
 
 bool PostEndCommandBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkResult result)
 {
 
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkEndCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
@@ -5059,18 +5059,18 @@ bool PostEndCommandBuffer(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
-    VkCmdBuffer cmdBuffer)
+    VkCommandBuffer commandBuffer)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);
+    VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->EndCommandBuffer(commandBuffer);
 
-    PostEndCommandBuffer(cmdBuffer, result);
+    PostEndCommandBuffer(commandBuffer, result);
 
     return result;
 }
 
 bool PostResetCommandBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkCmdBufferResetFlags flags,
+    VkCommandBuffer commandBuffer,
+    VkCommandBufferResetFlags flags,
     VkResult result)
 {
 
@@ -5078,7 +5078,7 @@ bool PostResetCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
         return false;
     }
 
@@ -5086,18 +5086,18 @@ bool PostResetCommandBuffer(
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkCmdBufferResetFlags flags)
+    VkCommandBuffer commandBuffer,
+    VkCommandBufferResetFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
+    VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->ResetCommandBuffer(commandBuffer, flags);
 
-    PostResetCommandBuffer(cmdBuffer, flags, result);
+    PostResetCommandBuffer(commandBuffer, flags, result);
 
     return result;
 }
 
 bool PostCmdBindPipeline(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline pipeline)
 {
@@ -5105,7 +5105,7 @@ bool PostCmdBindPipeline(
     if(pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindPipeline parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
@@ -5115,62 +5115,62 @@ bool PostCmdBindPipeline(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline pipeline)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 
-    PostCmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+    PostCmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetViewport(commandBuffer, viewportCount, pViewports);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, scissorCount, pScissors);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
+VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetLineWidth(cmdBuffer, lineWidth);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(VkCmdBuffer cmdBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCmdBuffer cmdBuffer, const float blendConstants[4])
+VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConstants);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetBlendConstants(commandBuffer, blendConstants);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds)
+VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, stencilCompareMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, stencilWriteMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
+VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, stencilReference);
 }
 
 bool PreCmdBindDescriptorSets(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkDescriptorSet* pDescriptorSets,
     const uint32_t* pDynamicOffsets)
 {
@@ -5186,7 +5186,7 @@ bool PreCmdBindDescriptorSets(
 }
 
 bool PostCmdBindDescriptorSets(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipelineLayout layout,
     uint32_t firstSet,
@@ -5197,7 +5197,7 @@ bool PostCmdBindDescriptorSets(
     if(pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindDescriptorSets parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
@@ -5210,7 +5210,7 @@ bool PostCmdBindDescriptorSets(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipelineLayout layout,
     uint32_t firstSet,
@@ -5219,15 +5219,15 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
     uint32_t dynamicOffsetCount,
     const uint32_t* pDynamicOffsets)
 {
-    PreCmdBindDescriptorSets(cmdBuffer, pDescriptorSets, pDynamicOffsets);
+    PreCmdBindDescriptorSets(commandBuffer, pDescriptorSets, pDynamicOffsets);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 
-    PostCmdBindDescriptorSets(cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, dynamicOffsetCount);
+    PostCmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount, dynamicOffsetCount);
 }
 
 bool PostCmdBindIndexBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     VkIndexType indexType)
@@ -5238,7 +5238,7 @@ bool PostCmdBindIndexBuffer(
     if(indexType < VK_INDEX_TYPE_BEGIN_RANGE ||
         indexType > VK_INDEX_TYPE_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindIndexBuffer parameter, VkIndexType indexType, is an unrecognized enumerator");
         return false;
     }
@@ -5247,18 +5247,18 @@ bool PostCmdBindIndexBuffer(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     VkIndexType indexType)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 
-    PostCmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+    PostCmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
 bool PreCmdBindVertexBuffers(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkBuffer* pBuffers,
     const VkDeviceSize* pOffsets)
 {
@@ -5274,7 +5274,7 @@ bool PreCmdBindVertexBuffers(
 }
 
 bool PostCmdBindVertexBuffers(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t startBinding,
     uint32_t bindingCount)
 {
@@ -5285,21 +5285,21 @@ bool PostCmdBindVertexBuffers(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t startBinding,
     uint32_t bindingCount,
     const VkBuffer* pBuffers,
     const VkDeviceSize* pOffsets)
 {
-    PreCmdBindVertexBuffers(cmdBuffer, pBuffers, pOffsets);
+    PreCmdBindVertexBuffers(commandBuffer, pBuffers, pOffsets);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 
-    PostCmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount);
+    PostCmdBindVertexBuffers(commandBuffer, startBinding, bindingCount);
 }
 
 bool PostCmdDraw(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t firstVertex,
     uint32_t vertexCount,
     uint32_t firstInstance,
@@ -5314,19 +5314,19 @@ bool PostCmdDraw(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDraw(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t vertexCount,
     uint32_t instanceCount,
     uint32_t firstVertex,
     uint32_t firstInstance)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDraw(cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
-    PostCmdDraw(cmdBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
+    PostCmdDraw(commandBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
 }
 
 bool PostCmdDrawIndexed(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t firstIndex,
     uint32_t indexCount,
     int32_t vertexOffset,
@@ -5343,20 +5343,20 @@ bool PostCmdDrawIndexed(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t indexCount,
     uint32_t instanceCount,
     uint32_t firstIndex,
     int32_t vertexOffset,
     uint32_t firstInstance)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDrawIndexed(cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 
-    PostCmdDrawIndexed(cmdBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
+    PostCmdDrawIndexed(commandBuffer, firstIndex, indexCount, vertexOffset, firstInstance, instanceCount);
 }
 
 bool PostCmdDrawIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     uint32_t count,
@@ -5371,19 +5371,19 @@ bool PostCmdDrawIndirect(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     uint32_t count,
     uint32_t stride)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
 
-    PostCmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+    PostCmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
 bool PostCmdDrawIndexedIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     uint32_t count,
@@ -5398,19 +5398,19 @@ bool PostCmdDrawIndexedIndirect(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
     uint32_t count,
     uint32_t stride)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
 
-    PostCmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+    PostCmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
 bool PostCmdDispatch(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t x,
     uint32_t y,
     uint32_t z)
@@ -5423,18 +5423,18 @@ bool PostCmdDispatch(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatch(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t x,
     uint32_t y,
     uint32_t z)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDispatch(cmdBuffer, x, y, z);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDispatch(commandBuffer, x, y, z);
 
-    PostCmdDispatch(cmdBuffer, x, y, z);
+    PostCmdDispatch(commandBuffer, x, y, z);
 }
 
 bool PostCmdDispatchIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset)
 {
@@ -5445,17 +5445,17 @@ bool PostCmdDispatchIndirect(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDispatchIndirect(commandBuffer, buffer, offset);
 
-    PostCmdDispatchIndirect(cmdBuffer, buffer, offset);
+    PostCmdDispatchIndirect(commandBuffer, buffer, offset);
 }
 
 bool PreCmdCopyBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkBufferCopy* pRegions)
 {
     if(pRegions != nullptr)
@@ -5466,9 +5466,9 @@ bool PreCmdCopyBuffer(
 }
 
 bool PostCmdCopyBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
-    VkBuffer destBuffer,
+    VkBuffer dstBuffer,
     uint32_t regionCount)
 {
 
@@ -5479,21 +5479,21 @@ bool PostCmdCopyBuffer(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
-    VkBuffer destBuffer,
+    VkBuffer dstBuffer,
     uint32_t regionCount,
     const VkBufferCopy* pRegions)
 {
-    PreCmdCopyBuffer(cmdBuffer, pRegions);
+    PreCmdCopyBuffer(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 
-    PostCmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount);
+    PostCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount);
 }
 
 bool PreCmdCopyImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkImageCopy* pRegions)
 {
     if(pRegions != nullptr)
@@ -5501,15 +5501,15 @@ bool PreCmdCopyImage(
     if ((pRegions->srcSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->destSubresource.aspect &
+    if ((pRegions->dstSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5518,11 +5518,11 @@ bool PreCmdCopyImage(
 }
 
 bool PostCmdCopyImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount)
 {
 
@@ -5530,17 +5530,17 @@ bool PostCmdCopyImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(destImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdCopyImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -5549,23 +5549,23 @@ bool PostCmdCopyImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount,
     const VkImageCopy* pRegions)
 {
-    PreCmdCopyImage(cmdBuffer, pRegions);
+    PreCmdCopyImage(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 
-    PostCmdCopyImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount);
+    PostCmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount);
 }
 
 bool PreCmdBlitImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkImageBlit* pRegions)
 {
     if(pRegions != nullptr)
@@ -5573,15 +5573,15 @@ bool PreCmdBlitImage(
     if ((pRegions->srcSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->destSubresource.aspect &
+    if ((pRegions->dstSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5590,11 +5590,11 @@ bool PreCmdBlitImage(
 }
 
 bool PostCmdBlitImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount,
     VkFilter filter)
 {
@@ -5603,17 +5603,17 @@ bool PostCmdBlitImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(destImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdBlitImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdBlitImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -5621,7 +5621,7 @@ bool PostCmdBlitImage(
     if(filter < VK_FILTER_BEGIN_RANGE ||
         filter > VK_FILTER_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkFilter filter, is an unrecognized enumerator");
         return false;
     }
@@ -5630,24 +5630,24 @@ bool PostCmdBlitImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount,
     const VkImageBlit* pRegions,
     VkFilter filter)
 {
-    PreCmdBlitImage(cmdBuffer, pRegions);
+    PreCmdBlitImage(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
 
-    PostCmdBlitImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, filter);
+    PostCmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, filter);
 }
 
 bool PreCmdCopyBufferToImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkBufferImageCopy* pRegions)
 {
     if(pRegions != nullptr)
@@ -5655,7 +5655,7 @@ bool PreCmdCopyBufferToImage(
     if ((pRegions->imageSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
@@ -5665,20 +5665,20 @@ bool PreCmdCopyBufferToImage(
 }
 
 bool PostCmdCopyBufferToImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount)
 {
 
 
 
-    if(destImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBufferToImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdCopyBufferToImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -5687,22 +5687,22 @@ bool PostCmdCopyBufferToImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount,
     const VkBufferImageCopy* pRegions)
 {
-    PreCmdCopyBufferToImage(cmdBuffer, pRegions);
+    PreCmdCopyBufferToImage(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
 
-    PostCmdCopyBufferToImage(cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount);
+    PostCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount);
 }
 
 bool PreCmdCopyImageToBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkBufferImageCopy* pRegions)
 {
     if(pRegions != nullptr)
@@ -5710,7 +5710,7 @@ bool PreCmdCopyImageToBuffer(
     if ((pRegions->imageSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
@@ -5720,10 +5720,10 @@ bool PreCmdCopyImageToBuffer(
 }
 
 bool PostCmdCopyImageToBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkBuffer destBuffer,
+    VkBuffer dstBuffer,
     uint32_t regionCount)
 {
 
@@ -5731,7 +5731,7 @@ bool PostCmdCopyImageToBuffer(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5742,22 +5742,22 @@ bool PostCmdCopyImageToBuffer(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkBuffer destBuffer,
+    VkBuffer dstBuffer,
     uint32_t regionCount,
     const VkBufferImageCopy* pRegions)
 {
-    PreCmdCopyImageToBuffer(cmdBuffer, pRegions);
+    PreCmdCopyImageToBuffer(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
 
-    PostCmdCopyImageToBuffer(cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount);
+    PostCmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount);
 }
 
 bool PreCmdUpdateBuffer(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const uint32_t* pData)
 {
     if(pData != nullptr)
@@ -5768,9 +5768,9 @@ bool PreCmdUpdateBuffer(
 }
 
 bool PostCmdUpdateBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkCommandBuffer commandBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize dataSize)
 {
 
@@ -5781,23 +5781,23 @@ bool PostCmdUpdateBuffer(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkCommandBuffer commandBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize dataSize,
     const uint32_t* pData)
 {
-    PreCmdUpdateBuffer(cmdBuffer, pData);
+    PreCmdUpdateBuffer(commandBuffer, pData);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
 
-    PostCmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize);
+    PostCmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize);
 }
 
 bool PostCmdFillBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkCommandBuffer commandBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize size,
     uint32_t data)
 {
@@ -5810,19 +5810,19 @@ bool PostCmdFillBuffer(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
-    VkCmdBuffer cmdBuffer,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkCommandBuffer commandBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize size,
     uint32_t data)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 
-    PostCmdFillBuffer(cmdBuffer, destBuffer, destOffset, size, data);
+    PostCmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
 bool PreCmdClearColorImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkClearColorValue* pColor,
     const VkImageSubresourceRange* pRanges)
 {
@@ -5839,7 +5839,7 @@ bool PreCmdClearColorImage(
 }
 
 bool PostCmdClearColorImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
     uint32_t rangeCount)
@@ -5849,7 +5849,7 @@ bool PostCmdClearColorImage(
     if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5859,22 +5859,22 @@ bool PostCmdClearColorImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
     const VkClearColorValue* pColor,
     uint32_t rangeCount,
     const VkImageSubresourceRange* pRanges)
 {
-    PreCmdClearColorImage(cmdBuffer, pColor, pRanges);
+    PreCmdClearColorImage(commandBuffer, pColor, pRanges);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 
-    PostCmdClearColorImage(cmdBuffer, image, imageLayout, rangeCount);
+    PostCmdClearColorImage(commandBuffer, image, imageLayout, rangeCount);
 }
 
 bool PreCmdClearDepthStencilImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkImageSubresourceRange* pRanges)
 {
     if(pRanges != nullptr)
@@ -5890,7 +5890,7 @@ bool PreCmdClearDepthStencilImage(
 }
 
 bool PostCmdClearDepthStencilImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
     const VkClearDepthStencilValue* pDepthStencil,
@@ -5901,7 +5901,7 @@ bool PostCmdClearDepthStencilImage(
     if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5913,22 +5913,22 @@ bool PostCmdClearDepthStencilImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
     const VkClearDepthStencilValue* pDepthStencil,
     uint32_t rangeCount,
     const VkImageSubresourceRange* pRanges)
 {
-    PreCmdClearDepthStencilImage(cmdBuffer, pRanges);
+    PreCmdClearDepthStencilImage(commandBuffer, pRanges);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 
-    PostCmdClearDepthStencilImage(cmdBuffer, image, imageLayout, pDepthStencil, rangeCount);
+    PostCmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount);
 }
 
 bool PreCmdClearAttachments(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkClearColorValue* pColor,
     const VkClearRect* pRects)
 {
@@ -5944,21 +5944,21 @@ bool PreCmdClearAttachments(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                                 commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
     const VkClearRect*                          pRects)
 {
     for (uint32_t i = 0; i < attachmentCount; i++) {
-        PreCmdClearAttachments(cmdBuffer, &pAttachments[i].clearValue.color, pRects);
+        PreCmdClearAttachments(commandBuffer, &pAttachments[i].clearValue.color, pRects);
     }
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdClearAttachments(cmdBuffer, attachmentCount, pAttachments, rectCount, pRects);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
 bool PreCmdResolveImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkImageResolve* pRegions)
 {
     if(pRegions != nullptr)
@@ -5966,15 +5966,15 @@ bool PreCmdResolveImage(
     if ((pRegions->srcSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->destSubresource.aspect &
+    if ((pRegions->dstSubresource.aspect &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageAspect pRegions->destSubresource.aspect, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdResolveImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5983,11 +5983,11 @@ bool PreCmdResolveImage(
 }
 
 bool PostCmdResolveImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount)
 {
 
@@ -5995,17 +5995,17 @@ bool PostCmdResolveImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
 
 
-    if(destImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
-        destImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
+    if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
+        dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageLayout destImageLayout, is an unrecognized enumerator");
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdResolveImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
 
@@ -6014,23 +6014,23 @@ bool PostCmdResolveImage(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
-    VkImage destImage,
-    VkImageLayout destImageLayout,
+    VkImage dstImage,
+    VkImageLayout dstImageLayout,
     uint32_t regionCount,
     const VkImageResolve* pRegions)
 {
-    PreCmdResolveImage(cmdBuffer, pRegions);
+    PreCmdResolveImage(commandBuffer, pRegions);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 
-    PostCmdResolveImage(cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount);
+    PostCmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount);
 }
 
 bool PostCmdSetEvent(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
 {
@@ -6041,17 +6041,17 @@ bool PostCmdSetEvent(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdSetEvent(cmdBuffer, event, stageMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetEvent(commandBuffer, event, stageMask);
 
-    PostCmdSetEvent(cmdBuffer, event, stageMask);
+    PostCmdSetEvent(commandBuffer, event, stageMask);
 }
 
 bool PostCmdResetEvent(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
 {
@@ -6062,25 +6062,25 @@ bool PostCmdResetEvent(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdResetEvent(cmdBuffer, event, stageMask);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetEvent(commandBuffer, event, stageMask);
 
-    PostCmdResetEvent(cmdBuffer, event, stageMask);
+    PostCmdResetEvent(commandBuffer, event, stageMask);
 }
 
 bool PreCmdWaitEvents(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkEvent* pEvents,
-    const void* const* ppMemBarriers)
+    const void* const* ppMemoryBarriers)
 {
     if(pEvents != nullptr)
     {
     }
 
-    if(ppMemBarriers != nullptr)
+    if(ppMemoryBarriers != nullptr)
     {
     }
 
@@ -6088,11 +6088,11 @@ bool PreCmdWaitEvents(
 }
 
 bool PostCmdWaitEvents(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t eventCount,
     VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags destStageMask,
-    uint32_t memBarrierCount)
+    VkPipelineStageFlags dstStageMask,
+    uint32_t memoryBarrierCount)
 {
 
 
@@ -6103,26 +6103,26 @@ bool PostCmdWaitEvents(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     uint32_t eventCount,
     const VkEvent* pEvents,
     VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags destStageMask,
-    uint32_t memBarrierCount,
-    const void* const* ppMemBarriers)
+    VkPipelineStageFlags dstStageMask,
+    uint32_t memoryBarrierCount,
+    const void* const* ppMemoryBarriers)
 {
-    PreCmdWaitEvents(cmdBuffer, pEvents, ppMemBarriers);
+    PreCmdWaitEvents(commandBuffer, pEvents, ppMemoryBarriers);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWaitEvents(cmdBuffer, eventCount, pEvents, srcStageMask, destStageMask, memBarrierCount, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdWaitEvents(commandBuffer, eventCount, pEvents, srcStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
 
-    PostCmdWaitEvents(cmdBuffer, eventCount, srcStageMask, destStageMask, memBarrierCount);
+    PostCmdWaitEvents(commandBuffer, eventCount, srcStageMask, dstStageMask, memoryBarrierCount);
 }
 
 bool PreCmdPipelineBarrier(
-    VkCmdBuffer cmdBuffer,
-    const void* const* ppMemBarriers)
+    VkCommandBuffer commandBuffer,
+    const void* const* ppMemoryBarriers)
 {
-    if(ppMemBarriers != nullptr)
+    if(ppMemoryBarriers != nullptr)
     {
     }
 
@@ -6130,11 +6130,11 @@ bool PreCmdPipelineBarrier(
 }
 
 bool PostCmdPipelineBarrier(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags destStageMask,
+    VkPipelineStageFlags dstStageMask,
     VkDependencyFlags dependencyFlags,
-    uint32_t memBarrierCount)
+    uint32_t memoryBarrierCount)
 {
 
 
@@ -6145,22 +6145,22 @@ bool PostCmdPipelineBarrier(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags destStageMask,
+    VkPipelineStageFlags dstStageMask,
     VkDependencyFlags dependencyFlags,
-    uint32_t memBarrierCount,
-    const void* const* ppMemBarriers)
+    uint32_t memoryBarrierCount,
+    const void* const* ppMemoryBarriers)
 {
-    PreCmdPipelineBarrier(cmdBuffer, ppMemBarriers);
+    PreCmdPipelineBarrier(commandBuffer, ppMemoryBarriers);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, dependencyFlags, memBarrierCount, ppMemBarriers);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
 
-    PostCmdPipelineBarrier(cmdBuffer, srcStageMask, destStageMask, dependencyFlags, memBarrierCount);
+    PostCmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount);
 }
 
 bool PostCmdBeginQuery(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot,
     VkQueryControlFlags flags)
@@ -6173,18 +6173,18 @@ bool PostCmdBeginQuery(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot,
     VkQueryControlFlags flags)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 
-    PostCmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    PostCmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
 bool PostCmdEndQuery(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot)
 {
@@ -6195,17 +6195,17 @@ bool PostCmdEndQuery(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdEndQuery(commandBuffer, queryPool, slot);
 
-    PostCmdEndQuery(cmdBuffer, queryPool, slot);
+    PostCmdEndQuery(commandBuffer, queryPool, slot);
 }
 
 bool PostCmdResetQueryPool(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount)
@@ -6218,18 +6218,18 @@ bool PostCmdResetQueryPool(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 
-    PostCmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    PostCmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 }
 
 bool PostCmdWriteTimestamp(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineStageFlagBits pipelineStage,
     VkQueryPool queryPool,
     uint32_t slot)
@@ -6241,23 +6241,23 @@ bool PostCmdWriteTimestamp(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineStageFlagBits pipelineStage,
     VkQueryPool queryPool,
     uint32_t slot)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdWriteTimestamp(cmdBuffer, pipelineStage, queryPool, slot);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 
-    PostCmdWriteTimestamp(cmdBuffer, pipelineStage, queryPool, slot);
+    PostCmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 }
 
 bool PostCmdCopyQueryPoolResults(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
@@ -6273,22 +6273,22 @@ bool PostCmdCopyQueryPoolResults(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
     uint32_t queryCount,
-    VkBuffer destBuffer,
-    VkDeviceSize destOffset,
+    VkBuffer dstBuffer,
+    VkDeviceSize dstOffset,
     VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, stride, flags);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyQueryPoolResults(commandBuffer, queryPool, startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 
-    PostCmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, stride, flags);
+    PostCmdCopyQueryPoolResults(commandBuffer, queryPool, startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
 bool PreCmdPushConstants(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const void* values)
 {
     if(values != nullptr)
@@ -6299,7 +6299,7 @@ bool PreCmdPushConstants(
 }
 
 bool PostCmdPushConstants(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineLayout layout,
     VkShaderStageFlags stageFlags,
     uint32_t offset,
@@ -6314,29 +6314,29 @@ bool PostCmdPushConstants(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdPushConstants(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkPipelineLayout layout,
     VkShaderStageFlags stageFlags,
     uint32_t offset,
     uint32_t size,
     const void* values)
 {
-    PreCmdPushConstants(cmdBuffer, values);
+    PreCmdPushConstants(commandBuffer, values);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdPushConstants(cmdBuffer, layout, stageFlags, offset, size, values);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, values);
 
-    PostCmdPushConstants(cmdBuffer, layout, stageFlags, offset, size);
+    PostCmdPushConstants(commandBuffer, layout, stageFlags, offset, size);
 }
 
 bool PreCmdBeginRenderPass(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin)
 {
     if(pRenderPassBegin != nullptr)
     {
     if(pRenderPassBegin->sType != VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBeginRenderPass parameter, VkStructureType pRenderPassBegin->sType, is an invalid enumerator");
         return false;
     }
@@ -6349,14 +6349,14 @@ bool PreCmdBeginRenderPass(
 }
 
 bool PostCmdBeginRenderPass(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkRenderPassContents contents)
 {
 
     if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
         contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBeginRenderPass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
         return false;
     }
@@ -6365,26 +6365,26 @@ bool PostCmdBeginRenderPass(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin,
     VkRenderPassContents contents)
 {
-    PreCmdBeginRenderPass(cmdBuffer, pRenderPassBegin);
+    PreCmdBeginRenderPass(commandBuffer, pRenderPassBegin);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdBeginRenderPass(cmdBuffer, pRenderPassBegin, contents);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
 
-    PostCmdBeginRenderPass(cmdBuffer, contents);
+    PostCmdBeginRenderPass(commandBuffer, contents);
 }
 
 bool PostCmdNextSubpass(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkRenderPassContents contents)
 {
 
     if(contents < VK_RENDER_PASS_CONTENTS_BEGIN_RANGE ||
         contents > VK_RENDER_PASS_CONTENTS_END_RANGE)
     {
-        log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdNextSubpass parameter, VkRenderPassContents contents, is an unrecognized enumerator");
         return false;
     }
@@ -6393,34 +6393,34 @@ bool PostCmdNextSubpass(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
-    VkCmdBuffer cmdBuffer,
+    VkCommandBuffer commandBuffer,
     VkRenderPassContents contents)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdNextSubpass(cmdBuffer, contents);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdNextSubpass(commandBuffer, contents);
 
-    PostCmdNextSubpass(cmdBuffer, contents);
+    PostCmdNextSubpass(commandBuffer, contents);
 }
 
 bool PostCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer)
+    VkCommandBuffer commandBuffer)
 {
 
     return true;
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer cmdBuffer)
+    VkCommandBuffer commandBuffer)
 {
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdEndRenderPass(cmdBuffer);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdEndRenderPass(commandBuffer);
 
-    PostCmdEndRenderPass(cmdBuffer);
+    PostCmdEndRenderPass(commandBuffer);
 }
 
 bool PreCmdExecuteCommands(
-    VkCmdBuffer cmdBuffer,
-    const VkCmdBuffer* pCmdBuffers)
+    VkCommandBuffer commandBuffer,
+    const VkCommandBuffer* pCommandBuffers)
 {
-    if(pCmdBuffers != nullptr)
+    if(pCommandBuffers != nullptr)
     {
     }
 
@@ -6428,8 +6428,8 @@ bool PreCmdExecuteCommands(
 }
 
 bool PostCmdExecuteCommands(
-    VkCmdBuffer cmdBuffer,
-    uint32_t cmdBuffersCount)
+    VkCommandBuffer commandBuffer,
+    uint32_t commandBuffersCount)
 {
 
 
@@ -6437,15 +6437,15 @@ bool PostCmdExecuteCommands(
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
-    VkCmdBuffer cmdBuffer,
-    uint32_t cmdBuffersCount,
-    const VkCmdBuffer* pCmdBuffers)
+    VkCommandBuffer commandBuffer,
+    uint32_t commandBuffersCount,
+    const VkCommandBuffer* pCommandBuffers)
 {
-    PreCmdExecuteCommands(cmdBuffer, pCmdBuffers);
+    PreCmdExecuteCommands(commandBuffer, pCommandBuffers);
 
-    get_dispatch_table(pc_device_table_map, cmdBuffer)->CmdExecuteCommands(cmdBuffer, cmdBuffersCount, pCmdBuffers);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
 
-    PostCmdExecuteCommands(cmdBuffer, cmdBuffersCount);
+    PostCmdExecuteCommands(commandBuffer, commandBuffersCount);
 }
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
@@ -6472,8 +6472,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkQueueWaitIdle;
     if (!strcmp(funcName, "vkDeviceWaitIdle"))
         return (PFN_vkVoidFunction) vkDeviceWaitIdle;
-    if (!strcmp(funcName, "vkAllocMemory"))
-        return (PFN_vkVoidFunction) vkAllocMemory;
+    if (!strcmp(funcName, "vkAllocateMemory"))
+        return (PFN_vkVoidFunction) vkAllocateMemory;
     if (!strcmp(funcName, "vkMapMemory"))
         return (PFN_vkVoidFunction) vkMapMemory;
     if (!strcmp(funcName, "vkFlushMappedMemoryRanges"))
@@ -6530,8 +6530,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCreateDescriptorPool;
     if (!strcmp(funcName, "vkResetDescriptorPool"))
         return (PFN_vkVoidFunction) vkResetDescriptorPool;
-    if (!strcmp(funcName, "vkAllocDescriptorSets"))
-        return (PFN_vkVoidFunction) vkAllocDescriptorSets;
+    if (!strcmp(funcName, "vkAllocateDescriptorSets"))
+        return (PFN_vkVoidFunction) vkAllocateDescriptorSets;
     if (!strcmp(funcName, "vkCmdSetViewport"))
         return (PFN_vkVoidFunction) vkCmdSetViewport;
     if (!strcmp(funcName, "vkCmdSetScissor"))
@@ -6550,8 +6550,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkCmdSetStencilWriteMask;
     if (!strcmp(funcName, "vkCmdSetStencilReference"))
         return (PFN_vkVoidFunction) vkCmdSetStencilReference;
-    if (!strcmp(funcName, "vkAllocCommandBuffers"))
-        return (PFN_vkVoidFunction) vkAllocCommandBuffers;
+    if (!strcmp(funcName, "vkAllocateCommandBuffers"))
+        return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))

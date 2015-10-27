@@ -40,7 +40,7 @@ static device_table_map multi1_device_table_map;
 /******************************** Layer multi1 functions **************************/
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocCallbacks* pAllocator)
+VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
     dispatch_key key = get_dispatch_key(device);
@@ -51,7 +51,7 @@ VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocCal
     printf("Completed multi1 layer vkDestroyDevice()\n");
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocCallbacks* pAllocator, VkSampler* pSampler)
+VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
 
@@ -66,7 +66,7 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipelines(
                                 VkPipelineCache pipelineCache,
                                 uint32_t count,
                                 const VkGraphicsPipelineCreateInfo* pCreateInfos,
-                                const VkAllocCallbacks* pAllocator,
+                                const VkAllocationCallbacks* pAllocator,
                                 VkPipeline* pPipelines)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
@@ -140,7 +140,7 @@ VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceFeatures(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance, const VkAllocCallbacks* pAllocator)
+VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, instance);
     dispatch_key key = get_dispatch_key(instance);

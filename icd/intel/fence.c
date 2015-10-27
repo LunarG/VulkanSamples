@@ -120,7 +120,7 @@ VkResult intel_fence_wait(struct intel_fence *fence, int64_t timeout_ns)
 ICD_EXPORT VkResult VKAPI vkCreateFence(
     VkDevice                                  device,
     const VkFenceCreateInfo*                pCreateInfo,
-    const VkAllocCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*                     pAllocator,
     VkFence*                                  pFence)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -132,7 +132,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFence(
 ICD_EXPORT void VKAPI vkDestroyFence(
     VkDevice                                device,
     VkFence                                 fence,
-    const VkAllocCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*                     pAllocator)
 
  {
     struct intel_obj *obj = intel_obj(fence);
