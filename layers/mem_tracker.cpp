@@ -1571,6 +1571,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
+VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
+    VkDevice                      device,
+    const VkBufferViewCreateInfo *pCreateInfo,
+    VkBufferView                 *pView)
+{
+    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
+    if (result == VK_SUCCESS) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        // In order to create a valid buffer view, the buffer must have been created with at least one of the
+        // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
+        validate_buffer_usage_flags(
+                    device, pCreateInfo->buffer,
+                    VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
+                    false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+        loader_platform_thread_unlock_mutex(&globalLock);
+    }
+    return result;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     VkDevice                     device,
     const VkCmdBufferAllocInfo *pCreateInfo,
@@ -2461,6 +2480,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
+    if (!strcmp(funcName, "vkCreateBufferView"))
+        return (PFN_vkVoidFunction) vkCreateBufferView;
     if (!strcmp(funcName, "vkAllocCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
