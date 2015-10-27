@@ -2227,10 +2227,10 @@ typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRender
 typedef void (VKAPI *PFN_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator);
 typedef void (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
 typedef VkResult (VKAPI *PFN_vkCreateCommandPool)(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool);
-typedef void (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCommandPool CommandPool, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCommandPool CommandPool, VkCommandPoolResetFlags flags);
+typedef void (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator);
+typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags);
 typedef VkResult (VKAPI *PFN_vkAllocateCommandBuffers)(VkDevice device, const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers);
-typedef void (VKAPI *PFN_vkFreeCommandBuffers)(VkDevice device, VkCommandPool CommandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
+typedef void (VKAPI *PFN_vkFreeCommandBuffers)(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCommandBuffer commandBuffer);
 typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
@@ -2763,12 +2763,12 @@ VkResult VKAPI vkCreateCommandPool(
 
 void VKAPI vkDestroyCommandPool(
     VkDevice                                    device,
-    VkCommandPool                               CommandPool,
+    VkCommandPool                               commandPool,
     const VkAllocationCallbacks*                pAllocator);
 
 VkResult VKAPI vkResetCommandPool(
     VkDevice                                    device,
-    VkCommandPool                               CommandPool,
+    VkCommandPool                               commandPool,
     VkCommandPoolResetFlags                     flags);
 
 VkResult VKAPI vkAllocateCommandBuffers(
@@ -2778,7 +2778,7 @@ VkResult VKAPI vkAllocateCommandBuffers(
 
 void VKAPI vkFreeCommandBuffers(
     VkDevice                                    device,
-    VkCommandPool                               CommandPool,
+    VkCommandPool                               commandPool,
     uint32_t                                    commandBufferCount,
     const VkCommandBuffer*                      pCommandBuffers);
 

@@ -694,12 +694,12 @@ core = Extension(
 
         Proto("void", "DestroyCommandPool",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "CommandPool"),
+             Param("VkCommandPool", "commandPool"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
 
         Proto("VkResult", "ResetCommandPool",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "CommandPool"),
+             Param("VkCommandPool", "commandPool"),
              Param("VkCommandPoolResetFlags", "flags")]),
 
         Proto("VkResult", "AllocateCommandBuffers",
@@ -709,7 +709,7 @@ core = Extension(
 
         Proto("void", "FreeCommandBuffers",
             [Param("VkDevice", "device"),
-             Param("VkCommandPool", "CommandPool"),
+             Param("VkCommandPool", "commandPool"),
              Param("uint32_t", "commandBufferCount"),
              Param("const VkCommandBuffer*", "pCommandBuffers")]),
 
