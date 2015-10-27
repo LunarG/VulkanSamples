@@ -1149,7 +1149,7 @@ typedef struct {
     VkBool32                                    shaderInt64;
     VkBool32                                    shaderInt16;
     VkBool32                                    shaderResourceResidency;
-    VkBool32                                    shaderResourceMinLOD;
+    VkBool32                                    shaderResourceMinLod;
     VkBool32                                    sparseBinding;
     VkBool32                                    sparseResidencyBuffer;
     VkBool32                                    sparseResidencyImage2D;
@@ -1295,8 +1295,8 @@ typedef struct {
 typedef struct {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
-    uint32_t                                    vendorId;
-    uint32_t                                    deviceId;
+    uint32_t                                    vendorID;
+    uint32_t                                    deviceID;
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
     uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
@@ -1401,7 +1401,7 @@ typedef struct {
 
 typedef struct {
     VkSparseImageFormatProperties               formatProperties;
-    uint32_t                                    imageMipTailStartLOD;
+    uint32_t                                    imageMipTailStartLod;
     VkDeviceSize                                imageMipTailSize;
     VkDeviceSize                                imageMipTailOffset;
     VkDeviceSize                                imageMipTailStride;
@@ -1594,7 +1594,7 @@ typedef struct {
 } VkPipelineCacheCreateInfo;
 
 typedef struct {
-    uint32_t                                    constantId;
+    uint32_t                                    constantID;
     uint32_t                                    offset;
     size_t                                      size;
 } VkSpecializationMapEntry;

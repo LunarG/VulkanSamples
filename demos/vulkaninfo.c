@@ -785,7 +785,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tshaderInt64                             = %u\n", features->shaderInt64                            );
     printf("\tshaderInt16                             = %u\n", features->shaderInt16                            );
     printf("\tshaderResourceResidency                 = %u\n", features->shaderResourceResidency                );
-    printf("\tshaderResourceMinLOD                    = %u\n", features->shaderResourceMinLOD                   );
+    printf("\tshaderResourceMinLod                    = %u\n", features->shaderResourceMinLod                   );
     printf("\talphaToOne                              = %u\n", features->alphaToOne                             );
     printf("\tsparseBinding                           = %u\n", features->sparseBinding                          );
     printf("\tsparseResidencyBuffer                   = %u\n", features->sparseResidencyBuffer                  );
@@ -932,8 +932,8 @@ static void app_gpu_dump_props(const struct app_gpu *gpu)
     printf("===========================\n");
     printf("\tapiVersion     = %u\n",                props->apiVersion);
     printf("\tdriverVersion  = %u\n",                props->driverVersion);
-    printf("\tvendorId       = 0x%04x\n",            props->vendorId);
-    printf("\tdeviceId       = 0x%04x\n",            props->deviceId);
+    printf("\tvendorID       = 0x%04x\n",            props->vendorID);
+    printf("\tdeviceID       = 0x%04x\n",            props->deviceID);
     printf("\tdeviceType     = %s\n",                vk_physical_device_type_string(props->deviceType));
     printf("\tdeviceName     = %s\n",                props->deviceName);
 

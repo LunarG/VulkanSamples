@@ -1373,8 +1373,8 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
 
     pProperties->apiVersion = VK_API_VERSION;
     pProperties->driverVersion = 0; // Appropriate that the nulldrv have 0's
-    pProperties->vendorId = 0;
-    pProperties->deviceId = 0;
+    pProperties->vendorID = 0;
+    pProperties->deviceID = 0;
     pProperties->deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
     strncpy(pProperties->deviceName, "nulldrv", strlen("nulldrv"));
 

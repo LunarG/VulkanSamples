@@ -273,8 +273,8 @@ void intel_gpu_get_props(const struct intel_gpu *gpu,
     props->apiVersion = INTEL_API_VERSION;
     props->driverVersion = INTEL_DRIVER_VERSION;
 
-    props->vendorId = 0x8086;
-    props->deviceId = gpu->devid;
+    props->vendorID = 0x8086;
+    props->deviceID = gpu->devid;
 
     props->deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
