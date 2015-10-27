@@ -150,7 +150,11 @@ class HeaderFileParser:
                 elif 'typedef struct' in line or 'typedef union' in line:
                     if True in [ex_type in line for ex_type in exclude_struct_list]:
                         continue
+
                     (ty_txt, st_txt, base_type) = line.strip().split(None, 2)
+                    if ' ' in base_type:
+                        (ignored, base_type) = base_type.strip().split(None, 1)
+
                     #print("Found STRUCT type: %s" % base_type)
                     # Note:  This really needs to be updated to handle one line struct definition, like
                     #        typedef struct obj##_T { uint64_t handle; } obj;
