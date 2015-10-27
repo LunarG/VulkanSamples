@@ -158,7 +158,7 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     // If dataPtr is nullptr, only width and height are returned
 
     // Read in values from the PPM file as characters to check for comments
-    char magicStr[2] = {}, heightStr[5] = {}, widthStr[5] = {}, formatStr[5] = {};
+    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {}, formatStr[6] = {};
 
     FILE *fPtr = fopen(filename,"rb");
     if (!fPtr) {
