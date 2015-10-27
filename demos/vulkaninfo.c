@@ -796,6 +796,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tsparseResidency8Samples                 = %u\n", features->sparseResidency8Samples                );
     printf("\tsparseResidency16Samples                = %u\n", features->sparseResidency16Samples               );
     printf("\tsparseResidencyAliased                  = %u\n", features->sparseResidencyAliased                 );
+    printf("\tvariableMultisampleRate                 = %u\n", features->variableMultisampleRate                );
 }
 
 static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparseProps)
@@ -808,7 +809,6 @@ static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparse
     printf("\t\tresidencyStandard2DMultisampleBlockShape = %u\n", sparseProps->residencyStandard2DMultisampleBlockShape);
     printf("\t\tresidencyStandard3DBlockShape     = %u\n", sparseProps->residencyStandard3DBlockShape    );
     printf("\t\tresidencyAlignedMipSize           = %u\n", sparseProps->residencyAlignedMipSize          );
-    printf("\t\tresidencyNonResident              = %u\n", sparseProps->residencyNonResident             );
     printf("\t\tresidencyNonResidentStrict        = %u\n", sparseProps->residencyNonResidentStrict       );
 }
 

@@ -839,10 +839,6 @@ typedef enum {
     VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT = 0x00000004,
 } VkSparseImageFormatFlagBits;
 typedef VkFlags VkSparseImageFormatFlags;
-
-typedef enum {
-    VK_SPARSE_MEMORY_BIND_REPLICATE_BLOCK_BIT = 0x00000001,
-} VkSparseMemoryBindFlagBits;
 typedef VkFlags VkSparseMemoryBindFlags;
 
 typedef enum {
@@ -1163,6 +1159,7 @@ typedef struct {
     VkBool32                                    sparseResidency8Samples;
     VkBool32                                    sparseResidency16Samples;
     VkBool32                                    sparseResidencyAliased;
+    VkBool32                                    variableMultisampleRate;
 } VkPhysicalDeviceFeatures;
 
 typedef struct {
@@ -1292,7 +1289,6 @@ typedef struct {
     VkBool32                                    residencyStandard2DMultisampleBlockShape;
     VkBool32                                    residencyStandard3DBlockShape;
     VkBool32                                    residencyAlignedMipSize;
-    VkBool32                                    residencyNonResident;
     VkBool32                                    residencyNonResidentStrict;
 } VkPhysicalDeviceSparseProperties;
 
