@@ -2055,7 +2055,7 @@ bool PostGetPhysicalDeviceQueueFamilyProperties(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
     VkQueueFamilyProperties* pQueueProperties)
