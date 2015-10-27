@@ -587,14 +587,14 @@ void  TestFrameworkVkPresent::Display()
     cmdBufs[0] = m_cmdbuf.handle();
 
     VkFence nullFence = { VK_NULL_HANDLE };
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = cmdBufs,
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = cmdBufs;
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+
     vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);
     m_queue.wait();
 
@@ -1027,14 +1027,14 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
 
     const VkCmdBuffer cmd_bufs[] = { m_cmdbuf.handle() };
     VkFence nullFence = { VK_NULL_HANDLE };
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = cmd_bufs,
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = cmd_bufs;
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+
     err = vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);
     assert(!err);
 

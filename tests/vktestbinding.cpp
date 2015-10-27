@@ -395,14 +395,13 @@ void Device::update_descriptor_sets(const std::vector<VkWriteDescriptorSet> &wri
 void Queue::submit(const std::vector<const CmdBuffer *> &cmds, Fence &fence)
 {
     const std::vector<VkCmdBuffer> cmd_handles = make_handles<VkCmdBuffer>(cmds);
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = (uint32_t) cmd_handles.size(),
-        .pCommandBuffers = cmd_handles.data(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = (uint32_t)cmd_handles.size();
+    submit_info.pCommandBuffers = cmd_handles.data();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     EXPECT(vkQueueSubmit(handle(), 1, &submit_info, fence.handle()) == VK_SUCCESS);
 }

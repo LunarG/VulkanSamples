@@ -989,14 +989,13 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     // submit the command buffer to the universal queue
     VkCmdBuffer bufferArray[1];
     bufferArray[0] = m_commandBuffer->GetBufferHandle();
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = bufferArray,
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = bufferArray;
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit(m_device->m_queue, 1, &submit_info, m_fence.handle());
     ASSERT_VK_SUCCESS(err);
@@ -1603,14 +1602,13 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
     VkResult err = VK_SUCCESS;
 
     // submit the command buffer to the universal queue
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = &handle(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = &handle();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, fence );
     ASSERT_VK_SUCCESS( err );

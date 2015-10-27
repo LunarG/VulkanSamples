@@ -413,14 +413,13 @@ TEST_F(VkLayerTest, CallResetCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = &m_cmdBuffer->handle(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
     ASSERT_VK_SUCCESS( err );
@@ -459,14 +458,13 @@ TEST_F(VkLayerTest, CallBeginCmdBufferBeforeCompletion)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = &m_cmdBuffer->handle(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
     ASSERT_VK_SUCCESS( err );
@@ -738,14 +736,13 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     testFence.init(*m_device, fenceInfo);
     m_errorMonitor->ClearState();
 
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = &m_cmdBuffer->handle(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
 
     vkQueueSubmit(m_device->m_queue, 1, &submit_info, testFence.handle());
     vkQueueWaitIdle(m_device->m_queue );
@@ -1302,14 +1299,14 @@ TEST_F(VkLayerTest, CmdBufferTwoSubmits)
 
     // Bypass framework since it does the waits automatically
     VkResult err = VK_SUCCESS;
-    VkSubmitInfo submit_info = {
-        .waitSemCount = 0,
-        .pWaitSemaphores = NULL,
-        .cmdBufferCount = 1,
-        .pCommandBuffers = &m_cmdBuffer->handle(),
-        .signalSemCount = 0,
-        .pSignalSemaphores = NULL
-    };
+    VkSubmitInfo submit_info;
+    submit_info.waitSemCount = 0;
+    submit_info.pWaitSemaphores = NULL;
+    submit_info.cmdBufferCount = 1;
+    submit_info.pCommandBuffers = &m_cmdBuffer->handle();
+    submit_info.signalSemCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+
     err = vkQueueSubmit( m_device->m_queue, 1, &submit_info, testFence.handle());
     ASSERT_VK_SUCCESS( err );
 
