@@ -1308,6 +1308,7 @@ typedef struct {
     VkQueueFlags                                queueFlags;
     uint32_t                                    queueCount;
     uint32_t                                    timestampValidBits;
+    VkExtent3D                                  minImageTransferGranularity;
 } VkQueueFamilyProperties;
 
 typedef struct {

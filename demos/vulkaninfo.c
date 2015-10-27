@@ -982,6 +982,10 @@ static void app_gpu_dump_queue_props(const struct app_gpu *gpu, uint32_t id)
             (props->queueFlags & VK_QUEUE_DMA_BIT)      ? 'D' : '.');
     printf("\tqueueCount         = %u\n",   props->queueCount);
     printf("\ttimestampValidBits = %u\n",   props->timestampValidBits);
+    printf("\tminImageTransferGranularity = (%d, %d, %d)\n",
+            props->minImageTransferGranularity.width,
+            props->minImageTransferGranularity.height,
+            props->minImageTransferGranularity.depth);
     fflush(stdout);
 }
 

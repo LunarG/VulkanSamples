@@ -300,6 +300,9 @@ void intel_gpu_get_queue_props(const struct intel_gpu *gpu,
         props->queueFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
         props->queueCount = 1;
         props->timestampValidBits = 0;
+        props->minImageTransferGranularity.width = 1;
+        props->minImageTransferGranularity.height = 1;
+        props->minImageTransferGranularity.depth = 1;
         break;
     default:
         assert(!"unknown engine type");
