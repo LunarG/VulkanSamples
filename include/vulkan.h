@@ -982,27 +982,25 @@ typedef enum {
 typedef VkFlags VkPipelineStageFlags;
 
 typedef enum {
-    VK_MEMORY_OUTPUT_HOST_WRITE_BIT = 0x00000001,
-    VK_MEMORY_OUTPUT_SHADER_WRITE_BIT = 0x00000002,
-    VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT = 0x00000004,
-    VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000008,
-    VK_MEMORY_OUTPUT_TRANSFER_BIT = 0x00000010,
-} VkMemoryOutputFlagBits;
-typedef VkFlags VkMemoryOutputFlags;
-
-typedef enum {
-    VK_MEMORY_INPUT_HOST_READ_BIT = 0x00000001,
-    VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT = 0x00000002,
-    VK_MEMORY_INPUT_INDEX_FETCH_BIT = 0x00000004,
-    VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT = 0x00000008,
-    VK_MEMORY_INPUT_UNIFORM_READ_BIT = 0x00000010,
-    VK_MEMORY_INPUT_SHADER_READ_BIT = 0x00000020,
-    VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT = 0x00000040,
-    VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000080,
-    VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT = 0x00000100,
-    VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000200,
-} VkMemoryInputFlagBits;
-typedef VkFlags VkMemoryInputFlags;
+    VK_ACCESS_INDIRECT_COMMAND_READ_BIT = 0x00000001,
+    VK_ACCESS_INDEX_READ_BIT = 0x00000002,
+    VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT = 0x00000004,
+    VK_ACCESS_UNIFORM_READ_BIT = 0x00000008,
+    VK_ACCESS_INPUT_ATTACHMENT_READ_BIT = 0x00000010,
+    VK_ACCESS_SHADER_READ_BIT = 0x00000020,
+    VK_ACCESS_SHADER_WRITE_BIT = 0x00000040,
+    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT = 0x00000080,
+    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT = 0x00000100,
+    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT = 0x00000200,
+    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT = 0x00000400,
+    VK_ACCESS_TRANSFER_READ_BIT = 0x00000800,
+    VK_ACCESS_TRANSFER_WRITE_BIT = 0x00001000,
+    VK_ACCESS_HOST_READ_BIT = 0x00002000,
+    VK_ACCESS_HOST_WRITE_BIT = 0x00004000,
+    VK_ACCESS_MEMORY_READ_BIT = 0x00008000,
+    VK_ACCESS_MEMORY_WRITE_BIT = 0x00010000,
+} VkAccessFlagBits;
+typedef VkFlags VkAccessFlags;
 
 typedef enum {
     VK_DEPENDENCY_BY_REGION_BIT = 0x00000001,
@@ -1959,8 +1957,8 @@ typedef struct {
     uint32_t                                    dstSubpass;
     VkPipelineStageFlags                        srcStageMask;
     VkPipelineStageFlags                        dstStageMask;
-    VkMemoryOutputFlags                         outputMask;
-    VkMemoryInputFlags                          inputMask;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
     VkDependencyFlags                           dependencyFlags;
 } VkSubpassDependency;
 
@@ -2088,8 +2086,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkMemoryOutputFlags                         outputMask;
-    VkMemoryInputFlags                          inputMask;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
     uint32_t                                    srcQueueFamilyIndex;
     uint32_t                                    dstQueueFamilyIndex;
     VkBuffer                                    buffer;
@@ -2121,8 +2119,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkMemoryOutputFlags                         outputMask;
-    VkMemoryInputFlags                          inputMask;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
     VkImageLayout                               oldLayout;
     VkImageLayout                               newLayout;
     uint32_t                                    srcQueueFamilyIndex;
@@ -2134,8 +2132,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkMemoryOutputFlags                         outputMask;
-    VkMemoryInputFlags                          inputMask;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
 } VkMemoryBarrier;
 
 

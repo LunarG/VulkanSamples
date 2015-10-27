@@ -556,20 +556,20 @@ void VkImageObj::ImageMemoryBarrier(
         VkCommandBufferObj *cmd_buf,
         VkImageAspectFlags aspect,
         VkFlags output_mask /*=
-            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-            VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_ACCESS_HOST_WRITE_BIT |
+            VK_ACCESS_SHADER_WRITE_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
             VK_MEMORY_OUTPUT_COPY_BIT*/,
         VkFlags input_mask /*=
-            VK_MEMORY_INPUT_HOST_READ_BIT |
-            VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-            VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-            VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-            VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-            VK_MEMORY_INPUT_SHADER_READ_BIT |
-            VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+            VK_ACCESS_HOST_READ_BIT |
+            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+            VK_ACCESS_INDEX_READ_BIT |
+            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+            VK_ACCESS_UNIFORM_READ_BIT |
+            VK_ACCESS_SHADER_READ_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
             VK_MEMORY_INPUT_COPY_BIT*/,
         VkImageLayout image_layout)
 {
@@ -593,21 +593,21 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 {
     VkFlags output_mask, input_mask;
     const VkFlags all_cache_outputs =
-            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-            VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_TRANSFER_BIT;
+            VK_ACCESS_HOST_WRITE_BIT |
+            VK_ACCESS_SHADER_WRITE_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_TRANSFER_WRITE_BIT;
     const VkFlags all_cache_inputs =
-            VK_MEMORY_INPUT_HOST_READ_BIT |
-            VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-            VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-            VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-            VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-            VK_MEMORY_INPUT_SHADER_READ_BIT |
-            VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_TRANSFER_BIT;
+            VK_ACCESS_HOST_READ_BIT |
+            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+            VK_ACCESS_INDEX_READ_BIT |
+            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+            VK_ACCESS_UNIFORM_READ_BIT |
+            VK_ACCESS_SHADER_READ_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+            VK_ACCESS_MEMORY_READ_BIT;
 
     if (image_layout == m_descriptorImageInfo.imageLayout) {
         return;
@@ -615,18 +615,18 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 
     switch (image_layout) {
     case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
+        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
+        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        output_mask = VK_MEMORY_OUTPUT_TRANSFER_BIT;
-        input_mask = VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_TRANSFER_BIT;
+        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     default:
@@ -922,21 +922,21 @@ void VkConstantBufferObj::Bind(VkCommandBuffer commandBuffer, VkDeviceSize offse
 
 
 void VkConstantBufferObj::BufferMemoryBarrier(
-        VkFlags outputMask /*=
-            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-            VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VkFlags srcAccessMask /*=
+            VK_ACCESS_HOST_WRITE_BIT |
+            VK_ACCESS_SHADER_WRITE_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
             VK_MEMORY_OUTPUT_COPY_BIT*/,
-        VkFlags inputMask /*=
-            VK_MEMORY_INPUT_HOST_READ_BIT |
-            VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-            VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-            VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-            VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-            VK_MEMORY_INPUT_SHADER_READ_BIT |
-            VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VkFlags dstAccessMask /*=
+            VK_ACCESS_HOST_READ_BIT |
+            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+            VK_ACCESS_INDEX_READ_BIT |
+            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+            VK_ACCESS_UNIFORM_READ_BIT |
+            VK_ACCESS_SHADER_READ_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
             VK_MEMORY_INPUT_COPY_BIT*/)
 {
     VkResult err = VK_SUCCESS;
@@ -970,7 +970,7 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     ASSERT_VK_SUCCESS(err);
 
     VkBufferMemoryBarrier memory_barrier =
-        buffer_memory_barrier(outputMask, inputMask, 0, m_numVertices * m_stride);
+        buffer_memory_barrier(srcAccessMask, dstAccessMask, 0, m_numVertices * m_stride);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
@@ -1362,11 +1362,11 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 {
     uint32_t i;
     const VkFlags output_mask =
-        VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-        VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-        VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        VK_ACCESS_HOST_WRITE_BIT |
+        VK_ACCESS_SHADER_WRITE_BIT |
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_TRANSFER_WRITE_BIT;
     const VkFlags input_mask = 0;
 
     // whatever we want to do, we do it to the whole buffer
@@ -1379,8 +1379,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memory_barrier.outputMask = output_mask;
-    memory_barrier.inputMask = input_mask;
+    memory_barrier.srcAccessMask = output_mask;
+    memory_barrier.dstAccessMask = input_mask;
     memory_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
@@ -1460,21 +1460,21 @@ void VkCommandBufferObj::PrepareAttachments()
 {
     uint32_t i;
     const VkFlags output_mask =
-        VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-        VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-        VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        VK_ACCESS_HOST_WRITE_BIT |
+        VK_ACCESS_SHADER_WRITE_BIT |
+        VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_TRANSFER_WRITE_BIT;
     const VkFlags input_mask =
-        VK_MEMORY_INPUT_HOST_READ_BIT |
-        VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-        VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-        VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-        VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-        VK_MEMORY_INPUT_SHADER_READ_BIT |
-        VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_TRANSFER_BIT;
+        VK_ACCESS_HOST_READ_BIT |
+        VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+        VK_ACCESS_INDEX_READ_BIT |
+        VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+        VK_ACCESS_UNIFORM_READ_BIT |
+        VK_ACCESS_SHADER_READ_BIT |
+        VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+        VK_ACCESS_MEMORY_READ_BIT;
 
     VkImageSubresourceRange srRange = {};
     srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1485,8 +1485,8 @@ void VkCommandBufferObj::PrepareAttachments()
 
     VkImageMemoryBarrier memory_barrier = {};
     memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memory_barrier.outputMask = output_mask;
-    memory_barrier.inputMask = input_mask;
+    memory_barrier.srcAccessMask = output_mask;
+    memory_barrier.dstAccessMask = input_mask;
     memory_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;

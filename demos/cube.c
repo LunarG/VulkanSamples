@@ -496,8 +496,8 @@ static void demo_set_image_layout(
     VkImageMemoryBarrier image_memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = NULL,
-        .outputMask = 0,
-        .inputMask = 0,
+        .srcAccessMask = 0,
+        .dstAccessMask = 0,
         .oldLayout = old_image_layout,
         .newLayout = new_image_layout,
         .image = image,
@@ -506,12 +506,12 @@ static void demo_set_image_layout(
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_HOST_WRITE_BIT | VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     }
 
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
@@ -582,8 +582,8 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
     VkImageMemoryBarrier prePresentBarrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .pNext = NULL,
-        .outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT,
-        .inputMask = 0,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = 0,
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

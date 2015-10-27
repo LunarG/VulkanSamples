@@ -346,8 +346,8 @@ public:
         VkBufferMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.buffer = handle();
-        barrier.outputMask = output_mask;
-        barrier.inputMask = input_mask;
+        barrier.srcAccessMask = output_mask;
+        barrier.dstAccessMask = input_mask;
         barrier.offset = offset;
         barrier.size = size;
         return barrier;
@@ -408,8 +408,8 @@ public:
     {
         VkImageMemoryBarrier barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.outputMask = output_mask;
-        barrier.inputMask = input_mask;
+        barrier.srcAccessMask = output_mask;
+        barrier.dstAccessMask = input_mask;
         barrier.oldLayout = old_layout;
         barrier.newLayout = new_layout;
         barrier.image = handle();

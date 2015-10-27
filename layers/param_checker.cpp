@@ -1321,13 +1321,27 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
 }
 
 static
-bool ValidateEnumerator(VkMemoryOutputFlagBits const& enumerator)
+bool ValidateEnumerator(VkAccessFlagBits const& enumerator)
 {
-    VkMemoryOutputFlagBits allFlags = (VkMemoryOutputFlagBits)(VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_TRANSFER_BIT |
-        VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-        VK_MEMORY_OUTPUT_HOST_WRITE_BIT);
+    VkAccessFlagBits allFlags = (VkAccessFlagBits)(
+            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+            VK_ACCESS_INDEX_READ_BIT |
+            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+            VK_ACCESS_UNIFORM_READ_BIT |
+            VK_ACCESS_INPUT_ATTACHMENT_READ_BIT |
+            VK_ACCESS_SHADER_READ_BIT |
+            VK_ACCESS_SHADER_WRITE_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_TRANSFER_READ_BIT |
+            VK_ACCESS_TRANSFER_WRITE_BIT |
+            VK_ACCESS_HOST_READ_BIT |
+            VK_ACCESS_HOST_WRITE_BIT |
+            VK_ACCESS_MEMORY_READ_BIT |
+            VK_ACCESS_MEMORY_WRITE_BIT);
+
     if(enumerator & (~allFlags))
     {
         return false;
@@ -1337,7 +1351,7 @@ bool ValidateEnumerator(VkMemoryOutputFlagBits const& enumerator)
 }
 
 static
-std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
+std::string EnumeratorString(VkAccessFlagBits const& enumerator)
 {
     if(!ValidateEnumerator(enumerator))
     {
@@ -1345,110 +1359,73 @@ std::string EnumeratorString(VkMemoryOutputFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
+    if(enumerator & VK_ACCESS_INDIRECT_COMMAND_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
+        strings.push_back("VK_ACCESS_INDIRECT_COMMAND_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_OUTPUT_TRANSFER_BIT)
+    if(enumerator & VK_ACCESS_INDEX_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_TRANSFER_BIT");
+        strings.push_back("VK_ACCESS_INDEX_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT)
+    if(enumerator & VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT");
+        strings.push_back("VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_OUTPUT_SHADER_WRITE_BIT)
+    if(enumerator & VK_ACCESS_UNIFORM_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_SHADER_WRITE_BIT");
+        strings.push_back("VK_ACCESS_UNIFORM_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_OUTPUT_HOST_WRITE_BIT)
+    if(enumerator & VK_ACCESS_INPUT_ATTACHMENT_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_OUTPUT_HOST_WRITE_BIT");
+        strings.push_back("VK_ACCESS_INPUT_ATTACHMENT_READ_BIT");
     }
-
-    std::string enumeratorString;
-    for(auto const& string : strings)
+    if(enumerator & VK_ACCESS_SHADER_READ_BIT)
     {
-        enumeratorString += string;
-
-        if(string != strings.back())
-        {
-            enumeratorString += '|';
-        }
+        strings.push_back("VK_ACCESS_SHADER_READ_BIT");
     }
-
-    return enumeratorString;
-}
-
-static
-bool ValidateEnumerator(VkMemoryInputFlagBits const& enumerator)
-{
-    VkMemoryInputFlagBits allFlags = (VkMemoryInputFlagBits)(VK_MEMORY_INPUT_TRANSFER_BIT |
-        VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_SHADER_READ_BIT |
-        VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-        VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-        VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-        VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT |
-        VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-        VK_MEMORY_INPUT_HOST_READ_BIT);
-    if(enumerator & (~allFlags))
+    if(enumerator & VK_ACCESS_SHADER_WRITE_BIT)
     {
-        return false;
+        strings.push_back("VK_ACCESS_SHADER_WRITE_BIT");
     }
-
-    return true;
-}
-
-static
-std::string EnumeratorString(VkMemoryInputFlagBits const& enumerator)
-{
-    if(!ValidateEnumerator(enumerator))
+    if(enumerator & VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
     {
-        return "unrecognized enumerator";
+        strings.push_back("VK_ACCESS_COLOR_ATTACHMENT_READ_BIT");
     }
-
-    std::vector<std::string> strings;
-    if(enumerator & VK_MEMORY_INPUT_TRANSFER_BIT)
+    if(enumerator & VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_TRANSFER_BIT");
+        strings.push_back("VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT)
+    if(enumerator & VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT");
+        strings.push_back("VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT)
+    if(enumerator & VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT");
+        strings.push_back("VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_SHADER_READ_BIT)
+    if(enumerator & VK_ACCESS_TRANSFER_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_SHADER_READ_BIT");
+        strings.push_back("VK_ACCESS_TRANSFER_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_UNIFORM_READ_BIT)
+    if(enumerator & VK_ACCESS_TRANSFER_WRITE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_UNIFORM_READ_BIT");
+        strings.push_back("VK_ACCESS_TRANSFER_WRITE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_INDEX_FETCH_BIT)
+    if(enumerator & VK_ACCESS_HOST_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_INDEX_FETCH_BIT");
+        strings.push_back("VK_ACCESS_HOST_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT)
+    if(enumerator & VK_ACCESS_HOST_WRITE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT");
+        strings.push_back("VK_ACCESS_HOST_WRITE_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT)
+    if(enumerator & VK_ACCESS_MEMORY_READ_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT");
+        strings.push_back("VK_ACCESS_MEMORY_READ_BIT");
     }
-    if(enumerator & VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT)
+    if(enumerator & VK_ACCESS_MEMORY_WRITE_BIT)
     {
-        strings.push_back("VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT");
-    }
-    if(enumerator & VK_MEMORY_INPUT_HOST_READ_BIT)
-    {
-        strings.push_back("VK_MEMORY_INPUT_HOST_READ_BIT");
+        strings.push_back("VK_ACCESS_MEMORY_WRITE_BIT");
     }
 
     std::string enumeratorString;

@@ -201,16 +201,16 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
         switch(u->type)
         {
         case VK_STRUCTURE_TYPE_MEMORY_BARRIER:
-            output_mask |= u->mem.outputMask;
-            input_mask  |= u->mem.inputMask;
+            output_mask |= u->mem.srcAccessMask;
+            input_mask  |= u->mem.dstAccessMask;
             break;
         case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER:
-            output_mask |= u->buf.outputMask;
-            input_mask  |= u->buf.inputMask;
+            output_mask |= u->buf.srcAccessMask;
+            input_mask  |= u->buf.dstAccessMask;
             break;
         case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER:
-            output_mask |= u->img.outputMask;
-            input_mask  |= u->img.inputMask;
+            output_mask |= u->img.srcAccessMask;
+            input_mask  |= u->img.dstAccessMask;
             {
                 struct intel_img *img = intel_img(u->img.image);
 
@@ -228,38 +228,38 @@ static void cmd_memory_barriers(struct intel_cmd *cmd,
         }
     }
 
-    if (output_mask & VK_MEMORY_OUTPUT_SHADER_WRITE_BIT) {
+    if (output_mask & VK_ACCESS_SHADER_WRITE_BIT) {
         flush_flags |= GEN7_PIPE_CONTROL_DC_FLUSH;
     }
-    if (output_mask & VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT) {
+    if (output_mask & VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_RENDER_CACHE_FLUSH;
     }
-    if (output_mask & VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (output_mask & VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_DEPTH_CACHE_FLUSH;
     }
 
-    /* CPU write is cache coherent, so VK_MEMORY_OUTPUT_HOST_WRITE_BIT needs no flush. */
-    /* Meta handles flushes, so VK_MEMORY_OUTPUT_TRANSFER_BIT needs no flush. */
+    /* CPU write is cache coherent, so VK_ACCESS_HOST_WRITE_BIT needs no flush. */
+    /* Meta handles flushes, so VK_ACCESS_TRANSFER_WRITE_BIT needs no flush. */
 
-    if (input_mask & (VK_MEMORY_INPUT_SHADER_READ_BIT | VK_MEMORY_INPUT_UNIFORM_READ_BIT)) {
+    if (input_mask & (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT)) {
         flush_flags |= GEN6_PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE;
     }
 
-    if (input_mask & VK_MEMORY_INPUT_UNIFORM_READ_BIT) {
+    if (input_mask & VK_ACCESS_UNIFORM_READ_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_CONSTANT_CACHE_INVALIDATE;
     }
 
-    if (input_mask & VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT) {
+    if (input_mask & VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT) {
         flush_flags |= GEN6_PIPE_CONTROL_VF_CACHE_INVALIDATE;
     }
 
     /* These bits have no corresponding cache invalidate operation.
-     * VK_MEMORY_INPUT_HOST_READ_BIT
-     * VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT
-     * VK_MEMORY_INPUT_INDEX_FETCH_BIT
-     * VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT
-     * VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT
-     * VK_MEMORY_INPUT_TRANSFER_BIT
+     * VK_ACCESS_HOST_READ_BIT
+     * VK_ACCESS_INDIRECT_COMMAND_READ_BIT
+     * VK_ACCESS_INDEX_READ_BIT
+     * VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+     * VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
+     * VK_ACCESS_TRANSFER_READ_BIT
      */
 
     cmd_batch_flush(cmd, flush_flags);

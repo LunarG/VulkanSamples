@@ -544,8 +544,8 @@ void  TestFrameworkVkPresent::Display()
     VkImageMemoryBarrier memoryBarrier = {};
     memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memoryBarrier.pNext = NULL;
-    memoryBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
-    memoryBarrier.inputMask = 0;
+    memoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    memoryBarrier.dstAccessMask = 0;
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -995,8 +995,8 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = 0;
-    image_memory_barrier.inputMask = 0;
+    image_memory_barrier.srcAccessMask = 0;
+    image_memory_barrier.dstAccessMask = 0;
     image_memory_barrier.oldLayout = old_image_layout;
     image_memory_barrier.newLayout = new_image_layout;
     image_memory_barrier.image = image;
@@ -1008,12 +1008,12 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_HOST_WRITE_BIT | VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     }
 
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;

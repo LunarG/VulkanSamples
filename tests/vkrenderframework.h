@@ -214,22 +214,22 @@ public:
     VkConstantBufferObj(VkDeviceObj *device, int constantCount, int constantSize, const void* data);
     ~VkConstantBufferObj();
     void BufferMemoryBarrier(
-        VkFlags outputMask =
-            VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-            VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-            VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_OUTPUT_TRANSFER_BIT,
-        VkFlags inputMask =
-            VK_MEMORY_INPUT_HOST_READ_BIT |
-            VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-            VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-            VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-            VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-            VK_MEMORY_INPUT_SHADER_READ_BIT |
-            VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-            VK_MEMORY_INPUT_TRANSFER_BIT);
+        VkFlags srcAccessMask =
+            VK_ACCESS_HOST_WRITE_BIT |
+            VK_ACCESS_SHADER_WRITE_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+        VkFlags dstAccessMask =
+            VK_ACCESS_HOST_READ_BIT |
+            VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+            VK_ACCESS_INDEX_READ_BIT |
+            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+            VK_ACCESS_UNIFORM_READ_BIT |
+            VK_ACCESS_SHADER_READ_BIT |
+            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+            VK_ACCESS_MEMORY_READ_BIT);
 
     void Bind(VkCommandBuffer commandBuffer, VkDeviceSize offset, uint32_t binding);
 

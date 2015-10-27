@@ -783,7 +783,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vkCmdFillBuffer(cmd_.handle(), bufs[0].handle(), 0, 4, 0x11111111);
     // is this necessary?
     VkBufferMemoryBarrier memory_barrier = bufs[0].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, 0, 4);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -795,7 +795,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     vkCmdCopyBuffer(cmd_.handle(), bufs[0].handle(), bufs[1].handle(), 1, &region);
 
     memory_barrier = bufs[1].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_TRANSFER_BIT, 0, 4);
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 
@@ -809,7 +809,7 @@ TEST_F(VkCmdCopyBufferTest, RAWHazard)
     // Additional commands could go into the buffer here before the wait.
 
     memory_barrier = bufs[1].buffer_memory_barrier(
-            VK_MEMORY_OUTPUT_TRANSFER_BIT, VK_MEMORY_INPUT_HOST_READ_BIT, 0, 4);
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_HOST_READ_BIT, 0, 4);
     pmemory_barrier = &memory_barrier;
     vkCmdWaitEvents(cmd_.handle(), 1, &event, src_stages, dest_stages, 1, (const void **)&pmemory_barrier);
 
@@ -1195,21 +1195,21 @@ protected:
 
         img.init(dev_, img_info, image_reqs);
         const VkFlags all_cache_outputs =
-                VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-                VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-                VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_TRANSFER_BIT;
+                VK_ACCESS_HOST_WRITE_BIT |
+                VK_ACCESS_SHADER_WRITE_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_TRANSFER_WRITE_BIT;
         const VkFlags all_cache_inputs =
-                VK_MEMORY_INPUT_HOST_READ_BIT |
-                VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-                VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-                VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-                VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-                VK_MEMORY_INPUT_SHADER_READ_BIT |
-                VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_TRANSFER_BIT;
+                VK_ACCESS_HOST_READ_BIT |
+                VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+                VK_ACCESS_INDEX_READ_BIT |
+                VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+                VK_ACCESS_UNIFORM_READ_BIT |
+                VK_ACCESS_SHADER_READ_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                VK_ACCESS_MEMORY_READ_BIT;
 
         std::vector<VkImageMemoryBarrier> to_clear;
         std::vector<VkImageMemoryBarrier *> p_to_clear;
@@ -1374,21 +1374,21 @@ protected:
 
         img.init(dev_, img_info, image_reqs);
         const VkFlags all_cache_outputs =
-                VK_MEMORY_OUTPUT_HOST_WRITE_BIT |
-                VK_MEMORY_OUTPUT_SHADER_WRITE_BIT |
-                VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_OUTPUT_TRANSFER_BIT;
+                VK_ACCESS_HOST_WRITE_BIT |
+                VK_ACCESS_SHADER_WRITE_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                VK_ACCESS_TRANSFER_WRITE_BIT;
         const VkFlags all_cache_inputs =
-                VK_MEMORY_INPUT_HOST_READ_BIT |
-                VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT |
-                VK_MEMORY_INPUT_INDEX_FETCH_BIT |
-                VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT |
-                VK_MEMORY_INPUT_UNIFORM_READ_BIT |
-                VK_MEMORY_INPUT_SHADER_READ_BIT |
-                VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT |
-                VK_MEMORY_INPUT_TRANSFER_BIT;
+                VK_ACCESS_HOST_READ_BIT |
+                VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+                VK_ACCESS_INDEX_READ_BIT |
+                VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+                VK_ACCESS_UNIFORM_READ_BIT |
+                VK_ACCESS_SHADER_READ_BIT |
+                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                VK_ACCESS_MEMORY_READ_BIT;
 
         std::vector<VkImageMemoryBarrier> to_clear;
         std::vector<VkImageMemoryBarrier *> p_to_clear;
