@@ -99,18 +99,18 @@ ImageChecker::ImageChecker(const VkImageCreateInfo &info)
 
         if (info_.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             if (info_.format != VK_FORMAT_S8_UINT) {
-                region.imageSubresource.aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                 regions_.push_back(region);
             }
 
             if (info_.format == VK_FORMAT_D16_UNORM_S8_UINT ||
                 info_.format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
                 info_.format == VK_FORMAT_S8_UINT) {
-                region.imageSubresource.aspect = VK_IMAGE_ASPECT_STENCIL_BIT;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
                 regions_.push_back(region);
             }
         } else {
-            region.imageSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             regions_.push_back(region);
         }
 

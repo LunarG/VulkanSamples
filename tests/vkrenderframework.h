@@ -313,10 +313,10 @@ public:
             createView.image = handle();
             createView.viewType =  VK_IMAGE_VIEW_TYPE_2D;
             createView.format = format;
-            createView.channels.r = VK_COMPONENT_SWIZZLE_R;
-            createView.channels.g = VK_COMPONENT_SWIZZLE_G;
-            createView.channels.b = VK_COMPONENT_SWIZZLE_B;
-            createView.channels.a = VK_COMPONENT_SWIZZLE_A;
+            createView.components.r = VK_COMPONENT_SWIZZLE_R;
+            createView.components.g = VK_COMPONENT_SWIZZLE_G;
+            createView.components.b = VK_COMPONENT_SWIZZLE_B;
+            createView.components.a = VK_COMPONENT_SWIZZLE_A;
             createView.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
             createView.flags = 0;
             m_targetView.init(*m_device, createView);

@@ -1253,7 +1253,7 @@ void intel_img_view_init(struct intel_dev *dev,
 
     if (!(img->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
         if (intel_gpu_gen(dev->gpu) >= INTEL_GEN(7.5)) {
-            state_swizzles = info->channels;
+            state_swizzles = info->components;
             view->shader_swizzles.r = VK_COMPONENT_SWIZZLE_R;
             view->shader_swizzles.g = VK_COMPONENT_SWIZZLE_G;
             view->shader_swizzles.b = VK_COMPONENT_SWIZZLE_B;
@@ -1263,7 +1263,7 @@ void intel_img_view_init(struct intel_dev *dev,
             state_swizzles.g = VK_COMPONENT_SWIZZLE_G;
             state_swizzles.b = VK_COMPONENT_SWIZZLE_B;
             state_swizzles.a = VK_COMPONENT_SWIZZLE_A;
-            view->shader_swizzles = info->channels;
+            view->shader_swizzles = info->components;
         }
 
         /* shader_swizzles is ignored by the compiler */

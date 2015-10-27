@@ -954,13 +954,13 @@ core = Extension(
         Proto("void", "CmdBeginQuery",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "slot"),
+             Param("uint32_t", "entry"),
              Param("VkQueryControlFlags", "flags")]),
 
         Proto("void", "CmdEndQuery",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "slot")]),
+             Param("uint32_t", "entry")]),
 
         Proto("void", "CmdResetQueryPool",
             [Param("VkCommandBuffer", "commandBuffer"),
@@ -972,7 +972,7 @@ core = Extension(
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkPipelineStageFlagBits", "pipelineStage"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "slot")]),
+             Param("uint32_t", "entry")]),
 
         Proto("void", "CmdCopyQueryPoolResults",
             [Param("VkCommandBuffer", "commandBuffer"),

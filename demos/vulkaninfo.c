@@ -758,7 +758,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tmultiDrawIndirect                       = %u\n", features->multiDrawIndirect                      );
     printf("\tdepthClamp                              = %u\n", features->depthClamp                             );
     printf("\tdepthBiasClamp                          = %u\n", features->depthBiasClamp                         );
-    printf("\tpolygonModeNonSolid                        = %u\n", features->polygonModeNonSolid                       );
+    printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
     printf("\tdepthBounds                             = %u\n", features->depthBounds                            );
     printf("\twideLines                               = %u\n", features->wideLines                              );
     printf("\tlargePoints                             = %u\n", features->largePoints                            );

@@ -4931,14 +4931,14 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
 
     BeginCommandBuffer();
     VkImageCopy copyRegion;
-    copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
     copyRegion.srcSubresource.layerCount = 0;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
-    copyRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.dstSubresource.mipLevel = 0;
     copyRegion.dstSubresource.baseArrayLayer = 0;
     copyRegion.dstSubresource.layerCount = 0;
@@ -5037,14 +5037,14 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
 
     BeginCommandBuffer();
     VkImageCopy copyRegion;
-    copyRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.srcSubresource.mipLevel = 0;
     copyRegion.srcSubresource.baseArrayLayer = 0;
     copyRegion.srcSubresource.layerCount = 0;
     copyRegion.srcOffset.x = 0;
     copyRegion.srcOffset.y = 0;
     copyRegion.srcOffset.z = 0;
-    copyRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copyRegion.dstSubresource.mipLevel = 0;
     copyRegion.dstSubresource.baseArrayLayer = 0;
     copyRegion.dstSubresource.layerCount = 0;
@@ -5141,14 +5141,14 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     //VK_IMAGE_LAYOUT_UNDEFINED = 0,
     //VK_IMAGE_LAYOUT_GENERAL = 1,
     VkImageResolve resolveRegion;
-    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
     resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.dstSubresource.mipLevel = 0;
     resolveRegion.dstSubresource.baseArrayLayer = 0;
     resolveRegion.dstSubresource.layerCount = 0;
@@ -5247,14 +5247,14 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     //VK_IMAGE_LAYOUT_UNDEFINED = 0,
     //VK_IMAGE_LAYOUT_GENERAL = 1,
     VkImageResolve resolveRegion;
-    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
     resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.dstSubresource.mipLevel = 0;
     resolveRegion.dstSubresource.baseArrayLayer = 0;
     resolveRegion.dstSubresource.layerCount = 0;
@@ -5355,14 +5355,14 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     //VK_IMAGE_LAYOUT_UNDEFINED = 0,
     //VK_IMAGE_LAYOUT_GENERAL = 1,
     VkImageResolve resolveRegion;
-    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
     resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.dstSubresource.mipLevel = 0;
     resolveRegion.dstSubresource.baseArrayLayer = 0;
     resolveRegion.dstSubresource.layerCount = 0;
@@ -5462,14 +5462,14 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     //VK_IMAGE_LAYOUT_UNDEFINED = 0,
     //VK_IMAGE_LAYOUT_GENERAL = 1,
     VkImageResolve resolveRegion;
-    resolveRegion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.srcSubresource.mipLevel = 0;
     resolveRegion.srcSubresource.baseArrayLayer = 0;
     resolveRegion.srcSubresource.layerCount = 0;
     resolveRegion.srcOffset.x = 0;
     resolveRegion.srcOffset.y = 0;
     resolveRegion.srcOffset.z = 0;
-    resolveRegion.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    resolveRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     resolveRegion.dstSubresource.mipLevel = 0;
     resolveRegion.dstSubresource.baseArrayLayer = 0;
     resolveRegion.dstSubresource.layerCount = 0;

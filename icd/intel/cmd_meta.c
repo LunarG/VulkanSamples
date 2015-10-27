@@ -158,10 +158,10 @@ static void cmd_meta_set_src_for_img(struct intel_cmd *cmd,
     }
 
     info.format = format;
-    info.channels.r = VK_COMPONENT_SWIZZLE_R;
-    info.channels.g = VK_COMPONENT_SWIZZLE_G;
-    info.channels.b = VK_COMPONENT_SWIZZLE_B;
-    info.channels.a = VK_COMPONENT_SWIZZLE_A;
+    info.components.r = VK_COMPONENT_SWIZZLE_R;
+    info.components.g = VK_COMPONENT_SWIZZLE_G;
+    info.components.b = VK_COMPONENT_SWIZZLE_B;
+    info.components.a = VK_COMPONENT_SWIZZLE_A;
     info.subresourceRange.aspectMask = aspect;
     info.subresourceRange.baseMipLevel = 0;
     info.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;

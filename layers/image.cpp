@@ -552,13 +552,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
-        if (pRegions[i].srcSubresource.aspect != pRegions[i].dstSubresource.aspect) {
+        if (pRegions[i].srcSubresource.aspectMask != pRegions[i].dstSubresource.aspectMask) {
             char const str[] = "vkCmdCopyImage: Src and dest aspectMasks for each region must match";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
-        if ((pRegions[i].srcSubresource.aspect & VK_IMAGE_ASPECT_COLOR_BIT) &&
-            (pRegions[i].srcSubresource.aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))) {
+        if ((pRegions[i].srcSubresource.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (pRegions[i].srcSubresource.aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))) {
             char const str[] = "vkCmdCopyImage aspectMask cannot specify both COLOR and DEPTH/STENCIL aspects";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
@@ -653,10 +653,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
-        VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
-        if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
-            (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-            (aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+        VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
+        if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+            (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyImageToBuffer: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
@@ -689,10 +689,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
-        VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
-        if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
-            (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-            (aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+        VkImageAspectFlags aspectMask = pRegions[i].imageSubresource.aspectMask;
+        if ((aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) &&
+            (aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+            (aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
             char const str[] = "vkCmdCopyBufferToImage: aspectMasks for each region must specify only COLOR or DEPTH or STENCIL";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);
@@ -772,8 +772,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
                                         (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
                 }
 
-                VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspect;
-                VkImageAspectFlags dstAspect = pRegions[i].dstSubresource.aspect;
+                VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspectMask;
+                VkImageAspectFlags dstAspect = pRegions[i].dstSubresource.aspectMask;
 
                 if (srcAspect != dstAspect) {
                     std::stringstream ss;
@@ -857,8 +857,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
         }
 
-        if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR_BIT) ||
-            (pRegions[i].dstSubresource.aspect != VK_IMAGE_ASPECT_COLOR_BIT)) {
+        if ((pRegions[i].srcSubresource.aspectMask  != VK_IMAGE_ASPECT_COLOR_BIT) ||
+            (pRegions[i].dstSubresource.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT)) {
             char const str[] = "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", str);

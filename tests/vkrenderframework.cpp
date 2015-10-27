@@ -759,13 +759,13 @@ VkResult VkImageObj::CopyImage(VkImageObj &src_image)
     this->SetLayout(&cmd_buf, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkImageCopy copy_region = {};
-    copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.mipLevel = 0;
     copy_region.srcOffset.x = 0;
     copy_region.srcOffset.y = 0;
     copy_region.srcOffset.z = 0;
-    copy_region.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.mipLevel = 0;
     copy_region.dstOffset.x = 0;
@@ -815,10 +815,10 @@ VkTextureObj::VkTextureObj(VkDeviceObj *device, uint32_t *colors)
     view.image = VK_NULL_HANDLE;
     view.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view.format = tex_format;
-    view.channels.r = VK_COMPONENT_SWIZZLE_R;
-    view.channels.g = VK_COMPONENT_SWIZZLE_G;
-    view.channels.b = VK_COMPONENT_SWIZZLE_B;
-    view.channels.a = VK_COMPONENT_SWIZZLE_A;
+    view.components.r = VK_COMPONENT_SWIZZLE_R;
+    view.components.g = VK_COMPONENT_SWIZZLE_G;
+    view.components.b = VK_COMPONENT_SWIZZLE_B;
+    view.components.a = VK_COMPONENT_SWIZZLE_A;
     view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view.subresourceRange.baseMipLevel = 0;
     view.subresourceRange.levelCount = 1;

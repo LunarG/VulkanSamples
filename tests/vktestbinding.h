@@ -661,7 +661,7 @@ inline VkQueryPoolCreateInfo QueryPool::create_info(VkQueryType type, uint32_t s
     VkQueryPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     info.queryType = type;
-    info.slots = slot_count;
+    info.entryCount = slot_count;
     return info;
 }
 
@@ -695,7 +695,7 @@ inline VkImageSubresource Image::subresource(const VkImageSubresourceRange &rang
 inline VkImageSubresourceLayers Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer, uint32_t array_size)
 {
     VkImageSubresourceLayers subres = {};
-    subres.aspect = aspect;
+    subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
     subres.baseArrayLayer = array_layer;
     subres.layerCount = array_size;

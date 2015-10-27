@@ -3394,32 +3394,32 @@ bool PreCreateImageView(
         "vkCreateImageView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.r < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.r > VK_COMPONENT_SWIZZLE_END_RANGE)
+    if(pCreateInfo->components.r < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->components.r > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.r, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.r, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.g < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.g > VK_COMPONENT_SWIZZLE_END_RANGE)
+    if(pCreateInfo->components.g < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->components.g > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.g, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.g, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.b < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.b > VK_COMPONENT_SWIZZLE_END_RANGE)
+    if(pCreateInfo->components.b < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->components.b > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.b, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.b, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->channels.a < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
-        pCreateInfo->channels.a > VK_COMPONENT_SWIZZLE_END_RANGE)
+    if(pCreateInfo->components.a < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
+        pCreateInfo->components.a > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->channels.a, is an unrecognized enumerator");
+        "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.a, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3808,8 +3808,8 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterizationState->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfos->pRasterizationState->polygonMode < VK_FILL_MODE_BEGIN_RANGE ||
-        pCreateInfos->pRasterizationState->polygonMode > VK_FILL_MODE_END_RANGE)
+    if(pCreateInfos->pRasterizationState->polygonMode < VK_POLYGON_MODE_BEGIN_RANGE ||
+        pCreateInfos->pRasterizationState->polygonMode > VK_POLYGON_MODE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode, is an unrecognized enumerator");
@@ -3928,15 +3928,15 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->pColorBlendState->pAttachments != nullptr && pCreateInfos->pColorBlendState->pAttachments->blendEnable == VK_TRUE)
     {
-    if(pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor, is an unrecognized enumerator");
@@ -3949,15 +3949,15 @@ bool PreCreateGraphicsPipelines(
         "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->colorBlendOp, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor < VK_BLEND_BEGIN_RANGE ||
-        pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor > VK_BLEND_END_RANGE)
+    if(pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
+        pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor, is an unrecognized enumerator");
@@ -5458,18 +5458,18 @@ bool PreCmdCopyImage(
 {
     if(pRegions != nullptr)
     {
-    if ((pRegions->srcSubresource.aspect &
+    if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->dstSubresource.aspect &
+    if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5530,18 +5530,18 @@ bool PreCmdBlitImage(
 {
     if(pRegions != nullptr)
     {
-    if ((pRegions->srcSubresource.aspect &
+    if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->dstSubresource.aspect &
+    if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5612,11 +5612,11 @@ bool PreCmdCopyBufferToImage(
 {
     if(pRegions != nullptr)
     {
-    if ((pRegions->imageSubresource.aspect &
+    if ((pRegions->imageSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5667,11 +5667,11 @@ bool PreCmdCopyImageToBuffer(
 {
     if(pRegions != nullptr)
     {
-    if ((pRegions->imageSubresource.aspect &
+    if ((pRegions->imageSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -5923,18 +5923,18 @@ bool PreCmdResolveImage(
 {
     if(pRegions != nullptr)
     {
-    if ((pRegions->srcSubresource.aspect &
+    if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
-    if ((pRegions->dstSubresource.aspect &
+    if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCmdResolveImage parameter, VkImageAspect pRegions->dstSubresource.aspect, is an unrecognized enumerator");
+        "vkCmdResolveImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }

@@ -283,10 +283,10 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewInfo.format = fmt;
 
-    viewInfo.channels.r = VK_COMPONENT_SWIZZLE_R;
-    viewInfo.channels.g = VK_COMPONENT_SWIZZLE_G;
-    viewInfo.channels.b = VK_COMPONENT_SWIZZLE_B;
-    viewInfo.channels.a = VK_COMPONENT_SWIZZLE_A;
+    viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+    viewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+    viewInfo.components.a = VK_COMPONENT_SWIZZLE_A;
 
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;

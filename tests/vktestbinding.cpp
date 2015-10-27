@@ -597,7 +597,7 @@ VkSubresourceLayout Image::subresource_layout(const VkImageSubresource &subres) 
 VkSubresourceLayout Image::subresource_layout(const VkImageSubresourceLayers &subrescopy) const
 {
     VkSubresourceLayout data;
-    VkImageSubresource subres = subresource(image_aspect(subrescopy.aspect), subrescopy.mipLevel, subrescopy.baseArrayLayer);
+    VkImageSubresource subres = subresource(image_aspect(subrescopy.aspectMask), subrescopy.mipLevel, subrescopy.baseArrayLayer);
     size_t size = sizeof(data);
     vkGetImageSubresourceLayout(device(), handle(), &subres, &data);
     if (size != sizeof(data))

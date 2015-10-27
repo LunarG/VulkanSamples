@@ -845,7 +845,7 @@ static void demo_prepare_buffers(struct demo *demo)
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = NULL,
             .format = demo->format,
-            .channels = {
+            .components = {
                 .r = VK_COMPONENT_SWIZZLE_R,
                 .g = VK_COMPONENT_SWIZZLE_G,
                 .b = VK_COMPONENT_SWIZZLE_B,
@@ -1196,7 +1196,7 @@ static void demo_prepare_textures(struct demo *demo)
             .image = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
-            .channels = { VK_COMPONENT_SWIZZLE_R,
+            .components = { VK_COMPONENT_SWIZZLE_R,
                           VK_COMPONENT_SWIZZLE_G,
                           VK_COMPONENT_SWIZZLE_B,
                           VK_COMPONENT_SWIZZLE_A, },

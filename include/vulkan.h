@@ -100,12 +100,12 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCommandPool)
 #define VK_FALSE                          0
 #define VK_QUEUE_FAMILY_IGNORED           (~0U)
 #define VK_SUBPASS_EXTERNAL               (~0U)
-#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE       256
-#define VK_UUID_SIZE                    16
+#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE  256
+#define VK_UUID_SIZE                      16
 #define VK_MAX_MEMORY_TYPES               32
 #define VK_MAX_MEMORY_HEAPS               16
-#define VK_MAX_EXTENSION_NAME_SIZE             256
-#define VK_MAX_DESCRIPTION_SIZE                256
+#define VK_MAX_EXTENSION_NAME_SIZE        256
+#define VK_MAX_DESCRIPTION_SIZE           256
 
 
 typedef enum {
@@ -512,10 +512,10 @@ typedef enum {
     VK_POLYGON_MODE_FILL = 0,
     VK_POLYGON_MODE_LINE = 1,
     VK_POLYGON_MODE_POINT = 2,
-    VK_FILL_MODE_BEGIN_RANGE = VK_POLYGON_MODE_FILL,
-    VK_FILL_MODE_END_RANGE = VK_POLYGON_MODE_POINT,
-    VK_FILL_MODE_RANGE_SIZE = (VK_POLYGON_MODE_POINT - VK_POLYGON_MODE_FILL + 1),
-    VK_FILL_MODE_MAX_ENUM = 0x7FFFFFFF
+    VK_POLYGON_MODE_BEGIN_RANGE = VK_POLYGON_MODE_FILL,
+    VK_POLYGON_MODE_END_RANGE = VK_POLYGON_MODE_POINT,
+    VK_POLYGON_MODE_RANGE_SIZE = (VK_POLYGON_MODE_POINT - VK_POLYGON_MODE_FILL + 1),
+    VK_POLYGON_MODE_MAX_ENUM = 0x7FFFFFFF
 } VkPolygonMode;
 
 typedef enum {
@@ -600,10 +600,10 @@ typedef enum {
     VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR = 16,
     VK_BLEND_FACTOR_SRC1_ALPHA = 17,
     VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA = 18,
-    VK_BLEND_BEGIN_RANGE = VK_BLEND_FACTOR_ZERO,
-    VK_BLEND_END_RANGE = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA,
-    VK_BLEND_RANGE_SIZE = (VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA - VK_BLEND_FACTOR_ZERO + 1),
-    VK_BLEND_MAX_ENUM = 0x7FFFFFFF
+    VK_BLEND_FACTOR_BEGIN_RANGE = VK_BLEND_FACTOR_ZERO,
+    VK_BLEND_FACTOR_END_RANGE = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA,
+    VK_BLEND_FACTOR_RANGE_SIZE = (VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA - VK_BLEND_FACTOR_ZERO + 1),
+    VK_BLEND_FACTOR_MAX_ENUM = 0x7FFFFFFF
 } VkBlendFactor;
 
 typedef enum {
@@ -940,7 +940,7 @@ typedef enum {
     VK_COLOR_COMPONENT_B_BIT = 0x00000004,
     VK_COLOR_COMPONENT_A_BIT = 0x00000008,
 } VkColorComponentFlagBits;
-typedef VkFlags VkChannelFlags;
+typedef VkFlags VkColorComponentFlags;
 typedef VkFlags VkPipelineDynamicStateCreateFlags;
 typedef VkFlags VkPipelineLayoutCreateFlags;
 typedef VkFlags VkShaderStageFlags;
@@ -1119,7 +1119,7 @@ typedef struct {
     VkBool32                                    multiDrawIndirect;
     VkBool32                                    depthClamp;
     VkBool32                                    depthBiasClamp;
-    VkBool32                                    polygonModeNonSolid;
+    VkBool32                                    fillModeNonSolid;
     VkBool32                                    depthBounds;
     VkBool32                                    wideLines;
     VkBool32                                    largePoints;
@@ -1493,7 +1493,7 @@ typedef struct {
     const void*                                 pNext;
     VkQueryPoolCreateFlags                      flags;
     VkQueryType                                 queryType;
-    uint32_t                                    slots;
+    uint32_t                                    entryCount;
     VkQueryPipelineStatisticFlags               pipelineStatistics;
 } VkQueryPoolCreateInfo;
 
@@ -1544,10 +1544,10 @@ typedef struct {
 } VkSubresourceLayout;
 
 typedef struct {
-    VkComponentSwizzle                            r;
-    VkComponentSwizzle                            g;
-    VkComponentSwizzle                            b;
-    VkComponentSwizzle                            a;
+    VkComponentSwizzle                          r;
+    VkComponentSwizzle                          g;
+    VkComponentSwizzle                          b;
+    VkComponentSwizzle                          a;
 } VkComponentMapping;
 
 typedef struct {
@@ -1565,7 +1565,7 @@ typedef struct {
     VkImage                                     image;
     VkImageViewType                             viewType;
     VkFormat                                    format;
-    VkComponentMapping                            channels;
+    VkComponentMapping                          components;
     VkImageSubresourceRange                     subresourceRange;
 } VkImageViewCreateInfo;
 
@@ -1618,7 +1618,7 @@ typedef struct {
 typedef struct {
     uint32_t                                    binding;
     uint32_t                                    stride;
-    VkVertexInputRate                       inputRate;
+    VkVertexInputRate                           inputRate;
 } VkVertexInputBindingDescription;
 
 typedef struct {
@@ -1693,7 +1693,7 @@ typedef struct {
     VkPipelineRasterizationStateCreateFlags     flags;
     VkBool32                                    depthClampEnable;
     VkBool32                                    rasterizerDiscardEnable;
-    VkPolygonMode                                  polygonMode;
+    VkPolygonMode                               polygonMode;
     VkCullModeFlags                             cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
@@ -1742,13 +1742,13 @@ typedef struct {
 
 typedef struct {
     VkBool32                                    blendEnable;
-    VkBlendFactor                                     srcColorBlendFactor;
-    VkBlendFactor                                     dstColorBlendFactor;
+    VkBlendFactor                               srcColorBlendFactor;
+    VkBlendFactor                               dstColorBlendFactor;
     VkBlendOp                                   colorBlendOp;
-    VkBlendFactor                                     srcAlphaBlendFactor;
-    VkBlendFactor                                     dstAlphaBlendFactor;
+    VkBlendFactor                               srcAlphaBlendFactor;
+    VkBlendFactor                               dstAlphaBlendFactor;
     VkBlendOp                                   alphaBlendOp;
-    VkChannelFlags                              colorWriteMask;
+    VkColorComponentFlags                       colorWriteMask;
 } VkPipelineColorBlendAttachmentState;
 
 typedef struct {
@@ -1864,7 +1864,7 @@ typedef struct {
     VkDescriptorPoolCreateFlags                 flags;
     uint32_t                                    maxSets;
     uint32_t                                    poolSizeCount;
-    const VkDescriptorPoolSize*                pPoolSizes;
+    const VkDescriptorPoolSize*                 pPoolSizes;
 } VkDescriptorPoolCreateInfo;
 
 typedef struct {
@@ -2007,25 +2007,25 @@ typedef struct {
 } VkBufferCopy;
 
 typedef struct {
-    VkImageAspectFlags                          aspect;
+    VkImageAspectFlags                          aspectMask;
     uint32_t                                    mipLevel;
     uint32_t                                    baseArrayLayer;
     uint32_t                                    layerCount;
 } VkImageSubresourceLayers;
 
 typedef struct {
-    VkImageSubresourceLayers                      srcSubresource;
+    VkImageSubresourceLayers                    srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresourceLayers                      dstSubresource;
+    VkImageSubresourceLayers                    dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  extent;
 } VkImageCopy;
 
 typedef struct {
-    VkImageSubresourceLayers                      srcSubresource;
+    VkImageSubresourceLayers                    srcSubresource;
     VkOffset3D                                  srcOffset;
     VkExtent3D                                  srcExtent;
-    VkImageSubresourceLayers                      dstSubresource;
+    VkImageSubresourceLayers                    dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  dstExtent;
 } VkImageBlit;
@@ -2034,7 +2034,7 @@ typedef struct {
     VkDeviceSize                                bufferOffset;
     uint32_t                                    bufferRowLength;
     uint32_t                                    bufferImageHeight;
-    VkImageSubresourceLayers                      imageSubresource;
+    VkImageSubresourceLayers                    imageSubresource;
     VkOffset3D                                  imageOffset;
     VkExtent3D                                  imageExtent;
 } VkBufferImageCopy;
@@ -2068,9 +2068,9 @@ typedef struct {
 } VkClearRect;
 
 typedef struct {
-    VkImageSubresourceLayers                      srcSubresource;
+    VkImageSubresourceLayers                    srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresourceLayers                      dstSubresource;
+    VkImageSubresourceLayers                    dstSubresource;
     VkOffset3D                                  dstOffset;
     VkExtent3D                                  extent;
 } VkImageResolve;
@@ -2268,10 +2268,10 @@ typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCommandBuffer commandBuffer, VkEvent e
 typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
 typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
-typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
-typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot);
+typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry, VkQueryControlFlags flags);
+typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry);
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
-typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot);
+typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t entry);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
@@ -3023,13 +3023,13 @@ void VKAPI vkCmdPipelineBarrier(
 void VKAPI vkCmdBeginQuery(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    slot,
+    uint32_t                                    entry,
     VkQueryControlFlags                         flags);
 
 void VKAPI vkCmdEndQuery(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    slot);
+    uint32_t                                    entry);
 
 void VKAPI vkCmdResetQueryPool(
     VkCommandBuffer                             commandBuffer,
@@ -3041,7 +3041,7 @@ void VKAPI vkCmdWriteTimestamp(
     VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,
-    uint32_t                                    slot);
+    uint32_t                                    entry);
 
 void VKAPI vkCmdCopyQueryPoolResults(
     VkCommandBuffer                             commandBuffer,
@@ -3064,11 +3064,11 @@ void VKAPI vkCmdPushConstants(
 void VKAPI vkCmdBeginRenderPass(
     VkCommandBuffer                             commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkSubpassContents                        contents);
+    VkSubpassContents                           contents);
 
 void VKAPI vkCmdNextSubpass(
     VkCommandBuffer                             commandBuffer,
-    VkSubpassContents                        contents);
+    VkSubpassContents                           contents);
 
 void VKAPI vkCmdEndRenderPass(
     VkCommandBuffer                             commandBuffer);
