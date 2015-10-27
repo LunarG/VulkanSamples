@@ -74,6 +74,7 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 option(BUILD_VKTRACE "Build VkTrace" ON)
+option(BUILD_VKJSON "Build vkjson" ON)
 
 if (BUILD_ICD OR BUILD_TESTS)
     # Hard code our glslang path for now
@@ -134,4 +135,8 @@ endif()
 
 if(BUILD_VKTRACE)
     add_subdirectory(vktrace)
+endif()
+
+if(BUILD_VKJSON)
+    add_subdirectory(libs/vkjson)
 endif()
