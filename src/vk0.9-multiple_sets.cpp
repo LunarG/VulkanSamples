@@ -193,7 +193,9 @@ int main(int argc, char **argv)
             descriptor_sets);
     assert(res == VK_SUCCESS);
 
-    VkWriteDescriptorSet descriptor_writes[2] = {};
+    // Using empty brace initializer on the next line triggers a bug in older versions of gcc, so memset instead
+    VkWriteDescriptorSet descriptor_writes[2];
+    memset(descriptor_writes, 0, sizeof(descriptor_writes));
 
     // Populate with info about our uniform buffer
     descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
