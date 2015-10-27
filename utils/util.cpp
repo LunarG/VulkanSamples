@@ -140,7 +140,7 @@ void set_image_layout(
     vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
 }
 
-bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, char* dataPtr)
+bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char* dataPtr)
 {
     // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
     //  1. magic number
@@ -203,7 +203,7 @@ bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPi
     // Now read the data
     for(int y = 0; y < height; y++)
     {
-        char* rowPtr = dataPtr;
+        unsigned char* rowPtr = dataPtr;
         for(int x = 0; x < width; x++)
         {
             fread(rowPtr, 3, 1, fPtr);
