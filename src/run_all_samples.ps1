@@ -52,8 +52,10 @@ echo "Draw Cube"
 & $dPath\vk0.9-drawcube
 echo "Draw Textured Cube"
 & $dPath\vk0.9-drawtexturedcube
-echo "Draw Cube With Utilities"
-& $dPath\vk0.9-drawcubewithutilities
+echo "Draw Cubes with Dynamic Uniform Buffer"
+& $dPath\vk0.9-dynamicuniform
+echo "Texel Buffer"
+& $dPath\vk0.9-texelbuffer
 echo "Use GLSL Shader"
 & $dPath\vk0.9-useglslshader
 echo "Use SPIR-V Shader"

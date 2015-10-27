@@ -220,10 +220,6 @@ set (S_TARGETS instance device enumerate enumerate-adv
     enable_validation_with_callback multiple_sets)
 sampleWithSingleFile()
 
-# simple one file sample targets, no additional files
-set (S_TARGETS drawcubewithutilities)
-sampleInlineGLSLShaders()
-
 # targets that use spv shaders
 
 # usespirvshader
