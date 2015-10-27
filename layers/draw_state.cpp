@@ -236,7 +236,6 @@ static uint32_t        g_lastTouchedCBIndex = 0;
 // Track the last global DrawState of interest touched by any thread
 static GLOBAL_CB_NODE* g_lastGlobalCB = NULL;
 static PIPELINE_NODE*  g_lastBoundPipeline = NULL;
-static VkDescriptorSet g_lastBoundDescriptorSet = VK_NULL_HANDLE;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 // prototype
 static GLOBAL_CB_NODE* getCBNode(layer_data*, const VkCmdBuffer);
@@ -1062,7 +1061,6 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, VkStructureType t
     for (uint32_t i = 0; i < updateCount; i++) {
         VkDescriptorSet ds = pWDS[i].destSet;
         SET_NODE* pSet = my_data->setMap[ds.handle]; // getSetNode() without locking
-        g_lastBoundDescriptorSet = pSet->set;
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
         pLayout = pSet->pLayout;
         // First verify valid update struct
@@ -2591,7 +2589,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCmdBuffer cmdBuffer, VkPipe
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
                         pCB->lastBoundPipelineLayout = layout;
                         pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
-                        g_lastBoundDescriptorSet = pDescriptorSets[i];
                         loader_platform_thread_unlock_mutex(&globalLock);
                         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDescriptorSets[i].handle, 0, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", pDescriptorSets[i].handle, string_VkPipelineBindPoint(pipelineBindPoint));
