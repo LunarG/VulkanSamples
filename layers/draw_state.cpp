@@ -681,29 +681,6 @@ static VkBool32 validUpdateStruct(layer_data* my_data, const VkDevice device, co
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
     }
 }
-// For given update struct, return binding
-static uint32_t getUpdateBinding(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
-{
-    switch (pUpdateStruct->sType)
-    {
-        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->destBinding;
-        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->destBinding;
-    }
-}
-// Set arrayIndex for given update struct in the last parameter
-static uint32_t getUpdateArrayIndex(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
-{
-    switch (pUpdateStruct->sType)
-    {
-        case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
-            return ((VkWriteDescriptorSet*)pUpdateStruct)->destArrayElement;
-        case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
-            // TODO : Need to understand this case better and make sure code is correct
-            return ((VkCopyDescriptorSet*)pUpdateStruct)->destArrayElement;
-    }
-}
 // Set count for given update struct in the last parameter
 // Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
 static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
@@ -736,20 +713,14 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
     return offsetIndex-1;
 }
 // For given layout and update, return the first overall index of the layout that is updated
-static uint32_t getUpdateStartIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+static uint32_t getUpdateStartIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const uint32_t binding, const uint32_t arrayIndex, const GENERIC_HEADER* pUpdateStruct)
 {
-    uint32_t binding = 0, arrayIndex = 0;
-    binding = getUpdateBinding(my_data, device, pUpdateStruct);
-    arrayIndex = getUpdateArrayIndex(my_data, device, pUpdateStruct);
     return getBindingStartIndex(pLayout, binding)+arrayIndex;
 }
-// For given layout and update, return the last overall index of the layout that is update
-static uint32_t getUpdateEndIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct)
+// For given layout and update, return the last overall index of the layout that is updated
+static uint32_t getUpdateEndIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const uint32_t binding, const uint32_t arrayIndex, const GENERIC_HEADER* pUpdateStruct)
 {
-    uint32_t binding = 0, arrayIndex = 0, count = 0;
-    binding = getUpdateBinding(my_data, device, pUpdateStruct);
-    arrayIndex = getUpdateArrayIndex(my_data, device, pUpdateStruct);
-    count = getUpdateCount(my_data, device, pUpdateStruct);
+    uint32_t count = getUpdateCount(my_data, device, pUpdateStruct);
     return getBindingStartIndex(pLayout, binding)+arrayIndex+count-1;
 }
 // Verify that the descriptor type in the update struct matches what's expected by the layout
@@ -1041,7 +1012,8 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
     LAYOUT_NODE* pLayout = NULL;
     VkDescriptorSetLayoutCreateInfo* pLayoutCI = NULL;
     // Validate Write updates
-    for (uint32_t i = 0; i < writeCount; i++) {
+    uint32_t i = 0;
+    for (i=0; i < writeCount; i++) {
         VkDescriptorSet ds = pWDS[i].destSet;
         SET_NODE* pSet = my_data->setMap[ds.handle];
         GENERIC_HEADER* pUpdate = (GENERIC_HEADER*) &pWDS[i];
@@ -1058,7 +1030,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                     "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
-            endIndex = getUpdateEndIndex(my_data, device, pLayout, pUpdate);
+            endIndex = getUpdateEndIndex(my_data, device, pLayout, binding, pWDS[i].destArrayElement, pUpdate);
             if (getBindingEndIndex(pLayout, binding) < endIndex) {
                 pLayoutCI = &pLayout->createInfo;
                 string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
@@ -1066,7 +1038,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                         "Descriptor update type of %s is out of bounds for matching binding %u in Layout w/ CI:\n%s!", string_VkStructureType(pUpdate->sType), binding, DSstr.c_str());
             } else { // TODO : should we skip update on a type mismatch or force it?
                 uint32_t startIndex;
-                startIndex = getUpdateStartIndex(my_data, device, pLayout, pUpdate);
+                startIndex = getUpdateStartIndex(my_data, device, pLayout, binding, pWDS[i].destArrayElement, pUpdate);
                 // Layout bindings match w/ update, now verify that update type & stageFlags are the same for entire update
                 if ((skipCall = validateUpdateConsistency(my_data, device, pLayout, pUpdate, startIndex, endIndex)) == VK_FALSE) {
                     // The update is within bounds and consistent, but need to make sure contents make sense as well
@@ -1088,6 +1060,56 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t writeCou
                                 pSet->ppDescriptors[j] = pNewNode;
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+    // Now validate copy updates
+    for (i=0; i < copyCount; ++i) {
+        SET_NODE *pSrcSet = NULL, *pDstSet = NULL;
+        LAYOUT_NODE *pSrcLayout = NULL, *pDstLayout = NULL;
+        uint32_t srcStartIndex = 0, srcEndIndex = 0, dstStartIndex = 0, dstEndIndex = 0;
+        // For each copy make sure that update falls within given layout and that types match
+        pSrcSet = my_data->setMap[pCDS[i].srcSet.handle];
+        pDstSet = my_data->setMap[pCDS[i].destSet.handle];
+        pSrcLayout = pSrcSet->pLayout;
+        pDstLayout = pDstSet->pLayout;
+        // Validate that src binding is valid for src set layout
+        if (pSrcLayout->createInfo.count < pCDS[i].srcBinding) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pSrcSet->set.handle, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                "Copy descriptor update %u has srcBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
+                i, pCDS[i].srcBinding, pSrcLayout->layout.handle, pSrcLayout->createInfo.count-1);
+        } else if (pDstLayout->createInfo.count < pCDS[i].destBinding) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDstSet->set.handle, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
+                "Copy descriptor update %u has destBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
+                i, pCDS[i].destBinding, pDstLayout->layout.handle, pDstLayout->createInfo.count-1);
+        } else {
+            // Proceed with validation. Bindings are ok, but make sure update is within bounds of given layout
+            srcEndIndex = getUpdateEndIndex(my_data, device, pSrcLayout, pCDS[i].srcBinding, pCDS[i].srcArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
+            dstEndIndex = getUpdateEndIndex(my_data, device, pDstLayout, pCDS[i].destBinding, pCDS[i].destArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
+            if (getBindingEndIndex(pSrcLayout, pCDS[i].srcBinding) < srcEndIndex) {
+                pLayoutCI = &pSrcLayout->createInfo;
+                string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
+                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pSrcSet->set.handle, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
+                    "Copy descriptor src update is out of bounds for matching binding %u in Layout w/ CI:\n%s!", pCDS[i].srcBinding, DSstr.c_str());
+            } else if (getBindingEndIndex(pDstLayout, pCDS[i].destBinding) < dstEndIndex) {
+                pLayoutCI = &pDstLayout->createInfo;
+                string DSstr = vk_print_vkdescriptorsetlayoutcreateinfo(pLayoutCI, "{DS}    ");
+                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pDstSet->set.handle, 0, DRAWSTATE_DESCRIPTOR_UPDATE_OUT_OF_BOUNDS, "DS",
+                    "Copy descriptor dest update is out of bounds for matching binding %u in Layout w/ CI:\n%s!", pCDS[i].destBinding, DSstr.c_str());
+            } else {
+                srcStartIndex = getUpdateStartIndex(my_data, device, pSrcLayout, pCDS[i].srcBinding, pCDS[i].srcArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
+                dstStartIndex = getUpdateStartIndex(my_data, device, pDstLayout, pCDS[i].destBinding, pCDS[i].destArrayElement, (const GENERIC_HEADER*)&(pCDS[i]));
+                for (uint32_t j=0; j<pCDS[i].count; ++j) {
+                    // For copy just make sure that the types match and then perform the update
+                    if (pSrcLayout->descriptorTypes[srcStartIndex+j] != pDstLayout->descriptorTypes[dstStartIndex+j]) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_DESCRIPTOR_TYPE_MISMATCH, "DS",
+                            "Copy descriptor update index %u, update count #%u, has src update descriptor type %s that does not match overlapping dest descriptor type of %s!",
+                            i, j+1, string_VkDescriptorType(pSrcLayout->descriptorTypes[srcStartIndex+j]), string_VkDescriptorType(pDstLayout->descriptorTypes[dstStartIndex+j]));
+                    } else {
+                        // point dst descriptor at corresponding src descriptor
+                        pDstSet->ppDescriptors[j+dstStartIndex] = pSrcSet->ppDescriptors[j+srcStartIndex];
                     }
                 }
             }
