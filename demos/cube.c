@@ -1892,9 +1892,11 @@ static void demo_resize(struct demo *demo)
 
     for (i = 0; i < demo->swapchainImageCount; i++) {
         vkDestroyImageView(demo->device, demo->buffers[i].view);
-        vkDestroyCommandBuffer(demo->device, demo->buffers[i].cmd);
+        vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->buffers[i].cmd);
     }
     free(demo->buffers);
+
+    vkDestroyCommandPool(demo->device, demo->cmd_pool);
 
 
     // Second, re-perform the demo_prepare() function, which will re-create the

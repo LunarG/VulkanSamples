@@ -2270,10 +2270,9 @@ static void demo_resize(struct demo *demo)
     vkDestroyDescriptorPool(demo->device, demo->desc_pool);
 
     if (demo->setup_cmd) {
-        vkDestroyCommandBuffer(demo->device, demo->setup_cmd);
-        demo->setup_cmd = 0; // Must clear this value
+        vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->setup_cmd);
     }
-    vkDestroyCommandBuffer(demo->device, demo->draw_cmd);
+    vkFreeCommandBuffers(demo->device, demo->cmd_pool, 1, &demo->draw_cmd);
     vkDestroyCommandPool(demo->device, demo->cmd_pool);
 
     vkDestroyPipeline(demo->device, demo->pipeline);
@@ -2298,6 +2297,8 @@ static void demo_resize(struct demo *demo)
     vkDestroyImageView(demo->device, demo->depth.view);
     vkDestroyImage(demo->device, demo->depth.image);
     vkFreeMemory(demo->device, demo->depth.mem);
+
+    free(demo->buffers);
 
     // Second, re-perform the demo_prepare() function, which will re-create the
     // swapchain:
