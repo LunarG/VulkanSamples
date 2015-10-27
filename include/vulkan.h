@@ -832,6 +832,7 @@ typedef enum {
     VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
     VK_IMAGE_ASPECT_METADATA_BIT = 0x00000008,
 } VkImageAspectFlagBits;
+typedef VkFlags VkImageAspectFlags;
 
 typedef enum {
     VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT = 0x00000001,
@@ -894,7 +895,6 @@ typedef enum {
 typedef VkFlags VkBufferUsageFlags;
 typedef VkFlags VkBufferViewCreateFlags;
 typedef VkFlags VkImageViewCreateFlags;
-typedef VkFlags VkImageAspectFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
@@ -1393,7 +1393,7 @@ typedef struct {
 } VkMemoryRequirements;
 
 typedef struct {
-    VkImageAspectFlagBits                       aspect;
+    VkImageAspectFlags                          aspectMask;
     VkExtent3D                                  imageGranularity;
     VkSparseImageFormatFlags                    flags;
 } VkSparseImageFormatProperties;
@@ -1427,7 +1427,7 @@ typedef struct {
 } VkSparseImageOpaqueMemoryBindInfo;
 
 typedef struct {
-    VkImageAspectFlagBits                       aspect;
+    VkImageAspectFlags                          aspectMask;
     uint32_t                                    mipLevel;
     uint32_t                                    arrayLayer;
 } VkImageSubresource;

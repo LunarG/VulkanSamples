@@ -1075,7 +1075,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
         const VkImageSubresource subres = {
-            .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
             .arrayLayer = 0,
         };

@@ -382,7 +382,7 @@ void VkTest::CreateImageTest()
 
     if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         VkImageSubresource subresource = {};
-        subresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         subresource.arrayLayer = 0;
 
         _w = w;

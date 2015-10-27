@@ -681,7 +681,7 @@ inline VkImageCreateInfo Image::create_info()
 inline VkImageSubresource Image::subresource(VkImageAspectFlagBits aspect, uint32_t mip_level, uint32_t array_layer)
 {
     VkImageSubresource subres = {};
-    subres.aspect = aspect;
+    subres.aspectMask = aspect;
     subres.mipLevel = mip_level;
     subres.arrayLayer = array_layer;
     return subres;
@@ -747,7 +747,7 @@ inline VkImageSubresourceRange Image::subresource_range(const VkImageCreateInfo 
 
 inline VkImageSubresourceRange Image::subresource_range(const VkImageSubresource &subres)
 {
-    return subresource_range(subres.aspect, subres.mipLevel, 1, subres.arrayLayer, 1);
+    return subresource_range(subres.aspectMask, subres.mipLevel, 1, subres.arrayLayer, 1);
 }
 
 inline VkExtent2D Image::extent(int32_t width, int32_t height)

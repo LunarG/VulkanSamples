@@ -911,17 +911,17 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
     if (imageEntry != device_data->imageMap.end()) {
         format = imageEntry->second.format;
         if (vk_format_is_color(format)) {
-            if (pSubresource->aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
+            if (pSubresource->aspectMask != VK_IMAGE_ASPECT_COLOR_BIT) {
                 std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For color formats, the aspect field of VkImageSubresource must be VK_IMAGE_ASPECT_COLOR.";
+                ss << "vkGetImageSubresourceLayout: For color formats, the aspectMask field of VkImageSubresource must be VK_IMAGE_ASPECT_COLOR.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
                                    (uint64_t)image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }
         } else if (vk_format_is_depth_or_stencil(format)) {
-            if ((pSubresource->aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                (pSubresource->aspect != VK_IMAGE_ASPECT_STENCIL_BIT)) {
+            if ((pSubresource->aspectMask != VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                (pSubresource->aspectMask != VK_IMAGE_ASPECT_STENCIL_BIT)) {
                 std::stringstream ss;
-                ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspect selects either the depth or stencil image aspect.";
+                ss << "vkGetImageSubresourceLayout: For depth/stencil formats, the aspectMask selects either the depth or stencil image aspectMask.";
                 skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE,
                                    (uint64_t)image, 0, IMAGE_INVALID_IMAGE_ASPECT, "IMAGE", ss.str().c_str());
             }

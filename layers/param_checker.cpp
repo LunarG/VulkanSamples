@@ -2492,11 +2492,11 @@ bool PostGetImageSparseMemoryRequirements(
 
     if(pSparseMemoryRequirements != nullptr)
     {
-    if ((pSparseMemoryRequirements->formatProperties.aspect &
+    if ((pSparseMemoryRequirements->formatProperties.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProperties.aspect, is an unrecognized enumerator");
+        "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProperties.aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -2558,11 +2558,11 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
 
     if(pProperties != nullptr)
     {
-    if ((pProperties->aspect &
+    if ((pProperties->aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspect, is an unrecognized enumerator");
+        "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
@@ -3306,11 +3306,11 @@ bool PreGetImageSubresourceLayout(
 {
     if(pSubresource != nullptr)
     {
-    if ((pSubresource->aspect &
+    if ((pSubresource->aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspect, is an unrecognized enumerator");
+        "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspectMask, is an unrecognized enumerator");
         return false;
     }
     }
