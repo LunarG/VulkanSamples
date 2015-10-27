@@ -1229,9 +1229,9 @@ void VkPipelineObj::SetViewport(vector<VkViewport> viewports)
 {
     m_viewports = viewports;
     // If we explicitly set a null viewport, pass it through to create info
-    if (!m_viewports.size()) {
-        m_vp_state.viewportCount = m_viewports.size();
-        m_vp_state.pViewports = m_viewports.data();
+    // but preserve viewportCount because it musn't change
+    if (m_viewports.size() == 0) {
+        m_vp_state.pViewports = nullptr;
     }
 }
 
@@ -1239,9 +1239,9 @@ void VkPipelineObj::SetScissor(vector<VkRect2D> scissors)
 {
     m_scissors = scissors;
     // If we explicitly set a null scissors, pass it through to create info
-    if (!m_scissors.size()) {
-        m_vp_state.scissorCount = m_scissors.size();
-        m_vp_state.pScissors = m_scissors.data();
+    // but preserve viewportCount because it musn't change
+    if (m_scissors.size() == 0) {
+        m_vp_state.pScissors = nullptr;
     }
 }
 
