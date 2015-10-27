@@ -152,7 +152,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */
-    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (char *)data)) {
+    if (!read_ppm(filename.c_str(), texObj.tex_width, texObj.tex_height, layout.rowPitch, (unsigned char *)data)) {
         std::cout << "Could not load texture file lunarg.ppm\n";
         exit(-1);
     }
