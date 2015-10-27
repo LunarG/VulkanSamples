@@ -3408,6 +3408,148 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     vkDestroyDescriptorPool(m_device->device(), ds_pool);
 }
 
+TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
+{
+    // Create DS w/ layout of 2 types, write update 1 and attempt to copy-update into the other
+    VkFlags         msgFlags;
+    std::string     msgString;
+    VkResult        err;
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    m_errorMonitor->ClearState();
+    //VkDescriptorSetObj descriptorSet(m_device);
+    VkDescriptorTypeCount ds_type_count[2] = {};
+        ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count[0].count = 1;
+        ds_type_count[1].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        ds_type_count[1].count = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.count = 2;
+        ds_pool_ci.pTypeCount = ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+    VkDescriptorSetLayoutBinding dsl_binding[2] = {};
+        dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding[0].arraySize = 1;
+        dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding[0].pImmutableSamplers = NULL;
+        dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        dsl_binding[1].arraySize = 1;
+        dsl_binding[1].stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding[1].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.count = 2;
+        ds_layout_ci.pBinding = dsl_binding;
+
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.count = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkSamplerCreateInfo sampler_ci = {};
+        sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_ci.pNext = NULL;
+        sampler_ci.magFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.minFilter = VK_TEX_FILTER_NEAREST;
+        sampler_ci.mipMode = VK_TEX_MIPMAP_MODE_BASE;
+        sampler_ci.addressModeU = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.addressModeV = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.addressModeW = VK_TEX_ADDRESS_MODE_CLAMP;
+        sampler_ci.mipLodBias = 1.0;
+        sampler_ci.maxAnisotropy = 1;
+        sampler_ci.compareEnable = VK_FALSE;
+        sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
+        sampler_ci.minLod = 1.0;
+        sampler_ci.maxLod = 1.0;
+        sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        sampler_ci.unnormalizedCoordinates = VK_FALSE;
+
+    VkSampler sampler;
+    err = vkCreateSampler(m_device->device(), &sampler_ci, &sampler);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorImageInfo info = {};
+    info.sampler = sampler;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(VkWriteDescriptorSet));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.destSet = descriptorSet;
+    descriptor_write.destBinding = 1; // SAMPLER binding from layout above
+    descriptor_write.count = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    descriptor_write.pImageInfo = &info;
+    // This write update should succeed
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    // Now perform a copy update that fails due to type mismatch
+    VkCopyDescriptorSet copy_ds_update;
+    memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
+    copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    copy_ds_update.srcSet = descriptorSet;
+    copy_ds_update.srcBinding = 1; // copy from SAMPLER binding
+    copy_ds_update.destSet = descriptorSet;
+    copy_ds_update.destBinding = 0; // ERROR : copy to UNIFORM binding
+    copy_ds_update.count = 1; // copy 1 descriptor
+    vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after copying SAMPLER descriptor type to BUFFER descriptor type.";
+    if (!strstr(msgString.c_str(),"Copy descriptor update index 0, update count #1, has src update descriptor type VK_DESCRIPTOR_TYPE_SAMPLER ")) {
+        FAIL() << "Error received was not 'Copy descriptor update index 0, update count #1, has src update descriptor type VK_DESCRIPTOR_TYPE_SAMPLER...' but instead '" << msgString.c_str() << "'";
+    }
+    // Now perform a copy update that fails due to binding out of bounds
+    memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
+    copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    copy_ds_update.srcSet = descriptorSet;
+    copy_ds_update.srcBinding = 3; // ERROR : Invalid binding for matching layout
+    copy_ds_update.destSet = descriptorSet;
+    copy_ds_update.destBinding = 0;
+    copy_ds_update.count = 1; // copy 1 descriptor
+    vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after attempting descriptor copy update w/ bad srcBinding.";
+    if (!strstr(msgString.c_str(),"Copy descriptor update 0 has srcBinding 3 which is out of bounds ")) {
+        FAIL() << "Error received was not 'Copy descriptor update 0 has srcBinding 3 which is out of bounds...' but instead '" << msgString.c_str() << "'";
+    }
+    // Now perform a copy update that fails due to binding out of bounds
+    memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
+    copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+    copy_ds_update.srcSet = descriptorSet;
+    copy_ds_update.srcBinding = 1;
+    copy_ds_update.destSet = descriptorSet;
+    copy_ds_update.destBinding = 0;
+    copy_ds_update.count = 5; // ERROR copy 5 descriptors (out of bounds for layout)
+    vkUpdateDescriptorSets(m_device->device(), 0, NULL, 1, &copy_ds_update);
+
+    msgFlags = m_errorMonitor->GetState(&msgString);
+    ASSERT_TRUE(0 != (msgFlags & VK_DBG_REPORT_ERROR_BIT)) << "Did not receive error after attempting descriptor copy update w/ count out of bounds for layout.";
+    if (!strstr(msgString.c_str(),"Copy descriptor src update is out of bounds for matching binding 1 ")) {
+        FAIL() << "Error received was not 'Copy descriptor src update is out of bounds for matching binding 1...' but instead '" << msgString.c_str() << "'";
+    }
+
+    vkDestroySampler(m_device->device(), sampler);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool);
+}
+
 TEST_F(VkLayerTest, NumSamplesMismatch)
 {
     // Create CmdBuffer where MSAA samples doesn't match RenderPass sampleCount
