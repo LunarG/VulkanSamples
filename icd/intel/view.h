@@ -114,7 +114,7 @@ static inline struct intel_img_view *intel_img_view_from_obj(struct intel_obj *o
 void intel_null_view_init(struct intel_null_view *view,
                           struct intel_dev *dev);
 
-void intel_buf_view_init(struct intel_dev *dev,
+void intel_buf_view_init(const struct intel_dev *dev,
                          const VkBufferViewCreateInfo *info,
                          struct intel_buf_view *view,
                          bool raw);

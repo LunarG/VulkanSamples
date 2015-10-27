@@ -538,7 +538,7 @@ static void desc_set_write_buffer(struct intel_desc_set *set,
     desc.mem = buf_view->buf->obj.mem;
     desc.read_only = false;
     desc.type = INTEL_DESC_SURFACE_BUF;
-    memcpy(&desc.u.buf, buf_view, sizeof(*buf_view));
+    memcpy((void*)&desc.u.buf, buf_view, sizeof(*buf_view));
     intel_desc_region_update(set->region, &iter->begin, &iter->end,
             &desc, NULL);
 }
@@ -873,13 +873,8 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         const struct intel_desc_layout_binding *binding;
         struct intel_desc_iter iter;
 
-        if (!desc_iter_init_for_writing(&iter, set, write->destBinding,
-                    write->destArrayElement) ||
-            iter.type != write->descriptorType) {
-            /* TODOVV: is this covered in validation? */
-//            return VK_ERROR_INVALID_VALUE;
-//            return VK_ERROR_UNKNOWN;
-        }
+        desc_iter_init_for_writing(&iter, set, write->destBinding,
+                    write->destArrayElement);
 
         switch (write->descriptorType) {
         case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -890,11 +885,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_sampler(set, &iter, sampler);
 
-                if (!intel_desc_iter_advance(&iter)) {
-                    /* TODOVV: is this covered in validation? */
-//                    return VK_ERROR_INVALID_VALUE;
-//                    return VK_ERROR_UNKNOWN;
-                }
+                intel_desc_iter_advance(&iter);
             }
             break;
         case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
@@ -926,11 +917,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
                 desc_set_write_combined_image_sampler(set, &iter,
                         img_view, info->imageLayout, sampler);
 
-                if (!intel_desc_iter_advance(&iter)) {
-                    /* TODOVV: Move test to validation */
-//                    return VK_ERROR_INVALID_VALUE;
-//                    return VK_ERROR_UNKNOWN;
-                }
+                intel_desc_iter_advance(&iter);
             }
             break;
         case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
@@ -942,11 +929,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_image(set, &iter, img_view, info->imageLayout);
 
-                if (!intel_desc_iter_advance(&iter)) {
-                    /* TODOVV: Move test to validation */
-//                    return VK_ERROR_INVALID_VALUE;
-//                    return VK_ERROR_UNKNOWN;
-                }
+                intel_desc_iter_advance(&iter);
             }
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
@@ -957,11 +940,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
                 desc_set_write_buffer(set, &iter, buf_view);
 
-                if (!intel_desc_iter_advance(&iter)) {
-                    /* TODOVV: Move test to validation */
-//                    return VK_ERROR_INVALID_VALUE;
-//                    return VK_ERROR_UNKNOWN;
-                }
+                intel_desc_iter_advance(&iter);
             }
             break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -986,17 +965,11 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
 
                     desc_set_write_buffer(set, &iter, &buf_view);
 
-                    if (!intel_desc_iter_advance(&iter)) {
-                        /* TODOVV: Move test to validation */
-    //                    return VK_ERROR_INVALID_VALUE;
-    //                    return VK_ERROR_UNKNOWN;
-                    }
+                    intel_desc_iter_advance(&iter);
                 }
             }
             break;
         default:
-            /* TODOVV: Make sure validation layer covers this case */
-//            return VK_ERROR_UNKNOWN;
             break;
         }
     }
@@ -1008,34 +981,14 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
         struct intel_desc_iter src_iter, dst_iter;
         struct intel_desc_offset src_begin, dst_begin;
 
-        if (!desc_iter_init_for_writing(&src_iter, src_set,
-                    copy->srcBinding, copy->srcArrayElement) ||
-            !desc_iter_init_for_writing(&dst_iter, dst_set,
-                    copy->destBinding, copy->destArrayElement) ||
-            src_iter.type != dst_iter.type) {
-            /* TODOVV: Move test to validation layer */
-//            return VK_ERROR_INVALID_VALUE;
-//            return VK_ERROR_UNKNOWN;
-        }
-
-        /* disallow combined image samplers */
-        /* TODOVV: Move test to validation layer */
-        //if (dst_iter.type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-        //    return VK_ERROR_UNKNOWN;
+        desc_iter_init_for_writing(&src_iter, src_set,
+                    copy->srcBinding, copy->srcArrayElement);
+        desc_iter_init_for_writing(&dst_iter, dst_set,
+                    copy->destBinding, copy->destArrayElement);
 
         /* save the begin offsets */
         src_begin = src_iter.begin;
         dst_begin = dst_iter.begin;
-
-        /* advance to the end */
-        for (j = 0; j < copy->count; j++) {
-            if (!intel_desc_iter_advance(&src_iter) ||
-                !intel_desc_iter_advance(&dst_iter)) {
-                /* TODOVV: Move test to validation layer */
-//                return VK_ERROR_INVALID_VALUE;
-//                return VK_ERROR_UNKNOWN;
-            }
-        }
 
         intel_desc_region_copy(dst_set->region, &dst_begin,
                 &dst_iter.end, &src_begin);

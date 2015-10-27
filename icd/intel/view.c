@@ -1144,7 +1144,7 @@ static void buf_view_destroy(struct intel_obj *obj)
     intel_buf_view_destroy(view);
 }
 
-void intel_buf_view_init(struct intel_dev *dev,
+void intel_buf_view_init(const struct intel_dev *dev,
                          const VkBufferViewCreateInfo *info,
                          struct intel_buf_view *view,
                          bool raw)
