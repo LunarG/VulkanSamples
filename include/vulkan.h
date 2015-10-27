@@ -1141,6 +1141,8 @@ typedef struct {
     VkBool32                                    shaderImageGatherExtended;
     VkBool32                                    shaderStorageImageExtendedFormats;
     VkBool32                                    shaderStorageImageMultisample;
+    VkBool32                                    shaderStorageImageReadWithoutFormat;
+    VkBool32                                    shaderStorageImageWriteWithoutFormat;
     VkBool32                                    shaderUniformBufferArrayDynamicIndexing;
     VkBool32                                    shaderSampledImageArrayDynamicIndexing;
     VkBool32                                    shaderStorageBufferArrayDynamicIndexing;
