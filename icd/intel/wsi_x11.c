@@ -366,12 +366,18 @@ static bool x11_swap_chain_dri3_and_present_query_version(struct intel_x11_swap_
 /**
  * Send a PresentSelectInput to select interested events.
  */
-static bool x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
+static bool x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc, struct intel_x11_swap_chain *old_sc)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
     xcb_present_event_t present_special_event_id;
 
+    if (old_sc && (old_sc->c == sc->c) && (old_sc->window == sc->window)) {
+        // Reuse a previous event.  (They can never be stopped.)
+        sc->present_special_event = old_sc->present_special_event;
+        old_sc->present_special_event = NULL;
+        return true;
+    }
     /* create the event queue */
     present_special_event_id = xcb_generate_id(sc->c);
     sc->present_special_event = xcb_register_for_special_xge(sc->c,
@@ -625,6 +631,10 @@ static VkResult x11_swap_chain_wait(struct intel_x11_swap_chain *sc,
     struct timespec current_time; // current time for planning wait
     struct timespec stop_time;  // time when timeout will elapse
     bool wait;
+    // Don't wait on destroyed swap chain
+    if (sc->present_special_event == NULL ) {
+        return VK_SUCCESS;
+    }
     if (timeout == 0){
         wait = false;
     } else {
@@ -724,13 +734,15 @@ static void x11_swap_chain_destroy_begin(struct intel_x11_swap_chain *sc)
         intel_free(sc, sc->present_queue);
     }
 
-    if (sc->present_special_event)
-        xcb_unregister_for_special_event(sc->c, sc->present_special_event);
+    // Don't unregister because another swap chain may be using this event queue.
+    //if (sc->present_special_event)
+    //    xcb_unregister_for_special_event(sc->c, sc->present_special_event);
 }
 
 static void x11_swap_chain_destroy_end(struct intel_x11_swap_chain *sc)
 {
-    intel_free(sc, sc);
+    // Leave memory around for now because fences use it without reference count.
+    //intel_free(sc, sc);
 }
 
 static VkResult x11_swap_chain_create(struct intel_dev *dev,
@@ -795,7 +807,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     sc->force_copy = true;
 
     if (!x11_swap_chain_dri3_and_present_query_version(sc) ||
-        !x11_swap_chain_present_select_input(sc) ||
+        !x11_swap_chain_present_select_input(sc, x11_swap_chain(info->oldSwapchain)) ||
         !x11_swap_chain_create_persistent_images(sc, dev, info)) {
         x11_swap_chain_destroy_begin(sc);
         x11_swap_chain_destroy_end(sc);
