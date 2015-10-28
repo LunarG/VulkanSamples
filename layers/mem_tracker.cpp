@@ -50,20 +50,21 @@ static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-
 
 struct layer_data {
     debug_report_data *report_data;
-    // TODO: put instance data here
     std::vector<VkDbgMsgCallback> logging_callback;
+    VkLayerDispatchTable* device_dispatch_table;
+    VkLayerInstanceDispatchTable* instance_dispatch_table;
     bool wsi_enabled;
 
     layer_data() :
         report_data(nullptr),
+        device_dispatch_table(nullptr),
+        instance_dispatch_table(nullptr),
         wsi_enabled(false)
     {};
 };
 
 static unordered_map<void *, layer_data *> layer_data_map;
 
-static device_table_map mem_tracker_device_table_map;
-static instance_table_map mem_tracker_instance_table_map;
 static VkPhysicalDeviceMemoryProperties memProps;
 
 // TODO : This can be much smarter, using separate locks for separate global data
@@ -938,11 +939,6 @@ static void init_mem_tracker(
 
     if (!globalLockInitialized)
     {
-        // TODO/TBD: Need to delete this mutex sometime.  How???  One
-        // suggestion is to call this during vkCreateInstance(), and then we
-        // can clean it up during vkDestroyInstance().  However, that requires
-        // that the layer have per-instance locks.  We need to come back and
-        // address this soon.
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
@@ -956,33 +952,36 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     pTable->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     while (my_data->logging_callback.size() > 0) {
         VkDbgMsgCallback callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback);
         my_data->logging_callback.pop_back();
     }
 
-    layer_debug_report_destroy_instance(mid(instance));
-    layer_data_map.erase(pTable);
-
-    mem_tracker_instance_table_map.erase(key);
-    assert(mem_tracker_instance_table_map.size() == 0 && "Should not have any instance mappings hanging around");
+    layer_debug_report_destroy_instance(my_data->report_data);
+    delete my_data->instance_dispatch_table;
+    layer_data_map.erase(key);
+    if (layer_data_map.empty()) {
+        // Release mutex when destroying last instance
+        loader_platform_thread_delete_mutex(&globalLock);
+        globalLockInitialized = 0;
+    }
 }
 
 VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     VkInstance*                                 pInstance)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, *pInstance);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
         my_data->report_data = debug_report_create_instance(
                                    pTable,
                                    *pInstance,
@@ -997,7 +996,7 @@ VkResult VKAPI vkCreateInstance(
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pDisp = get_dispatch_table(mem_tracker_device_table_map, device);
+    VkLayerDispatchTable *pDisp = my_device_data->device_dispatch_table;
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
     pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
     pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
@@ -1019,11 +1018,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     const VkDeviceCreateInfo *pCreateInfo,
     VkDevice                 *pDevice)
 {
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(mem_tracker_device_table_map, *pDevice);
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    VkLayerDispatchTable *pDeviceTable = my_device_data->device_dispatch_table;
     VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
@@ -1033,6 +1032,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
 VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     VkDevice device)
 {
+    dispatch_key key = get_dispatch_key(device);
+    layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
@@ -1059,23 +1060,23 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     layer_debug_report_destroy_device(device);
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    dispatch_key key = get_dispatch_key(device);
 #if DISPATCH_MAP_DEBUG
     fprintf(stderr, "Device: %p, key: %p\n", device, key);
 #endif
-    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, device);
+    VkLayerDispatchTable *pDisp  = my_device_data->device_dispatch_table;
     if (VK_FALSE == skipCall) {
         pDisp->DestroyDevice(device);
     }
-    mem_tracker_device_table_map.erase(key);
-    assert(mem_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");
+    delete my_device_data->device_dispatch_table;
+    layer_data_map.erase(key);
 }
 
 VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice                  physicalDevice,
     VkPhysicalDeviceMemoryProperties *pMemoryProperties)
 {
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(mem_tracker_instance_table_map, physicalDevice);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    VkLayerInstanceDispatchTable *pInstanceTable = my_data->instance_dispatch_table;
     pInstanceTable->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
     memcpy(&memProps, pMemoryProperties, sizeof(VkPhysicalDeviceMemoryProperties));
 }
@@ -1133,7 +1134,8 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     uint32_t  queueIndex,
     VkQueue   *pQueue)
 {
-    get_dispatch_table(mem_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->device_dispatch_table->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     loader_platform_thread_lock_mutex(&globalLock);
     add_queue_info(*pQueue);
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1145,6 +1147,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     const VkSubmitInfo *pSubmitInfo,
     VkFence             fence)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
 
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1192,7 +1195,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
 
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueSubmit(
+        result = my_data->device_dispatch_table->QueueSubmit(
             queue, submitCount, pSubmitInfo, fence);
     }
 
@@ -1217,7 +1220,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     const VkMemoryAllocInfo *pAllocInfo,
     VkDeviceMemory          *pMem)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->AllocMemory(device, pAllocInfo, pMem);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
     add_mem_obj_info(device, *pMem, pAllocInfo);
@@ -1230,6 +1234,7 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
      * freeing a memory object, an application must ensure the memory object is unbound from
      * all API objects referencing it and that it is not referenced by any queued command buffers
@@ -1239,7 +1244,7 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     print_mem_list(device);
     printCBList(device);
     loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->FreeMemory(device, mem);
+    my_data->device_dispatch_table->FreeMemory(device, mem);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
@@ -1250,6 +1255,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkFlags          flags,
     void           **ppData)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : Track when memory is mapped
     VkBool32 skipCall = VK_FALSE;
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
@@ -1262,7 +1268,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
+        result = my_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
     }
     return result;
 }
@@ -1271,13 +1277,15 @@ VK_LAYER_EXPORT void VKAPI vkUnmapMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : Track as memory gets unmapped, do we want to check what changed following map?
     //   Make sure that memory was ever mapped to begin with
-    get_dispatch_table(mem_tracker_device_table_map, device)->UnmapMemory(device, mem);
+    my_data->device_dispatch_table->UnmapMemory(device, mem);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     delete_fence_info(fence);
     auto item = fenceMap.find(fence);
@@ -1285,11 +1293,12 @@ VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
         fenceMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroyFence(device, fence);
+    my_data->device_dispatch_table->DestroyFence(device, fence);
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = bufferMap.find((uint64_t) buffer);
@@ -1299,12 +1308,13 @@ VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, device)->DestroyBuffer(device, buffer);
+        my_data->device_dispatch_table->DestroyBuffer(device, buffer);
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = imageMap.find((uint64_t) image);
@@ -1314,7 +1324,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, device)->DestroyImage(device, image);
+        my_data->device_dispatch_table->DestroyImage(device, image);
     }
 }
 
@@ -1324,6 +1334,7 @@ VkResult VKAPI vkBindBufferMemory(
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
@@ -1332,7 +1343,7 @@ VkResult VKAPI vkBindBufferMemory(
     print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->BindBufferMemory(device, buffer, mem, memOffset);
+        result = my_data->device_dispatch_table->BindBufferMemory(device, buffer, mem, memOffset);
     }
     return result;
 }
@@ -1343,6 +1354,7 @@ VkResult VKAPI vkBindImageMemory(
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
@@ -1351,7 +1363,7 @@ VkResult VKAPI vkBindImageMemory(
     print_mem_list(device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->BindImageMemory(device, image, mem, memOffset);
+        result = my_data->device_dispatch_table->BindImageMemory(device, image, mem, memOffset);
     }
     return result;
 }
@@ -1361,9 +1373,10 @@ void VKAPI vkGetBufferMemoryRequirements(
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindBufferMemory
-    get_dispatch_table(mem_tracker_device_table_map, device)->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
+    my_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
 void VKAPI vkGetImageMemoryRequirements(
@@ -1371,9 +1384,10 @@ void VKAPI vkGetImageMemoryRequirements(
     VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
     //   Could potentially save returned mem requirements and validate values passed into BindImageMemory
-    get_dispatch_table(mem_tracker_device_table_map, device)->GetImageMemoryRequirements(device, image, pMemoryRequirements);
+    my_data->device_dispatch_table->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
@@ -1382,6 +1396,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     uint32_t                                    numBindings,
     const VkSparseMemoryBindInfo*               pBindInfo)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
@@ -1389,7 +1404,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueBindSparseImageOpaqueMemory( queue, image, numBindings, pBindInfo);
+        result = my_data->device_dispatch_table->QueueBindSparseImageOpaqueMemory( queue, image, numBindings, pBindInfo);
     }
     return result;
 }
@@ -1400,6 +1415,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     uint32_t                                    numBindings,
     const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
@@ -1407,7 +1423,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        VkResult result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueBindSparseImageMemory(
+        VkResult result = my_data->device_dispatch_table->QueueBindSparseImageMemory(
                               queue, image, numBindings, pBindInfo);
     }
     return result;
@@ -1419,6 +1435,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     uint32_t                      numBindings,
     const VkSparseMemoryBindInfo* pBindInfo)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
@@ -1426,7 +1443,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     print_mem_list(queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        VkResult result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueBindSparseBufferMemory(
+        VkResult result = my_data->device_dispatch_table->QueueBindSparseBufferMemory(
                               queue, buffer, numBindings, pBindInfo);
     }
     return result;
@@ -1437,7 +1454,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     const VkFenceCreateInfo *pCreateInfo,
     VkFence                 *pFence)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateFence(device, pCreateInfo, pFence);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateFence(device, pCreateInfo, pFence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         MT_FENCE_INFO* pFI = &fenceMap[*pFence];
@@ -1453,6 +1471,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     uint32_t  fenceCount,
     const VkFence  *pFences)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
     VkBool32 skipCall = VK_FALSE;
 
@@ -1474,13 +1493,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->ResetFences(device, fenceCount, pFences);
+        result = my_data->device_dispatch_table->ResetFences(device, fenceCount, pFences);
     }
     return result;
 }
 
 static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const char* apiCall)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     auto pFenceInfo = fenceMap.find(fence);
     if (pFenceInfo != fenceMap.end()) {
@@ -1500,10 +1520,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
     VkDevice device,
     VkFence  fence)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = verifyFenceStatus(device, fence, "vkGetFenceStatus");
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetFenceStatus(device, fence);
+    VkResult result = my_data->device_dispatch_table->GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         update_fence_tracking(fence);
@@ -1519,6 +1540,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     VkBool32       waitAll,
     uint64_t       timeout)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     // Verify fence status of submitted fences
     for(uint32_t i = 0; i < fenceCount; i++) {
@@ -1526,7 +1548,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     }
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED;
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
+    VkResult result = my_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
 
     if (VK_SUCCESS == result) {
@@ -1543,7 +1565,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
 VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
     VkQueue queue)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueWaitIdle(queue);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->QueueWaitIdle(queue);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_queue_fences(queue);
@@ -1555,7 +1578,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
 VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     VkDevice device)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->DeviceWaitIdle(device);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->DeviceWaitIdle(device);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         retire_device_fences(device);
@@ -1569,7 +1593,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     const VkBufferCreateInfo *pCreateInfo,
     VkBuffer                 *pBuffer)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateBuffer(device, pCreateInfo, pBuffer);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info((uint64_t) *pBuffer, VK_OBJECT_TYPE_BUFFER, pCreateInfo);
@@ -1583,7 +1608,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     const VkImageCreateInfo *pCreateInfo,
     VkImage                 *pImage)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateImage(device, pCreateInfo, pImage);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         add_object_create_info((uint64_t) *pImage, VK_OBJECT_TYPE_IMAGE, pCreateInfo);
@@ -1597,7 +1623,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     const VkImageViewCreateInfo *pCreateInfo,
     VkImageView                 *pView)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateImageView(device, pCreateInfo, pView);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         // Validate that img has correct usage flags set
@@ -1615,7 +1642,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     const VkBufferViewCreateInfo *pCreateInfo,
     VkBufferView                 *pView)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateBufferView(device, pCreateInfo, pView);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pView);
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
@@ -1634,7 +1662,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     const VkCmdBufferAllocInfo *pCreateInfo,
     VkCmdBuffer                 *pCmdBuffer)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->AllocCommandBuffers(device, pCreateInfo, pCmdBuffer);
     // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
@@ -1648,6 +1677,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     VkCmdBuffer                 cmdBuffer,
     const VkCmdBufferBeginInfo *pBeginInfo)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkResult result            = VK_ERROR_VALIDATION_FAILED;
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 cmdBufferComplete = VK_FALSE;
@@ -1662,7 +1692,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->BeginCommandBuffer(cmdBuffer, pBeginInfo);
+        result = my_data->device_dispatch_table->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     }
     loader_platform_thread_lock_mutex(&globalLock);
     clear_cmd_buf_and_mem_references(cmdBuffer);
@@ -1673,8 +1703,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
 VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
     VkCmdBuffer cmdBuffer)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Anything to do here?
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->EndCommandBuffer(cmdBuffer);
+    VkResult result = my_data->device_dispatch_table->EndCommandBuffer(cmdBuffer);
     return result;
 }
 
@@ -1682,6 +1713,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     VkCmdBuffer cmdBuffer,
     VkCmdBufferResetFlags flags)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkResult result            = VK_ERROR_VALIDATION_FAILED;
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 cmdBufferComplete = VK_FALSE;
@@ -1697,7 +1729,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     skipCall |= clear_cmd_buf_and_mem_references(cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->ResetCommandBuffer(cmdBuffer, flags);
+        result = my_data->device_dispatch_table->ResetCommandBuffer(cmdBuffer, flags);
     }
     return result;
 }
@@ -1708,6 +1740,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline          pipeline)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
 #if 0
     // TODO : If memory bound to pipeline, then need to tie that mem to cmdBuffer
     if (getPipeline(pipeline)) {
@@ -1724,7 +1757,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
         layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, pipeline, 0, MEMTRACK_INVALID_OBJECT, (char *) "DS", (char *) str);
     }
 #endif
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
+    my_data->device_dispatch_table->CmdBindPipeline(cmdBuffer, pipelineBindPoint, pipeline);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
@@ -1732,6 +1765,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1741,7 +1775,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
+        my_data->device_dispatch_table->CmdSetViewport(cmdBuffer, viewportCount, pViewports);
     }
 }
 
@@ -1750,6 +1784,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1759,12 +1794,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
+        my_data->device_dispatch_table->CmdSetScissor(cmdBuffer, scissorCount, pScissors);
     }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWidth)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1774,7 +1810,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetLineWidth(cmdBuffer, lineWidth);
+        my_data->device_dispatch_table->CmdSetLineWidth(cmdBuffer, lineWidth);
     }
 }
 
@@ -1784,6 +1820,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     float                               depthBiasClamp,
     float                               depthBiasSlopeFactor)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1793,7 +1830,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+        my_data->device_dispatch_table->CmdSetDepthBias(cmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
     }
 }
 
@@ -1801,6 +1838,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
      VkCmdBuffer                            cmdBuffer,
      const float                            blendConst[4])
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1810,7 +1848,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetBlendConstants(cmdBuffer, blendConst);
+        my_data->device_dispatch_table->CmdSetBlendConstants(cmdBuffer, blendConst);
     }
 }
 
@@ -1819,6 +1857,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     float                               minDepthBounds,
     float                               maxDepthBounds)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1828,7 +1867,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
+        my_data->device_dispatch_table->CmdSetDepthBounds(cmdBuffer, minDepthBounds, maxDepthBounds);
     }
 }
 
@@ -1837,6 +1876,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilCompareMask)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1846,7 +1886,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
+        my_data->device_dispatch_table->CmdSetStencilCompareMask(cmdBuffer, faceMask, stencilCompareMask);
     }
 }
 
@@ -1855,6 +1895,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilWriteMask)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1864,7 +1905,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
+        my_data->device_dispatch_table->CmdSetStencilWriteMask(cmdBuffer, faceMask, stencilWriteMask);
     }
 }
 
@@ -1873,6 +1914,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     VkStencilFaceFlags                  faceMask,
     uint32_t                            stencilReference)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
@@ -1882,7 +1924,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
+        my_data->device_dispatch_table->CmdSetStencilReference(cmdBuffer, faceMask, stencilReference);
     }
 }
 
@@ -1896,8 +1938,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
     uint32_t               dynamicOffsetCount,
     const uint32_t        *pDynamicOffsets)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Somewhere need to verify that all textures referenced by shaders in DS are in some type of *SHADER_READ* state
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindDescriptorSets(
+    my_data->device_dispatch_table->CmdBindDescriptorSets(
         cmdBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
@@ -1908,8 +1951,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     const VkBuffer     *pBuffers,
     const VkDeviceSize *pOffsets)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Somewhere need to verify that VBs have correct usage state flagged
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+    my_data->device_dispatch_table->CmdBindVertexBuffers(cmdBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
@@ -1918,8 +1962,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
     VkDeviceSize offset,
     VkIndexType  indexType)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
+    my_data->device_dispatch_table->CmdBindIndexBuffer(cmdBuffer, buffer, offset, indexType);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
@@ -1929,13 +1974,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
      uint32_t     count,
      uint32_t     stride)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
     skipCall          |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDrawIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
+        my_data->device_dispatch_table->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
     }
 }
 
@@ -1946,13 +1992,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     uint32_t     count,
     uint32_t     stride)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
     skipCall         |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDrawIndexedIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
+        my_data->device_dispatch_table->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
     }
 }
 
@@ -1961,13 +2008,14 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
     VkBuffer     buffer,
     VkDeviceSize offset)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
     VkBool32 skipCall = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
     skipCall         |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDispatchIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdDispatchIndirect(cmdBuffer, buffer, offset);
+        my_data->device_dispatch_table->CmdDispatchIndirect(cmdBuffer, buffer, offset);
     }
 }
 
@@ -1978,6 +2026,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     uint32_t            regionCount,
     const VkBufferCopy *pRegions)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1990,7 +2039,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
+        my_data->device_dispatch_table->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
     }
 }
 
@@ -2004,6 +2053,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2013,7 +2063,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
+        my_data->device_dispatch_table->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
     }
 }
 
@@ -2026,6 +2076,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     uint32_t           regionCount,
     const VkImageCopy *pRegions)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2038,7 +2089,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyImage(
+        my_data->device_dispatch_table->CmdCopyImage(
             cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
     }
 }
@@ -2053,6 +2104,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     const VkImageBlit *pRegions,
     VkTexFilter        filter)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2065,7 +2117,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBlitImage(
+        my_data->device_dispatch_table->CmdBlitImage(
             cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions, filter);
     }
 }
@@ -2078,6 +2130,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     uint32_t                 regionCount,
     const VkBufferImageCopy *pRegions)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2090,7 +2143,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyBufferToImage(
+        my_data->device_dispatch_table->CmdCopyBufferToImage(
         cmdBuffer, srcBuffer, destImage, destImageLayout, regionCount, pRegions);
     }
 }
@@ -2103,6 +2156,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     uint32_t                 regionCount,
     const VkBufferImageCopy *pRegions)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2115,7 +2169,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdCopyImageToBuffer(
+        my_data->device_dispatch_table->CmdCopyImageToBuffer(
             cmdBuffer, srcImage, srcImageLayout, destBuffer, regionCount, pRegions);
     }
 }
@@ -2127,6 +2181,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkDeviceSize    dataSize,
     const uint32_t *pData)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2136,7 +2191,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
+        my_data->device_dispatch_table->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
     }
 }
 
@@ -2147,6 +2202,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     VkDeviceSize fillSize,
     uint32_t     data)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2156,7 +2212,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
+        my_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
     }
 }
 
@@ -2168,6 +2224,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     uint32_t                       rangeCount,
     const VkImageSubresourceRange *pRanges)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
@@ -2176,7 +2233,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdClearColorImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
+        my_data->device_dispatch_table->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
     }
 }
 
@@ -2188,6 +2245,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     uint32_t                            rangeCount,
     const VkImageSubresourceRange*      pRanges)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
@@ -2196,7 +2254,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdClearDepthStencilImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdClearDepthStencilImage(
+        my_data->device_dispatch_table->CmdClearDepthStencilImage(
             cmdBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
     }
 }
@@ -2210,6 +2268,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     uint32_t              regionCount,
     const VkImageResolve *pRegions)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     VkDeviceMemory mem;
@@ -2219,7 +2278,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdResolveImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdResolveImage(
+        my_data->device_dispatch_table->CmdResolveImage(
             cmdBuffer, srcImage, srcImageLayout, destImage, destImageLayout, regionCount, pRegions);
     }
 }
@@ -2230,7 +2289,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
     uint32_t    slot,
     VkFlags     flags)
 {
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    my_data->device_dispatch_table->CmdBeginQuery(cmdBuffer, queryPool, slot, flags);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
@@ -2238,7 +2298,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
     VkQueryPool queryPool,
     uint32_t    slot)
 {
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdEndQuery(cmdBuffer, queryPool, slot);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    my_data->device_dispatch_table->CmdEndQuery(cmdBuffer, queryPool, slot);
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
@@ -2247,7 +2308,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
     uint32_t    startQuery,
     uint32_t    queryCount)
 {
-    get_dispatch_table(mem_tracker_device_table_map, cmdBuffer)->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+    my_data->device_dispatch_table->CmdResetQueryPool(cmdBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -2257,11 +2319,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
         void* pUserData,
         VkDbgMsgCallback* pMsgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult res =  pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     if (res == VK_SUCCESS) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-
         res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     }
     return res;
@@ -2271,10 +2332,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(mem_tracker_instance_table_map, instance);
-    VkResult res =  pTable->DbgDestroyMsgCallback(instance, msgCallback);
-
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+    VkResult res =  pTable->DbgDestroyMsgCallback(instance, msgCallback);
     layer_destroy_msg_callback(my_data->report_data, msgCallback);
 
     return res;
@@ -2285,7 +2345,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     const VkSwapchainCreateInfoKHR *pCreateInfo,
     VkSwapchainKHR                 *pSwapchain)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -2300,6 +2361,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkDevice                        device,
     VkSwapchainKHR swapchain)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2319,7 +2381,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain);
+        result = my_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
     }
     return result;
 }
@@ -2330,7 +2392,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     uint32_t*               pCount,
     VkImage*                pSwapchainImages)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
     if (result == VK_SUCCESS && pSwapchainImages != NULL) {
         const size_t count = *pCount;
@@ -2369,6 +2432,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     VkSemaphore     semaphore,
     uint32_t       *pImageIndex)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
     VkBool32 skipCall = VK_FALSE;
 
@@ -2383,7 +2447,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = get_dispatch_table(mem_tracker_device_table_map, device)->AcquireNextImageKHR(device,
+        result = my_data->device_dispatch_table->AcquireNextImageKHR(device,
                                     swapchain, timeout, semaphore, pImageIndex);
     }
     return result;
@@ -2394,7 +2458,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     const VkSemaphoreCreateInfo *pCreateInfo,
     VkSemaphore                 *pSemaphore)
 {
-    VkResult result = get_dispatch_table(mem_tracker_device_table_map, device)->CreateSemaphore(device, pCreateInfo, pSemaphore);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pSemaphore);
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pSemaphore != VK_NULL_HANDLE) {
         semaphoreMap[*pSemaphore] = MEMTRACK_SEMAPHORE_STATE_UNSET;
@@ -2407,26 +2472,30 @@ VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
     VkDevice    device,
     VkSemaphore semaphore)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
     auto item = semaphoreMap.find(semaphore);
     if (item != semaphoreMap.end()) {
         semaphoreMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    get_dispatch_table(mem_tracker_device_table_map, device)->DestroySemaphore(device, semaphore);
+    my_data->device_dispatch_table->DestroySemaphore(device, semaphore);
 }
 
 VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     VkDevice         dev,
     const char      *funcName)
 {
-    if (dev == NULL) {
+    if (dev == NULL)
         return NULL;
-    }
 
+    layer_data *my_data;
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp(funcName, "vkGetDeviceProcAddr")) {
-        initDeviceTable(mem_tracker_device_table_map, (const VkBaseLayerObject *) dev);
+        VkBaseLayerObject* wrapped_dev = (VkBaseLayerObject*) dev;
+        my_data = get_my_data_ptr(get_dispatch_key(wrapped_dev->baseObject), layer_data_map);
+        my_data->device_dispatch_table = new VkLayerDispatchTable;
+        layer_initialize_dispatch_table(my_data->device_dispatch_table, wrapped_dev);
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
     if (!strcmp(funcName, "vkCreateDevice"))
@@ -2556,8 +2625,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
 
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
-    if (my_device_data->wsi_enabled)
+    my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
+    if (my_data->wsi_enabled)
     {
         if (!strcmp(funcName, "vkCreateSwapchainKHR"))
             return (PFN_vkVoidFunction) vkCreateSwapchainKHR;
@@ -2569,7 +2638,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
             return (PFN_vkVoidFunction)vkAcquireNextImageKHR;
     }
 
-    VkLayerDispatchTable *pDisp  = get_dispatch_table(mem_tracker_device_table_map, dev);
+    VkLayerDispatchTable *pDisp = my_data->device_dispatch_table;
     if (pDisp->GetDeviceProcAddr == NULL)
         return NULL;
     return pDisp->GetDeviceProcAddr(dev, funcName);
@@ -2580,16 +2649,19 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     const char       *funcName)
 {
     PFN_vkVoidFunction fptr;
-    if (instance == NULL) {
+    if (instance == NULL)
         return NULL;
-    }
 
+    layer_data *my_data;
     /* loader uses this to force layer initialization; instance object is wrapped */
     if (!strcmp(funcName, "vkGetInstanceProcAddr")) {
-        initInstanceTable(mem_tracker_instance_table_map, (const VkBaseLayerObject *) instance);
+        VkBaseLayerObject* wrapped_inst = (VkBaseLayerObject*) instance;
+        my_data = get_my_data_ptr(get_dispatch_key(wrapped_inst->baseObject), layer_data_map);
+        my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+        layer_init_instance_dispatch_table(my_data->instance_dispatch_table, wrapped_inst);
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
-
+    my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     if (!strcmp(funcName, "vkDestroyInstance"))
         return (PFN_vkVoidFunction) vkDestroyInstance;
     if (!strcmp(funcName, "vkCreateInstance"))
@@ -2605,14 +2677,14 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if (fptr)
         return fptr;
 
     {
-        if (get_dispatch_table(mem_tracker_instance_table_map, instance)->GetInstanceProcAddr == NULL)
+        VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
+        if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
-        return get_dispatch_table(mem_tracker_instance_table_map, instance)->GetInstanceProcAddr(instance, funcName);
+        return pTable->GetInstanceProcAddr(instance, funcName);
     }
 }
