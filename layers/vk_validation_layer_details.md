@@ -57,6 +57,8 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 | Valid bufferView descriptor Updates | An invalid bufferView is used when updating *_TEXEL_BUFFER descriptor. | BUFFERVIEW_DESCRIPTOR_ERROR | vkUpdateDescriptorSets | BufferViewDescriptorUpdateError | Currently only making sure bufferView handle is known, can add further validation for bufferView parameters |
 | Valid bufferInfo descriptor Updates | An invalid bufferInfo is used when updating *_UNIFORM_BUFFER* or *_STORAGE_BUFFER* descriptor. | BUFFERINFO_DESCRIPTOR_ERROR | vkUpdateDescriptorSets | TODO | Implement validation test |
 | Attachment References in Subpass | Attachment reference must be present in active subpass | MISSING_ATTACHMENT_REFERENCE | vkCmdClearAttachments | BufferInfoDescriptorUpdateError | Currently only making sure bufferInfo has buffer whose handle is known, can add further validation for bufferInfo parameters |
+| Verify Image Layouts | Validate correct image layouts for presents, image transitions, command buffers and renderpasses | INVALID_IMAGE_LAYOUT | vkCreateRenderPass vkMapMemory vkQueuePresentKHR vkQueueSubmit vkCmdCopyImage vkCmdCopyImageToBuffer vkCmdWaitEvents VkCmdPipelineBarrier | TBD | None |
+| Verify Memory Access Flags/Memory Barriers | Validate correct access flags for memory barriers | INVALID_BARRIER | vkCmdWaitEvents VkCmdPipelineBarrier | TBD | None |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when Drawstate attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |

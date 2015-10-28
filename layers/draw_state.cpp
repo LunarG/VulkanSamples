@@ -3760,7 +3760,8 @@ bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderP
                 }
             }
         }
-        if (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+        if ((subpass.pDepthStencilAttachment != NULL) &&
+            (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
             if (subpass.pDepthStencilAttachment->layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
                 if (subpass.pDepthStencilAttachment->layout == VK_IMAGE_LAYOUT_GENERAL) {
                     skip |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -3960,7 +3961,8 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
             }
         }
     }
-    if (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+    if ((subpass.pDepthStencilAttachment != NULL) && 
+        (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
         const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pDepthStencilAttachment->attachment];
         auto image_view_data = dev_data->imageViewMap.find(image_view);
         if (image_view_data !=  dev_data->imageViewMap.end()) {
@@ -4000,11 +4002,11 @@ void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPass
 VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
-    skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         if (pRenderPassBegin && pRenderPassBegin->renderPass) {
+            skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             updateCBTracking(pCB);
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS);
@@ -4021,12 +4023,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
                     "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
         }
     }
-    if (VK_FALSE == skipCall)
+    if (VK_FALSE == skipCall) {
         dev_data->device_dispatch_table->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
-
-    // This is a shallow copy as that is all that is needed for now
-    dev_data->renderPassBeginInfo = *pRenderPassBegin;
-    dev_data->currentSubpass = 0;
+        // This is a shallow copy as that is all that is needed for now
+        dev_data->renderPassBeginInfo = *pRenderPassBegin;
+        dev_data->currentSubpass = 0;
+    }
 }
 
 VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
@@ -4107,7 +4109,6 @@ bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
     return skip_call;
 }
 
-// clang-format off
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
@@ -4161,7 +4162,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkSwapchainKHR swapchain)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
 
     loader_platform_thread_lock_mutex(&globalLock);
     auto swapchain_data = dev_data->device_extensions.swapchainMap.find(swapchain);
