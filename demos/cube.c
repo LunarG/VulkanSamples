@@ -965,21 +965,29 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         return false;
 
     cPtr = fgets(header, 256, fPtr); // P6
-    if (cPtr == NULL || strncmp(header, "P6\n", 3))
+    if (cPtr == NULL || strncmp(header, "P6\n", 3)) {
+        fclose(fPtr);
         return false;
+    }
 
     do {
         cPtr = fgets(header, 256, fPtr);
-        if (cPtr == NULL)
+        if (cPtr == NULL) {
+            fclose(fPtr);
             return false;
+        }
     } while ( !strncmp(header, "#", 1) );
 
     sscanf(header, "%u %u", height, width);
-    if (rgba_data == NULL)
+    if (rgba_data == NULL) {
+        fclose(fPtr);
         return true;
+    }
     fgets(header, 256, fPtr); // Format
-    if (cPtr == NULL || strncmp(header, "255\n", 3))
+    if (cPtr == NULL || strncmp(header, "255\n", 3)) {
+        fclose(fPtr);
         return false;
+    }
 
     for(int y = 0; y < *height; y++)
     {
@@ -993,7 +1001,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         rgba_data += layout->rowPitch;
     }
     fclose(fPtr);
-  return true;
+    return true;
 }
 
 static void demo_prepare_texture_image(struct demo *demo,
@@ -1457,6 +1465,7 @@ char *demo_read_spv(const char *filename, size_t *psize)
 
     *psize = size;
 
+    fclose(fp);
     return shader_code;
 }
 
