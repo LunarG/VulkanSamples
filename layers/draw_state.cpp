@@ -1324,9 +1324,25 @@ static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCom
     return log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_BEGIN_COMMAND_BUFFER, "DS",
             "You must call vkBeginCommandBuffer() before this call to %s", (void*)caller_name);
 }
+
+bool validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
+    bool skip_call = false;
+    for (auto cmd : pCB->pCmds) {
+        if (cmd_type == CMD_EXECUTECOMMANDS && cmd->type != CMD_EXECUTECOMMANDS) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                                 "vkCmdExecuteCommands() cannot be called on a cmd buffer with exsiting commands.");
+        }
+        if (cmd_type != CMD_EXECUTECOMMANDS && cmd->type == CMD_EXECUTECOMMANDS) {
+            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                                 "Commands cannot be added to a cmd buffer with exsiting secondary commands.");
+        }
+    }
+    return skip_call;
+}
+
 static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd)
 {
-    VkBool32 skipCall = VK_FALSE;
+    VkBool32 skipCall = validateCmdsInCmdBuffer(my_data, pCB, cmd);
     CMD_NODE* pCmd = new CMD_NODE;
     if (pCmd) {
         // init cmd node and append to end of cmd LL
@@ -3961,7 +3977,7 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
             }
         }
     }
-    if ((subpass.pDepthStencilAttachment != NULL) && 
+    if ((subpass.pDepthStencilAttachment != NULL) &&
         (subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED)) {
         const VkImageView& image_view = pFramebufferInfo->pAttachments[subpass.pDepthStencilAttachment->attachment];
         auto image_view_data = dev_data->imageViewMap.find(image_view);
@@ -3972,6 +3988,15 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
             }
         }
     }
+}
+
+bool validatePrimaryCommandBuffer(const layer_data* my_data, const GLOBAL_CB_NODE* pCB, const std::string& cmd_name) {
+    bool skip_call = false;
+    if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+        skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+                             "Cannot execute command %s on a secondary command buffer.", cmd_name.c_str());
+    }
+    return skip_call;
 }
 
 void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin) {
@@ -4009,6 +4034,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
             skipCall |= VerifyFramebufferAndRenderPassLayouts(commandBuffer, pRenderPassBegin);
             skipCall |= insideRenderPass(dev_data, pCB, "vkCmdBeginRenderPass");
             updateCBTracking(pCB);
+            skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdBeginRenderPass");
             skipCall |= addCmd(dev_data, pCB, CMD_BEGINRENDERPASS);
             pCB->activeRenderPass = pRenderPassBegin->renderPass;
             // This is a shallow copy as that is all that is needed for now
@@ -4039,6 +4065,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSub
     TransitionSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo, ++dev_data->currentSubpass);
     if (pCB) {
         updateCBTracking(pCB);
+        skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS);
         pCB->activeSubpass++;
         TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, ++pCB->activeSubpass);
@@ -4058,8 +4085,9 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     TransitionFinalSubpassLayouts(commandBuffer, &dev_data->renderPassBeginInfo);
     if (pCB) {
-        skipCall |= outsideRenderPass(dev_data, pCB, "vkEndRenderpass");
+        skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdEndRenderpass");
         updateCBTracking(pCB);
+        skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdEndRenderPass");
         skipCall |= addCmd(dev_data, pCB, CMD_ENDRENDERPASS);
         TransitionFinalSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo);
         pCB->activeRenderPass = 0;
@@ -4087,6 +4115,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCommandBuffer commandBuffer, u
             }
         }
         updateCBTracking(pCB);
+        skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands");
         skipCall |= addCmd(dev_data, pCB, CMD_EXECUTECOMMANDS);
     }
     if (VK_FALSE == skipCall)
