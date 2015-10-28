@@ -406,13 +406,15 @@ class Subcommand(object):
                         func_body.append('%s' % self.lineinfo.get())
                         func_body.append('VKTRACER_EXPORT %s VKAPI __HOOKED_vk%s(' % (proto.ret, proto.name))
                         for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 if NULL
-                            func_body.append('    %s %s,' % (p.ty, p.name))
+                            func_body.append('    %s,' % p.c())
                             if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
                                 if 'pDataSize' in p.name:
                                     in_data_size = True;
                             elif 'pfnMsgCallback' == p.name:
                                 raw_packet_update_list.append('    PFN_vkDbgMsgCallback* pNonConstCallback = (PFN_vkDbgMsgCallback*)&pPacket->pfnMsgCallback;')
                                 raw_packet_update_list.append('    *pNonConstCallback = pfnMsgCallback;')
+                            elif '[' in p.ty:
+                                raw_packet_update_list.append('    memcpy((void *) pPacket->%s, %s, sizeof(pPacket->%s));' % (p.name, p.name, p.name))
                             else:
                                 raw_packet_update_list.append('    pPacket->%s = %s;' % (p.name, p.name))
                         # Get list of packet size modifiers due to ptr params
@@ -937,7 +939,7 @@ class Subcommand(object):
                 if_body.append('typedef struct packet_vk%s {' % proto.name)
                 if_body.append('    vktrace_trace_packet_header* header;')
                 for p in proto.params:
-                    if_body.append('    %s %s;' % (p.ty, p.name))
+                    if_body.append('    %s;' % p.c())
                 if 'void' != proto.ret:
                     if_body.append('    %s result;' % proto.ret)
                 if_body.append('} packet_vk%s;\n' % proto.name)
@@ -979,7 +981,7 @@ class Subcommand(object):
                     if_body.append('typedef struct packet_vk%s {' % proto.name)
                     if_body.append('    vktrace_trace_packet_header* pHeader;')
                     for p in proto.params:
-                        if_body.append('    %s %s;' % (p.ty, p.name))
+                        if_body.append('    %s;' % p.c())
                     if 'void' != proto.ret:
                         if_body.append('    %s result;' % proto.ret)
                     if_body.append('} packet_vk%s;\n' % proto.name)
@@ -1009,7 +1011,7 @@ class Subcommand(object):
         for proto in self.protos:
             xf_body.append('    typedef %s( VKAPI * type_vk%s)(' % (proto.ret, proto.name))
             for p in proto.params:
-                xf_body.append('        %s %s,' % (p.ty, p.name))
+                xf_body.append('        %s,' % p.c())
             xf_body[-1] = xf_body[-1].replace(',', ');')
             xf_body.append('    type_vk%s real_vk%s;' % (proto.name, proto.name))
         xf_body.append('};')
@@ -1788,6 +1790,7 @@ class VktraceTraceC(Subcommand):
         header_txt.append('#endif')
         header_txt.append('#include "vktrace_trace_packet_utils.h"')
         header_txt.append('#include <stdio.h>\n')
+        header_txt.append('#include <string.h>\n')
         header_txt.append('#ifdef WIN32')
         header_txt.append('INIT_ONCE gInitOnce = INIT_ONCE_STATIC_INIT;')
         header_txt.append('#elif defined(PLATFORM_LINUX)')
