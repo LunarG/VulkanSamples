@@ -84,7 +84,6 @@ struct intel_x11_swap_chain {
     int dri3_major, dri3_minor;
     int present_major, present_minor;
 
-    xcb_present_event_t present_special_event_id;
     xcb_special_event_t *present_special_event;
 
     struct intel_img **persistent_images;
@@ -105,7 +104,6 @@ struct intel_x11_swap_chain {
 };
 
 struct intel_x11_img_data {
-    struct intel_x11_swap_chain *swap_chain;
     struct intel_mem *mem;
     int prime_fd;
     uint32_t pixmap;
@@ -372,14 +370,15 @@ static bool x11_swap_chain_present_select_input(struct intel_x11_swap_chain *sc)
 {
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
+    xcb_present_event_t present_special_event_id;
 
     /* create the event queue */
-    sc->present_special_event_id = xcb_generate_id(sc->c);
+    present_special_event_id = xcb_generate_id(sc->c);
     sc->present_special_event = xcb_register_for_special_xge(sc->c,
-            &xcb_present_id, sc->present_special_event_id, NULL);
+            &xcb_present_id, present_special_event_id, NULL);
 
     cookie = xcb_present_select_input_checked(sc->c,
-            sc->present_special_event_id, sc->window,
+            present_special_event_id, sc->window,
             XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
             XCB_PRESENT_EVENT_MASK_CONFIGURE_NOTIFY);
 
@@ -431,7 +430,6 @@ static struct intel_img *x11_swap_chain_create_persistent_image(struct intel_x11
             prime_fd, &img->layout);
 
     data = (struct intel_x11_img_data *) img->wsi_data;
-    data->swap_chain = sc;
     data->mem = mem;
     data->prime_fd = prime_fd;
     data->pixmap = pixmap;
