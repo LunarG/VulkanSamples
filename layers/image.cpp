@@ -560,9 +560,32 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
     auto destImageEntry = device_data->imageMap.find(destImage.handle);
 
+    // For each region, src and dst number of layers should not be zero
+    // For each region, src and dst number of layers must match
     // For each region, src aspect mask must match dest aspect mask
     // For each region, color aspects cannot be mixed with depth/stencil aspects
     for (uint32_t i = 0; i < regionCount; i++) {
+        if(pRegions[i].srcSubresource.numLayers == 0)
+        {
+            char const str[] = "vkCmdCopyImage: number of layers in source subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
+        if(pRegions[i].destSubresource.numLayers == 0)
+        {
+            char const str[] = "vkCmdCopyImage: number of layers in destination subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
+        if(pRegions[i].srcSubresource.numLayers != pRegions[i].destSubresource.numLayers)
+        {
+            char const str[] = "vkCmdCopyImage: number of layers in source and destination subresources must match";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
         if (pRegions[i].srcSubresource.aspect != pRegions[i].destSubresource.aspect) {
             char const str[] = "vkCmdCopyImage: Src and dest aspectMasks for each region must match";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
@@ -656,8 +679,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
 {
     VkBool32 skipCall = VK_FALSE;
 
+    // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
     for (uint32_t i = 0; i < regionCount; i++) {
+        if(pRegions[i].imageSubresource.numLayers == 0)
+        {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyImageToBuffer: number of layers in image subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
         VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
         if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
             (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
@@ -685,8 +717,17 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
 {
     VkBool32 skipCall = VK_FALSE;
 
+    // For each region, the number of layers in the image subresource should not be zero
     // Image aspect must be ONE OF color, depth, stencil
     for (uint32_t i = 0; i < regionCount; i++) {
+        if(pRegions[i].imageSubresource.numLayers == 0)
+        {
+            layer_data *device_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
+            char const str[] = "vkCmdCopyBufferToImage: number of layers in image subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
         VkImageAspectFlags aspect = pRegions[i].imageSubresource.aspect;
         if ((aspect != VK_IMAGE_ASPECT_COLOR_BIT) &&
             (aspect != VK_IMAGE_ASPECT_DEPTH_BIT) &&
@@ -750,6 +791,27 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
             }
 
             for (uint32_t i = 0; i < regionCount; i++) {
+                if(pRegions[i].srcSubresource.numLayers == 0)
+                {
+                    char const str[] = "vkCmdBlitImage: number of layers in source subresource is zero";
+                    skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                        (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+                }
+
+                if(pRegions[i].destSubresource.numLayers == 0)
+                {
+                    char const str[] = "vkCmdBlitImage: number of layers in destination subresource is zero";
+                    skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                        (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+                }
+
+                if(pRegions[i].srcSubresource.numLayers != pRegions[i].destSubresource.numLayers)
+                {
+                    char const str[] = "vkCmdBlitImage: number of layers in source and destination subresources must match";
+                    skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                        (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+                }
+
                 VkImageAspectFlags srcAspect = pRegions[i].srcSubresource.aspect;
                 VkImageAspectFlags dstAspect = pRegions[i].destSubresource.aspect;
 
@@ -818,8 +880,23 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     auto srcImageEntry = device_data->imageMap.find(srcImage.handle);
     auto destImageEntry = device_data->imageMap.find(destImage.handle);
 
+    // For each region, the number of layers in the image subresource should not be zero
     // For each region, src and dest image aspect must be color only
     for (uint32_t i = 0; i < regionCount; i++) {
+        if(pRegions[i].srcSubresource.numLayers == 0)
+        {
+            char const str[] = "vkCmdResolveImage: number of layers in source subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
+        if(pRegions[i].destSubresource.numLayers == 0)
+        {
+            char const str[] = "vkCmdResolveImage: number of layers in destination subresource is zero";
+            skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
+                                (uint64_t)cmdBuffer, 0, IMAGE_MISMATCHED_IMAGE_ASPECT, "IMAGE", str);
+        }
+
         if ((pRegions[i].srcSubresource.aspect  != VK_IMAGE_ASPECT_COLOR_BIT) ||
             (pRegions[i].destSubresource.aspect != VK_IMAGE_ASPECT_COLOR_BIT)) {
             char const str[] = "vkCmdResolveImage: src and dest aspectMasks for each region must specify only VK_IMAGE_ASPECT_COLOR_BIT";
