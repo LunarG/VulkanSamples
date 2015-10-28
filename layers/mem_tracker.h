@@ -48,6 +48,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_INVALID_FENCE_STATE,           // Invalid Fence State signaled or used
     MEMTRACK_REBIND_OBJECT,                 // Non-sparse object bindings are immutable
     MEMTRACK_INVALID_USAGE_FLAG,            // Usage flags specified at image/buffer create conflict w/ use of object
+    MEMTRACK_INVALID_MAP,                   // Size flag specified at alloc is too small for mapping range
 } MEM_TRACK_ERROR;
 
 // MemTracker Semaphore states

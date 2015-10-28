@@ -1239,6 +1239,26 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
     my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
 }
 
+bool validateMemRange(
+    VkDevice        device,
+    VkDeviceMemory  mem,
+    VkDeviceSize    offset,
+    VkDeviceSize    size)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    bool skip_call = false;
+
+    auto mem_element = my_data->memObjMap.find(mem);
+    if (mem_element != my_data->memObjMap.end()) {
+        if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
+            skip_call = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0,
+                                MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
+                                offset, size + offset, mem_element->second.allocInfo.allocationSize);
+        }
+    }
+    return skip_call;
+}
+
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
@@ -1258,6 +1278,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
         skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
                        "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %#" PRIxLEAST64, (uint64_t) mem);
     }
+    skipCall |= validateMemRange(device, mem, offset, size);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
