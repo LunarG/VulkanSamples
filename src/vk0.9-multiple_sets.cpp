@@ -47,7 +47,7 @@ const char *vertShaderText =
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         // Note, set = 0 here
-        "layout (set = 0, binding = 0) uniform bufferVals {\n"
+        "layout (std140, set = 0, binding = 0) uniform bufferVals {\n"
         "    mat4 mvp;\n"
         "} myBufferVals;\n"
         // And set = 1 here

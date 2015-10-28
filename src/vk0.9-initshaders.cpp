@@ -54,7 +54,7 @@ int main(int argc, char **argv)
             "#version 140\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (binding = 0) uniform bufferVals {\n"
+            "layout (std140, binding = 0) uniform bufferVals {\n"
             "    mat4 mvp;\n"
             "} myBufferVals;\n"
             "layout (location = 0) in vec4 pos;\n"
