@@ -35,11 +35,11 @@
 #include <string.h>
 
 #include <sys/types.h>
-#if defined(WIN32)
+#if defined(_WIN32)
 #include "dirent_on_windows.h"
-#else // WIN32
+#else // _WIN32
 #include <dirent.h>
-#endif // WIN32
+#endif // _WIN32
 #include "vk_loader_platform.h"
 #include "loader.h"
 #include "gpa_helper.h"
@@ -1626,7 +1626,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
     out_files->filename_list = NULL;
 
     if (env_override != NULL && (override = getenv(env_override))) {
-#if defined(__linux__)
+#if !defined(_WIN32)
         if (geteuid() != getuid()) {
             /* Don't allow setuid apps to use the env var: */
             override = NULL;
@@ -1641,10 +1641,10 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
         return;
     }
 
-#if defined(__linux__)
-    list_is_dirs = (override == NULL || is_layer) ? true : false;
-#else //WIN32
+#if defined(_WIN32)
     list_is_dirs = (is_layer && override != NULL) ? true : false;
+#else
+    list_is_dirs = (override == NULL || is_layer) ? true : false;
 #endif
     // Make a copy of the input we are using so it is not modified
     // Also handle getting the location(s) from registry on Windows
@@ -1655,7 +1655,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
             return;
         }
         strcpy(loc, location);
-#if defined (_WIN32)
+#if defined(_WIN32)
         loc = loader_get_registry_files(inst, loc);
         if (loc == NULL) {
             loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Registry lookup failed can't get manifest files");
@@ -1691,7 +1691,9 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
             }
         }
         else {
-#if defined(__linux__)
+#if defined(_WIN32)
+            name = file;
+#else
             // only Linux has relative paths
             char *dir;
             // make a copy of location so it isn't modified
@@ -1705,8 +1707,6 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
             loader_get_fullpath(file, dir, sizeof(full_path), full_path);
 
             name = full_path;
-#else  // WIN32
-            name = file;
 #endif
         }
         while (name) {
@@ -1852,11 +1852,11 @@ void loader_icd_scan(
                     strcpy(def_path, DEFAULT_VK_DRIVERS_PATH);
                     path_len = strlen(DEFAULT_VK_DRIVERS_PATH) + strlen(library_path) + 2;
                     fullpath = loader_stack_alloc(path_len);
-#if defined(__linux__)
+#if defined(_WIN32)
+                    strncpy(fullpath, library_path, path_len);
+                    fullpath[path_len - 1] = '\0';
+#else
                     loader_get_fullpath(library_path, def_path, path_len, fullpath);
-#else // WIN32
-                    strncpy(fullpath, library_path, sizeof (fullpath));
-                    fullpath[sizeof (fullpath) - 1] = '\0';
 #endif
                 } else {
                     // a relative or absolute path
