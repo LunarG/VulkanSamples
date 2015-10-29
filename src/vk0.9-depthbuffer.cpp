@@ -65,8 +65,7 @@ int main(int argc, char **argv)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -121,8 +120,8 @@ int main(int argc, char **argv)
                         &info.depth.image);
     assert(res == VK_SUCCESS);
 
-    res = vkGetImageMemoryRequirements(info.device,
-                                       info.depth.image, &mem_reqs);
+    vkGetImageMemoryRequirements(info.device,
+                                 info.depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */

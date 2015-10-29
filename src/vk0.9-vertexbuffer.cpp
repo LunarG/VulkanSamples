@@ -83,8 +83,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    res = vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
-    assert(res == VK_SUCCESS);
+    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;

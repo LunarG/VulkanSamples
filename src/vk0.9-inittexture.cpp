@@ -75,8 +75,7 @@ int main(int argc, char **argv)
     }
 
     VkFormatProperties formatProps;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
     bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
@@ -117,8 +116,7 @@ int main(int argc, char **argv)
             &mappableImage);
     assert(res == VK_SUCCESS);
 
-    res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
-    assert(res == VK_SUCCESS);
+    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
 
@@ -145,8 +143,7 @@ int main(int argc, char **argv)
     void *data;
 
     /* Get the subresource layout so we know what the row pitch is */
-    res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-    assert(res == VK_SUCCESS);
+    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
 
     res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
     assert(res == VK_SUCCESS);
@@ -177,8 +174,7 @@ int main(int argc, char **argv)
                 &texObj.image);
         assert(res == VK_SUCCESS);
 
-        res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-        assert(res == VK_SUCCESS);
+        vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
 
         mem_alloc.allocationSize = mem_reqs.size;
 

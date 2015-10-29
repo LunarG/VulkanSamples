@@ -260,11 +260,8 @@ VkResult init_device(struct sample_info &info)
     VkResult res;
 
     /* This is as good a place as any to do this */
-    res = vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
-    assert(res == VK_SUCCESS);
-
-    res = vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
+    vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
 
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -524,8 +521,7 @@ void init_depth_buffer(struct sample_info &info)
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
         image_info.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -580,7 +576,7 @@ void init_depth_buffer(struct sample_info &info)
                         &info.depth.image);
     assert(res == VK_SUCCESS);
 
-    res = vkGetImageMemoryRequirements(info.device,
+    vkGetImageMemoryRequirements(info.device,
                                        info.depth.image, &mem_reqs);
 
     mem_alloc.allocationSize = mem_reqs.size;
@@ -629,13 +625,11 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
     assert(info.queue_count >= 1);
 
     // Construct the surface description:
@@ -980,8 +974,7 @@ void init_uniform_buffer(struct sample_info &info)
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    res = vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
-    assert(res == VK_SUCCESS);
+    vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -1226,10 +1219,8 @@ void init_device_queue(struct sample_info &info)
 {
     /* DEPENDS on init_swapchain_extension() */
 
-    VkResult U_ASSERT_ONLY res;
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
+    vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
-    assert(res == VK_SUCCESS);
 }
 
 void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture)
@@ -1249,8 +1240,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    res = vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
-    assert(res == VK_SUCCESS);
+    vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -1575,8 +1565,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     }
 
     VkFormatProperties formatProps;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 
     /* See if we can use a linear tiled image for a texture, if not, we will need a staging image for the texture data */
     bool needStaging = (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))?true:false;
@@ -1618,7 +1607,7 @@ void init_texture(struct sample_info &info, const char* textureName)
             &mappableImage);
     assert(res == VK_SUCCESS);
 
-    res = vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
     assert(res == VK_SUCCESS);
 
     mem_alloc.allocationSize = mem_reqs.size;
@@ -1646,8 +1635,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     void *data;
 
     /* Get the subresource layout so we know what the row pitch is */
-    res = vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
-    assert(res == VK_SUCCESS);
+    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
 
     res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
     assert(res == VK_SUCCESS);
@@ -1678,8 +1666,7 @@ void init_texture(struct sample_info &info, const char* textureName)
                 &texObj.image);
         assert(res == VK_SUCCESS);
 
-        res = vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
-        assert(res == VK_SUCCESS);
+        vkGetImageMemoryRequirements(info.device, texObj.image, &mem_reqs);
 
         mem_alloc.allocationSize = mem_reqs.size;
 

@@ -90,8 +90,7 @@ int main(int argc, char **argv)
     }
 
     VkFormatProperties props;
-    res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R32_SFLOAT, &props);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], VK_FORMAT_R32_SFLOAT, &props);
     if (!(props.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
         std::cout << "R32_SFLOAT format unsupported for texel buffer\n";
         exit(-1);
@@ -121,8 +120,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    res = vkGetBufferMemoryRequirements(info.device, texelBuf, &mem_reqs);
-    assert(res == VK_SUCCESS);
+    vkGetBufferMemoryRequirements(info.device, texelBuf, &mem_reqs);
 
     VkMemoryAllocInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
