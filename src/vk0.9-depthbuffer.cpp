@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     image_info.extent.height = info.height;
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
-    image_info.arraySize = 1;
+    image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.queueFamilyCount = 0;
