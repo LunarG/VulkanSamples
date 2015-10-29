@@ -36,73 +36,117 @@
 #include "vk_layer_utils.h"
 #include "vk_layer_config.h"
 #include "vk_layer_table.h"
-#include "vk_layer_logging.h"
 #include "vk_enum_string_helper.h"
 #include "shader_checker.h"
 #include "vk_layer_extension_utils.h"
 
 #include "spirv/spirv.hpp"
 
+// fwd decls
+struct shader_module;
+struct shader_object;
+struct render_pass;
 
 struct layer_data {
     debug_report_data *report_data;
-    // TODO: put instance data here
     std::vector<VkDbgMsgCallback> logging_callback;
+    VkLayerDispatchTable* device_dispatch_table;
+    VkLayerInstanceDispatchTable* instance_dispatch_table;
+
+    std::unordered_map<VkShaderModule, shader_module *> shader_module_map;
+    std::unordered_map<VkShader, shader_object *> shader_object_map;
+    std::unordered_map<VkDescriptorSetLayout, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
+    std::unordered_map<VkPipelineLayout, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
+    std::unordered_map<VkRenderPass, render_pass *> render_pass_map;
 
     layer_data() :
-        report_data(nullptr)
+        report_data(nullptr),
+        device_dispatch_table(nullptr),
+        instance_dispatch_table(nullptr)
     {};
 };
 
-static std::unordered_map<void *, layer_data *> layer_data_map;
-static device_table_map shader_checker_device_table_map;
-static instance_table_map shader_checker_instance_table_map;
+static void
+build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index);
 
+struct shader_module {
+    /* the spirv image itself */
+    std::vector<uint32_t> words;
+    /* a mapping of <id> to the first word of its def. this is useful because walking type
+     * trees requires jumping all over the instruction stream.
+     */
+    std::unordered_map<unsigned, unsigned> type_def_index;
+
+    shader_module(VkShaderModuleCreateInfo const *pCreateInfo) :
+        words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
+        type_def_index() {
+
+        build_type_def_index(words, type_def_index);
+    }
+};
+
+struct shader_object {
+    std::string name;
+    struct shader_module *module;
+    VkShaderStageFlagBits stage;
+
+    shader_object(layer_data *my_data, VkShaderCreateInfo const *pCreateInfo)
+    {
+        module = my_data->shader_module_map[pCreateInfo->module];
+        stage = pCreateInfo->stage;
+        name = pCreateInfo->pName;
+    }
+};
+
+struct render_pass {
+    std::vector<std::vector<VkFormat>> subpass_color_formats;
+
+    render_pass(VkRenderPassCreateInfo const *pCreateInfo)
+    {
+        uint32_t i;
+
+        subpass_color_formats.reserve(pCreateInfo->subpassCount);
+        for (i = 0; i < pCreateInfo->subpassCount; i++) {
+            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
+            std::vector<VkFormat> color_formats;
+            uint32_t j;
+
+            color_formats.reserve(subpass->colorCount);
+            for (j = 0; j < subpass->colorCount; j++) {
+                const uint32_t att = subpass->pColorAttachments[j].attachment;
+                const VkFormat format = pCreateInfo->pAttachments[att].format;
+
+                color_formats.push_back(pCreateInfo->pAttachments[att].format);
+            }
+
+            subpass_color_formats.push_back(color_formats);
+        }
+    }
+};
+
+static std::unordered_map<void *, layer_data *> layer_data_map;
 
 template layer_data *get_my_data_ptr<layer_data>(
         void *data_key,
         std::unordered_map<void *, layer_data *> &data_map);
-
-debug_report_data *mdd(void *object)
-{
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-#if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
-#endif
-    return my_data->report_data;
-}
-
-debug_report_data *mid(VkInstance object)
-{
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-#if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
-#endif
-    return my_data->report_data;
-}
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
 static loader_platform_thread_mutex globalLock;
 
-
-std::unordered_map<VkDescriptorSetLayout, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
     VkDescriptorSetLayout* pSetLayout)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* stash a copy of the layout bindings */
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(shader_checker_device_table_map, device);
-    VkResult result = pDeviceTable->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
+    VkResult result = my_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pSetLayout);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        auto& bindings = descriptor_set_layout_map[*pSetLayout];
+        auto& bindings = my_data->descriptor_set_layout_map[*pSetLayout];
         bindings = new std::vector<VkDescriptorSetLayoutBinding>(
                 pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->count);
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -111,31 +155,27 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     return result;
 }
 
-
-std::unordered_map<VkPipelineLayout, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
     VkPipelineLayout*                           pPipelineLayout)
 {
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(shader_checker_device_table_map, device);
-    VkResult result = pDeviceTable->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pPipelineLayout);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        auto& layouts = pipeline_layout_map[*pPipelineLayout];
+        auto& layouts = my_data->pipeline_layout_map[*pPipelineLayout];
         layouts = new std::vector<std::vector<VkDescriptorSetLayoutBinding>*>();
         layouts->reserve(pCreateInfo->descriptorSetCount);
         for (unsigned i = 0; i < pCreateInfo->descriptorSetCount; i++) {
-            layouts->push_back(descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
+            layouts->push_back(my_data->descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
     return result;
 }
-
 
 static void
 build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index)
@@ -181,7 +221,6 @@ build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsi
     }
 }
 
-
 bool
 shader_is_spirv(VkShaderModuleCreateInfo const *pCreateInfo)
 {
@@ -191,67 +230,6 @@ shader_is_spirv(VkShaderModuleCreateInfo const *pCreateInfo)
     /* Just validate that the header makes sense. */
     return sizeInWords >= 5 && words[0] == spv::MagicNumber && words[1] == spv::Version;
 }
-
-struct shader_module {
-    /* the spirv image itself */
-    std::vector<uint32_t> words;
-    /* a mapping of <id> to the first word of its def. this is useful because walking type
-     * trees requires jumping all over the instruction stream.
-     */
-    std::unordered_map<unsigned, unsigned> type_def_index;
-
-    shader_module(VkShaderModuleCreateInfo const *pCreateInfo) :
-        words((uint32_t *)pCreateInfo->pCode, (uint32_t *)pCreateInfo->pCode + pCreateInfo->codeSize / sizeof(uint32_t)),
-        type_def_index() {
-
-        build_type_def_index(words, type_def_index);
-    }
-};
-
-
-static std::unordered_map<VkShaderModule, shader_module *> shader_module_map;
-
-struct shader_object {
-    std::string name;
-    struct shader_module *module;
-    VkShaderStageFlagBits stage;
-
-    shader_object(VkShaderCreateInfo const *pCreateInfo)
-    {
-        module = shader_module_map[pCreateInfo->module];
-        stage = pCreateInfo->stage;
-        name = pCreateInfo->pName;
-    }
-};
-static std::unordered_map<VkShader, shader_object *> shader_object_map;
-
-struct render_pass {
-    std::vector<std::vector<VkFormat>> subpass_color_formats;
-
-    render_pass(VkRenderPassCreateInfo const *pCreateInfo)
-    {
-        uint32_t i;
-
-        subpass_color_formats.reserve(pCreateInfo->subpassCount);
-        for (i = 0; i < pCreateInfo->subpassCount; i++) {
-            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
-            std::vector<VkFormat> color_formats;
-            uint32_t j;
-
-            color_formats.reserve(subpass->colorCount);
-            for (j = 0; j < subpass->colorCount; j++) {
-                const uint32_t att = subpass->pColorAttachments[j].attachment;
-                const VkFormat format = pCreateInfo->pAttachments[att].format;
-
-                color_formats.push_back(pCreateInfo->pAttachments[att].format);
-            }
-
-            subpass_color_formats.push_back(color_formats);
-        }
-    }
-};
-static std::unordered_map<VkRenderPass, render_pass *> render_pass_map;
-
 
 static void
 init_shader_checker(layer_data *my_data)
@@ -280,11 +258,6 @@ init_shader_checker(layer_data *my_data)
 
     if (!globalLockInitialized)
     {
-        // TODO/TBD: Need to delete this mutex sometime.  How???  One
-        // suggestion is to call this during vkCreateInstance(), and then we
-        // can clean it up during vkDestroyInstance().  However, that requires
-        // that the layer have per-instance locks.  We need to come back and
-        // address this soon.
         loader_platform_thread_create_mutex(&globalLock);
         globalLockInitialized = 1;
     }
@@ -357,7 +330,6 @@ storage_class_name(unsigned sc)
     }
 }
 
-
 /* returns ptr to null terminator */
 static char *
 describe_type(char *dst, shader_module const *src, unsigned type)
@@ -405,7 +377,6 @@ describe_type(char *dst, shader_module const *src, unsigned type)
             return dst + sprintf(dst, "oddtype");
     }
 }
-
 
 static bool
 types_match(shader_module const *a, shader_module const *b, unsigned a_type, unsigned b_type, bool b_arrayed)
@@ -489,7 +460,6 @@ types_match(shader_module const *a, shader_module const *b, unsigned a_type, uns
     }
 }
 
-
 static int
 value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id, int def)
 {
@@ -500,16 +470,14 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
         return it->second;
 }
 
-
 struct interface_var {
     uint32_t id;
     uint32_t type_id;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
-
 static void
-collect_interface_by_location(VkDevice dev,
+collect_interface_by_location(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
                               std::map<uint32_t, interface_var> &out,
                               std::map<uint32_t, interface_var> &builtins_out)
@@ -552,7 +520,7 @@ collect_interface_by_location(VkDevice dev,
                  * The spec says nothing about how this case works (or doesn't)
                  * for interface matching.
                  */
-                log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
+                log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface has no Location or Builtin decoration",
                         code[word+2], code[word+1], storage_class_name(sinterface));
             }
@@ -576,9 +544,8 @@ collect_interface_by_location(VkDevice dev,
     }
 }
 
-
 static void
-collect_interface_by_descriptor_slot(VkDevice dev,
+collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
                               std::map<std::pair<unsigned, unsigned>, interface_var> &out)
 {
@@ -615,7 +582,7 @@ collect_interface_by_descriptor_slot(VkDevice dev,
             auto existing_it = out.find(std::make_pair(set, binding));
             if (existing_it != out.end()) {
                 /* conflict within spv image */
-                log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
+                log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
                         SHADER_CHECKER_INCONSISTENT_SPIRV, "SC",
                         "var %d (type %d) in %s interface in descriptor slot (%u,%u) conflicts with existing definition",
                         code[word+2], code[word+1], storage_class_name(sinterface),
@@ -632,25 +599,25 @@ collect_interface_by_descriptor_slot(VkDevice dev,
     }
 }
 
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         VkDevice device,
         const VkShaderModuleCreateInfo *pCreateInfo,
         VkShaderModule *pShaderModule)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* Protect the driver from non-SPIRV shaders */
     if (!shader_is_spirv(pCreateInfo)) {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE,
+        log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE,
                 /* dev */ 0, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
                 "Shader is not SPIR-V");
         return VK_ERROR_VALIDATION_FAILED;
     }
 
-    VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateShaderModule(device, pCreateInfo, pShaderModule);
+    VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pShaderModule);
 
     if (res == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        shader_module_map[*pShaderModule] = new shader_module(pCreateInfo);
+        my_data->shader_module_map[*pShaderModule] = new shader_module(pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return res;
@@ -661,10 +628,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
         const VkShaderCreateInfo *pCreateInfo,
         VkShader *pShader)
 {
-    VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateShader(device, pCreateInfo, pShader);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult res = my_data->device_dispatch_table->CreateShader(device, pCreateInfo, pShader);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    shader_object_map[*pShader] = new shader_object(pCreateInfo);
+    my_data->shader_object_map[*pShader] = new shader_object(my_data, pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
@@ -674,16 +642,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
         const VkRenderPassCreateInfo *pCreateInfo,
         VkRenderPass *pRenderPass)
 {
-    VkResult res = get_dispatch_table(shader_checker_device_table_map, device)->CreateRenderPass(device, pCreateInfo, pRenderPass);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult res = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pRenderPass);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    render_pass_map[*pRenderPass] = new render_pass(pCreateInfo);
+    my_data->render_pass_map[*pRenderPass] = new render_pass(pCreateInfo);
     loader_platform_thread_unlock_mutex(&globalLock);
     return res;
 }
 
 static bool
-validate_interface_between_stages(VkDevice dev,
+validate_interface_between_stages(layer_data *my_data, VkDevice dev,
                                   shader_module const *producer, char const *producer_name,
                                   shader_module const *consumer, char const *consumer_name,
                                   bool consumer_arrayed_input)
@@ -696,8 +665,8 @@ validate_interface_between_stages(VkDevice dev,
 
     bool pass = true;
 
-    collect_interface_by_location(dev, producer, spv::StorageClassOutput, outputs, builtin_outputs);
-    collect_interface_by_location(dev, consumer, spv::StorageClassInput, inputs, builtin_inputs);
+    collect_interface_by_location(my_data, dev, producer, spv::StorageClassOutput, outputs, builtin_outputs);
+    collect_interface_by_location(my_data, dev, consumer, spv::StorageClassInput, inputs, builtin_inputs);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -710,14 +679,14 @@ validate_interface_between_stages(VkDevice dev,
         auto b_first = b_at_end ? 0 : b_it->first;
 
         if (b_at_end || ((!a_at_end) && (a_first < b_first))) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "%s writes to output location %d which is not consumed by %s", producer_name, a_first, consumer_name)) {
                 pass = false;
             }
             a_it++;
         }
         else if (a_at_end || a_first > b_first) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                     "%s consumes input location %d which is not written by %s", consumer_name, b_first, producer_name)) {
                 pass = false;
             }
@@ -733,7 +702,7 @@ validate_interface_between_stages(VkDevice dev,
                 describe_type(producer_type, producer, a_it->second.type_id);
                 describe_type(consumer_type, consumer, b_it->second.type_id);
 
-                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Type mismatch on location %d: '%s' vs '%s'", a_it->first, producer_type, consumer_type)) {
                 pass = false;
                 }
@@ -833,7 +802,7 @@ get_fundamental_type(shader_module const *src, unsigned type)
 
 
 static bool
-validate_vi_consistency(VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi)
+validate_vi_consistency(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi)
 {
     /* walk the binding descriptions, which describe the step rate and stride of each vertex buffer.
      * each binding should be specified only once.
@@ -845,7 +814,7 @@ validate_vi_consistency(VkDevice dev, VkPipelineVertexInputStateCreateInfo const
         auto desc = &vi->pVertexBindingDescriptions[i];
         auto & binding = bindings[desc->binding];
         if (binding) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INCONSISTENT_VI, "SC",
                     "Duplicate vertex input binding descriptions for binding %d", desc->binding)) {
                 pass = false;
             }
@@ -860,7 +829,7 @@ validate_vi_consistency(VkDevice dev, VkPipelineVertexInputStateCreateInfo const
 
 
 static bool
-validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs)
+validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVertexInputStateCreateInfo const *vi, shader_module const *vs)
 {
     std::map<uint32_t, interface_var> inputs;
     /* we collect builtin inputs, but they will never appear in the VI state --
@@ -869,7 +838,7 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
     std::map<uint32_t, interface_var> builtin_inputs;
     bool pass = true;
 
-    collect_interface_by_location(dev, vs, spv::StorageClassInput, inputs, builtin_inputs);
+    collect_interface_by_location(my_data, dev, vs, spv::StorageClassInput, inputs, builtin_inputs);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -887,14 +856,14 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
         auto a_first = a_at_end ? 0 : it_a->first;
         auto b_first = b_at_end ? 0 : it_b->first;
         if (b_at_end || a_first < b_first) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "Vertex attribute at location %d not consumed by VS", a_first)) {
                 pass = false;
             }
             it_a++;
         }
         else if (a_at_end || b_first < a_first) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                     "VS consumes input at location %d but not provided", b_first)) {
                 pass = false;
             }
@@ -908,7 +877,7 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
             if (attrib_type != FORMAT_TYPE_UNDEFINED && input_type != FORMAT_TYPE_UNDEFINED && attrib_type != input_type) {
                 char vs_type[1024];
                 describe_type(vs_type, vs, it_b->second.type_id);
-                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Attribute type of `%s` at location %d does not match VS input type of `%s`",
                         string_VkFormat(it_a->second->format), a_first, vs_type)) {
                     pass = false;
@@ -926,7 +895,7 @@ validate_vi_against_vs_inputs(VkDevice dev, VkPipelineVertexInputStateCreateInfo
 
 
 static bool
-validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, render_pass const *rp, uint32_t subpass)
+validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, render_pass const *rp, uint32_t subpass)
 {
     const std::vector<VkFormat> &color_formats = rp->subpass_color_formats[subpass];
     std::map<uint32_t, interface_var> outputs;
@@ -935,14 +904,14 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(dev, fs, spv::StorageClassOutput, outputs, builtin_outputs);
+    collect_interface_by_location(my_data, dev, fs, spv::StorageClassOutput, outputs, builtin_outputs);
 
     /* Check for legacy gl_FragColor broadcast: In this case, we should have no user-defined outputs,
      * and all color attachment should be UNORM/SNORM/FLOAT.
      */
     if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
         if (outputs.size()) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
                     "Should not have user-defined FS outputs when using broadcast")) {
                 pass = false;
             }
@@ -951,7 +920,7 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
         for (unsigned i = 0; i < color_formats.size(); i++) {
             unsigned attachmentType = get_format_type(color_formats[i]);
             if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
-                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "CB format should not be SINT or UINT when using broadcast")) {
                     pass = false;
                 }
@@ -971,14 +940,14 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
     /* TODO: Figure out compile error with cb->attachmentCount */
     while ((outputs.size() > 0 && it != outputs.end()) || attachment < color_formats.size()) {
         if (attachment == color_formats.size() || ( it != outputs.end() && it->first < attachment)) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_OUTPUT_NOT_CONSUMED, "SC",
                     "FS writes to output location %d with no matching attachment", it->first)) {
                 pass = false;
             }
             it++;
         }
         else if (it == outputs.end() || it->first > attachment) {
-            if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
+            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INPUT_NOT_PRODUCED, "SC",
                     "Attachment %d not written by FS", attachment)) {
                 pass = false;
             }
@@ -992,7 +961,7 @@ validate_fs_outputs_against_render_pass(VkDevice dev, shader_module const *fs, r
             if (att_type != FORMAT_TYPE_UNDEFINED && output_type != FORMAT_TYPE_UNDEFINED && att_type != output_type) {
                 char fs_type[1024];
                 describe_type(fs_type, fs, it->second.type_id);
-                if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
+                if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
                         "Attachment %d of type `%s` does not match FS output type of `%s`",
                         attachment, string_VkFormat(color_formats[attachment]), fs_type)) {
                     pass = false;
@@ -1050,7 +1019,7 @@ static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
 }
 
 static bool
-validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
+validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
@@ -1074,22 +1043,22 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
             // this will make sense again
             if ((VK_SHADER_STAGE_VERTEX_BIT & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                                   | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
-                if (log_msg(mdd(dev), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
+                if (log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
                         "Unknown shader stage %d", VK_SHADER_STAGE_VERTEX_BIT)) {
                     pass = false;
                 }
             }
             else {
-                struct shader_object *shader = shader_object_map[pStage->shader];
+                struct shader_object *shader = my_data->shader_object_map[pStage->shader];
                 shaders[get_shader_stage_id(shader->stage)] = shader->module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
-                collect_interface_by_descriptor_slot(dev, shader->module, spv::StorageClassUniform,
+                collect_interface_by_descriptor_slot(my_data, dev, shader->module, spv::StorageClassUniform,
                         descriptor_uses);
 
                 auto layout = pCreateInfo->layout != VK_NULL_HANDLE ?
-                    pipeline_layout_map[pCreateInfo->layout] : nullptr;
+                    my_data->pipeline_layout_map[pCreateInfo->layout] : nullptr;
 
                 for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
 
@@ -1099,7 +1068,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
                     if (binding == nullptr) {
                         char type_name[1024];
                         describe_type(type_name, shader->module, it->second.type_id);
-                        if (log_msg(mdd(dev), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
+                        if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
                                 SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                 "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
                                 it->first.first, it->first.second, type_name)) {
@@ -1112,16 +1081,16 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     }
 
     if (pCreateInfo->renderPass != VK_NULL_HANDLE)
-        rp = render_pass_map[pCreateInfo->renderPass];
+        rp = my_data->render_pass_map[pCreateInfo->renderPass];
 
     vi = pCreateInfo->pVertexInputState;
 
     if (vi) {
-        pass = validate_vi_consistency(dev, vi) && pass;
+        pass = validate_vi_consistency(my_data, dev, vi) && pass;
     }
 
     if (shaders[vertex_stage]) {
-        pass = validate_vi_against_vs_inputs(dev, vi, shaders[vertex_stage]) && pass;
+        pass = validate_vi_against_vs_inputs(my_data, dev, vi, shaders[vertex_stage]) && pass;
     }
 
     /* TODO: enforce rules about present combinations of shaders */
@@ -1136,7 +1105,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     for (; producer != fragment_stage && consumer <= fragment_stage; consumer++) {
         assert(shaders[producer]);
         if (shaders[consumer]) {
-            pass = validate_interface_between_stages(dev,
+            pass = validate_interface_between_stages(my_data, dev,
                                                      shaders[producer], shader_stage_attribs[producer].name,
                                                      shaders[consumer], shader_stage_attribs[consumer].name,
                                                      shader_stage_attribs[consumer].arrayed_input) && pass;
@@ -1146,7 +1115,7 @@ validate_graphics_pipeline(VkDevice dev, VkGraphicsPipelineCreateInfo const *pCr
     }
 
     if (shaders[fragment_stage] && rp) {
-        pass = validate_fs_outputs_against_render_pass(dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
+        pass = validate_fs_outputs_against_render_pass(my_data, dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
 
     delete shaders;
@@ -1163,16 +1132,17 @@ vkCreateGraphicsPipelines(VkDevice device,
                          const VkGraphicsPipelineCreateInfo *pCreateInfos,
                          VkPipeline *pPipelines)
 {
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     bool pass = true;
     for (uint32_t i = 0; i < count; i++) {
-        pass = validate_graphics_pipeline(device, &pCreateInfos[i]) && pass;
+        pass = validate_graphics_pipeline(my_data, device, &pCreateInfos[i]) && pass;
     }
 
     if (pass) {
         /* The driver is allowed to crash if passed junk. Only actually create the
          * pipeline if we didn't run into any showstoppers above.
          */
-        return get_dispatch_table(shader_checker_device_table_map, device)->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
+        return my_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pPipelines);
     }
     else {
         return VK_ERROR_VALIDATION_FAILED;
@@ -1182,12 +1152,10 @@ vkCreateGraphicsPipelines(VkDevice device,
 
 VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice)
 {
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(shader_checker_device_table_map, *pDevice);
-    VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pDevice);
+    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+    VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        VkLayerDispatchTable *pTable = get_dispatch_table(shader_checker_device_table_map, *pDevice);
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
     }
     return result;
@@ -1197,16 +1165,18 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device)
 {
     dispatch_key key = get_dispatch_key(device);
-    VkLayerDispatchTable *pDisp =  get_dispatch_table(shader_checker_device_table_map, device);
-    pDisp->DestroyDevice(device);
-    shader_checker_device_table_map.erase(key);
+    layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
+    my_device_data->device_dispatch_table->DestroyDevice(device);
+    delete my_device_data->device_dispatch_table;
+    layer_data_map.erase(key);
 }
 
 VkResult VKAPI vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     VkInstance*                                 pInstance)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(shader_checker_instance_table_map,*pInstance);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
+    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult result = pTable->CreateInstance(pCreateInfo, pInstance);
 
     if (result == VK_SUCCESS) {
@@ -1226,11 +1196,10 @@ VkResult VKAPI vkCreateInstance(
 VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
 {
     dispatch_key key = get_dispatch_key(instance);
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(shader_checker_instance_table_map, instance);
-    pTable->DestroyInstance(instance);
+    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    my_data->instance_dispatch_table->DestroyInstance(instance);
 
     // Clean up logging callback, if any
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     while (my_data->logging_callback.size() > 0) {
         VkDbgMsgCallback callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback);
@@ -1238,9 +1207,13 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance)
     }
 
     layer_debug_report_destroy_instance(my_data->report_data);
-    layer_data_map.erase(pTable);
-
-    shader_checker_instance_table_map.erase(key);
+    delete my_data->instance_dispatch_table;
+    layer_data_map.erase(key);
+    if (layer_data_map.empty()) {
+        // Release mutex when destroying last instance.
+        loader_platform_thread_delete_mutex(&globalLock);
+        globalLockInitialized = 0;
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
@@ -1250,10 +1223,9 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     void*                               pUserData,
     VkDbgMsgCallback*                   pMsgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(shader_checker_instance_table_map, instance);
-    VkResult res = pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkResult res = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     if (VK_SUCCESS == res) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     }
     return res;
@@ -1263,9 +1235,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback)
 {
-    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(shader_checker_instance_table_map, instance);
-    VkResult res = pTable->DbgDestroyMsgCallback(instance, msgCallback);
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    VkResult res = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);
     layer_destroy_msg_callback(my_data->report_data, msgCallback);
     return res;
 }
@@ -1275,11 +1246,16 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     if (dev == NULL)
         return NULL;
 
+    layer_data *my_data;
     /* loader uses this to force layer initialization; device object is wrapped */
     if (!strcmp("vkGetDeviceProcAddr", funcName)) {
-        initDeviceTable(shader_checker_device_table_map, (const VkBaseLayerObject *) dev);
+        VkBaseLayerObject* wrapped_dev = (VkBaseLayerObject*) dev;
+        my_data = get_my_data_ptr(get_dispatch_key(wrapped_dev->baseObject), layer_data_map);
+        my_data->device_dispatch_table = new VkLayerDispatchTable;
+        layer_initialize_dispatch_table(my_data->device_dispatch_table, wrapped_dev);
         return (PFN_vkVoidFunction) vkGetDeviceProcAddr;
     }
+    my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
 
 #define ADD_HOOK(fn)    \
     if (!strncmp(#fn, funcName, sizeof(#fn))) \
@@ -1295,7 +1271,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     ADD_HOOK(vkCreatePipelineLayout);
 #undef ADD_HOOK
 
-    VkLayerDispatchTable* pTable = get_dispatch_table(shader_checker_device_table_map, dev);
+    VkLayerDispatchTable* pTable = my_data->device_dispatch_table;
     {
         if (pTable->GetDeviceProcAddr == NULL)
             return NULL;
@@ -1310,8 +1286,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     if (instance == NULL)
         return NULL;
 
+    layer_data *my_data;
     if (!strcmp("vkGetInstanceProcAddr", funcName)) {
-        initInstanceTable(shader_checker_instance_table_map, (const VkBaseLayerObject *) instance);
+        VkBaseLayerObject* wrapped_inst = (VkBaseLayerObject*) instance;
+        my_data = get_my_data_ptr(get_dispatch_key(wrapped_inst->baseObject), layer_data_map);
+        my_data->instance_dispatch_table = new VkLayerInstanceDispatchTable;
+        layer_init_instance_dispatch_table(my_data->instance_dispatch_table, wrapped_inst);
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
 #define ADD_HOOK(fn)    \
@@ -1327,13 +1307,13 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
 #undef ADD_HOOK
 
 
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if (fptr)
         return fptr;
 
     {
-        VkLayerInstanceDispatchTable* pTable = get_dispatch_table(shader_checker_instance_table_map, instance);
+        VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
         if (pTable->GetInstanceProcAddr == NULL)
             return NULL;
         return pTable->GetInstanceProcAddr(instance, funcName);
