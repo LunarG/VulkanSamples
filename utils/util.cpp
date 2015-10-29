@@ -80,7 +80,7 @@ std::string get_data_dir( std::string filename )
 }
 
 
-VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
+bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
      // Search memtypes to find first index with those properties
      for (uint32_t i = 0; i < 32; i++) {
@@ -88,13 +88,13 @@ VkResult memory_type_from_properties(struct sample_info &info, uint32_t typeBits
              // Type is available, does it match user properties?
              if ((info.memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                  *typeIndex = i;
-                 return VK_SUCCESS;
+                 return true;
              }
          }
          typeBits >>= 1;
      }
      // No memory types matched, return failure
-     return VK_UNSUPPORTED;
+     return false;
 }
 
 void set_image_layout(

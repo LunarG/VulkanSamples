@@ -34,6 +34,7 @@ Inititalize Texture
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
     char sample_title[] = "Texture Initialization Sample";
 
@@ -121,8 +122,8 @@ int main(int argc, char **argv)
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
+    assert(pass);
 
     /* allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc,
@@ -179,8 +180,8 @@ int main(int argc, char **argv)
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type - don't specify any mapping requirements */
-        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex);
-        assert(res == VK_SUCCESS);
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, 0, &mem_alloc.memoryTypeIndex);
+        assert(pass);
 
         /* allocate memory */
         res = vkAllocMemory(info.device, &mem_alloc,

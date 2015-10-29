@@ -34,6 +34,8 @@ create Vulkan depth buffer
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
+
     struct sample_info info = {};
     char sample_title[] = "Depth Buffer Sample";
 
@@ -125,11 +127,11 @@ int main(int argc, char **argv)
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    res = memory_type_from_properties(info,
+    pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       0, /* No Requirements */
                                       &mem_alloc.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    assert(pass);
 
     /* Allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
