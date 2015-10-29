@@ -33,12 +33,9 @@ The “library_path” specifies either a filename, a relative pathname or a ful
 pathname to an ICD shared library file, which the loader will attempt to load
 using dlopen(). If the layer is specified via a relative pathname, it is
 relative to the path of the info file.  If the ICD is specified via a filename,
-the shared library lives in the following system directory:
-
-/$libdir/vulkan/icd
-
-where $libdir specifies where libraries reside on the given Linux distribution
-(e.g. “/usr/lib/x86_64-linux-gnu” on 64-bit Debian-based distributions, or
+the shared library lives in the system directory as defined by the Linux
+distribution, such that dlopen() will find the library. (e.g.
+“/usr/lib/x86_64-linux-gnu” on 64-bit Debian-based distributions, or
 “/usr/lib64” on 64-bit Red Hat-based systems).
 
 The “file_format_version” provides a major.minor.patch version number in case
@@ -233,12 +230,9 @@ to load using dlopen().  If the layer is specified via a relative pathname, it
 is relative to the path of the info file (e.g. for cases when an application
 provides a layer that is in the same directory hierarchy as the rest of the
 application files).  If the layer is specified via a filename, the shared
-library lives in the following system directory:
-
-/$libdir/vulkan/layer
-
-where $libdir specifies where libraries reside on the given Linux distribution
-(e.g. “/usr/lib/x86_64-linux-gnu” on 64-bit Debian-based distributions, or
+library lives in the system directory as defined by the Linux distribution,
+such that dlopen() will find the library. (e.g.
+“/usr/lib/x86_64-linux-gnu” on 64-bit Debian-based distributions, or
 “/usr/lib64” on 64-bit Red Hat-based systems).
 
 There are no rules about the name of the text files (except the .json suffix).
