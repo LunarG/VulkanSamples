@@ -119,8 +119,8 @@ void set_image_layout(
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.mipLevels = 1;
-    image_memory_barrier.subresourceRange.arraySize = 0;
+    image_memory_barrier.subresourceRange.numLevels = 1;
+    image_memory_barrier.subresourceRange.numLayers = 0;
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */

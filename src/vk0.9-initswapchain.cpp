@@ -283,9 +283,9 @@ int main(int argc, char **argv)
         color_image_view.channels.a = VK_CHANNEL_SWIZZLE_A;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.numLevels = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.subresourceRange.numLayers = 1;
         color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.flags = 0;
 

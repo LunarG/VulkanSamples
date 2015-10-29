@@ -185,9 +185,9 @@ int main(int argc, char **argv)
     prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.mipLevels = 1;
+    prePresentBarrier.subresourceRange.numLevels = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.arraySize = 1;
+    prePresentBarrier.subresourceRange.numLayers = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
