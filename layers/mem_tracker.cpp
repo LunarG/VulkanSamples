@@ -54,12 +54,24 @@ struct layer_data {
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     bool wsi_enabled;
+    uint64_t currentFenceId;
+    // Maps for tracking key structs related to MemTracker state
+    unordered_map<VkCmdBuffer,    MT_CB_INFO>           cbMap;
+    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>      memObjMap;
+    unordered_map<VkFence,        MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
+    unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
+    unordered_map<VkSwapchainKHR, MT_SWAP_CHAIN_INFO*>  swapchainMap;
+    unordered_map<VkSemaphore,    MtSemaphoreState>     semaphoreMap;
+    // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
+    unordered_map<uint64_t, MT_OBJ_BINDING_INFO>        imageMap;
+    unordered_map<uint64_t, MT_OBJ_BINDING_INFO>        bufferMap;
 
     layer_data() :
         report_data(nullptr),
         device_dispatch_table(nullptr),
         instance_dispatch_table(nullptr),
-        wsi_enabled(false)
+        wsi_enabled(false),
+        currentFenceId(1)
     {};
 };
 
@@ -73,42 +85,28 @@ static loader_platform_thread_mutex globalLock;
 
 #define MAX_BINDING 0xFFFFFFFF
 
-// Maps for tracking key structs related to MemTracker state
-unordered_map<VkCmdBuffer,    MT_CB_INFO>           cbMap;
-unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>      memObjMap;
-unordered_map<VkFence,        MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
-unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
-unordered_map<VkSwapchainKHR, MT_SWAP_CHAIN_INFO*>  swapchainMap;
-unordered_map<VkSemaphore,    MtSemaphoreState>     semaphoreMap;
-
-// Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
-unordered_map<uint64_t, MT_OBJ_BINDING_INFO> imageMap;
-unordered_map<uint64_t, MT_OBJ_BINDING_INFO> bufferMap;
-
-static MT_OBJ_BINDING_INFO* get_object_binding_info(uint64_t handle, VkDbgObjectType type)
+static MT_OBJ_BINDING_INFO* get_object_binding_info(layer_data* my_data, uint64_t handle, VkDbgObjectType type)
 {
     MT_OBJ_BINDING_INFO* retValue = NULL;
     switch (type)
     {
         case VK_OBJECT_TYPE_IMAGE:
         {
-            auto it = imageMap.find(handle);
-            if (it != imageMap.end())
+            auto it = my_data->imageMap.find(handle);
+            if (it != my_data->imageMap.end())
                 return &(*it).second;
             break;
         }
         case VK_OBJECT_TYPE_BUFFER:
         {
-            auto it = bufferMap.find(handle);
-            if (it != bufferMap.end())
+            auto it = my_data->bufferMap.find(handle);
+            if (it != my_data->bufferMap.end())
                 return &(*it).second;
             break;
         }
     }
     return retValue;
 }
-// TODO : Add per-device fence completion
-static uint64_t   g_currentFenceId  = 1;
 
 template layer_data *get_my_data_ptr<layer_data>(
         void *data_key,
@@ -135,68 +133,67 @@ debug_report_data *mid(VkInstance object)
 }
 
 // Add new queue for this device to map container
-static void add_queue_info(const VkQueue queue)
+static void add_queue_info(layer_data* my_data, const VkQueue queue)
 {
-    MT_QUEUE_INFO* pInfo   = &queueMap[queue];
+    MT_QUEUE_INFO* pInfo   = &my_data->queueMap[queue];
     pInfo->lastRetiredId   = 0;
     pInfo->lastSubmittedId = 0;
 }
 
-static void delete_queue_info_list(
-    void)
+static void delete_queue_info_list(layer_data* my_data)
 {
     // Process queue list, cleaning up each entry before deleting
-    queueMap.clear();
+    my_data->queueMap.clear();
 }
 
-static void add_swap_chain_info(
+static void add_swap_chain_info(layer_data* my_data,
     const VkSwapchainKHR swapchain, const VkSwapchainCreateInfoKHR* pCI)
 {
     MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
     memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapchainCreateInfoKHR));
-    swapchainMap[swapchain] = pInfo;
+    my_data->swapchainMap[swapchain] = pInfo;
 }
 
 // Add new CBInfo for this cb to map container
-static void add_cmd_buf_info(
+static void add_cmd_buf_info(layer_data* my_data,
     const VkCmdBuffer cb)
 {
-    cbMap[cb].cmdBuffer = cb;
+    my_data->cbMap[cb].cmdBuffer = cb;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
-static MT_CB_INFO* get_cmd_buf_info(
+static MT_CB_INFO* get_cmd_buf_info(layer_data* my_data,
     const VkCmdBuffer cb)
 {
-    auto item = cbMap.find(cb);
-    if (item != cbMap.end()) {
+    auto item = my_data->cbMap.find(cb);
+    if (item != my_data->cbMap.end()) {
         return &(*item).second;
     } else {
         return NULL;
     }
 }
 
-static void add_object_binding_info(const uint64_t handle, const VkDbgObjectType type, const VkDeviceMemory mem)
+static void add_object_binding_info(layer_data* my_data, const uint64_t handle, const VkDbgObjectType type, const VkDeviceMemory mem)
 {
     switch (type)
     {
         // Buffers and images are unique as their CreateInfo is in container struct
         case VK_OBJECT_TYPE_BUFFER:
         {
-            auto pCI = &bufferMap[handle];
+            auto pCI = &my_data->bufferMap[handle];
             pCI->mem = mem;
             break;
         }
         case VK_OBJECT_TYPE_IMAGE:
         {
-            auto pCI = &imageMap[handle];
+            auto pCI = &my_data->imageMap[handle];
             pCI->mem = mem;
             break;
         }
     }
 }
 
-static void add_object_create_info(const uint64_t handle, const VkDbgObjectType type, const void* pCreateInfo)
+static void add_object_create_info(layer_data* my_data, const uint64_t handle, const VkDbgObjectType type, const void* pCreateInfo)
 {
     // TODO : For any CreateInfo struct that has ptrs, need to deep copy them and appropriately clean up on Destroy
     switch (type)
@@ -204,24 +201,24 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
         // Buffers and images are unique as their CreateInfo is in container struct
         case VK_OBJECT_TYPE_BUFFER:
         {
-            auto pCI = &bufferMap[handle];
+            auto pCI = &my_data->bufferMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
             memcpy(&pCI->create_info.buffer, pCreateInfo, sizeof(VkBufferCreateInfo));
             break;
         }
         case VK_OBJECT_TYPE_IMAGE:
         {
-            auto pCI = &imageMap[handle];
+            auto pCI = &my_data->imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
             memcpy(&pCI->create_info.image, pCreateInfo, sizeof(VkImageCreateInfo));
             break;
         }
-        // Swap Chain is very unique, use imageMap, but copy in
+        // Swap Chain is very unique, use my_data->imageMap, but copy in
         // SwapChainCreatInfo's usage flags and set the mem value to a unique key. These is used by
         // vkCreateImageView and internal MemTracker routines to distinguish swap chain images
         case VK_OBJECT_TYPE_SWAPCHAIN_KHR:
         {
-            auto pCI = &imageMap[handle];
+            auto pCI = &my_data->imageMap[handle];
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
             pCI->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             pCI->create_info.image.usage =
@@ -232,20 +229,20 @@ static void add_object_create_info(const uint64_t handle, const VkDbgObjectType 
 }
 
 // Add a fence, creating one if necessary to our list of fences/fenceIds
-static VkBool32 add_fence_info(
+static VkBool32 add_fence_info(layer_data* my_data,
     VkFence   fence,
     VkQueue   queue,
     uint64_t *fenceId)
 {
     VkBool32 skipCall = VK_FALSE;
-    *fenceId = g_currentFenceId++;
+    *fenceId = my_data->currentFenceId++;
 
     // If no fence, create an internal fence to track the submissions
     if (fence != VK_NULL_HANDLE) {
-        fenceMap[fence].fenceId = *fenceId;
-        fenceMap[fence].queue   = queue;
+        my_data->fenceMap[fence].fenceId = *fenceId;
+        my_data->fenceMap[fence].queue   = queue;
         // Validate that fence is in UNSIGNALED state
-        VkFenceCreateInfo* pFenceCI = &(fenceMap[fence].createInfo);
+        VkFenceCreateInfo* pFenceCI = &(my_data->fenceMap[fence].createInfo);
         if (pFenceCI->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
             skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                            "Fence %#" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted", (uint64_t) fence);
@@ -254,27 +251,27 @@ static VkBool32 add_fence_info(
         // TODO : Do we need to create an internal fence here for tracking purposes?
     }
     // Update most recently submitted fence and fenceId for Queue
-    queueMap[queue].lastSubmittedId = *fenceId;
+    my_data->queueMap[queue].lastSubmittedId = *fenceId;
     return skipCall;
 }
 
 // Remove a fenceInfo from our list of fences/fenceIds
-static void delete_fence_info(
+static void delete_fence_info(layer_data* my_data,
     VkFence fence)
 {
-    fenceMap.erase(fence);
+    my_data->fenceMap.erase(fence);
 }
 
 // Record information when a fence is known to be signalled
-static void update_fence_tracking(
+static void update_fence_tracking(layer_data* my_data,
     VkFence fence)
 {
-    auto fence_item = fenceMap.find(fence);
-    if (fence_item != fenceMap.end()) {
+    auto fence_item = my_data->fenceMap.find(fence);
+    if (fence_item != my_data->fenceMap.end()) {
         MT_FENCE_INFO *pCurFenceInfo = &(*fence_item).second;
         VkQueue queue = pCurFenceInfo->queue;
-        auto queue_item = queueMap.find(queue);
-        if (queue_item != queueMap.end()) {
+        auto queue_item = my_data->queueMap.find(queue);
+        if (queue_item != my_data->queueMap.end()) {
             MT_QUEUE_INFO *pQueueInfo = &(*queue_item).second;
             if (pQueueInfo->lastRetiredId < pCurFenceInfo->fenceId) {
                 pQueueInfo->lastRetiredId = pCurFenceInfo->fenceId;
@@ -283,26 +280,26 @@ static void update_fence_tracking(
     }
 
     // Update fence state in fenceCreateInfo structure
-    auto pFCI = &(fenceMap[fence].createInfo);
+    auto pFCI = &(my_data->fenceMap[fence].createInfo);
     pFCI->flags = static_cast<VkFenceCreateFlags>(pFCI->flags | VK_FENCE_CREATE_SIGNALED_BIT);
 }
 
 // Helper routine that updates the fence list for a specific queue to all-retired
-static void retire_queue_fences(
+static void retire_queue_fences(layer_data* my_data,
     VkQueue queue)
 {
-    MT_QUEUE_INFO *pQueueInfo = &queueMap[queue];
+    MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
     // Set queue's lastRetired to lastSubmitted indicating all fences completed
     pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
 }
 
 // Helper routine that updates all queues to all-retired
-static void retire_device_fences(
+static void retire_device_fences(layer_data* my_data,
     VkDevice device)
 {
     // Process each queue for device
     // TODO: Add multiple device support
-    for (auto ii=queueMap.begin(); ii!=queueMap.end(); ++ii) {
+    for (auto ii=my_data->queueMap.begin(); ii!=my_data->queueMap.end(); ++ii) {
         // Set queue's lastRetired to lastSubmitted indicating all fences completed
         MT_QUEUE_INFO *pQueueInfo = &(*ii).second;
         pQueueInfo->lastRetiredId = pQueueInfo->lastSubmittedId;
@@ -334,11 +331,11 @@ static VkBool32 validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags des
 // Helper function to validate usage flags for images
 // Pulls image info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static VkBool32 validate_image_usage_flags(void* disp_obj, VkImage image, VkFlags desired, VkBool32 strict,
+static VkBool32 validate_image_usage_flags(layer_data* my_data, void* disp_obj, VkImage image, VkFlags desired, VkBool32 strict,
                                            char const* func_name, char const* usage_string)
 {
     VkBool32 skipCall = VK_FALSE;
-    MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info((uint64_t) image, VK_OBJECT_TYPE_IMAGE);
+    MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t)image, VK_OBJECT_TYPE_IMAGE);
     if (pBindInfo) {
         skipCall = validate_usage_flags(disp_obj, pBindInfo->create_info.image.usage, desired, strict,
                                       (uint64_t) image, VK_OBJECT_TYPE_IMAGE, "image", func_name, usage_string);
@@ -349,11 +346,11 @@ static VkBool32 validate_image_usage_flags(void* disp_obj, VkImage image, VkFlag
 // Helper function to validate usage flags for buffers
 // Pulls buffer info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static VkBool32 validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkFlags desired, VkBool32 strict,
+static VkBool32 validate_buffer_usage_flags(layer_data* my_data, void* disp_obj, VkBuffer buffer, VkFlags desired, VkBool32 strict,
                                             char const* func_name, char const* usage_string)
 {
     VkBool32 skipCall = VK_FALSE;
-    MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info((uint64_t) buffer, VK_OBJECT_TYPE_BUFFER);
+    MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER);
     if (pBindInfo) {
         skipCall = validate_usage_flags(disp_obj, pBindInfo->create_info.buffer.usage, desired, strict,
                                       (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, "buffer", func_name, usage_string);
@@ -363,35 +360,36 @@ static VkBool32 validate_buffer_usage_flags(void* disp_obj, VkBuffer buffer, VkF
 
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
-static MT_MEM_OBJ_INFO* get_mem_obj_info(
-    VkDeviceMemory mem)
+static MT_MEM_OBJ_INFO* get_mem_obj_info(layer_data* my_data,
+    const VkDeviceMemory mem)
 {
-    auto item = memObjMap.find(mem);
-    if (item != memObjMap.end()) {
+    auto item = my_data->memObjMap.find(mem);
+    if (item != my_data->memObjMap.end()) {
         return &(*item).second;
     } else {
         return NULL;
     }
 }
 
-static void add_mem_obj_info(
+static void add_mem_obj_info(layer_data* my_data,
     void*                    object,
     const VkDeviceMemory     mem,
     const VkMemoryAllocInfo* pAllocInfo)
 {
     assert(object != NULL);
 
-    memcpy(&memObjMap[mem].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
+    memcpy(&my_data->memObjMap[mem].allocInfo, pAllocInfo, sizeof(VkMemoryAllocInfo));
     // TODO:  Update for real hardware, actually process allocation info structures
-    memObjMap[mem].allocInfo.pNext = NULL;
-    memObjMap[mem].object = object;
-    memObjMap[mem].refCount = 0;
-    memObjMap[mem].mem = mem;
+    my_data->memObjMap[mem].allocInfo.pNext = NULL;
+    my_data->memObjMap[mem].object = object;
+    my_data->memObjMap[mem].refCount = 0;
+    my_data->memObjMap[mem].mem = mem;
 }
 
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
 static VkBool32 update_cmd_buf_and_mem_references(
+    layer_data           *my_data,
     const VkCmdBuffer     cb,
     const VkDeviceMemory  mem,
     const char           *apiName)
@@ -402,7 +400,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
     if (mem != MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
 
         // First update CB binding in MemObj mini CB list
-        MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem);
+        MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
         if (!pMemInfo) {
             skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                            "In %s, trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
@@ -424,7 +422,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
                 pMemInfo->refCount++;
             }
             // Now update CBInfo's Mem reference list
-            MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
+            MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
             if (!pCBInfo) {
                 skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
@@ -451,11 +449,11 @@ static VkBool32 update_cmd_buf_and_mem_references(
 }
 
 // Free bindings related to CB
-static VkBool32 clear_cmd_buf_and_mem_references(
+static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data,
     const VkCmdBuffer cb)
 {
     VkBool32 skipCall = VK_FALSE;
-    MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
+    MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
     if (!pCBInfo) {
         skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_CB, "MEM",
                      "Unable to find global CB info %p for deletion", cb);
@@ -463,7 +461,7 @@ static VkBool32 clear_cmd_buf_and_mem_references(
         if (pCBInfo->pMemObjList.size() > 0) {
             list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
             for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
-                MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(*it);
+                MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
                 pInfo->pCmdBufferBindings.remove(cb);
                 pInfo->refCount--;
             }
@@ -474,14 +472,13 @@ static VkBool32 clear_cmd_buf_and_mem_references(
 }
 
 // Delete the entire CB list
-static VkBool32 delete_cmd_buf_info_list(
-    void)
+static VkBool32 delete_cmd_buf_info_list(layer_data* my_data)
 {
     VkBool32 skipCall = VK_FALSE;
-    for (unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
-        skipCall |= clear_cmd_buf_and_mem_references((*ii).first);
+    for (unordered_map<VkCmdBuffer, MT_CB_INFO>::iterator ii=my_data->cbMap.begin(); ii!=my_data->cbMap.end(); ++ii) {
+        skipCall |= clear_cmd_buf_and_mem_references(my_data, (*ii).first);
     }
-    cbMap.clear();
+    my_data->cbMap.clear();
     return skipCall;
 }
 
@@ -520,14 +517,14 @@ static VkBool32 reportMemReferencesAndCleanUp(
     return skipCall;
 }
 
-static VkBool32 deleteMemObjInfo(
+static VkBool32 deleteMemObjInfo(layer_data* my_data,
     void* object,
     VkDeviceMemory mem)
 {
     VkBool32 skipCall = VK_FALSE;
-    auto item = memObjMap.find(mem);
-    if (item != memObjMap.end()) {
-        memObjMap.erase(item);
+    auto item = my_data->memObjMap.find(mem);
+    if (item != my_data->memObjMap.end()) {
+        my_data->memObjMap.erase(item);
     } else {
         skipCall = log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "Request to delete memory object %#" PRIxLEAST64 " not present in memory Object Map", (uint64_t) mem);
@@ -536,20 +533,20 @@ static VkBool32 deleteMemObjInfo(
 }
 
 // Check if fence for given CB is completed
-static VkBool32 checkCBCompleted(
+static VkBool32 checkCBCompleted(layer_data* my_data,
     const VkCmdBuffer  cb,
     VkBool32          *complete)
 {
     VkBool32 skipCall = VK_FALSE;
     *complete = VK_TRUE;
-    MT_CB_INFO* pCBInfo = get_cmd_buf_info(cb);
+    MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
     if (!pCBInfo) {
         skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
                         MEMTRACK_INVALID_CB, "MEM", "Unable to find global CB info %p to check for completion", cb);
         *complete = VK_FALSE;
     } else if (pCBInfo->lastSubmittedQueue != NULL) {
         VkQueue queue = pCBInfo->lastSubmittedQueue;
-        MT_QUEUE_INFO *pQueueInfo = &queueMap[queue];
+        MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
         if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
             log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
                 MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
@@ -560,14 +557,14 @@ static VkBool32 checkCBCompleted(
     return skipCall;
 }
 
-static VkBool32 freeMemObjInfo(
+static VkBool32 freeMemObjInfo(layer_data* my_data,
     void*          object,
     VkDeviceMemory mem,
     bool           internal)
 {
     VkBool32 skipCall = VK_FALSE;
     // Parse global list to find info w/ mem
-    MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
+    MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
     if (!pInfo) {
         skipCall = log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "Couldn't find mem info object for %#" PRIxLEAST64 "\n    Was %#" PRIxLEAST64 " never allocated or previously freed?",
@@ -586,11 +583,11 @@ static VkBool32 freeMemObjInfo(
             list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin();
             list<VkCmdBuffer>::iterator temp;
             while (pInfo->pCmdBufferBindings.size() > 0 && it != pInfo->pCmdBufferBindings.end()) {
-                skipCall |= checkCBCompleted(*it, &cmdBufferComplete);
+                skipCall |= checkCBCompleted(my_data, *it, &cmdBufferComplete);
                 if (VK_TRUE == cmdBufferComplete) {
                     temp = it;
                     ++temp;
-                    skipCall |= clear_cmd_buf_and_mem_references(*it);
+                    skipCall |= clear_cmd_buf_and_mem_references(my_data, *it);
                     it = temp;
                 } else {
                     ++it;
@@ -602,7 +599,7 @@ static VkBool32 freeMemObjInfo(
                 skipCall |= reportMemReferencesAndCleanUp(pInfo);
             }
             // Delete mem obj info
-            skipCall |= deleteMemObjInfo(object, mem);
+            skipCall |= deleteMemObjInfo(my_data, object, mem);
         }
     }
     return skipCall;
@@ -630,13 +627,13 @@ static const char *object_type_to_string(VkDbgObjectType type) {
 // 2. Decrement refCount for MemObjInfo
 // 3. Clear mem binding for image/buffer by setting its handle to 0
 // TODO : This only applied to Buffer, Image, and Swapchain objects now, how should it be updated/customized?
-static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObjectType type)
+static VkBool32 clear_object_binding(layer_data* my_data, void* dispObj, uint64_t handle, VkDbgObjectType type)
 {
     // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
     VkBool32 skipCall = VK_FALSE;
-    MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
+    MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
     if (pObjBindInfo) {
-        MT_MEM_OBJ_INFO* pMemObjInfo = get_mem_obj_info(pObjBindInfo->mem);
+        MT_MEM_OBJ_INFO* pMemObjInfo = get_mem_obj_info(my_data, pObjBindInfo->mem);
         if (!pMemObjInfo) {
             skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM",
                            "Attempting to clear mem binding on %s obj %#" PRIxLEAST64 " but it has no binding.",
@@ -672,7 +669,7 @@ static VkBool32 clear_object_binding(void* dispObj, uint64_t handle, VkDbgObject
 //  Add reference off of objInfo
 //  device is required for error logging, need a dispatchable
 //  object for that.
-static VkBool32 set_mem_binding(
+static VkBool32 set_mem_binding(layer_data* my_data,
     void*            dispatch_object,
     VkDeviceMemory   mem,
     uint64_t         handle,
@@ -685,21 +682,21 @@ static VkBool32 set_mem_binding(
         skipCall = log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "In %s, attempting to Bind Obj(%#" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
-        MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
+        MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
         if (!pObjBindInfo) {
             skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of %s Obj(%#" PRIxLEAST64 ") that's not in global list()",
                             object_type_to_string(type), apiName, handle);
         } else {
             // non-null case so should have real mem obj
-            MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(mem);
+            MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
             if (!pMemInfo) {
                 skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem,
                                 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", "In %s, while trying to bind mem for %s obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64,
                                 object_type_to_string(type), apiName, handle, (uint64_t) mem);
             } else {
                 // TODO : Need to track mem binding for obj and report conflict here
-                MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(pObjBindInfo->mem);
+                MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(my_data, pObjBindInfo->mem);
                 if (pPrevBinding != NULL) {
                     skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_REBIND_OBJECT, "MEM",
                             "In %s, attempting to bind memory (%#" PRIxLEAST64 ") to object (%#" PRIxLEAST64 ") which has already been bound to mem object %#" PRIxLEAST64,
@@ -734,7 +731,7 @@ static VkBool32 set_mem_binding(
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of object's binding info
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static VkBool32 set_sparse_mem_binding(
+static VkBool32 set_sparse_mem_binding(layer_data* my_data,
     void*            dispObject,
     VkDeviceMemory   mem,
     uint64_t         handle,
@@ -744,15 +741,15 @@ static VkBool32 set_sparse_mem_binding(
     VkBool32 skipCall = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
-        skipCall = clear_object_binding(dispObject, handle, type);
+        skipCall = clear_object_binding(my_data, dispObject, handle, type);
     } else {
-        MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
+        MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
         if (!pObjBindInfo) {
             skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of Obj(%#" PRIxLEAST64 ") that's not in global list()", apiName, handle);
         }
         // non-null case so should have real mem obj
-        MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(mem);
+        MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
         if (!pInfo) {
             skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "In %s, While trying to bind mem for obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64, apiName, handle, (uint64_t) mem);
@@ -776,7 +773,7 @@ static VkBool32 set_sparse_mem_binding(
                 pInfo->refCount++;
             }
             // Need to set mem binding for this object
-            MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(pObjBindInfo->mem);
+            MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(my_data, pObjBindInfo->mem);
             pObjBindInfo->mem = mem;
         }
     }
@@ -797,12 +794,12 @@ void print_object_map_members(
 }
 
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
-static VkBool32 get_mem_binding_from_object(
+static VkBool32 get_mem_binding_from_object(layer_data* my_data,
     void* dispObj, const uint64_t handle, const VkDbgObjectType type, VkDeviceMemory *mem)
 {
     VkBool32 skipCall = VK_FALSE;
     *mem = VK_NULL_HANDLE;
-    MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(handle, type);
+    MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
     if (pObjBindInfo) {
         if (pObjBindInfo->mem) {
             *mem = pObjBindInfo->mem;
@@ -819,7 +816,7 @@ static VkBool32 get_mem_binding_from_object(
 }
 
 // Print details of MemObjInfo list
-static void print_mem_list(
+static void print_mem_list(layer_data* my_data,
     void* dispObj)
 {
     MT_MEM_OBJ_INFO* pInfo = NULL;
@@ -831,14 +828,14 @@ static void print_mem_list(
 
     // Just printing each msg individually for now, may want to package these into single large print
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-            "Details of Memory Object list (of size %lu elements)", memObjMap.size());
+            "Details of Memory Object list (of size %lu elements)", my_data->memObjMap.size());
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "=============================");
 
-    if (memObjMap.size() <= 0)
+    if (my_data->memObjMap.size() <= 0)
         return;
 
-    for (auto ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+    for (auto ii=my_data->memObjMap.begin(); ii!=my_data->memObjMap.end(); ++ii) {
         pInfo = &(*ii).second;
 
         log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
@@ -877,7 +874,7 @@ static void print_mem_list(
     }
 }
 
-static void printCBList(
+static void printCBList(layer_data* my_data,
     void* dispObj)
 {
     MT_CB_INFO* pCBInfo = NULL;
@@ -888,14 +885,14 @@ static void printCBList(
     }
 
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-        "Details of CB list (of size %lu elements)", cbMap.size());
+        "Details of CB list (of size %lu elements)", my_data->cbMap.size());
     log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
         "==================");
 
-    if (cbMap.size() <= 0)
+    if (my_data->cbMap.size() <= 0)
         return;
 
-    for (auto ii=cbMap.begin(); ii!=cbMap.end(); ++ii) {
+    for (auto ii=my_data->cbMap.begin(); ii!=my_data->cbMap.end(); ++ii) {
         pCBInfo = &(*ii).second;
 
         log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
@@ -1040,13 +1037,13 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
         "Printing List details prior to vkDestroyDevice()");
     log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
         "================================================");
-    print_mem_list(device);
-    printCBList(device);
-    skipCall = delete_cmd_buf_info_list();
+    print_mem_list(my_device_data, device);
+    printCBList(my_device_data, device);
+    skipCall = delete_cmd_buf_info_list(my_device_data);
     // Report any memory leaks
     MT_MEM_OBJ_INFO* pInfo = NULL;
-    if (memObjMap.size() > 0) {
-        for (auto ii=memObjMap.begin(); ii!=memObjMap.end(); ++ii) {
+    if (my_device_data->memObjMap.size() > 0) {
+        for (auto ii=my_device_data->memObjMap.begin(); ii!=my_device_data->memObjMap.end(); ++ii) {
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
                 skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM",
@@ -1056,7 +1053,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
         }
     }
     // Queues persist until device is destroyed
-    delete_queue_info_list();
+    delete_queue_info_list(my_device_data);
     layer_debug_report_destroy_device(device);
     loader_platform_thread_unlock_mutex(&globalLock);
 
@@ -1137,7 +1134,7 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     my_data->device_dispatch_table->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
     loader_platform_thread_lock_mutex(&globalLock);
-    add_queue_info(*pQueue);
+    add_queue_info(my_data, *pQueue);
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
@@ -1154,14 +1151,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     // TODO : Need to track fence and clear mem references when fence clears
     MT_CB_INFO* pCBInfo = NULL;
     uint64_t    fenceId = 0;
-    VkBool32 skipCall = add_fence_info(fence, queue, &fenceId);
+    VkBool32 skipCall = add_fence_info(my_data, fence, queue, &fenceId);
 
-    print_mem_list(queue);
-    printCBList(queue);
+    print_mem_list(my_data, queue);
+    printCBList(my_data, queue);
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
         for (uint32_t i = 0; i < submit->cmdBufferCount; i++) {
-            pCBInfo = get_cmd_buf_info(submit->pCommandBuffers[i]);
+            pCBInfo = get_cmd_buf_info(my_data, submit->pCommandBuffers[i]);
             pCBInfo->fenceId = fenceId;
             pCBInfo->lastSubmittedFence = fence;
             pCBInfo->lastSubmittedQueue = queue;
@@ -1170,25 +1167,25 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
         for (uint32_t i = 0; i < submit->waitSemCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
-            if (semaphoreMap.find(sem) != semaphoreMap.end()) {
-                if (semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
                     skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
                             0, MEMTRACK_NONE, "SEMAPHORE",
                             "vkQueueSubmit: Semaphore must be in signaled state before passing to pWaitSemaphores");
                 }
-                semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_WAIT;
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_WAIT;
             }
         }
         for (uint32_t i = 0; i < submit->signalSemCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
-            if (semaphoreMap.find(sem) != semaphoreMap.end()) {
-                if (semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
                     skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
                             0, MEMTRACK_NONE, "SEMAPHORE",
                             "vkQueueSubmit: Semaphore must not be currently signaled or in a wait state");
                 }
-                semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
             }
         }
     }
@@ -1205,8 +1202,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
         for (uint32_t i = 0; i < submit->waitSemCount; i++) {
             VkSemaphore sem = submit->pWaitSemaphores[i];
 
-            if (semaphoreMap.find(sem) != semaphoreMap.end()) {
-                semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+            if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
+                my_data->semaphoreMap[sem] = MEMTRACK_SEMAPHORE_STATE_UNSET;
             }
         }
     }
@@ -1224,8 +1221,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocMemory(
     VkResult result = my_data->device_dispatch_table->AllocMemory(device, pAllocInfo, pMem);
     // TODO : Track allocations and overall size here
     loader_platform_thread_lock_mutex(&globalLock);
-    add_mem_obj_info(device, *pMem, pAllocInfo);
-    print_mem_list(device);
+    add_mem_obj_info(my_data, device, *pMem, pAllocInfo);
+    print_mem_list(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1240,9 +1237,9 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    freeMemObjInfo(device, mem, false);
-    print_mem_list(device);
-    printCBList(device);
+    freeMemObjInfo(my_data, device, mem, false);
+    print_mem_list(my_data, device);
+    printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     my_data->device_dispatch_table->FreeMemory(device, mem);
 }
@@ -1260,7 +1257,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     VkBool32 skipCall = VK_FALSE;
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(mem);
+    MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
     if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
         skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
@@ -1287,10 +1284,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-    delete_fence_info(fence);
-    auto item = fenceMap.find(fence);
-    if (item != fenceMap.end()) {
-        fenceMap.erase(item);
+    delete_fence_info(my_data, fence);
+    auto item = my_data->fenceMap.find(fence);
+    if (item != my_data->fenceMap.end()) {
+        my_data->fenceMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     my_data->device_dispatch_table->DestroyFence(device, fence);
@@ -1301,10 +1298,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer)
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    auto item = bufferMap.find((uint64_t) buffer);
-    if (item != bufferMap.end()) {
-        skipCall = clear_object_binding(device, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER);
-        bufferMap.erase(item);
+    auto item = my_data->bufferMap.find((uint64_t)buffer);
+    if (item != my_data->bufferMap.end()) {
+        skipCall = clear_object_binding(my_data, device, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER);
+        my_data->bufferMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1317,10 +1314,10 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image)
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    auto item = imageMap.find((uint64_t) image);
-    if (item != imageMap.end()) {
-        skipCall = clear_object_binding(device, (uint64_t) image, VK_OBJECT_TYPE_IMAGE);
-        imageMap.erase(item);
+    auto item = my_data->imageMap.find((uint64_t)image);
+    if (item != my_data->imageMap.end()) {
+        skipCall = clear_object_binding(my_data, device, (uint64_t)image, VK_OBJECT_TYPE_IMAGE);
+        my_data->imageMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1338,9 +1335,9 @@ VkResult VKAPI vkBindBufferMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_mem_binding(device, mem, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, "vkBindBufferMemory");
-    add_object_binding_info((uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, mem);
-    print_mem_list(device);
+    VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, "vkBindBufferMemory");
+    add_object_binding_info(my_data, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, mem);
+    print_mem_list(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->BindBufferMemory(device, buffer, mem, memOffset);
@@ -1358,9 +1355,9 @@ VkResult VKAPI vkBindImageMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_mem_binding(device, mem, (uint64_t) image, VK_OBJECT_TYPE_IMAGE, "vkBindImageMemory");
-    add_object_binding_info((uint64_t) image, VK_OBJECT_TYPE_IMAGE, mem);
-    print_mem_list(device);
+    VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, "vkBindImageMemory");
+    add_object_binding_info(my_data, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, mem);
+    print_mem_list(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->BindImageMemory(device, image, mem, memOffset);
@@ -1400,8 +1397,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageOpaqueMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, (uint64_t) image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageOpaqeMemory");
-    print_mem_list(queue);
+    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageOpaqeMemory");
+    print_mem_list(my_data, queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->QueueBindSparseImageOpaqueMemory( queue, image, numBindings, pBindInfo);
@@ -1419,8 +1416,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseImageMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, (uint64_t) image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageMemory");
-    print_mem_list(queue);
+    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, "vkQueueBindSparseImageMemory");
+    print_mem_list(my_data, queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         VkResult result = my_data->device_dispatch_table->QueueBindSparseImageMemory(
@@ -1439,8 +1436,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparseBufferMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_sparse_mem_binding(queue, pBindInfo->mem, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, "VkQueueBindSparseBufferMemory");
-    print_mem_list(queue);
+    VkBool32 skipCall = set_sparse_mem_binding(my_data, queue, pBindInfo->mem, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, "VkQueueBindSparseBufferMemory");
+    print_mem_list(my_data, queue);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         VkResult result = my_data->device_dispatch_table->QueueBindSparseBufferMemory(
@@ -1458,7 +1455,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     VkResult result = my_data->device_dispatch_table->CreateFence(device, pCreateInfo, pFence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        MT_FENCE_INFO* pFI = &fenceMap[*pFence];
+        MT_FENCE_INFO* pFI = &my_data->fenceMap[*pFence];
         memset(pFI, 0, sizeof(MT_FENCE_INFO));
         memcpy(&(pFI->createInfo), pCreateInfo, sizeof(VkFenceCreateInfo));
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1478,8 +1475,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
     loader_platform_thread_lock_mutex(&globalLock);
     // Reset fence state in fenceCreateInfo structure
     for (uint32_t i = 0; i < fenceCount; i++) {
-        auto fence_item = fenceMap.find(pFences[i]);
-        if (fence_item != fenceMap.end()) {
+        auto fence_item = my_data->fenceMap.find(pFences[i]);
+        if (fence_item != my_data->fenceMap.end()) {
             // Validate fences in SIGNALED state
             if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
                 skipCall = log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
@@ -1502,8 +1499,8 @@ static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const c
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
-    auto pFenceInfo = fenceMap.find(fence);
-    if (pFenceInfo != fenceMap.end()) {
+    auto pFenceInfo = my_data->fenceMap.find(fence);
+    if (pFenceInfo != my_data->fenceMap.end()) {
         if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
             skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                 "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
@@ -1527,7 +1524,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
     VkResult result = my_data->device_dispatch_table->GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        update_fence_tracking(fence);
+        update_fence_tracking(my_data, fence);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1554,7 +1551,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     if (VK_SUCCESS == result) {
         if (waitAll || fenceCount == 1) { // Clear all the fences
             for(uint32_t i = 0; i < fenceCount; i++) {
-                update_fence_tracking(pFences[i]);
+                update_fence_tracking(my_data, pFences[i]);
             }
         }
     }
@@ -1569,7 +1566,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
     VkResult result = my_data->device_dispatch_table->QueueWaitIdle(queue);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retire_queue_fences(queue);
+        retire_queue_fences(my_data, queue);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1582,7 +1579,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     VkResult result = my_data->device_dispatch_table->DeviceWaitIdle(device);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        retire_device_fences(device);
+        retire_device_fences(my_data, device);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1597,7 +1594,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     VkResult result = my_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pBuffer);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info((uint64_t) *pBuffer, VK_OBJECT_TYPE_BUFFER, pCreateInfo);
+        add_object_create_info(my_data, (uint64_t)*pBuffer, VK_OBJECT_TYPE_BUFFER, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1612,7 +1609,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     VkResult result = my_data->device_dispatch_table->CreateImage(device, pCreateInfo, pImage);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_object_create_info((uint64_t) *pImage, VK_OBJECT_TYPE_IMAGE, pCreateInfo);
+        add_object_create_info(my_data, (uint64_t)*pImage, VK_OBJECT_TYPE_IMAGE, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1628,8 +1625,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     if (result == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
         // Validate that img has correct usage flags set
-        validate_image_usage_flags(
-                    device, pCreateInfo->image,
+        validate_image_usage_flags(my_data, device, pCreateInfo->image,
                     VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1648,8 +1644,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
         loader_platform_thread_lock_mutex(&globalLock);
         // In order to create a valid buffer view, the buffer must have been created with at least one of the
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
-        validate_buffer_usage_flags(
-                    device, pCreateInfo->buffer,
+        validate_buffer_usage_flags(my_data, device, pCreateInfo->buffer,
                     VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
                     false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
@@ -1667,8 +1662,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocCommandBuffers(
     // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pCmdBuffer)
-        add_cmd_buf_info(*pCmdBuffer);
-    printCBList(device);
+        add_cmd_buf_info(my_data, *pCmdBuffer);
+    printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1683,7 +1678,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     VkBool32 cmdBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
-    skipCall = checkCBCompleted(cmdBuffer, &cmdBufferComplete);
+    skipCall = checkCBCompleted(my_data, cmdBuffer, &cmdBufferComplete);
 
     if (VK_FALSE == cmdBufferComplete) {
         skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
@@ -1695,7 +1690,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
         result = my_data->device_dispatch_table->BeginCommandBuffer(cmdBuffer, pBeginInfo);
     }
     loader_platform_thread_lock_mutex(&globalLock);
-    clear_cmd_buf_and_mem_references(cmdBuffer);
+    clear_cmd_buf_and_mem_references(my_data, cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
 }
@@ -1719,14 +1714,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     VkBool32 cmdBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     // Verify that CB is complete (not in-flight)
-    skipCall = checkCBCompleted(cmdBuffer, &cmdBufferComplete);
+    skipCall = checkCBCompleted(my_data, cmdBuffer, &cmdBufferComplete);
     if (VK_FALSE == cmdBufferComplete) {
         skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                         MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Resetting CB %p before it has completed. You must check CB "
                         "flag before calling vkResetCommandBuffer().", cmdBuffer);
     }
     // Clear memory references as this point.
-    skipCall |= clear_cmd_buf_and_mem_references(cmdBuffer);
+    skipCall |= clear_cmd_buf_and_mem_references(my_data, cmdBuffer);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->ResetCommandBuffer(cmdBuffer, flags);
@@ -1744,7 +1739,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
 #if 0
     // TODO : If memory bound to pipeline, then need to tie that mem to cmdBuffer
     if (getPipeline(pipeline)) {
-        MT_CB_INFO *pCBInfo = get_cmd_buf_info(cmdBuffer);
+        MT_CB_INFO *pCBInfo = get_cmd_buf_info(my_data, cmdBuffer);
         if (pCBInfo) {
             pCBInfo->pipelines[pipelineBindPoint] = pipeline;
         } else {
@@ -1768,7 +1763,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1787,7 +1782,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1803,7 +1798,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1823,7 +1818,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1841,7 +1836,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1860,7 +1855,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1879,7 +1874,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1898,7 +1893,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1917,7 +1912,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(cmdBuffer);
+    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
         skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
@@ -1977,8 +1972,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
-    VkBool32 skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall          |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDrawIndirect");
+    VkBool32 skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall          |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdDrawIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDrawIndirect(cmdBuffer, buffer, offset, count, stride);
@@ -1995,8 +1990,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
-    VkBool32 skipCall = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall         |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDrawIndexedIndirect");
+    VkBool32 skipCall = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall         |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdDrawIndexedIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDrawIndexedIndirect(cmdBuffer, buffer, offset, count, stride);
@@ -2011,8 +2006,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     VkDeviceMemory mem;
     loader_platform_thread_lock_mutex(&globalLock);
-    VkBool32 skipCall = get_mem_binding_from_object(cmdBuffer, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall         |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdDispatchIndirect");
+    VkBool32 skipCall = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)buffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall         |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdDispatchIndirect");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdDispatchIndirect(cmdBuffer, buffer, offset);
@@ -2030,13 +2025,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) srcBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyBuffer");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyBuffer");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyBuffer");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyBuffer");
     // Validate that SRC & DST buffers have correct usage flags set
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdCopyBuffer(cmdBuffer, srcBuffer, destBuffer, regionCount, pRegions);
@@ -2057,10 +2052,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyQueryPoolResults");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyQueryPoolResults");
     // Validate that DST buffer has correct usage flags set
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyQueryPoolResults()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdCopyQueryPoolResults(cmdBuffer, queryPool, startQuery, queryCount, destBuffer, destOffset, destStride, flags);
@@ -2081,12 +2076,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     // Validate that src & dst images have correct usage flags set
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyImage");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyImage");
-    skipCall |= validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
-    skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyImage");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyImage");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdCopyImage(
@@ -2109,12 +2104,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     // Validate that src & dst images have correct usage flags set
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdBlitImage");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdBlitImage");
-    skipCall |= validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
-    skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdBlitImage");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdBlitImage");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdBlitImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdBlitImage(
@@ -2134,13 +2129,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) destImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyBufferToImage");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) srcBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyBufferToImage");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyBufferToImage");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyBufferToImage");
     // Validate that src buff & dst image have correct usage flags set
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
-    skipCall |= validate_image_usage_flags(cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, srcBuffer, VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyBufferToImage()", "VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, destImage, VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyBufferToImage()", "VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdCopyBufferToImage(
@@ -2160,13 +2155,13 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyImageToBuffer");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdCopyImageToBuffer");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyImageToBuffer");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdCopyImageToBuffer");
     // Validate that dst buff & src image have correct usage flags set
-    skipCall |= validate_image_usage_flags(cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_image_usage_flags(my_data, cmdBuffer, srcImage, VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT, true, "vkCmdCopyImageToBuffer()", "VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdCopyImageToBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdCopyImageToBuffer(
@@ -2185,10 +2180,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdUpdateBuffer");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdUpdateBuffer");
     // Validate that dst buff has correct usage flags set
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdUpdateBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdUpdateBuffer(cmdBuffer, destBuffer, destOffset, dataSize, pData);
@@ -2206,10 +2201,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdFillBuffer");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destBuffer, VK_OBJECT_TYPE_BUFFER, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdFillBuffer");
     // Validate that dst buff has correct usage flags set
-    skipCall |= validate_buffer_usage_flags(cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
+    skipCall |= validate_buffer_usage_flags(my_data, cmdBuffer, destBuffer, VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT, true, "vkCmdFillBuffer()", "VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdFillBuffer(cmdBuffer, destBuffer, destOffset, fillSize, data);
@@ -2229,8 +2224,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) image, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdClearColorImage");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdClearColorImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdClearColorImage(cmdBuffer, image, imageLayout, pColor, rangeCount, pRanges);
@@ -2250,8 +2245,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     VkDeviceMemory mem;
     VkBool32       skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) image, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdClearDepthStencilImage");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)image, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdClearDepthStencilImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdClearDepthStencilImage(
@@ -2272,10 +2267,10 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
     VkDeviceMemory mem;
-    skipCall  = get_mem_binding_from_object(cmdBuffer, (uint64_t) srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdResolveImage");
-    skipCall |= get_mem_binding_from_object(cmdBuffer, (uint64_t) destImage, VK_OBJECT_TYPE_IMAGE, &mem);
-    skipCall |= update_cmd_buf_and_mem_references(cmdBuffer, mem, "vkCmdResolveImage");
+    skipCall  = get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)srcImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdResolveImage");
+    skipCall |= get_mem_binding_from_object(my_data, cmdBuffer, (uint64_t)destImage, VK_OBJECT_TYPE_IMAGE, &mem);
+    skipCall |= update_cmd_buf_and_mem_references(my_data, cmdBuffer, mem, "vkCmdResolveImage");
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         my_data->device_dispatch_table->CmdResolveImage(
@@ -2350,7 +2345,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
-        add_swap_chain_info(*pSwapchain, pCreateInfo);
+        add_swap_chain_info(my_data, *pSwapchain, pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -2365,19 +2360,19 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     VkBool32 skipCall = VK_FALSE;
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
-    if (swapchainMap.find(swapchain) != swapchainMap.end()) {
-        MT_SWAP_CHAIN_INFO* pInfo = swapchainMap[swapchain];
+    if (my_data->swapchainMap.find(swapchain) != my_data->swapchainMap.end()) {
+        MT_SWAP_CHAIN_INFO* pInfo = my_data->swapchainMap[swapchain];
 
         if (pInfo->images.size() > 0) {
             for (auto it = pInfo->images.begin(); it != pInfo->images.end(); it++) {
-                skipCall = clear_object_binding(device, (uint64_t) *it, VK_OBJECT_TYPE_SWAPCHAIN_KHR);
-                auto image_item = imageMap.find((uint64_t) *it);
-                if (image_item != imageMap.end())
-                    imageMap.erase(image_item);
+                skipCall = clear_object_binding(my_data, device, (uint64_t)*it, VK_OBJECT_TYPE_SWAPCHAIN_KHR);
+                auto image_item = my_data->imageMap.find((uint64_t)*it);
+                if (image_item != my_data->imageMap.end())
+                    my_data->imageMap.erase(image_item);
             }
         }
         delete pInfo;
-        swapchainMap.erase(swapchain);
+        my_data->swapchainMap.erase(swapchain);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -2397,7 +2392,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
 
     if (result == VK_SUCCESS && pSwapchainImages != NULL) {
         const size_t count = *pCount;
-        MT_SWAP_CHAIN_INFO *pInfo = swapchainMap[swapchain];
+        MT_SWAP_CHAIN_INFO *pInfo = my_data->swapchainMap[swapchain];
 
         if (pInfo->images.empty()) {
             pInfo->images.resize(count);
@@ -2407,12 +2402,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
                 for (std::vector<VkImage>::const_iterator it = pInfo->images.begin();
                      it != pInfo->images.end(); it++) {
                     // Add image object binding, then insert the new Mem Object and then bind it to created image
-                    add_object_create_info((uint64_t) *it, VK_OBJECT_TYPE_SWAPCHAIN_KHR, &pInfo->createInfo);
+                    add_object_create_info(my_data, (uint64_t)*it, VK_OBJECT_TYPE_SWAPCHAIN_KHR, &pInfo->createInfo);
                 }
             }
         } else {
             const size_t count = *pCount;
-            MT_SWAP_CHAIN_INFO *pInfo = swapchainMap[swapchain];
+            MT_SWAP_CHAIN_INFO *pInfo = my_data->swapchainMap[swapchain];
             const bool mismatch = (pInfo->images.size() != count ||
                     memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
 
@@ -2437,13 +2432,13 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     VkBool32 skipCall = VK_FALSE;
 
     loader_platform_thread_lock_mutex(&globalLock);
-    if (semaphoreMap.find(semaphore) != semaphoreMap.end()) {
-        if (semaphoreMap[semaphore] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
-            skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) semaphore,
+    if (my_data->semaphoreMap.find(semaphore) != my_data->semaphoreMap.end()) {
+        if (my_data->semaphoreMap[semaphore] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+            skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)semaphore,
                                0, MEMTRACK_NONE, "SEMAPHORE",
                                "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
         }
-        semaphoreMap[semaphore] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+        my_data->semaphoreMap[semaphore] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -2462,7 +2457,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     VkResult result = my_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pSemaphore);
     loader_platform_thread_lock_mutex(&globalLock);
     if (*pSemaphore != VK_NULL_HANDLE) {
-        semaphoreMap[*pSemaphore] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+        my_data->semaphoreMap[*pSemaphore] = MEMTRACK_SEMAPHORE_STATE_UNSET;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
@@ -2474,9 +2469,9 @@ VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
-    auto item = semaphoreMap.find(semaphore);
-    if (item != semaphoreMap.end()) {
-        semaphoreMap.erase(item);
+    auto item = my_data->semaphoreMap.find(semaphore);
+    if (item != my_data->semaphoreMap.end()) {
+        my_data->semaphoreMap.erase(item);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     my_data->device_dispatch_table->DestroySemaphore(device, semaphore);
