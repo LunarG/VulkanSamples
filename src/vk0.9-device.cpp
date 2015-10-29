@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.pNext = NULL;
-    device_info.queueRecordCount = 1;
+    device_info.requestedQueueCount = 1;
     device_info.pRequestedQueues = &queue_info;
     device_info.extensionCount = 0;
     device_info.ppEnabledExtensionNames = NULL;
