@@ -1373,12 +1373,12 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
 
     std::vector<unsigned int> vtx_spv;
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
+    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
     info.shaderStages[0].pNext  = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
 
     init_glslang();
-    retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX, vertShaderText, vtx_spv);
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
     assert(retVal);
 
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1396,17 +1396,17 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
-    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
     assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
+    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     info.shaderStages[1].pNext  = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
 
-    retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT, fragShaderText, frag_spv);
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
     assert(retVal);
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1422,7 +1422,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";
-    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
     assert(res == VK_SUCCESS);
 

@@ -81,12 +81,12 @@ int main(int argc, char **argv)
 
     std::vector<unsigned int> vtx_spv;
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX;
+    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
     info.shaderStages[0].pNext  = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
 
     init_glslang();
-    retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX, vertShaderText, vtx_spv);
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
     assert(retVal);
 
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     VkShaderCreateInfo shaderCreateInfo;
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
-    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
@@ -110,11 +110,11 @@ int main(int argc, char **argv)
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT;
+    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     info.shaderStages[1].pNext  = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
 
-    retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT, fragShaderText, frag_spv);
+    retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
     assert(retVal);
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
     shaderCreateInfo.pNext = NULL;
-    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT;
+    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     shaderCreateInfo.flags = 0;
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";
