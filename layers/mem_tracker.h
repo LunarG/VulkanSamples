@@ -114,8 +114,8 @@ struct MT_OBJ_BINDING_INFO {
 };
 
 // Track all command buffers
-struct MT_CB_INFO {
-    VkCmdBufferAllocInfo       createInfo;
+typedef struct _MT_CB_INFO {
+    VkCmdBufferAllocInfo        createInfo;
     VkPipeline                  pipelines[VK_PIPELINE_BIND_POINT_NUM];
     uint32_t                    attachmentCount;
     VkCmdBuffer                 cmdBuffer;
@@ -124,7 +124,9 @@ struct MT_CB_INFO {
     VkQueue                     lastSubmittedQueue;
     // Order dependent, stl containers must be at end of struct
     list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
-};
+    // Constructor
+    _MT_CB_INFO():createInfo{},pipelines{},attachmentCount(0),fenceId(0),lastSubmittedFence{},lastSubmittedQueue{} {};
+} MT_CB_INFO;
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
