@@ -53,8 +53,7 @@ int main(int argc, char **argv)
     for(uint32_t i = 0; i < gpu_count; ++i)
     {
         VkPhysicalDeviceProperties properties;
-        res = vkGetPhysicalDeviceProperties(gpu[i], &properties);
-        assert(res == VK_SUCCESS);
+        vkGetPhysicalDeviceProperties(gpu[i], &properties);
 
         std::cout << "apiVersion: ";
         std::cout << ((properties.apiVersion >> 22) & 0xfff) << '.'; // Major.

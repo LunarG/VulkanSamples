@@ -69,13 +69,11 @@ int main(int argc, char **argv)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
     assert(info.queue_count >= 1);
 
     info.queue_props.resize(info.queue_count);
-    res = vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(res == VK_SUCCESS);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
     assert(info.queue_count >= 1);
 
     // Construct the surface description:
@@ -271,9 +269,8 @@ int main(int argc, char **argv)
     init_command_pool(info);
     init_command_buffer(info);
     execute_begin_command_buffer(info);
-    res = vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
+    vkGetDeviceQueue(info.device, info.graphics_queue_family_index,
             0, &info.queue);
-    assert(res == VK_SUCCESS);
 
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
         VkImageViewCreateInfo color_image_view = {};
