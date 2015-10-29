@@ -1825,9 +1825,9 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(info.textures.size() == 1);
     info.texture_data.desc.imageView = 0;
     info.texture_data.desc.bufferView = 0;
-    info.texture_data.desc.imageView = info.textures[0].view;
-    info.texture_data.desc.sampler = info.textures[0].sampler;
-    info.texture_data.desc.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.desc.imageInfo.imageView = info.textures[0].view;
+    info.texture_data.desc.imageInfo.sampler = info.textures[0].sampler;
+    info.texture_data.desc.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 }
 
