@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -60,6 +61,11 @@ typedef enum _MtSemaphoreState
     MEMTRACK_SEMAPHORE_STATE_WAIT,          // Semaphore is in wait state
 } MtSemaphoreState;
 
+struct MemRange {
+    VkDeviceSize offset;
+    VkDeviceSize size;
+};
+
 /*
  * Data Structure overview
  *  There are 4 global STL(' maps
@@ -98,12 +104,15 @@ struct MT_OBJ_HANDLE_TYPE {
 
 // Data struct for tracking memory object
 struct MT_MEM_OBJ_INFO {
-    void*                       object;             // Dispatchable object used to create this memory (device of swapchain)
-    uint32_t                    refCount;           // Count of references (obj bindings or CB use)
+    void*                       object;                 // Dispatchable object used to create this memory (device of swapchain)
+    uint32_t                    refCount;               // Count of references (obj bindings or CB use)
     VkDeviceMemory              mem;
-    VkMemoryAllocateInfo           allocInfo;
-    list<MT_OBJ_HANDLE_TYPE>    pObjBindings;       // list container of objects bound to this memory
-    list<VkCommandBuffer>           pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    VkMemoryAllocateInfo        allocInfo;
+    list<MT_OBJ_HANDLE_TYPE>    pObjBindings;           // list container of objects bound to this memory
+    list<VkCommandBuffer>       pCommandBufferBindings; // list container of cmd buffers that reference this mem object
+    list<VkCommandBuffer>       pCmdBufferBindings;     // list container of cmd buffers that reference this mem object
+    MemRange                    memRange;
+    void                        *pData, *pDriverData;
 };
 
 // This only applies to Buffers and Images, which can have memory bound to them

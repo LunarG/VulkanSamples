@@ -57,7 +57,7 @@ struct layer_data {
     std::vector<VkDbgMsgCallback> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
-    bool wsi_enabled;
+    VkBool32 wsi_enabled;
     uint64_t currentFenceId;
     // Maps for tracking key structs related to MemTracker state
     unordered_map<VkCommandBuffer,    MT_CB_INFO>           cbMap;
@@ -74,7 +74,7 @@ struct layer_data {
         report_data(nullptr),
         device_dispatch_table(nullptr),
         instance_dispatch_table(nullptr),
-        wsi_enabled(false),
+        wsi_enabled(VK_FALSE),
         currentFenceId(1)
     {};
 };
@@ -544,7 +544,7 @@ static VkBool32 checkCBCompleted(layer_data* my_data,
 static VkBool32 freeMemObjInfo(layer_data* my_data,
     void*          object,
     VkDeviceMemory mem,
-    bool           internal)
+    VkBool32       internal)
 {
     VkBool32 skipCall = VK_FALSE;
     // Parse global list to find info w/ mem
@@ -988,7 +988,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
-    my_device_data->wsi_enabled = false;
+    my_device_data->wsi_enabled = VK_FALSE;
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
             my_device_data->wsi_enabled = true;
@@ -1236,31 +1236,87 @@ VK_LAYER_EXPORT void VKAPI vkFreeMemory(
      * all API objects referencing it and that it is not referenced by any queued command buffers
      */
     loader_platform_thread_lock_mutex(&globalLock);
-    freeMemObjInfo(my_data, device, mem, false);
+    freeMemObjInfo(my_data, device, mem, VK_FALSE);
     print_mem_list(my_data, device);
     printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
 }
 
-bool validateMemRange(
-    VkDevice        device,
+VkBool32 validateMemRange(
+    layer_data     *my_data,
     VkDeviceMemory  mem,
     VkDeviceSize    offset,
     VkDeviceSize    size)
 {
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skipCall = VK_FALSE;
 
     auto mem_element = my_data->memObjMap.find(mem);
     if (mem_element != my_data->memObjMap.end()) {
         if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
-            skip_call = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0,
-                                MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
-                                offset, size + offset, mem_element->second.allocInfo.allocationSize);
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
+                               MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
+                               offset, size + offset, mem_element->second.allocInfo.allocationSize);
         }
     }
-    return skip_call;
+    return skipCall;
+}
+
+void storeMemRanges(
+    layer_data     *my_data,
+    VkDeviceMemory  mem,
+    VkDeviceSize    offset,
+    VkDeviceSize    size)
+ {
+    auto mem_element = my_data->memObjMap.find(mem);
+    if (mem_element != my_data->memObjMap.end()) {
+        MemRange new_range;
+        new_range.offset = offset;
+        new_range.size = size;
+        mem_element->second.memRange = new_range;
+    }
+}
+
+VkBool32 deleteMemRanges(
+    layer_data     *my_data,
+    VkDeviceMemory  mem)
+{
+    VkBool32 skipCall = VK_FALSE;
+    auto mem_element = my_data->memObjMap.find(mem);
+    if (mem_element != my_data->memObjMap.end()) {
+        if (!mem_element->second.memRange.size) {
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0, MEMTRACK_INVALID_MAP, "MEM",
+                               "Unmapping Memory without memory being mapped: mem obj %#" PRIxLEAST64, mem);
+        }
+        mem_element->second.memRange.size = 0;
+        if (mem_element->second.pData) {
+            free(mem_element->second.pData);
+            mem_element->second.pData = 0;
+        }
+    }
+    return skipCall;
+}
+
+static char NoncoherentMemoryFillValue = 0xb;
+
+void initializeAndTrackMemory(
+    layer_data      *my_data,
+    VkDeviceMemory   mem,
+    VkDeviceSize     size,
+    void           **ppData)
+{
+    auto mem_element = my_data->memObjMap.find(mem);
+    if (mem_element != my_data->memObjMap.end()) {
+        mem_element->second.pDriverData = *ppData;
+        uint32_t index = mem_element->second.allocInfo.memoryTypeIndex;
+        if (memProps.memoryTypes[index].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+            mem_element->second.pData = 0;
+        } else {
+            mem_element->second.pData = malloc(2 * size);
+            memset(mem_element->second.pData, NoncoherentMemoryFillValue, 2 * size);
+            *ppData = static_cast<char*>(mem_element->second.pData) + (size / 2);
+        }
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
@@ -1272,9 +1328,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     void           **ppData)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Track when memory is mapped
-    VkBool32 skipCall = VK_FALSE;
-    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+    VkBool32 skipCall   = VK_FALSE;
+    VkResult result     = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
     if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
@@ -1282,10 +1337,12 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
         skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
                        "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %#" PRIxLEAST64, (uint64_t) mem);
     }
-    skipCall |= validateMemRange(device, mem, offset, size);
+    skipCall |= validateMemRange(my_data, mem, offset, size);
+    storeMemRanges(my_data, mem, offset, size);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
+        initializeAndTrackMemory(my_data, mem, size, ppData);
     }
     return result;
 }
@@ -1295,9 +1352,90 @@ VK_LAYER_EXPORT void VKAPI vkUnmapMemory(
     VkDeviceMemory mem)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    // TODO : Track as memory gets unmapped, do we want to check what changed following map?
-    //   Make sure that memory was ever mapped to begin with
-    my_data->device_dispatch_table->UnmapMemory(device, mem);
+    VkBool32 skipCall   = VK_FALSE;
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    skipCall |= deleteMemRanges(my_data, mem);
+    loader_platform_thread_unlock_mutex(&globalLock);
+    if (VK_FALSE == skipCall) {
+        my_data->device_dispatch_table->UnmapMemory(device, mem);
+    }
+}
+
+VkBool32 validateMemoryIsMapped(layer_data *my_data, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges) {
+    VkBool32 skipCall = VK_FALSE;
+    for (uint32_t i = 0; i < memRangeCount; ++i) {
+        auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
+        if (mem_element != my_data->memObjMap.end()) {
+            if (mem_element->second.memRange.offset > pMemRanges[i].offset ||
+                (mem_element->second.memRange.offset + mem_element->second.memRange.size) < (pMemRanges[i].offset + pMemRanges[i].size)) {
+                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)pMemRanges[i].memory,
+                                    0, MEMTRACK_INVALID_MAP, "MEM", "Memory must be mapped before it can be flushed or invalidated.");
+            }
+        }
+    }
+    return skipCall;
+}
+
+VkBool32 validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges) {
+    VkBool32 skipCall = VK_FALSE;
+    for (uint32_t i = 0; i < memRangeCount; ++i) {
+        auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
+        if (mem_element != my_data->memObjMap.end()) {
+            if (mem_element->second.pData) {
+                VkDeviceSize size      = mem_element->second.memRange.size;
+                VkDeviceSize half_size = (size / 2);
+                char* data = static_cast<char*>(mem_element->second.pData);
+                for (auto j = 0; j < half_size; ++j) {
+                    if (data[j] != NoncoherentMemoryFillValue) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)pMemRanges[i].memory,
+                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, pMemRanges[i].memory);
+                    }
+                }
+                for (auto j = size + half_size; j < 2 * size; ++j) {
+                    if (data[j] != NoncoherentMemoryFillValue) {
+                        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)pMemRanges[i].memory,
+                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, pMemRanges[i].memory);
+                    }
+                }
+                memcpy(mem_element->second.pDriverData, static_cast<void*>(data + half_size), size);
+            }
+        }
+    }
+    return skipCall;
+}
+
+VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
+    VkDevice                                    device,
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges)
+{
+    VkResult    result    = VK_ERROR_VALIDATION_FAILED;
+    VkBool32    skipCall  = VK_FALSE;
+    layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    skipCall  |= validateAndCopyNoncoherentMemoryToDriver(my_data, memRangeCount, pMemRanges);
+    skipCall  |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    if (VK_FALSE == skipCall ) {
+        result = my_data->device_dispatch_table->FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
+    VkDevice                                    device,
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges)
+{
+    VkResult    result    = VK_ERROR_VALIDATION_FAILED;
+    VkBool32    skipCall = VK_FALSE;
+    layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    skipCall |= validateMemoryIsMapped(my_data, memRangeCount, pMemRanges);
+    if (VK_FALSE == skipCall) {
+        result = my_data->device_dispatch_table->InvalidateMappedMemoryRanges(device, memRangeCount, pMemRanges);
+    }
+    return result;
 }
 
 VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
@@ -1643,7 +1781,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
         // Validate that img has correct usage flags set
         validate_image_usage_flags(my_data, device, pCreateInfo->image,
                     VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                    false, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
+                    VK_FALSE, "vkCreateImageView()", "VK_IMAGE_USAGE_[SAMPLED|STORAGE|COLOR_ATTACHMENT]_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1663,7 +1801,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
         // following flags:  UNIFORM_TEXEL_BUFFER_BIT or STORAGE_TEXEL_BUFFER_BIT
         validate_buffer_usage_flags(my_data, device, pCreateInfo->buffer,
                     VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT,
-                    false, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
+                    VK_FALSE, "vkCreateBufferView()", "VK_BUFFER_USAGE_[STORAGE|UNIFORM]_TEXEL_BUFFER_BIT");
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -2425,7 +2563,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
         } else {
             const size_t count = *pCount;
             MT_SWAP_CHAIN_INFO *pInfo = my_data->swapchainMap[swapchain];
-            const bool mismatch = (pInfo->images.size() != count ||
+            const VkBool32 mismatch = (pInfo->images.size() != count ||
                     memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
@@ -2526,6 +2664,10 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkMapMemory;
     if (!strcmp(funcName, "vkUnmapMemory"))
         return (PFN_vkVoidFunction) vkUnmapMemory;
+    if (!strcmp(funcName, "vkFlushMappedMemoryRanges"))
+        return (PFN_vkVoidFunction) vkFlushMappedMemoryRanges;
+    if (!strcmp(funcName, "vkInvalidateMappedMemoryRanges"))
+        return (PFN_vkVoidFunction) vkInvalidateMappedMemoryRanges;
     if (!strcmp(funcName, "vkDestroyFence"))
         return (PFN_vkVoidFunction) vkDestroyFence;
     if (!strcmp(funcName, "vkDestroyBuffer"))
