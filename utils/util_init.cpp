@@ -518,6 +518,7 @@ void destroy_window(struct sample_info &info)
 void init_depth_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
     VkImageCreateInfo image_info = {};
     const VkFormat depth_format = VK_FORMAT_D16_UNORM;
     VkFormatProperties props;
@@ -581,11 +582,11 @@ void init_depth_buffer(struct sample_info &info)
 
     mem_alloc.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    res = memory_type_from_properties(info,
+    pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       0, /* No requirements */
                                       &mem_alloc.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    assert(pass);
 
     /* Allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
@@ -960,6 +961,7 @@ void init_swap_chain(struct sample_info &info)
 void init_uniform_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
     info.Projection = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
     info.View       = glm::lookAt(
                           glm::vec3(0,3,10), // Camera is at (0,3,10), in World Space
@@ -991,11 +993,11 @@ void init_uniform_buffer(struct sample_info &info)
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    res = memory_type_from_properties(info,
+    pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    assert(pass);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
@@ -1243,6 +1245,7 @@ void init_device_queue(struct sample_info &info)
 void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1265,11 +1268,11 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    res = memory_type_from_properties(info,
+    pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    assert(pass);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
@@ -1567,6 +1570,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
 void init_texture(struct sample_info &info, const char* textureName)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
     struct texture_object texObj;
     std::string filename = get_base_data_dir();
 
@@ -1630,8 +1634,8 @@ void init_texture(struct sample_info &info, const char* textureName)
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &mem_alloc.memoryTypeIndex);
+    assert(pass);
 
     /* allocate memory */
     res = vkAllocMemory(info.device, &mem_alloc,
@@ -1688,8 +1692,8 @@ void init_texture(struct sample_info &info, const char* textureName)
         mem_alloc.allocationSize = mem_reqs.size;
 
         /* Find memory type - dont specify any mapping requirements */
-        res = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
-        assert(res == VK_SUCCESS);
+        pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_ONLY, &mem_alloc.memoryTypeIndex);
+        assert(pass);
 
         /* allocate memory */
         res = vkAllocMemory(info.device, &mem_alloc,

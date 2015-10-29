@@ -78,6 +78,7 @@ static const char *fragShaderText=
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
+    bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
     char sample_title[] = "Draw Cube";
 
@@ -141,11 +142,11 @@ int main(int argc, char **argv)
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    res = memory_type_from_properties(info,
+    pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &alloc_info.memoryTypeIndex);
-    assert(res == VK_SUCCESS);
+    assert(pass);
 
     res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
