@@ -1,5 +1,4 @@
 /*
- * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  * Copyright (C) 2015 Google, Inc.

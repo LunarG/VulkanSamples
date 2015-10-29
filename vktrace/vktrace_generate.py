@@ -76,7 +76,6 @@ class Subcommand(object):
         return """/* THIS FILE IS GENERATED.  DO NOT EDIT. */
 
 /*
- * Vulkan
  *
  * Copyright (C) 2014 LunarG, Inc.
  *

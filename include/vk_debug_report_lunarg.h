@@ -2,7 +2,6 @@
 // File: vk_debug_report_lunarg.h
 //
 /*
- * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  *

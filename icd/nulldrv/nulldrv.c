@@ -1,5 +1,4 @@
 /*
- * Vulkan null driver
  *
  * Copyright (C) 2015 LunarG, Inc.
  *

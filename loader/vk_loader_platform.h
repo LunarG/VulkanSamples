@@ -1,5 +1,4 @@
 /*
- * Vulkan
  *
  * Copyright (C) 2015 LunarG, Inc.
  * Copyright 2014 Valve Software

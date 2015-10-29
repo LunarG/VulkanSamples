@@ -1,5 +1,4 @@
 /*
- * Vulkan Tests
  *
  * Copyright (C) 2014 LunarG, Inc.
  *

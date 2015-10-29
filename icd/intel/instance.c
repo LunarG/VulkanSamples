@@ -1,5 +1,4 @@
 /*
- * Vulkan 3-D graphics library
  *
  * Copyright (C) 2014 LunarG, Inc.
  *
