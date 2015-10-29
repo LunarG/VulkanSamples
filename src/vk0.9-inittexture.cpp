@@ -275,9 +275,9 @@ int main(int argc, char **argv)
     view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
     view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.numLevels = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.arraySize = 1;
+    view_info.subresourceRange.numLayers = 1;
 
     /* create image view */
     view_info.image = texObj.image;

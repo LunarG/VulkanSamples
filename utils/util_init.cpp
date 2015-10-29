@@ -562,9 +562,9 @@ void init_depth_buffer(struct sample_info &info)
     view_info.format = depth_format;
     view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.numLevels = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.arraySize = 1;
+    view_info.subresourceRange.numLayers = 1;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
@@ -787,9 +787,9 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.mipLevels = 1;
+    prePresentBarrier.subresourceRange.numLevels = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.arraySize = 1;
+    prePresentBarrier.subresourceRange.numLayers = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -934,9 +934,9 @@ void init_swap_chain(struct sample_info &info)
         color_image_view.channels.a = VK_CHANNEL_SWIZZLE_A;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
-        color_image_view.subresourceRange.mipLevels = 1;
+        color_image_view.subresourceRange.numLevels = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.arraySize = 1;
+        color_image_view.subresourceRange.numLayers = 1;
         color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.flags = 0;
 
@@ -1811,9 +1811,9 @@ void init_texture(struct sample_info &info, const char* textureName)
     view_info.channels.a = VK_CHANNEL_SWIZZLE_A;
     view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.mipLevels = 1;
+    view_info.subresourceRange.numLevels = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.arraySize = 1;
+    view_info.subresourceRange.numLayers = 1;
 
     /* create image view */
     view_info.image = texObj.image;
