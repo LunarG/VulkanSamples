@@ -55,6 +55,7 @@ extern "C" {
 #include "loop_analysis.h"
 #include "threadpool.h"
 #include "SPIRV/spirv.hpp"
+#include "Core/Exceptions.h"
 
 namespace spv {
 
@@ -1578,6 +1579,13 @@ EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
 
 static const char* GlslStd450DebugNames[GLSLstd450Count];
 
+void null_unsupported_functionality(const std::string& message, gla::EAbortType at) {
+   if (at == gla::EATAbort) {
+      std::cerr << std::endl << message << std::endl;
+      exit(1);
+   }
+}
+
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_SPV, bool dump_hir,
@@ -1638,6 +1646,11 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       state->error = true;
       infoLog = glslang_program->getInfoLog();
    }
+
+#ifndef DEBUG
+   //std::cerr << std::endl << "Register Handler" << std::endl;
+   gla::RegisterUnsupportedFunctionalityHandler((gla::UnsupportedFunctionalityHandler) null_unsupported_functionality);
+#endif
 
    if (!state->error) {
        if (!useSPV) {
