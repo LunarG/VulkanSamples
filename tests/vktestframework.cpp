@@ -534,13 +534,6 @@ void  TestFrameworkVkPresent::Display()
     // return codes
     assert(!err);
 
-    // Wait for the present complete semaphore to be signaled to ensure
-    // that the image won't be rendered to until the presentation
-    // engine has fully released ownership to the application, and it is
-    // okay to render to the image.
-    vkQueueWaitSemaphore(m_queue.handle(), presentCompleteSemaphore);
-    vkDestroySemaphore(m_device.handle(), presentCompleteSemaphore);
-
     VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     buf.init_as_src(m_device, (VkDeviceSize)m_display_image->m_data_size, flags);
     dest_ptr = buf.memory().map();
@@ -586,10 +579,14 @@ void  TestFrameworkVkPresent::Display()
     VkCmdBuffer cmdBufs[1];
     cmdBufs[0] = m_cmdbuf.handle();
 
+    // Wait for the present complete semaphore to be signaled to ensure
+    // that the image won't be rendered to until the presentation
+    // engine has fully released ownership to the application, and it is
+    // okay to render to the image.
     VkFence nullFence = { VK_NULL_HANDLE };
     VkSubmitInfo submit_info;
-    submit_info.waitSemCount = 0;
-    submit_info.pWaitSemaphores = NULL;
+    submit_info.waitSemCount = 1;
+    submit_info.pWaitSemaphores = &presentCompleteSemaphore,
     submit_info.cmdBufferCount = 1;
     submit_info.pCommandBuffers = cmdBufs;
     submit_info.signalSemCount = 0;
@@ -597,6 +594,8 @@ void  TestFrameworkVkPresent::Display()
 
     vkQueueSubmit(m_queue.handle(), 1, &submit_info, nullFence);
     m_queue.wait();
+
+    vkDestroySemaphore(m_device.handle(), presentCompleteSemaphore);
 
     VkPresentInfoKHR present = {};
     present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

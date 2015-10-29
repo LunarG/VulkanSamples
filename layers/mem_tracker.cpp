@@ -1163,6 +1163,31 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
             pCBInfo->lastSubmittedFence = fence;
             pCBInfo->lastSubmittedQueue = queue;
         }
+
+        for (uint32_t i = 0; i < submit->waitSemCount; i++) {
+            VkSemaphore sem = submit->pWaitSemaphores[i];
+
+            if (semaphoreMap.find(sem.handle) != semaphoreMap.end()) {
+                if (semaphoreMap[sem.handle] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
+                    skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, sem.handle,
+                            0, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueSubmit: Semaphore must be in signaled state before passing to pWaitSemaphores");
+                }
+                semaphoreMap[sem.handle] = MEMTRACK_SEMAPHORE_STATE_WAIT;
+            }
+        }
+        for (uint32_t i = 0; i < submit->signalSemCount; i++) {
+            VkSemaphore sem = submit->pWaitSemaphores[i];
+
+            if (semaphoreMap.find(sem.handle) != semaphoreMap.end()) {
+                if (semaphoreMap[sem.handle] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
+                    skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, sem.handle,
+                            0, MEMTRACK_NONE, "SEMAPHORE",
+                            "vkQueueSubmit: Semaphore must not be currently signaled or in a wait state");
+                }
+                semaphoreMap[sem.handle] = MEMTRACK_SEMAPHORE_STATE_SIGNALLED;
+            }
+        }
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1170,6 +1195,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
         result = get_dispatch_table(mem_tracker_device_table_map, queue)->QueueSubmit(
             queue, submitCount, pSubmitInfo, fence);
     }
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
+        const VkSubmitInfo *submit = &pSubmitInfo[submit_idx];
+        for (uint32_t i = 0; i < submit->waitSemCount; i++) {
+            VkSemaphore sem = submit->pWaitSemaphores[i];
+
+            if (semaphoreMap.find(sem.handle) != semaphoreMap.end()) {
+                semaphoreMap[sem.handle] = MEMTRACK_SEMAPHORE_STATE_UNSET;
+            }
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
