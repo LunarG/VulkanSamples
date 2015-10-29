@@ -314,25 +314,25 @@ void init_resources(TBuiltInResource &Resources)
 
 }
 
-EShLanguage FindLanguage(const VkShaderStage shader_type)
+EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type)
 {
     switch (shader_type) {
-    case VK_SHADER_STAGE_VERTEX:
+    case VK_SHADER_STAGE_VERTEX_BIT:
         return EShLangVertex;
 
-    case VK_SHADER_STAGE_TESS_CONTROL:
+    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
         return EShLangTessControl;
 
-    case VK_SHADER_STAGE_TESS_EVALUATION:
+    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
         return EShLangTessEvaluation;
 
-    case VK_SHADER_STAGE_GEOMETRY:
+    case VK_SHADER_STAGE_GEOMETRY_BIT:
         return EShLangGeometry;
 
-    case VK_SHADER_STAGE_FRAGMENT:
+    case VK_SHADER_STAGE_FRAGMENT_BIT:
         return EShLangFragment;
 
-    case VK_SHADER_STAGE_COMPUTE:
+    case VK_SHADER_STAGE_COMPUTE_BIT:
         return EShLangCompute;
 
     default:
@@ -354,7 +354,7 @@ void finalize_glslang()
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStage shader_type,
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                const char *pshader,
                std::vector<unsigned int> &spirv)
 {
