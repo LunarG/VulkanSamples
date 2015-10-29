@@ -541,7 +541,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.extent.height = info.height;
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
-    image_info.arraySize = 1;
+    image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
     image_info.queueFamilyCount = 0;
     image_info.pQueueFamilyIndices = NULL;
@@ -1600,7 +1600,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     image_create_info.extent.height = texObj.tex_height;
     image_create_info.extent.depth = 1;
     image_create_info.mipLevels = 1;
-    image_create_info.arraySize = 1;
+    image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
