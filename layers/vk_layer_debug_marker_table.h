@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Valve Corporation
  * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a

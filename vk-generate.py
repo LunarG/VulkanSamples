@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 #
-# VK
-#
-# Copyright (C) 2014 LunarG, Inc.
+# Copyright (C) 2015 Valve Corporation
 # Copyright (C) 2015 Google Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -66,7 +64,7 @@ class Subcommand(object):
 
 /*
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Valve Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -283,7 +281,7 @@ class WinDefFileSubcommand(Subcommand):
 ;;;; Begin Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Vulkan
 ;
-; Copyright (C) 2015 LunarG, Inc.
+; Copyright (C) 2015 Valve Corporation
 ;
 ; Permission is hereby granted, free of charge, to any person obtaining a
 ; copy of this software and associated documentation files (the "Software"),

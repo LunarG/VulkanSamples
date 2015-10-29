@@ -1,6 +1,6 @@
 # - FindPthreadStubs
 #
-# Copyright 2015 LunarG, Inc.
+# Copyright (C) 2015 Valve Corporation
 
 find_package(PkgConfig)
 

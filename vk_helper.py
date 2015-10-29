@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 #
-# VK
-#
-# Copyright (C) 2014 LunarG, Inc.
+# Copyright (C) 2015 Valve Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -529,7 +527,7 @@ class StructWrapperGen:
         copyright.append('/*');
         copyright.append(' * Vulkan');
         copyright.append(' *');
-        copyright.append(' * Copyright (C) 2014 LunarG, Inc.');
+        copyright.append(' * Copyright (C) 2015 Valive Corporation');
         copyright.append(' *');
         copyright.append(' * Permission is hereby granted, free of charge, to any person obtaining a');
         copyright.append(' * copy of this software and associated documentation files (the "Software"),');
