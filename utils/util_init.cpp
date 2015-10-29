@@ -275,7 +275,7 @@ VkResult init_device(struct sample_info &info)
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.pNext = NULL;
-    device_info.queueRecordCount = 1;
+    device_info.requestedQueueCount = 1;
     device_info.pRequestedQueues = &queue_info;
     device_info.layerCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
@@ -1469,7 +1469,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     rs.fillMode = VK_FILL_MODE_SOLID;
     rs.cullMode = VK_CULL_MODE_BACK;
     rs.frontFace = VK_FRONT_FACE_CW;
-    rs.depthClipEnable = include_depth;
+    rs.depthClampEnable = include_depth;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
     rs.depthBias = 0;
