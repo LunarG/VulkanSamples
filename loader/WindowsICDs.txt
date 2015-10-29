@@ -19,33 +19,33 @@ text information file (a.k.a. "manifest file"), that uses a JSON format (NOTE:
 The JSON in this version of the specification is for illustration purposes, and
 isn’t completely valid yet), specified by the name of the value.  Each name
 must be a full pathname to the text info file.  The Vulkan loader will open
-each info file to obtain the name or pathname of an ICD shared library (“.dll”)
+each info file to obtain the name or pathname of an ICD shared library (".dll")
 file.  For example:
 
 {
-    “file_format_version” : “1.0.0”,
+    "file_format_version" : "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        “abi_versions” : “1.0.0”
+        "abi_versions" : "1.0.0"
     }
 }
 
-The “library_path” specifies either a filename, a relative pathname, or a full
+The "library_path" specifies either a filename, a relative pathname, or a full
 pathname to an ICD shared library file, which the loader will attempt to load
 using LoadLibrary().  If the ICD is specified via a filename, the shared
 library lives in the system’s DLL search path (e.g. in the
-“C:\\Windows\\System32” folder).  If the ICD is specified via a relative
+"C:\\Windows\\System32" folder).  If the ICD is specified via a relative
 pathname, it is relative to the path of the info file.
 
-The “file_format_version” specifies a major.minor.patch version number in case
+The "file_format_version" specifies a major.minor.patch version number in case
 the format of the text information file changes in the future.  If the same ICD
 shared library supports multiple, incompatible versions of text info file
 format versions, it must have multiple text info files (all of which may point
 to the same shared library).
 
-The “abi_versions” specifies a colon-separated list of major.minor.patch
+The "abi_versions" specifies a colon-separated list of major.minor.patch
 version numbers of the Vulkan ABI that the shared library (referenced by
-“library_path”) support.
+"library_path") support.
 
 There are no rules about the name of the text information files (except the
 .json suffix).  There are no rules about the name of the ICD shared library
@@ -62,10 +62,10 @@ specified contents:
     Text File Name    Text File Contents
     --------------------------------------------------------------------------
     vk_vendora.json   { "ICD": { "library_path": "C:\\VENDORA\\vk_vendora.dll" }}
-    vendorb_vk.json   { "ICD": { "library_path": “vendorb_vk.dll" }}
+    vendorb_vk.json   { "ICD": { "library_path": "vendorb_vk.dll" }}
     vendorc_icd.json  { "ICD": { "library_path": "vedorc_icd.dll" }}
 
-then the loader will open the three files mentioned in the “Text File Contents”
+then the loader will open the three files mentioned in the "Text File Contents"
 column, and then try to load and use the three shared libraries mentioned
 indicated by the ICD.library_path value.
 
@@ -79,21 +79,21 @@ shared library in the developer’s build tree.  In this latter case, we want to
 allow developers to point to such an ICD without modifying the
 properly-installed ICD(s) on their system.
 
-This need is met with the use of the “VK_ICD_FILENAMES” environment variable,
+This need is met with the use of the "VK_ICD_FILENAMES" environment variable,
 which will override the mechanism used for finding properly-installed ICDs.  In
-other words, only the ICDs listed in “VK_ICD_FILENAMES” will be used.
+other words, only the ICDs listed in "VK_ICD_FILENAMES" will be used.
 
-The “VK_ICD_FILENAMES” environment variable is a semi-colon-separated list of
+The "VK_ICD_FILENAMES" environment variable is a semi-colon-separated list of
 ICD text information files, containing the following:
 
-- A full pathname (e.g. “C:\\my_build\\my_icd.json”)
+- A full pathname (e.g. "C:\\my_build\\my_icd.json")
 
-Typically, “VK_ICD_FILENAMES” will only contain a full pathname to one info
+Typically, "VK_ICD_FILENAMES" will only contain a full pathname to one info
 file for a developer-built ICD.  A semi-colon is only used if more than one ICD
 is listed.
 
 For example, if a developer wants to refer to one ICD that they built, they
-could set the “VK_ICD_FILENAMES” environment variable to:
+could set the "VK_ICD_FILENAMES" environment variable to:
 
         C:\\my_build\\my_icd.json
 
@@ -102,8 +102,8 @@ ICD, they can use the full pathname of the text file:
 
         C:\\Windows\\System32\\vendorc_icd.json;C:\\my_build\\my_icd.json
 
-Notice the semi-colon between “C:\\Windows\\System32\\vendorc_icd.json” and
-“C:\\my_build\\my_icd.json”.
+Notice the semi-colon between "C:\\Windows\\System32\\vendorc_icd.json" and
+"C:\\my_build\\my_icd.json".
 
 
 2. Layers:
@@ -141,28 +141,28 @@ explicit is by which registry key its layer information file is referenced by.
 The information file is in the JSON format and contains the following
 information:
 
-- (required) “file_format_version” – same as for ICDs, except that the format
+- (required) "file_format_version" – same as for ICDs, except that the format
   version can vary independently for ICDs and layers.
 - (required) "name" - layer name
 - (required) "type" - which layer chains should the layer be activated on.
   Allowable values are "INSTANCE", "DEVICE", "GLOBAL".  Global means activate
   on both device and instance chains.
-- (required) “library_path” - filename / full path / relative path to the text
+- (required) "library_path" - filename / full path / relative path to the text
   file
-- (required) “abi_versions” – same as for ICDs.
-- (required) “implementation_version” – layer code version.
-- (required) “description” – informative decription of the layer.
-- (optional) extension and it's “name” - e.g."instance_extensions”{ DEBUG_REPORT}
-- (optional) extension and it's “version” - extension version (formatted as
+- (required) "abi_versions" – same as for ICDs.
+- (required) "implementation_version" – layer code version.
+- (required) "description" – informative decription of the layer.
+- (optional) extension and it's "name" - e.g."instance_extensions"{ DEBUG_REPORT}
+- (optional) extension and it's "version" - extension version (formatted as
   major.minor.patch).
-- (sometimes required) “functions” - mapping list of function entry points.  If
+- (sometimes required) "functions" - mapping list of function entry points.  If
   multiple layers exist within the same shared library (or if a layer is in the
   same shared library as an ICD), this must be specified to allow each layer to
   have its own vkGet*ProcAddr entrypoints that can be found by the loader.  At
   this time, only the following two functions are required:
-  - “vkGetInstanceProcAddr” name
-  - “vkGetDeviceProcAddr” name
-- (optional for implicit layers) “enable_environment” requirement(s) -
+  - "vkGetInstanceProcAddr" name
+  - "vkGetDeviceProcAddr" name
+- (optional for implicit layers) "enable_environment" requirement(s) -
   environment variable and value required to enable an implicit layer.  This
   environment variable (which should vary with each "version" of the layer, as
   in "ENABLE_LAYER_FOO_1_0_0") must be set to the given value or else the
@@ -170,7 +170,7 @@ information:
   (e.g. Steam) which want to enable a layer(s) only for applications that they
   launch, and allows for applications run outside of an application environment
   to not get that implicit layer(s).
-- (required for implicit layers) “disable_environment” requirement(s) -
+- (required for implicit layers) "disable_environment" requirement(s) -
   environment variable and value required to disable an implicit layer.  Note:
   in rare cases of an application not working with an implicit layer, the
   application can set this environment variable (before calling Vulkan
@@ -183,48 +183,48 @@ information:
 For example:
 
 {
-     “file_format_version” : “1.0.0”,
-     “layer”: {
+     "file_format_version" : "1.0.0",
+     "layer": {
          "name": "OverlayLayer",
          "type": "DEVICE",
          "library_path": "vkOverlayLayer.dll",
-         “abi_versions” : “1.0.0:1.1.0”,
-         “implementation_version” : “0.9.3”,
-         “description” : “LunarG HUD layer”,
-         “functions”: {
-            “vkGetInstanceProcAddr”: “OverlayLayer_GetInstanceProcAddr”,
-            “vkGetDeviceProcAddr”: “OverlayLayer_GetDeviceProcAddr”
+         "abi_versions" : "1.0.0:1.1.0",
+         "implementation_version" : "0.9.3",
+         "description" : "LunarG HUD layer",
+         "functions": {
+            "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
+            "vkGetDeviceProcAddr": "OverlayLayer_GetDeviceProcAddr"
          },
-         instance_extensions”: [
+         instance_extensions": [
              {
-                 “name”: “DEBUG_REPORT”,
-                 “version”: “1.0.0”
+                 "name": "DEBUG_REPORT",
+                 "version": "1.0.0"
              },
              {
-                 “name”: “DEBUG_X”,
-                 “version”: “1.0.0”
+                 "name": "DEBUG_X",
+                 "version": "1.0.0"
              }
          ],
-         device_extensions”: [
+         device_extensions": [
              {
-                 “name”: “DEBUG_MARKER”,
-                 “version”: “1.0.0”
+                 "name": "DEBUG_MARKER",
+                 "version": "1.0.0"
              }
          ],
-         “disable_environment”: {
-             “DISABLE_LAYER_OVERLAY_1_0_0”: “”
+         "disable_environment": {
+             "DISABLE_LAYER_OVERLAY_1_0_0": ""
          }
      }
 }
 
-The “library_path” specifies either a filename, a relative pathname, or a full
-pathname to a layer shared library (“.dll”) file, which the loader will attempt
+The "library_path" specifies either a filename, a relative pathname, or a full
+pathname to a layer shared library (".dll") file, which the loader will attempt
 to load using LoadLibrary().  If the layer is specified via a relative
 pathname, it is relative to the path of the info file (e.g. for cases when an
 application provides a layer that is in the same folder hierarchy as the rest
 of the application files).  If the layer is specified via a filename, the
 shared library lives in the system’s DLL search path (e.g. in the
-“C:\\Windows\\System32” folder).
+"C:\\Windows\\System32" folder).
 
 There are no rules about the name of the text files (except the .json suffix).
 There are no rules about the name of the layer shared library files.
@@ -235,11 +235,11 @@ There are no rules about the name of the layer shared library files.
 As with ICDs, developers may need to use special, pre-production layers,
 without modifying the properly-installed layers.
 
-This need is met with the use of the “VK_LAYER_FOLDERS” environment variable,
+This need is met with the use of the "VK_LAYER_PATH" environment variable,
 which will override the mechanism using for finding properly-installed layers.
 Because many layers may exist on a system, this environment variable is a
 semi-colon-separated list of folders that contain layer info files.  Only the
-folder listed in “VK_LAYER_FOLDERS” will be scanned for info files.  Each
+folder listed in "VK_LAYER_PATH" will be scanned for info files.  Each
 semi-colon-separated entry is:
 
 - The full pathname of a folder containing layer info files
@@ -248,12 +248,12 @@ In addition to overriding the mechanism for finding layers, the following
 environment variables are used to select one or more layers/extensions
 (respectively) to explicitly enable:
 
-- “VK_INSTANCE_LAYERS” for instance/global layers/extensions, enabled at
+- "VK_INSTANCE_LAYERS" for instance/global layers/extensions, enabled at
   vkCreateInstance time
 
-- “VK_DEVICE_LAYERS” for device layers/extensions, enabled at vkCreateDevice
+- "VK_DEVICE_LAYERS" for device layers/extensions, enabled at vkCreateDevice
   time
 
 These are semi-colon-separated lists of extension names, as listed in the
-“name” field of the info file.  The loader will load all layers/extensions that
-match the given extension name(s), ignoring the “version” fields.
+"name" field of the info file.  The loader will load all layers/extensions that
+match the given extension name(s), ignoring the "version" fields.
