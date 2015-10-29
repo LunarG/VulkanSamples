@@ -41,11 +41,13 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_START */
 
+    float queue_priorities[1] = { 0.0 };
     VkDeviceQueueCreateInfo queue_info = {};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
+    queue_info.pQueuePriorities = queue_priorities;
 
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
