@@ -112,26 +112,6 @@ template layer_data *get_my_data_ptr<layer_data>(
         void *data_key,
         std::unordered_map<void *, layer_data *> &data_map);
 
-debug_report_data *mdd(void* object)
-{
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-#if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MDD: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
-#endif
-    return my_data->report_data;
-}
-
-debug_report_data *mid(VkInstance object)
-{
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-#if DISPATCH_MAP_DEBUG
-    fprintf(stderr, "MID: map: %p, object: %p, key: %p, data: %p\n", &layer_data_map, object, key, my_data);
-#endif
-    return my_data->report_data;
-}
-
 // Add new queue for this device to map container
 static void add_queue_info(layer_data* my_data, const VkQueue queue)
 {
@@ -244,7 +224,7 @@ static VkBool32 add_fence_info(layer_data* my_data,
         // Validate that fence is in UNSIGNALED state
         VkFenceCreateInfo* pFenceCI = &(my_data->fenceMap[fence].createInfo);
         if (pFenceCI->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                            "Fence %#" PRIxLEAST64 " submitted in SIGNALED state.  Fences must be reset before being submitted", (uint64_t) fence);
         }
     } else {
@@ -310,7 +290,7 @@ static void retire_device_fences(layer_data* my_data,
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
-static VkBool32 validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags desired,
+static VkBool32 validate_usage_flags(layer_data* my_data, void* disp_obj, VkFlags actual, VkFlags desired,
                                      VkBool32 strict, uint64_t obj_handle, VkDbgObjectType obj_type,
                                      char const* ty_str, char const* func_name, char const* usage_str)
 {
@@ -321,7 +301,7 @@ static VkBool32 validate_usage_flags(void* disp_obj, VkFlags actual, VkFlags des
     else
         correct_usage = ((actual & desired) != 0);
     if (!correct_usage) {
-        skipCall = log_msg(mdd(disp_obj), VK_DBG_REPORT_ERROR_BIT, obj_type, obj_handle, 0, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, obj_type, obj_handle, 0, MEMTRACK_INVALID_USAGE_FLAG, "MEM",
                            "Invalid usage flag for %s %#" PRIxLEAST64 " used by %s. In this case, %s should have %s set during creation.",
                            ty_str, obj_handle, func_name, ty_str, usage_str);
     }
@@ -337,7 +317,7 @@ static VkBool32 validate_image_usage_flags(layer_data* my_data, void* disp_obj, 
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t)image, VK_OBJECT_TYPE_IMAGE);
     if (pBindInfo) {
-        skipCall = validate_usage_flags(disp_obj, pBindInfo->create_info.image.usage, desired, strict,
+        skipCall = validate_usage_flags(my_data, disp_obj, pBindInfo->create_info.image.usage, desired, strict,
                                       (uint64_t) image, VK_OBJECT_TYPE_IMAGE, "image", func_name, usage_string);
     }
     return skipCall;
@@ -352,7 +332,7 @@ static VkBool32 validate_buffer_usage_flags(layer_data* my_data, void* disp_obj,
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER);
     if (pBindInfo) {
-        skipCall = validate_usage_flags(disp_obj, pBindInfo->create_info.buffer.usage, desired, strict,
+        skipCall = validate_usage_flags(my_data, disp_obj, pBindInfo->create_info.buffer.usage, desired, strict,
                                       (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER, "buffer", func_name, usage_string);
     }
     return skipCall;
@@ -402,7 +382,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
         // First update CB binding in MemObj mini CB list
         MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
         if (!pMemInfo) {
-            skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                            "In %s, trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
                            "Was it correctly allocated? Did it already get freed?", apiName, (uint64_t) mem, cb);
         } else {
@@ -425,7 +405,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
             MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
             if (!pCBInfo) {
-                skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                                "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that CB. Was CB incorrectly destroyed?", (uint64_t) mem, cb);
             } else {
                 // Search for memory object in cmd buffer's reference list
@@ -455,7 +435,7 @@ static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data,
     VkBool32 skipCall = VK_FALSE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
     if (!pCBInfo) {
-        skipCall = log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_CB, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_CB, "MEM",
                      "Unable to find global CB info %p for deletion", cb);
     } else {
         if (pCBInfo->pMemObjList.size() > 0) {
@@ -483,7 +463,7 @@ static VkBool32 delete_cmd_buf_info_list(layer_data* my_data)
 }
 
 // For given MemObjInfo, report Obj & CB bindings
-static VkBool32 reportMemReferencesAndCleanUp(
+static VkBool32 reportMemReferencesAndCleanUp(layer_data* my_data,
     MT_MEM_OBJ_INFO* pMemObjInfo)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -491,7 +471,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
     size_t objRefCount    = pMemObjInfo->pObjBindings.size();
 
     if ((pMemObjInfo->pCmdBufferBindings.size() + pMemObjInfo->pObjBindings.size()) != 0) {
-        skipCall = log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pMemObjInfo->mem, 0, MEMTRACK_FREED_MEM_REF, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pMemObjInfo->mem, 0, MEMTRACK_FREED_MEM_REF, "MEM",
                        "Attempting to free memory object %#" PRIxLEAST64 " which still contains %lu references",
                        (uint64_t) pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
     }
@@ -499,7 +479,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
     if (cmdBufRefCount > 0 && pMemObjInfo->pCmdBufferBindings.size() > 0) {
         for (list<VkCmdBuffer>::const_iterator it = pMemObjInfo->pCmdBufferBindings.begin(); it != pMemObjInfo->pCmdBufferBindings.end(); ++it) {
             // TODO : cmdBuffer should be source Obj here
-            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)(*it), 0, MEMTRACK_FREED_MEM_REF, "MEM",
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)(*it), 0, MEMTRACK_FREED_MEM_REF, "MEM",
                     "Command Buffer %p still has a reference to mem obj %#" PRIxLEAST64, (*it), (uint64_t) pMemObjInfo->mem);
         }
         // Clear the list of hanging references
@@ -508,7 +488,7 @@ static VkBool32 reportMemReferencesAndCleanUp(
 
     if (objRefCount > 0 && pMemObjInfo->pObjBindings.size() > 0) {
         for (auto it = pMemObjInfo->pObjBindings.begin(); it != pMemObjInfo->pObjBindings.end(); ++it) {
-            log_msg(mdd(pMemObjInfo->object), VK_DBG_REPORT_INFO_BIT, it->type, it->handle, 0, MEMTRACK_FREED_MEM_REF, "MEM",
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, it->type, it->handle, 0, MEMTRACK_FREED_MEM_REF, "MEM",
                     "VK Object %#" PRIxLEAST64 " still has a reference to mem obj %#" PRIxLEAST64, it->handle, (uint64_t) pMemObjInfo->mem);
         }
         // Clear the list of hanging references
@@ -526,7 +506,7 @@ static VkBool32 deleteMemObjInfo(layer_data* my_data,
     if (item != my_data->memObjMap.end()) {
         my_data->memObjMap.erase(item);
     } else {
-        skipCall = log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "Request to delete memory object %#" PRIxLEAST64 " not present in memory Object Map", (uint64_t) mem);
     }
     return skipCall;
@@ -541,14 +521,14 @@ static VkBool32 checkCBCompleted(layer_data* my_data,
     *complete = VK_TRUE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
     if (!pCBInfo) {
-        skipCall |= log_msg(mdd(cb), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
                         MEMTRACK_INVALID_CB, "MEM", "Unable to find global CB info %p to check for completion", cb);
         *complete = VK_FALSE;
     } else if (pCBInfo->lastSubmittedQueue != NULL) {
         VkQueue queue = pCBInfo->lastSubmittedQueue;
         MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
         if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
-            log_msg(mdd(cb), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
                 MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
                 (uint64_t) pCBInfo->lastSubmittedFence, cb);
             *complete = VK_FALSE;
@@ -566,12 +546,12 @@ static VkBool32 freeMemObjInfo(layer_data* my_data,
     // Parse global list to find info w/ mem
     MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
     if (!pInfo) {
-        skipCall = log_msg(mdd(object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "Couldn't find mem info object for %#" PRIxLEAST64 "\n    Was %#" PRIxLEAST64 " never allocated or previously freed?",
                        (uint64_t) mem, (uint64_t) mem);
     } else {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
-            skipCall = log_msg(mdd(pInfo->object), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "Attempting to free memory associated with a Persistent Image, %#" PRIxLEAST64 ", "
                             "this should not be explicitly freed\n", (uint64_t) mem);
         } else {
@@ -596,7 +576,7 @@ static VkBool32 freeMemObjInfo(layer_data* my_data,
 
             // Now verify that no references to this mem obj remain and remove bindings
             if (0 != pInfo->refCount) {
-                skipCall |= reportMemReferencesAndCleanUp(pInfo);
+                skipCall |= reportMemReferencesAndCleanUp(my_data, pInfo);
             }
             // Delete mem obj info
             skipCall |= deleteMemObjInfo(my_data, object, mem);
@@ -635,7 +615,7 @@ static VkBool32 clear_object_binding(layer_data* my_data, void* dispObj, uint64_
     if (pObjBindInfo) {
         MT_MEM_OBJ_INFO* pMemObjInfo = get_mem_obj_info(my_data, pObjBindInfo->mem);
         if (!pMemObjInfo) {
-            skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM",
                            "Attempting to clear mem binding on %s obj %#" PRIxLEAST64 " but it has no binding.",
                            object_type_to_string(type), handle);
         } else {
@@ -653,7 +633,7 @@ static VkBool32 clear_object_binding(layer_data* my_data, void* dispObj, uint64_
                 }
             }
             if (VK_FALSE == clearSucceeded ) {
-                skipCall |= log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
+                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                                 "While trying to clear mem binding for %s obj %#" PRIxLEAST64 ", unable to find that object referenced by mem obj %#" PRIxLEAST64,
                                  object_type_to_string(type), handle, (uint64_t) pMemObjInfo->mem);
             }
@@ -679,26 +659,26 @@ static VkBool32 set_mem_binding(layer_data* my_data,
     VkBool32 skipCall = VK_FALSE;
     // Handle NULL case separately, just clear previous binding & decrement reference
     if (mem == VK_NULL_HANDLE) {
-        skipCall = log_msg(mdd(dispatch_object), VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                        "In %s, attempting to Bind Obj(%#" PRIxLEAST64 ") to NULL", apiName, handle);
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
         if (!pObjBindInfo) {
-            skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of %s Obj(%#" PRIxLEAST64 ") that's not in global list()",
                             object_type_to_string(type), apiName, handle);
         } else {
             // non-null case so should have real mem obj
             MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
             if (!pMemInfo) {
-                skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem,
+                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem,
                                 0, MEMTRACK_INVALID_MEM_OBJ, "MEM", "In %s, while trying to bind mem for %s obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64,
                                 object_type_to_string(type), apiName, handle, (uint64_t) mem);
             } else {
                 // TODO : Need to track mem binding for obj and report conflict here
                 MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(my_data, pObjBindInfo->mem);
                 if (pPrevBinding != NULL) {
-                    skipCall |= log_msg(mdd(dispatch_object), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_REBIND_OBJECT, "MEM",
+                    skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_REBIND_OBJECT, "MEM",
                             "In %s, attempting to bind memory (%#" PRIxLEAST64 ") to object (%#" PRIxLEAST64 ") which has already been bound to mem object %#" PRIxLEAST64,
                             apiName, (uint64_t) mem, handle, (uint64_t) pPrevBinding->mem);
                 }
@@ -745,13 +725,13 @@ static VkBool32 set_sparse_mem_binding(layer_data* my_data,
     } else {
         MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
         if (!pObjBindInfo) {
-            skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                             "In %s, attempting to update Binding of Obj(%#" PRIxLEAST64 ") that's not in global list()", apiName, handle);
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
         if (!pInfo) {
-            skipCall |= log_msg(mdd(dispObject), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "In %s, While trying to bind mem for obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64, apiName, handle, (uint64_t) mem);
         } else {
             // Search for object in memory object's binding list
@@ -781,14 +761,14 @@ static VkBool32 set_sparse_mem_binding(layer_data* my_data,
 }
 
 template <typename T>
-void print_object_map_members(
+void print_object_map_members(layer_data* my_data,
     void*            dispObj,
     T const&         objectName,
     VkDbgObjectType  objectType,
     const char      *objectStr)
 {
     for (auto const& element : objectName) {
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, objectType, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, objectType, 0, 0, MEMTRACK_NONE, "MEM",
             "    %s Object list contains %s Object %#" PRIxLEAST64 " ", objectStr, objectStr, element.first);
     }
 }
@@ -804,11 +784,11 @@ static VkBool32 get_mem_binding_from_object(layer_data* my_data,
         if (pObjBindInfo->mem) {
             *mem = pObjBindInfo->mem;
         } else {
-            skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_MISSING_MEM_BINDINGS, "MEM",
                            "Trying to get mem binding for object %#" PRIxLEAST64 " but object has no mem binding", handle);
         }
     } else {
-        skipCall = log_msg(mdd(dispObj), VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, type, handle, 0, MEMTRACK_INVALID_OBJECT, "MEM",
                        "Trying to get mem binding for object %#" PRIxLEAST64 " but no such object in %s list",
                        handle, object_type_to_string(type));
     }
@@ -822,14 +802,14 @@ static void print_mem_list(layer_data* my_data,
     MT_MEM_OBJ_INFO* pInfo = NULL;
 
     // Early out if info is not requested
-    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+    if (!(my_data->report_data->active_flags & VK_DBG_REPORT_INFO_BIT)) {
         return;
     }
 
     // Just printing each msg individually for now, may want to package these into single large print
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "Details of Memory Object list (of size %lu elements)", my_data->memObjMap.size());
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "=============================");
 
     if (my_data->memObjMap.size() <= 0)
@@ -838,36 +818,36 @@ static void print_mem_list(layer_data* my_data,
     for (auto ii=my_data->memObjMap.begin(); ii!=my_data->memObjMap.end(); ++ii) {
         pInfo = &(*ii).second;
 
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "    ===MemObjInfo at %p===", (void*)pInfo);
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    Mem object: %#" PRIxLEAST64, (void*)pInfo->mem);
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    Ref Count: %u", pInfo->refCount);
         if (0 != pInfo->allocInfo.allocationSize) {
             string pAllocInfoMsg = vk_print_vkmemoryallocinfo(&pInfo->allocInfo, "MEM(INFO):         ");
-            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                     "    Mem Alloc info:\n%s", pAllocInfoMsg.c_str());
         } else {
-            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                     "    Mem Alloc info is NULL (alloc done by vkCreateSwapchainKHR())");
         }
 
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
         if (pInfo->pObjBindings.size() > 0) {
             for (list<MT_OBJ_HANDLE_TYPE>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
-                log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                         "       VK OBJECT %p", (*it));
             }
         }
 
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCmdBufferBindings.size());
         if (pInfo->pCmdBufferBindings.size() > 0)
         {
             for (list<VkCmdBuffer>::iterator it = pInfo->pCmdBufferBindings.begin(); it != pInfo->pCmdBufferBindings.end(); ++it) {
-                log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+                log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                         "      VK CB %p", (*it));
             }
         }
@@ -880,13 +860,13 @@ static void printCBList(layer_data* my_data,
     MT_CB_INFO* pCBInfo = NULL;
 
     // Early out if info is not requested
-    if (!(mdd(dispObj)->active_flags & VK_DBG_REPORT_INFO_BIT)) {
+    if (!(my_data->report_data->active_flags & VK_DBG_REPORT_INFO_BIT)) {
         return;
     }
 
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
         "Details of CB list (of size %lu elements)", my_data->cbMap.size());
-    log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
         "==================");
 
     if (my_data->cbMap.size() <= 0)
@@ -895,7 +875,7 @@ static void printCBList(layer_data* my_data,
     for (auto ii=my_data->cbMap.begin(); ii!=my_data->cbMap.end(); ++ii) {
         pCBInfo = &(*ii).second;
 
-        log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    CB Info (%p) has CB %p, fenceId %" PRIx64", and fence %#" PRIxLEAST64,
                 (void*)pCBInfo, (void*)pCBInfo->cmdBuffer, pCBInfo->fenceId,
                 (uint64_t) pCBInfo->lastSubmittedFence);
@@ -903,7 +883,7 @@ static void printCBList(layer_data* my_data,
         if (pCBInfo->pMemObjList.size() <= 0)
             continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
-            log_msg(mdd(dispObj), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
+            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                     "      Mem obj %p", (*it));
         }
     }
@@ -1033,9 +1013,9 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
     VkBool32 skipCall = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_device_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
         "Printing List details prior to vkDestroyDevice()");
-    log_msg(mdd(device), VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
+    log_msg(my_device_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, MEMTRACK_NONE, "MEM",
         "================================================");
     print_mem_list(my_device_data, device);
     printCBList(my_device_data, device);
@@ -1046,7 +1026,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
         for (auto ii=my_device_data->memObjMap.begin(); ii!=my_device_data->memObjMap.end(); ++ii) {
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
-                skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM",
+                skipCall |= log_msg(my_device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM",
                                  "Mem Object %p has not been freed. You should clean up this memory by calling "
                                  "vkFreeMemory(%p) prior to vkDestroyDevice().", pInfo->mem, pInfo->mem);
             }
@@ -1169,7 +1149,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
                 if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_SIGNALLED) {
-                    skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
+                    skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
                             0, MEMTRACK_NONE, "SEMAPHORE",
                             "vkQueueSubmit: Semaphore must be in signaled state before passing to pWaitSemaphores");
                 }
@@ -1181,7 +1161,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
 
             if (my_data->semaphoreMap.find(sem) != my_data->semaphoreMap.end()) {
                 if (my_data->semaphoreMap[sem] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
-                    skipCall = log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
+                    skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t) sem,
                             0, MEMTRACK_NONE, "SEMAPHORE",
                             "vkQueueSubmit: Semaphore must not be currently signaled or in a wait state");
                 }
@@ -1260,7 +1240,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
     if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
-        skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
                        "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %#" PRIxLEAST64, (uint64_t) mem);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1479,7 +1459,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
         if (fence_item != my_data->fenceMap.end()) {
             // Validate fences in SIGNALED state
             if (!(fence_item->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT)) {
-                skipCall = log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) pFences[i], 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                         "Fence %#" PRIxLEAST64 " submitted to VkResetFences in UNSIGNALED STATE", (uint64_t) pFences[i]);
             }
             else {
@@ -1502,11 +1482,11 @@ static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const c
     auto pFenceInfo = my_data->fenceMap.find(fence);
     if (pFenceInfo != my_data->fenceMap.end()) {
         if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                 "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
         }
         if (!pFenceInfo->second.queue) { // Checking status of unsubmitted fence
-            skipCall |= log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                 "%s called for fence %#" PRIxLEAST64 " which has not been submitted on a Queue.", apiCall, (uint64_t) fence);
         }
     }
@@ -1681,7 +1661,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     skipCall = checkCBCompleted(my_data, cmdBuffer, &cmdBufferComplete);
 
     if (VK_FALSE == cmdBufferComplete) {
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                         MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Calling vkBeginCommandBuffer() on active CB %p before it has completed. "
                         "You must check CB flag before this call.", cmdBuffer);
     }
@@ -1716,7 +1696,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
     // Verify that CB is complete (not in-flight)
     skipCall = checkCBCompleted(my_data, cmdBuffer, &cmdBufferComplete);
     if (VK_FALSE == cmdBufferComplete) {
-        skipCall |= log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                         MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Resetting CB %p before it has completed. You must check CB "
                         "flag before calling vkResetCommandBuffer().", cmdBuffer);
     }
@@ -1765,7 +1745,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1784,7 +1764,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1800,7 +1780,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCmdBuffer cmdBuffer, float lineWi
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1820,7 +1800,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1838,7 +1818,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1857,7 +1837,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1876,7 +1856,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1895,7 +1875,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -1914,7 +1894,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     loader_platform_thread_lock_mutex(&globalLock);
     MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, cmdBuffer);
     if (!pCmdBuf) {
-        skipCall = log_msg(mdd(cmdBuffer), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cmdBuffer, 0,
                        MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)cmdBuffer);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -2412,7 +2392,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
                     memcmp(&pInfo->images[0], pSwapchainImages, sizeof(pInfo->images[0]) * count));
 
             if (mismatch) {
-                log_msg(mdd(device), VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t) swapchain, 0, MEMTRACK_NONE, "SWAP_CHAIN",
+                log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t) swapchain, 0, MEMTRACK_NONE, "SWAP_CHAIN",
                         "vkGetSwapchainInfoKHR(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", swapchain);
             }
         }
@@ -2434,7 +2414,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     loader_platform_thread_lock_mutex(&globalLock);
     if (my_data->semaphoreMap.find(semaphore) != my_data->semaphoreMap.end()) {
         if (my_data->semaphoreMap[semaphore] != MEMTRACK_SEMAPHORE_STATE_UNSET) {
-            skipCall = log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)semaphore,
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)semaphore,
                                0, MEMTRACK_NONE, "SEMAPHORE",
                                "vkAcquireNextImageKHR: Semaphore must not be currently signaled or in a wait state");
         }
