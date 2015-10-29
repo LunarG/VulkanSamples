@@ -28,7 +28,12 @@
 #ifndef SWAPCHAIN_H
 #define SWAPCHAIN_H
 
+#include "vk_layer.h"
+#include "vk_debug_report_lunarg.h"
+#include "vk_layer_config.h"
+#include "vk_layer_logging.h"
 #include <vector>
+#include <unordered_map>
 
 static const VkLayerProperties globalLayerProps[] = {
     {
@@ -77,15 +82,6 @@ typedef enum _SWAPCHAIN_ERROR
 
 
 // The following is for logging error messages:
-struct layer_data {
-    debug_report_data *report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
-
-    layer_data() :
-        report_data(nullptr)
-    {};
-};
-
 #define LAYER_NAME (char *) "Swapchain"
 #define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                     \
     (my_data) ?                                                         \
@@ -211,6 +207,25 @@ struct _SwpSwapchain {
     // remembered:
     uint32_t imageCount;
     unordered_map<int, SwpImage> images;
+};
+
+struct layer_data {
+    debug_report_data *report_data;
+    std::vector<VkDbgMsgCallback> logging_callback;
+    VkLayerDispatchTable* device_dispatch_table;
+    VkLayerInstanceDispatchTable* instance_dispatch_table;
+    // NOTE: The following are for keeping track of info that is used for
+    // validating the WSI extensions.
+    std::unordered_map<void *, SwpInstance>       instanceMap;
+    std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
+    std::unordered_map<void *, SwpDevice>         deviceMap;
+    std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
+
+    layer_data() :
+        report_data(nullptr),
+        device_dispatch_table(nullptr),
+        instance_dispatch_table(nullptr)
+    {};
 };
 
 #endif // SWAPCHAIN_H
