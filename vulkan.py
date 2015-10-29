@@ -1011,46 +1011,46 @@ core = Extension(
 )
 
 ext_khr_swapchain = Extension(
-    name="VK_EXT_KHR_swapchain",
-    headers=["vulkan/vk_ext_khr_swapchain.h"],
+    name="VK_KHR_surface",
+    headers=["vulkan/vulkan.h"],
     objects=[],
     protos=[
         Proto("VkResult", "GetPhysicalDeviceSurfaceSupportKHR",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("uint32_t", "queueFamilyIndex"),
-             Param("const VkSurfaceDescriptionKHR*", "pSurfaceDescription"),
+             Param("VkSurfaceKHR", "surface"),
              Param("VkBool32*", "pSupported")]),
+
+        Proto("VkResult", "GetPhysicalDeviceSurfaceCapabilitiesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+	     Param("VkSurfaceKHR", "surface"),
+             Param("VkSurfaceCapabilitiesKHR*", "pSurfaceCapabilities")]),
+
+        Proto("VkResult", "GetPhysicalDeviceSurfaceFormatsKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+	     Param("VkSurfaceKHR", "surface"),
+	     Param("uint32_t*", "pSurfaceFormatCount"),
+             Param("VkSurfaceFormatKHR*", "pSurfaceFormats")]),
+
+        Proto("VkResult", "GetPhysicalDeviceSurfacePresentModesKHR",
+            [Param("VkPhysicalDevice", "physicalDevice"),
+	     Param("VkSurfaceKHR", "surface"),
+	     Param("uint32_t*", "pPresentModeCount"),
+             Param("VkPresentModeKHR*", "pPresentModes")]),
     ],
 )
 
 ext_khr_device_swapchain = Extension(
-    name="VK_EXT_KHR_device_swapchain",
-    headers=["vk_ext_khr_device_swapchain.h"],
+    name="VK_KHR_swapchain",
+    headers=["vulkan/vulkan.h"],
     objects=["VkSwapchainKHR"],
     protos=[
-        Proto("VkResult", "GetSurfacePropertiesKHR",
-            [Param("VkDevice", "device"),
-	     Param("const VkSurfaceDescriptionKHR*", "pSurfaceDescription"),
-             Param("VkSurfacePropertiesKHR*", "pSurfaceProperties")]),
-
-        Proto("VkResult", "GetSurfaceFormatsKHR",
-            [Param("VkDevice", "device"),
-	     Param("const VkSurfaceDescriptionKHR*", "pSurfaceDescription"),
-	     Param("uint32_t*", "pCount"),
-             Param("VkSurfaceFormatKHR*", "pSurfaceFormats")]),
-
-        Proto("VkResult", "GetSurfacePresentModesKHR",
-            [Param("VkDevice", "device"),
-	     Param("const VkSurfaceDescriptionKHR*", "pSurfaceDescription"),
-	     Param("uint32_t*", "pCount"),
-             Param("VkPresentModeKHR*", "pPresentModes")]),
-
         Proto("VkResult", "CreateSwapchainKHR",
             [Param("VkDevice", "device"),
              Param("const VkSwapchainCreateInfoKHR*", "pCreateInfo"),
              Param("VkSwapchainKHR*", "pSwapchain")]),
 
-        Proto("VkResult", "DestroySwapchainKHR",
+        Proto("void", "DestroySwapchainKHR",
             [Param("VkDevice", "device"),
              Param("VkSwapchainKHR", "swapchain")]),
 
