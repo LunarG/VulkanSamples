@@ -1200,8 +1200,7 @@ void execute_begin_command_buffer(struct sample_info &info)
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.renderPass = 0;  /* May only set renderPass and framebuffer */
     cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
-    cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                         VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = 0;
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
 }
@@ -1737,8 +1736,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         VkCmdBufferBeginInfo cmd_buf_info = {};
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
-        cmd_buf_info.flags = VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT |
-                             VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT;
+        cmd_buf_info.flags = 0;
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
         assert(res == VK_SUCCESS);
