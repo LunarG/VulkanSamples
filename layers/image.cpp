@@ -993,6 +993,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkCreateImage"))
         return (PFN_vkVoidFunction) vkCreateImage;
+    if (!strcmp(funcName, "vkDestroyImage"))
+        return (PFN_vkVoidFunction) vkDestroyImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
     if (!strcmp(funcName, "vkCreateRenderPass"))
