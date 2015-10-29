@@ -750,8 +750,17 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
 {
     VkResult U_ASSERT_ONLY res;
     VkFence nullFence = { VK_NULL_HANDLE };
+
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].waitSemCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(!res);
 
     res = vkQueueWaitIdle(info.queue);
@@ -1211,7 +1220,15 @@ void execute_queue_command_buffer(struct sample_info &info)
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = { VK_NULL_HANDLE };
 
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].waitSemCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(res == VK_SUCCESS);
 }
 
@@ -1733,8 +1750,16 @@ void init_texture(struct sample_info &info, const char* textureName)
         const VkCmdBuffer cmd_bufs[] = { info.cmd };
         VkFence nullFence = { VK_NULL_HANDLE };
 
+        VkSubmitInfo submit_info[1] = {};
+        submit_info[0].waitSemCount = 0;
+        submit_info[0].pWaitSemaphores = NULL;
+        submit_info[0].cmdBufferCount = 1;
+        submit_info[0].pCommandBuffers = cmd_bufs;
+        submit_info[0].signalSemCount = 0;
+        submit_info[0].pSignalSemaphores = NULL;
+
         /* Queue the command buffer for execution */
-        res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+        res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
         assert(res == VK_SUCCESS);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */

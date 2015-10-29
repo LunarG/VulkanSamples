@@ -204,8 +204,16 @@ int main(int argc, char **argv)
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = { VK_NULL_HANDLE };
 
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].waitSemCount = 0;
+    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(res == VK_SUCCESS);
 
     /* Now present the image in the window */
