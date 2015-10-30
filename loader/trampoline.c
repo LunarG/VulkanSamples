@@ -32,7 +32,7 @@
 #include "vk_loader_platform.h"
 #include "loader.h"
 #include "debug_report.h"
-#include "wsi_swapchain.h"
+#include "wsi.h"
 
 
 /* Trampoline entrypoints */
@@ -154,7 +154,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     }
     loader_activate_instance_layers(ptr_instance);
 
-    wsi_swapchain_create_instance(ptr_instance, pCreateInfo);
+    wsi_create_instance(ptr_instance, pCreateInfo);
     debug_report_create_instance(ptr_instance, pCreateInfo);
 
 

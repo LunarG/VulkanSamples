@@ -206,6 +206,15 @@ struct loader_instance {
 
     VkAllocationCallbacks alloc_callbacks;
 
+    bool wsi_surface_enabled;
+#ifdef _WIN32
+    bool wsi_win32_surface_enabled;
+#else // _WIN32
+    bool wsi_mir_surface_enabled;
+    bool wsi_wayland_surface_enabled;
+    bool wsi_xcb_surface_enabled;
+    bool wsi_xlib_surface_enabled;
+#endif // _WIN32
     bool wsi_swapchain_enabled;
 };
 

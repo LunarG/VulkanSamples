@@ -27,7 +27,7 @@
 
 #include <string.h>
 #include "debug_report.h"
-#include "wsi_swapchain.h"
+#include "wsi.h"
 
 static inline void* trampolineGetProcAddr(struct loader_instance *inst,
                                           const char *funcName)

@@ -18,8 +18,8 @@ set(LOADER_SRCS
     loader.h
     vk_loader_platform.h
     trampoline.c
-    wsi_swapchain.c
-    wsi_swapchain.h
+    wsi.c
+    wsi.h
     debug_report.c
     debug_report.h
     table_ops.h

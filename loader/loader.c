@@ -44,7 +44,7 @@
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "debug_report.h"
-#include "wsi_swapchain.h"
+#include "wsi.h"
 #include "vulkan/vk_icd.h"
 #include "cJSON.h"
 #include "murmurhash.h"
@@ -971,7 +971,7 @@ void loader_get_icd_loader_instance_extensions(
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
-    wsi_swapchain_add_instance_extensions(inst, inst_exts);
+    wsi_add_instance_extensions(inst, inst_exts);
     debug_report_add_instance_extensions(inst, inst_exts);
 }
 
