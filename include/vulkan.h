@@ -79,7 +79,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkQueryPool)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkBufferView)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkImageView)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShaderModule)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShader)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineCache)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineLayout)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkRenderPass)
@@ -148,38 +147,37 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO = 14,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO = 15,
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 16,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO = 17,
-    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO = 18,
-    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 19,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 20,
-    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO = 21,
-    VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO = 22,
-    VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO = 24,
-    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO = 28,
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 29,
-    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 30,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 31,
-    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 32,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 33,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO = 34,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO = 35,
-    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 36,
-    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET = 37,
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO = 38,
-    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 39,
-    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 40,
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO = 41,
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 42,
-    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 43,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 44,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 45,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 46,
-    VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO = 47,
-    VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO = 48,
+    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO = 17,
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 18,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 19,
+    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO = 20,
+    VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO = 21,
+    VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO = 22,
+    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO = 27,
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 28,
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 29,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 30,
+    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 31,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 32,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO = 33,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO = 34,
+    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 35,
+    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET = 36,
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO = 37,
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 38,
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 39,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO = 40,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 41,
+    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 42,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 43,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 44,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 45,
+    VK_STRUCTURE_TYPE_LAYER_INSTANCE_CREATE_INFO = 46,
+    VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO = 47,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO,
     VK_STRUCTURE_TYPE_RANGE_SIZE = (VK_STRUCTURE_TYPE_LAYER_DEVICE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
@@ -896,7 +894,15 @@ typedef VkFlags VkBufferUsageFlags;
 typedef VkFlags VkBufferViewCreateFlags;
 typedef VkFlags VkImageViewCreateFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
-typedef VkFlags VkShaderCreateFlags;
+typedef VkFlags VkPipelineCacheCreateFlags;
+
+typedef enum VkPipelineCreateFlagBits {
+    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
+    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
+    VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
+} VkPipelineCreateFlagBits;
+typedef VkFlags VkPipelineCreateFlags;
+typedef VkFlags VkPipelineShaderStageCreateFlags;
 
 typedef enum VkShaderStageFlagBits {
     VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
@@ -908,15 +914,6 @@ typedef enum VkShaderStageFlagBits {
     VK_SHADER_STAGE_ALL_GRAPHICS = 0x1F,
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
-typedef VkFlags VkPipelineCacheCreateFlags;
-
-typedef enum VkPipelineCreateFlagBits {
-    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
-    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
-    VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
-} VkPipelineCreateFlagBits;
-typedef VkFlags VkPipelineCreateFlags;
-typedef VkFlags VkPipelineShaderStageCreateFlags;
 typedef VkFlags VkPipelineVertexInputStateCreateFlags;
 typedef VkFlags VkPipelineInputAssemblyStateCreateFlags;
 typedef VkFlags VkPipelineTesselationStateCreateFlags;
@@ -1575,15 +1572,6 @@ typedef struct VkShaderModuleCreateInfo {
     const uint32_t*                             pCode;
 } VkShaderModuleCreateInfo;
 
-typedef struct VkShaderCreateInfo {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkShaderCreateFlags                         flags;
-    VkShaderModule                              module;
-    const char*                                 pName;
-    VkShaderStageFlagBits                       stage;
-} VkShaderCreateInfo;
-
 typedef struct VkPipelineCacheCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1609,7 +1597,9 @@ typedef struct VkPipelineShaderStageCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineShaderStageCreateFlags            flags;
-    VkShader                                    shader;
+    VkShaderStageFlagBits                       stage;
+    VkShaderModule                              module;
+    const char*                                 pName;
     const VkSpecializationInfo*                 pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
 
@@ -2198,8 +2188,6 @@ typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageVi
 typedef void (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShaderModule);
 typedef void (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShader* pShader);
-typedef void (VKAPI *PFN_vkDestroyShader)(VkDevice device, VkShader shader, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache);
 typedef void (VKAPI *PFN_vkDestroyPipelineCache)(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, size_t* pDataSize, void* pData);
@@ -2602,17 +2590,6 @@ VkResult VKAPI vkCreateShaderModule(
 void VKAPI vkDestroyShaderModule(
     VkDevice                                    device,
     VkShaderModule                              shaderModule,
-    const VkAllocationCallbacks*                pAllocator);
-
-VkResult VKAPI vkCreateShader(
-    VkDevice                                    device,
-    const VkShaderCreateInfo*                   pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkShader*                                   pShader);
-
-void VKAPI vkDestroyShader(
-    VkDevice                                    device,
-    VkShader                                    shader,
     const VkAllocationCallbacks*                pAllocator);
 
 VkResult VKAPI vkCreatePipelineCache(

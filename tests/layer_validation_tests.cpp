@@ -2085,11 +2085,8 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
 	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
-    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].shader = vs.handle();
-
-	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].shader = fs.handle();
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2192,11 +2189,8 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
 	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
-    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].shader = vs.handle();
-
-	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].shader = fs.handle();
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
 
     VkGraphicsPipelineCreateInfo gp_ci = {};
         gp_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2306,11 +2300,8 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
 	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
-    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].shader = vs.handle();
-
-	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].shader = fs.handle();
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
 
 	VkPipelineVertexInputStateCreateInfo vi_ci = {};
 	vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -2466,11 +2457,8 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     VkShaderObj vs(m_device,bindStateVertShaderText,VK_SHADER_STAGE_VERTEX_BIT, this);
 	VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); // TODO - We shouldn't need a fragment shader
 	                                                                                   // but add it to be able to run on more devices
-    shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].shader = vs.handle();
-
-	shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shaderStages[1].shader = fs.handle();
+    shaderStages[0] = vs.GetStageCreateInfo();
+    shaderStages[1] = fs.GetStageCreateInfo();
 
     VkPipelineVertexInputStateCreateInfo vi_ci = {};
     vi_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

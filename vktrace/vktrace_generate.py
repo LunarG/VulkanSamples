@@ -190,10 +190,6 @@ class Subcommand(object):
                                                'finalize_txt': 'default'},
                            'VkSparseImageMemoryBindInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pBindInfo), numBindings * sizeof(VkSparseImageMemoryBindInfo), pBindInfo)',
                                                'finalize_txt': 'default'},
-#                           'VkShaderCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n'
-#                                                             '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), ((pCreateInfo != NULL) ? pCreateInfo->codeSize : 0), pCreateInfo->pCode)',
-#                                             'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
-#                                                             '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VkFramebufferCreateInfo': {'add_txt': 'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkFramebufferCreateInfo), pCreateInfo);\n'
                                                                   '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pColorAttachments), colorCount * sizeof(VkColorAttachmentBindInfo), pCreateInfo->pColorAttachments);\n'
                                                                   '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pDepthStencilAttachment), dsSize, pCreateInfo->pDepthStencilAttachment)',
@@ -239,10 +235,6 @@ class Subcommand(object):
                                                                         '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), pPacket->pCreateInfo->codeSize, pCreateInfo->pCode)',
                                                         'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pCode));\n'
                                                                         '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
-                           'VkShaderCreateInfo': {'add_txt':    'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderCreateInfo), pCreateInfo);\n'
-                                                                '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pName), strlen(pPacket->pCreateInfo->pName), pCreateInfo->pName)',
-                                                                'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pName));\n'
-                                                                '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                           }
 
         for p in params:
@@ -680,6 +672,7 @@ class Subcommand(object):
         pid_enum.append('{')
         pid_enum.append('    if (pShader != NULL)')
         pid_enum.append('    {')
+        pid_enum.append('        pShader->pName = (const char*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pName);')
         pid_enum.append('        // specialization info')
         pid_enum.append('        pShader->pSpecializationInfo = (const VkSpecializationInfo*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pShader->pSpecializationInfo);')
         pid_enum.append('        if (pShader->pSpecializationInfo != NULL)')
@@ -776,9 +769,7 @@ class Subcommand(object):
                             '}\n']
         # TODO : This code is now too large and complex, need to make codegen smarter for pointers embedded in struct params to handle those cases automatically
                               # TODO138 : Just ripped out a bunch of custom code here that was out of date. Need to scrub these function and verify they're correct
-        custom_case_dict = { #'CreateShader' : {'param': 'pCreateInfo', 'txt': ['VkShaderCreateInfo* pInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;\n',
-                              #                 'pInfo->pCode = vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
-                             #'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkFramebufferCreateInfo* pInfo = (VkFramebufferCreateInfo*)pPacket->pCreateInfo;\n',
+        custom_case_dict = { #'CreateFramebuffer' : {'param': 'pCreateInfo', 'txt': ['VkFramebufferCreateInfo* pInfo = (VkFramebufferCreateInfo*)pPacket->pCreateInfo;\n',
                               #                      'pInfo->pColorAttachments = (VkColorAttachmentBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pColorAttachments);\n',
                                #                     'pInfo->pDepthStencilAttachment = (VkDepthStencilBindInfo*) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pDepthStencilAttachment);\n']},
                              'CreateRenderPass' : {'param': 'pCreateInfo', 'txt': create_rp_interp},
@@ -910,8 +901,6 @@ class Subcommand(object):
                                                                                           '*ppCV = (VkClearValue*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pRenderPassBegin->pClearValues));']},
                              'CreateShaderModule' : {'param': 'pCreateInfo', 'txt': ['void** ppCode = (void**)&(pPacket->pCreateInfo->pCode);\n',
                                                                                      '*ppCode = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pCode);']},
-                             'CreateShader' : {'param': 'pCreateInfo', 'txt': ['void** ppName = (void**)&(pPacket->pCreateInfo->pName);\n',
-                                                                               '*ppName = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->pCreateInfo->pName);']},
                              'FlushMappedMemoryRanges' : {'param': 'ppData', 'txt': ['uint32_t i = 0;\n',
                                                                                      'for (i = 0; i < pPacket->memoryRangeCount; i++)\n',
                                                                                      '{\n',
@@ -1456,7 +1445,6 @@ class Subcommand(object):
                                  'CreateInstance',
                                  'CreatePipelineLayout',
                                  'CreateRenderPass',
-                                 'CreateShader',
                                  'CmdBeginRenderPass',
                                  'CmdBindDescriptorSets',
                                  'CmdBindVertexBuffers',

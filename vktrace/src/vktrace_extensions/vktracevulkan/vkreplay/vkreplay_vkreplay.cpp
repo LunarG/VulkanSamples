@@ -813,40 +813,6 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
 //    return replayResult;
 //}
 
-VkResult vkReplay::manually_replay_vkCreateShader(packet_vkCreateShader* pPacket)
-{
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
-    VkShader local_pShader;
-    VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
-    if (pPacket->device != VK_NULL_HANDLE && remappeddevice == VK_NULL_HANDLE)
-    {
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    // Begin manual code
-    VkShaderModule savedModule = pPacket->pCreateInfo->module;
-    VkShaderCreateInfo* pNonConstInfo = (VkShaderCreateInfo*)pPacket->pCreateInfo;
-    pNonConstInfo->module = m_objMapper.remap_shadermodules(savedModule);
-    if (savedModule != VK_NULL_HANDLE && pNonConstInfo->module == VK_NULL_HANDLE)
-    {
-        pNonConstInfo->module = savedModule;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-    // End manual code
-
-    // No need to remap pCreateInfo
-    replayResult = m_vkFuncs.real_vkCreateShader(remappeddevice, pPacket->pCreateInfo, NULL, &local_pShader);
-    if (replayResult == VK_SUCCESS)
-    {
-        m_objMapper.add_to_shaders_map(*(pPacket->pShader), local_pShader);
-    }
-
-    // Begin manual code
-    pNonConstInfo->module = savedModule;
-    // End manual code
-    return replayResult;
-}
-
 void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket)
 {
     // We have to remap handles internal to the structures so save the handles prior to remap and then restore
@@ -1253,7 +1219,7 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
         memcpy((void*)&(pLocalCIs[i]), (void*)&(pPacket->pCreateInfos[i]), sizeof(VkGraphicsPipelineCreateInfo));
         for (j=0; j < pPacket->pCreateInfos[i].stageCount; j++)
         {
-            pRemappedStages[j].shader = m_objMapper.remap_shaders(pRemappedStages[j].shader);
+            pRemappedStages[j].module = m_objMapper.remap_shadermodules(pRemappedStages[j].module);
         }
         VkPipelineShaderStageCreateInfo** ppSSCI = (VkPipelineShaderStageCreateInfo**)&(pLocalCIs[i].pStages);
         *ppSSCI = pRemappedStages;

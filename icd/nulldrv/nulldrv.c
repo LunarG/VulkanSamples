@@ -447,22 +447,6 @@ static struct nulldrv_desc_layout *nulldrv_desc_layout(const VkDescriptorSetLayo
     return *(struct nulldrv_desc_layout **) &layout;
 }
 
-static VkResult shader_create(struct nulldrv_dev *dev,
-                                const VkShaderCreateInfo *info,
-                                struct nulldrv_shader **sh_ret)
-{
-    struct nulldrv_shader *sh;
-
-    sh = (struct nulldrv_shader *) nulldrv_base_create(dev, sizeof(*sh),
-            VK_OBJECT_TYPE_SHADER);
-    if (!sh)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    *sh_ret = sh;
-
-    return VK_SUCCESS;
-}
-
 static VkResult graphics_pipeline_create(struct nulldrv_dev *dev,
                                            const VkGraphicsPipelineCreateInfo *info_,
                                            struct nulldrv_pipeline **pipeline_ret)
@@ -1890,26 +1874,6 @@ ICD_EXPORT void VKAPI vkDestroyShaderModule(
     const VkAllocationCallbacks*                     pAllocator)
 {
     // TODO: Fill in with real data
-    NULLDRV_LOG_FUNC;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateShader(
-        VkDevice                                  device,
-        const VkShaderCreateInfo*               pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
-        VkShader*                                 pShader)
-{
-    NULLDRV_LOG_FUNC;
-    struct nulldrv_dev *dev = nulldrv_dev(device);
-
-    return shader_create(dev, pCreateInfo, (struct nulldrv_shader **) pShader);
-}
-
-ICD_EXPORT void VKAPI vkDestroyShader(
-    VkDevice                                  device,
-    VkShader                                  shader,
-    const VkAllocationCallbacks*                     pAllocator)
-{
     NULLDRV_LOG_FUNC;
 }
 

@@ -463,17 +463,6 @@ public:
     static VkShaderModuleCreateInfo create_info(size_t code_size, const uint32_t *code, VkFlags flags);
 };
 
-class Shader : public internal::NonDispHandle<VkShader> {
-public:
-    ~Shader();
-
-    // vkCreateShader()
-    void init(const Device &dev, const VkShaderCreateInfo &info);
-    VkResult init_try(const Device &dev, const VkShaderCreateInfo &info);
-
-    static VkShaderCreateInfo create_info(VkShaderModule module, const char *pName, VkFlags flags, VkShaderStageFlagBits stage);
-};
-
 class Pipeline : public internal::NonDispHandle<VkPipeline> {
 public:
     ~Pipeline();
@@ -794,17 +783,6 @@ inline VkShaderModuleCreateInfo ShaderModule::create_info(size_t code_size, cons
     info.codeSize = code_size;
     info.pCode = code;
     info.flags = flags;
-    return info;
-}
-
-inline VkShaderCreateInfo Shader::create_info(VkShaderModule module, const char *pName, VkFlags flags, VkShaderStageFlagBits stage)
-{
-    VkShaderCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    info.module = module;
-    info.pName = pName;
-    info.flags = flags;
-    info.stage = stage;
     return info;
 }
 

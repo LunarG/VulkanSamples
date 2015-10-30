@@ -74,8 +74,6 @@ typedef struct VkLayerDispatchTable_
     PFN_vkDestroyImageView DestroyImageView;
     PFN_vkCreateShaderModule CreateShaderModule;
     PFN_vkDestroyShaderModule DestroyShaderModule;
-    PFN_vkCreateShader CreateShader;
-    PFN_vkDestroyShader DestroyShader;
     PFN_vkCreatePipelineCache CreatePipelineCache;
     PFN_vkDestroyPipelineCache DestroyPipelineCache;
     PFN_vkGetPipelineCacheData GetPipelineCacheData;

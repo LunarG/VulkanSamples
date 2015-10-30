@@ -1292,10 +1292,6 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)
         return (PFN_vkVoidFunction) __HOOKED_vkCreateShaderModule;
     if (!strcmp(name, "DestroyShaderModule"))
         return (PFN_vkVoidFunction) __HOOKED_vkDestroyShaderModule;
-    if (!strcmp(name, "CreateShader"))
-        return (PFN_vkVoidFunction) __HOOKED_vkCreateShader;
-    if (!strcmp(name, "DestroyShader"))
-        return (PFN_vkVoidFunction) __HOOKED_vkDestroyShader;
     if (!strcmp(name, "CreatePipelineCache"))
         return (PFN_vkVoidFunction) __HOOKED_vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))

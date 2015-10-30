@@ -108,10 +108,6 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     case VK_OBJECT_TYPE_PIPELINE:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
         break;
-    case VK_OBJECT_TYPE_SHADER:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
-        shallow_copy = sizeof(VkShaderCreateInfo);
-        break;
     case VK_OBJECT_TYPE_FRAMEBUFFER:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkFramebufferCreateInfo);

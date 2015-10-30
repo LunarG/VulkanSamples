@@ -82,8 +82,6 @@ static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table
     table->DestroyImageView = (PFN_vkDestroyImageView) gpa(dev, "vkDestroyImageView");
     table->CreateShaderModule = (PFN_vkCreateShaderModule) gpa(dev, "vkCreateShaderModule");
     table->DestroyShaderModule = (PFN_vkDestroyShaderModule) gpa(dev, "vkDestroyShaderModule");
-    table->CreateShader = (PFN_vkCreateShader) gpa(dev, "vkCreateShader");
-    table->DestroyShader = (PFN_vkDestroyShader) gpa(dev, "vkDestroyShader");
     table->CreatePipelineCache = (PFN_vkCreatePipelineCache) gpa(dev, "vkCreatePipelineCache");
     table->DestroyPipelineCache = (PFN_vkDestroyPipelineCache) gpa(dev, "vkDestroyPipelineCache");
     table->GetPipelineCacheData = (PFN_vkGetPipelineCacheData) gpa(dev, "vkGetPipelineCacheData");
@@ -273,10 +271,6 @@ static inline void *loader_lookup_device_dispatch_table(
         return (void *) table->CreateShaderModule;
     if (!strcmp(name, "DestroyShaderModule"))
         return (void *) table->DestroyShaderModule;
-    if (!strcmp(name, "CreateShader"))
-        return (void *) table->CreateShader;
-    if (!strcmp(name, "DestroyShader"))
-        return (void *) table->DestroyShader;
     if (!strcmp(name, "CreatePipelineCache"))
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))

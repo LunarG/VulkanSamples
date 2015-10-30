@@ -245,25 +245,30 @@ static VkResult pipeline_build_shader(struct intel_pipeline *pipeline,
                                         const VkPipelineShaderStageCreateInfo *sh_info,
                                         struct intel_pipeline_shader *sh)
 {
-    const struct intel_shader *ir = intel_shader(sh_info->shader);
+    struct intel_shader_module *mod =
+        intel_shader_module(sh_info->module);
+    const struct intel_ir *ir =
+        intel_shader_module_get_ir(mod, sh_info->stage);
     VkResult ret;
 
+    if (!ir)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     ret = intel_pipeline_shader_compile(sh,
-            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info, ir->ir);
+            pipeline->dev->gpu, pipeline->pipeline_layout, sh_info, ir);
 
     if (ret != VK_SUCCESS)
         return ret;
 
     sh->max_threads =
-        intel_gpu_get_max_threads(pipeline->dev->gpu, ir->stage);
+        intel_gpu_get_max_threads(pipeline->dev->gpu, sh_info->stage);
 
     /* 1KB aligned */
     sh->scratch_offset = u_align(pipeline->scratch_size, 1024);
     pipeline->scratch_size = sh->scratch_offset +
         sh->per_thread_scratch_size * sh->max_threads;
 
-    pipeline->active_shaders |= ir->stage;
+    pipeline->active_shaders |= sh_info->stage;
 
     return VK_SUCCESS;
 }
@@ -273,18 +278,18 @@ static VkResult pipeline_build_shaders(struct intel_pipeline *pipeline,
 {
     VkResult ret = VK_SUCCESS;
 
-    if (ret == VK_SUCCESS && info->vs.shader)
+    if (ret == VK_SUCCESS && info->vs.module)
         ret = pipeline_build_shader(pipeline, &info->vs, &pipeline->vs);
-    if (ret == VK_SUCCESS && info->tcs.shader)
+    if (ret == VK_SUCCESS && info->tcs.module)
         ret = pipeline_build_shader(pipeline, &info->tcs,&pipeline->tcs);
-    if (ret == VK_SUCCESS && info->tes.shader)
+    if (ret == VK_SUCCESS && info->tes.module)
         ret = pipeline_build_shader(pipeline, &info->tes,&pipeline->tes);
-    if (ret == VK_SUCCESS && info->gs.shader)
+    if (ret == VK_SUCCESS && info->gs.module)
         ret = pipeline_build_shader(pipeline, &info->gs, &pipeline->gs);
-    if (ret == VK_SUCCESS && info->fs.shader)
+    if (ret == VK_SUCCESS && info->fs.module)
         ret = pipeline_build_shader(pipeline, &info->fs, &pipeline->fs);
 
-    if (ret == VK_SUCCESS && info->compute.stage.shader) {
+    if (ret == VK_SUCCESS && info->compute.stage.module) {
         ret = pipeline_build_shader(pipeline,
                 &info->compute.stage, &pipeline->cs);
     }
@@ -1204,7 +1209,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
     void *dst;
     for (uint32_t i = 0; i < vkinfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *thisStage = &vkinfo->pStages[i];
-        switch (intel_shader(thisStage->shader)->stage) {
+        switch (thisStage->stage) {
             case VK_SHADER_STAGE_VERTEX_BIT:
                 dst = &info->vs;
                 break;

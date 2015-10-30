@@ -198,7 +198,6 @@ core = Extension(
         "VkBufferView",
         "VkImageView",
         "VkShaderModule",
-        "VkShader",
         "VkPipelineCache",
         "VkPipelineLayout",
         "VkRenderPass",
@@ -535,17 +534,6 @@ core = Extension(
         Proto("void", "DestroyShaderModule",
             [Param("VkDevice", "device"),
              Param("VkShaderModule", "shaderModule"),
-             Param("const VkAllocationCallbacks*", "pAllocator")]),
-
-        Proto("VkResult", "CreateShader",
-            [Param("VkDevice", "device"),
-             Param("const VkShaderCreateInfo*", "pCreateInfo"),
-             Param("const VkAllocationCallbacks*", "pAllocator"),
-             Param("VkShader*", "pShader")]),
-
-        Proto("void", "DestroyShader",
-            [Param("VkDevice", "device"),
-             Param("VkShader", "shader"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
 
         Proto("VkResult", "CreatePipelineCache",
@@ -1141,7 +1129,6 @@ object_non_dispatch_list = [
     "VkBufferView",
     "VkImageView",
     "VkShaderModule",
-    "VkShader",
     "VkPipelineCache",
     "VkPipelineLayout",
     "VkPipeline",

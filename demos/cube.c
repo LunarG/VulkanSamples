@@ -1388,37 +1388,23 @@ static void demo_prepare_render_pass(struct demo *demo)
     assert(!err);
 }
 
-static VkShader demo_prepare_shader(struct demo* demo,
-                                      VkShaderStageFlagBits stage,
-                                      VkShaderModule* pShaderModule,
-                                      const void* code,
-                                      size_t size)
+static VkShaderModule demo_prepare_shader_module(struct demo* demo,
+                                                 VkShaderStageFlagBits stage,
+                                                 const void* code,
+                                                 size_t size)
 {
+    VkShaderModule module;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    VkShaderCreateInfo shaderCreateInfo;
-    VkShader shader;
     VkResult err;
-
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
-
-    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    shaderCreateInfo.pNext = NULL;
-    shaderCreateInfo.pName = "main";
 
     if (!demo->use_glsl) {
         moduleCreateInfo.codeSize = size;
         moduleCreateInfo.pCode = code;
         moduleCreateInfo.flags = 0;
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, pShaderModule);
-        assert(!err);
-
-        shaderCreateInfo.flags = 0;
-        shaderCreateInfo.module = *pShaderModule;
-        shaderCreateInfo.pName = "main";
-        shaderCreateInfo.stage = stage;
-        err = vkCreateShader(demo->device, &shaderCreateInfo, NULL, &shader);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
         assert(!err);
     } else {
         // Create fake SPV structure to feed GLSL
@@ -1433,20 +1419,12 @@ static VkShader demo_prepare_shader(struct demo* demo,
         ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
         memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
 
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, pShaderModule);
-        if (err) {
-            free((void *) moduleCreateInfo.pCode);
-        }
-
-        shaderCreateInfo.flags = 0;
-        shaderCreateInfo.module = *pShaderModule;
-        shaderCreateInfo.pName = "main";
-        shaderCreateInfo.stage = stage;
-        err = vkCreateShader(demo->device, &shaderCreateInfo, NULL, &shader);
+        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
         assert(!err);
         free((void *) moduleCreateInfo.pCode);
     }
-    return shader;
+
+    return module;
 }
 
 char *demo_read_spv(const char *filename, size_t *psize)
@@ -1473,19 +1451,16 @@ char *demo_read_spv(const char *filename, size_t *psize)
     return shader_code;
 }
 
-static VkShader demo_prepare_vs(struct demo *demo)
+static VkShaderModule demo_prepare_vs(struct demo *demo)
 {
     if (!demo->use_glsl) {
-        VkShader shader;
         void *vertShaderCode;
         size_t size;
 
         vertShaderCode = demo_read_spv("cube-vert.spv", &size);
-
-        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX_BIT, &demo->vert_shader_module,
-                                     vertShaderCode, size);
+        demo->vert_shader_module = demo_prepare_shader_module(demo,
+                VK_SHADER_STAGE_VERTEX_BIT, vertShaderCode, size);
         free(vertShaderCode);
-        return shader;
     } else {
         static const char *vertShaderText =
                 "#version 140\n"
@@ -1510,25 +1485,25 @@ static VkShader demo_prepare_vs(struct demo *demo)
                 "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
                 "}\n";
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_VERTEX_BIT, &demo->vert_shader_module,
-                                   (const void *) vertShaderText,
-                                   strlen(vertShaderText));
+        demo->vert_shader_module = demo_prepare_shader_module(demo,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                (const void *) vertShaderText, strlen(vertShaderText));
     }
+
+    return demo->vert_shader_module;
 }
 
-static VkShader demo_prepare_fs(struct demo *demo)
+static VkShaderModule demo_prepare_fs(struct demo *demo)
 {
     if (!demo->use_glsl) {
-        VkShader shader;
         void *fragShaderCode;
         size_t size;
 
         fragShaderCode = demo_read_spv("cube-frag.spv", &size);
 
-        shader = demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT_BIT, &demo->frag_shader_module,
-                                     fragShaderCode, size);
+        demo->frag_shader_module = demo_prepare_shader_module(demo,
+                VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, size);
         free(fragShaderCode);
-        return shader;
     } else {
         static const char *fragShaderText =
                 "#version 140\n"
@@ -1542,10 +1517,12 @@ static VkShader demo_prepare_fs(struct demo *demo)
                 "   uFragColor = texture(tex, texcoord.xy);\n"
                 "}\n";
 
-        return demo_prepare_shader(demo, VK_SHADER_STAGE_FRAGMENT_BIT, &demo->frag_shader_module,
-                                   (const void *) fragShaderText,
-                                   strlen(fragShaderText));
+        demo->frag_shader_module = demo_prepare_shader_module(demo,
+                VK_SHADER_STAGE_FRAGMENT_BIT,
+                (const void *) fragShaderText, strlen(fragShaderText));
     }
+
+    return demo->frag_shader_module;
 }
 
 static void demo_prepare_pipeline(struct demo *demo)
@@ -1627,10 +1604,14 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&shaderStages, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
     shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[0].shader = demo_prepare_vs(demo);
+    shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
+    shaderStages[0].module = demo_prepare_vs(demo);
+    shaderStages[0].pName  = "main";
 
     shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStages[1].shader = demo_prepare_fs(demo);
+    shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+    shaderStages[1].module = demo_prepare_fs(demo);
+    shaderStages[1].pName  = "main";
 
     memset(&pipelineCache, 0, sizeof(pipelineCache));
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -1655,9 +1636,6 @@ static void demo_prepare_pipeline(struct demo *demo)
             1, &pipeline, NULL, &demo->pipeline);
     assert(!err);
 
-    for (uint32_t i = 0; i < pipeline.stageCount; i++) {
-        vkDestroyShader(demo->device, shaderStages[i].shader, NULL);
-    }
     vkDestroyShaderModule(demo->device, demo->frag_shader_module, NULL);
     vkDestroyShaderModule(demo->device, demo->vert_shader_module, NULL);
 }

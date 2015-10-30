@@ -1025,22 +1025,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDepthStencilView(VkDevice device, const V
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader)
-{
-    loader_platform_thread_lock_mutex(&objLock);
-    ll_increment_use_count(device, VK_OBJECT_TYPE_DEVICE);
-    loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.CreateShader(device, pCreateInfo, pShader);
-    if (result == VK_SUCCESS)
-    {
-        loader_platform_thread_lock_mutex(&objLock);
-        VKTRACE_VK_SNAPSHOT_LL_NODE* pNode = snapshot_insert_object(&s_delta, *pShader, VK_OBJECT_TYPE_SHADER);
-        pNode->obj.pStruct = NULL;
-        loader_platform_thread_unlock_mutex(&objLock);
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipeline(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline)
 {
     loader_platform_thread_lock_mutex(&objLock);

@@ -42,6 +42,11 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
                                   const void *code, size_t size,
                                   VkShaderStageFlagBits stage);
 
+void shader_create_ir_with_lock(const struct intel_gpu *gpu,
+                                const void *code, size_t size,
+                                VkShaderStageFlagBits stage,
+                                struct intel_ir **ir);
+
 void shader_destroy_ir(struct intel_ir *ir);
 
 #ifdef __cplusplus

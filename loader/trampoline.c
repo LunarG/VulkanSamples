@@ -735,24 +735,6 @@ LOADER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule s
     disp->DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateShader(VkDevice device, const VkShaderCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShader* pShader)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    return disp->CreateShader(device, pCreateInfo, pAllocator, pShader);
-}
-
-LOADER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader, const VkAllocationCallbacks* pAllocator)
-{
-    const VkLayerDispatchTable *disp;
-
-    disp = loader_get_dispatch(device);
-
-    disp->DestroyShader(device, shader, pAllocator);
-}
-
 LOADER_EXPORT VkResult VKAPI vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache)
 {
     const VkLayerDispatchTable *disp;

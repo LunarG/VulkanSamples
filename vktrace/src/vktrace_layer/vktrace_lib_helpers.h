@@ -284,6 +284,9 @@ static size_t calculate_memory_barrier_size(uint32_t mbCount, const void* const*
 
 static void add_VkPipelineShaderStageCreateInfo_to_trace_packet(vktrace_trace_packet_header* pHeader, VkPipelineShaderStageCreateInfo* packetShader, const VkPipelineShaderStageCreateInfo* paramShader)
 {
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&packetShader->pName, strlen(paramShader->pName) + 1, paramShader->pName);
+    vktrace_finalize_buffer_address(pHeader, (void**)&packetShader->pName);
+
     // Specialization info
     if (packetShader->pSpecializationInfo != NULL)
     {

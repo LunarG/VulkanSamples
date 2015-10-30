@@ -153,10 +153,6 @@ static inline void* globalGetProcAddr(const char *name)
         return (void*) vkCreateShaderModule;
     if (!strcmp(name, "DestroyShaderModule"))
         return (void*) vkDestroyShaderModule;
-    if (!strcmp(name, "CreateShader"))
-        return (void*) vkCreateShader;
-    if (!strcmp(name, "DestroyShader"))
-        return (void*) vkDestroyShader;
     if (!strcmp(name, "CreatePipelineCache"))
         return (void*) vkCreatePipelineCache;
     if (!strcmp(name, "DestroyPipelineCache"))

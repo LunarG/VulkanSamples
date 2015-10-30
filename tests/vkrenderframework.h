@@ -79,7 +79,6 @@ public:
     VkPhysicalDevice gpu() {return objs[0];}
     VkRenderPass renderPass() {return m_renderPass;}
     VkFramebuffer framebuffer() {return m_framebuffer;}
-    std::vector<vk_testing::ShaderModule*> m_shader_modules;
     void InitViewport(float width, float height);
     void InitViewport();
     void InitRenderTarget();
@@ -402,11 +401,11 @@ protected:
 };
 
 
-class VkShaderObj : public vk_testing::Shader
+class VkShaderObj : public vk_testing::ShaderModule
 {
 public:
     VkShaderObj(VkDeviceObj *device, const char * shaderText, VkShaderStageFlagBits stage, VkRenderFramework *framework);
-    VkPipelineShaderStageCreateInfo* GetStageCreateInfo();
+    VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
 
 protected:
     VkPipelineShaderStageCreateInfo     stage_info;

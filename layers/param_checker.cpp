@@ -3497,61 +3497,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
     return result;
 }
 
-bool PreCreateShader(
-    VkDevice device,
-    const VkShaderCreateInfo* pCreateInfo)
-{
-    if(pCreateInfo != nullptr)
-    {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SHADER_CREATE_INFO)
-    {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateShader parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
-        return false;
-    }
-    if(pCreateInfo->pName != nullptr)
-    {
-    }
-    }
-
-    return true;
-}
-
-bool PostCreateShader(
-    VkDevice device,
-    VkShader* pShader,
-    VkResult result)
-{
-
-    if(pShader != nullptr)
-    {
-    }
-
-    if(result < VK_SUCCESS)
-    {
-        std::string reason = "vkCreateShader parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
-    VkDevice device,
-    const VkShaderCreateInfo* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkShader* pShader)
-{
-    PreCreateShader(device, pCreateInfo);
-
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->CreateShader(device, pCreateInfo, pAllocator, pShader);
-
-    PostCreateShader(device, pShader, result);
-
-    return result;
-}
-
 bool PreCreatePipelineCache(
     VkDevice device,
     const VkPipelineCacheCreateInfo* pCreateInfo)
@@ -6457,8 +6402,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
         return (PFN_vkVoidFunction) vkGetImageSubresourceLayout;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateShader"))
-        return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "vkCreateShaderModule"))
         return (PFN_vkVoidFunction) vkCreateShaderModule;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))

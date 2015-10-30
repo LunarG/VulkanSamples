@@ -166,11 +166,6 @@ void VkRenderFramework::ShutdownFramework()
     }
 
     delete m_depthStencil;
-    while (!m_shader_modules.empty())
-    {
-        delete m_shader_modules.back();
-        m_shader_modules.pop_back();
-    }
 
     // reset the driver
     delete m_device;
@@ -1052,11 +1047,14 @@ VkIndexType VkIndexBufferObj::GetIndexType()
     return m_indexType;
 }
 
-VkPipelineShaderStageCreateInfo* VkShaderObj::GetStageCreateInfo()
+VkPipelineShaderStageCreateInfo VkShaderObj::GetStageCreateInfo() const
 {
-    VkPipelineShaderStageCreateInfo *stageInfo = (VkPipelineShaderStageCreateInfo*) calloc( 1,sizeof(VkPipelineShaderStageCreateInfo) );
-    stageInfo->sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo->shader               = handle();
+    VkPipelineShaderStageCreateInfo stageInfo = {};
+
+    stageInfo.sType                = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageInfo.stage                = m_stage;
+    stageInfo.module               = handle();
+    stageInfo.pName                = "main";
 
     return stageInfo;
 }
@@ -1065,9 +1063,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
 {
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;
-    VkShaderCreateInfo createInfo;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    vk_testing::ShaderModule *module = new vk_testing::ShaderModule();
     size_t shader_len;
 
     m_stage = stage;
@@ -1075,9 +1071,6 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
-
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
 
     if (framework->m_use_glsl) {
 
@@ -1101,19 +1094,8 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char * shader_code, VkShader
         moduleCreateInfo.flags = 0;
     }
 
-    err = module->init_try(*m_device, moduleCreateInfo);
+    err = init_try(*m_device, moduleCreateInfo);
     assert(VK_SUCCESS == err);
-
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-    createInfo.module = module->handle();
-    createInfo.pName = "main";
-    createInfo.flags = 0;
-    createInfo.stage = stage;
-
-    err = init_try(*m_device, createInfo);
-    assert(VK_SUCCESS == err);
-    framework->m_shader_modules.push_back(module);
 }
 
 VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
@@ -1267,15 +1249,13 @@ VkResult VkPipelineObj::CreateVKPipeline(VkPipelineLayout layout, VkRenderPass r
     VkGraphicsPipelineCreateInfo info = {};
     VkPipelineDynamicStateCreateInfo dsci = {};
 
-    VkPipelineShaderStageCreateInfo* shaderCreateInfo;
-
     info.stageCount = m_shaderObjs.size();
     info.pStages = new VkPipelineShaderStageCreateInfo[info.stageCount];
 
     for (int i=0; i<m_shaderObjs.size(); i++)
     {
-        shaderCreateInfo = m_shaderObjs[i]->GetStageCreateInfo();
-        memcpy((void*)&info.pStages[i], shaderCreateInfo, sizeof(VkPipelineShaderStageCreateInfo));
+        ((VkPipelineShaderStageCreateInfo *) info.pStages)[i] =
+            m_shaderObjs[i]->GetStageCreateInfo();
     }
 
     if (m_vi_state.vertexAttributeDescriptionCount && m_vi_state.vertexBindingDescriptionCount) {

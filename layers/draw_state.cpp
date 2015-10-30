@@ -73,7 +73,6 @@ struct layer_data {
     unordered_map<VkDescriptorSet, SET_NODE*> setMap;
     unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*> layoutMap;
     unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
-    unordered_map<VkShader, VkShaderStageFlagBits> shaderStageMap;
     // Map for layout chains
     unordered_map<void*, GLOBAL_CB_NODE*> commandBufferMap;
     unordered_map<VkRenderPass, VkRenderPassCreateInfo*> renderPassMap;
@@ -448,10 +447,7 @@ static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelin
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         const VkPipelineShaderStageCreateInfo *pPSSCI = &pCreateInfo->pStages[i];
 
-        if (dev_data->shaderStageMap.find(pPSSCI->shader) == dev_data->shaderStageMap.end())
-            continue;
-
-        switch (dev_data->shaderStageMap[pPSSCI->shader]) {
+        switch (pPSSCI->stage) {
             case VK_SHADER_STAGE_VERTEX_BIT:
                 memcpy(&pPipeline->vsCI, pPSSCI, sizeof(VkPipelineShaderStageCreateInfo));
                 pPipeline->active_shaders |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -1824,13 +1820,6 @@ VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyShader(VkDevice device, VkShader shader, const VkAllocationCallbacks* pAllocator)
-{
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    dev_data->device_dispatch_table->DestroyShader(device, shader, pAllocator);
-    dev_data->shaderStageMap.erase(shader);
-}
-
 VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
@@ -1925,24 +1914,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
         dev_data->imageViewMap[*pView] = unique_ptr<VkImageViewCreateInfo>(new VkImageViewCreateInfo(*pCreateInfo));
         loader_platform_thread_unlock_mutex(&globalLock);
     }
-    return result;
-}
-
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
-        VkDevice device,
-        const VkShaderCreateInfo *pCreateInfo,
-        const VkAllocationCallbacks* pAllocator,
-        VkShader *pShader)
-{
-    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateShader(device, pCreateInfo, pAllocator, pShader);
-
-    if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->shaderStageMap[*pShader] = pCreateInfo->stage;
-        loader_platform_thread_unlock_mutex(&globalLock);
-    }
-
     return result;
 }
 
@@ -3734,8 +3705,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkDestroyImageView;
     if (!strcmp(funcName, "vkDestroyShaderModule"))
         return (PFN_vkVoidFunction) vkDestroyShaderModule;
-    if (!strcmp(funcName, "vkDestroyShader"))
-        return (PFN_vkVoidFunction) vkDestroyShader;
     if (!strcmp(funcName, "vkDestroyPipeline"))
         return (PFN_vkVoidFunction) vkDestroyPipeline;
     if (!strcmp(funcName, "vkDestroyPipelineLayout"))
@@ -3760,8 +3729,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
         return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "vkCreateImageView"))
         return (PFN_vkVoidFunction) vkCreateImageView;
-    if (!strcmp(funcName, "vkCreateShader"))
-        return (PFN_vkVoidFunction) vkCreateShader;
     if (!strcmp(funcName, "CreatePipelineCache"))
         return (PFN_vkVoidFunction) vkCreatePipelineCache;
     if (!strcmp(funcName, "DestroyPipelineCache"))

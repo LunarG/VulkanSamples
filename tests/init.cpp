@@ -72,7 +72,7 @@ public:
     void CreateCommandBufferTest();
     void CreatePipelineTest();
     void CreateShaderTest();
-    void CreateShader(VkShader *pshader, VkShaderStageFlagBits stage);
+    void CreateShader(VkShaderModule *pmodule, VkShaderStageFlagBits stage);
 
     VkDevice device() {return m_device->handle();}
 
@@ -519,7 +519,7 @@ TEST_F(VkTest, TestCommandBuffer) {
     CreateCommandBufferTest();
 }
 
-void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
+void VkTest::CreateShader(VkShaderModule *pmodule, VkShaderStageFlagBits stage)
 {
     uint32_t *code;
     uint32_t codeSize;
@@ -539,8 +539,6 @@ void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
 
     VkShaderModuleCreateInfo moduleCreateInfo;
     VkShaderModule module;
-    VkShaderCreateInfo createInfo;
-    VkShader shader;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
@@ -550,18 +548,7 @@ void VkTest::CreateShader(VkShader *pshader, VkShaderStageFlagBits stage)
     err = vkCreateShaderModule(device(), &moduleCreateInfo, NULL, &module);
     ASSERT_VK_SUCCESS(err);
 
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    createInfo.pNext = NULL;
-    createInfo.module = module;
-    createInfo.pName = "main";
-    createInfo.flags = 0;
-    createInfo.stage = stage;
-    err = vkCreateShader(device(), &createInfo, NULL, &shader);
-    ASSERT_VK_SUCCESS(err);
-
-    vkDestroyShaderModule(device(), module, NULL);
-
-    *pshader = shader;
+    *pmodule = module;
 }
 
 int main(int argc, char **argv) {

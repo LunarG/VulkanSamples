@@ -639,24 +639,6 @@ VkResult ShaderModule::init_try(const Device &dev, const VkShaderModuleCreateInf
     return err;
 }
 
-NON_DISPATCHABLE_HANDLE_DTOR(Shader, vkDestroyShader)
-
-void Shader::init(const Device &dev, const VkShaderCreateInfo &info)
-{
-    NON_DISPATCHABLE_HANDLE_INIT(vkCreateShader, dev, &info);
-}
-
-VkResult Shader::init_try(const Device &dev, const VkShaderCreateInfo &info)
-{
-    VkShader sh;
-
-    VkResult err = vkCreateShader(dev.handle(), &info, NULL, &sh);
-    if (err == VK_SUCCESS)
-        NonDispHandle::init(dev.handle(), sh);
-
-    return err;
-}
-
 NON_DISPATCHABLE_HANDLE_DTOR(Pipeline, vkDestroyPipeline)
 
 void Pipeline::init(const Device &dev, const VkGraphicsPipelineCreateInfo &info)

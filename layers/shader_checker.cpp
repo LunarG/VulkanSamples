@@ -44,7 +44,6 @@
 
 // fwd decls
 struct shader_module;
-struct shader_object;
 struct render_pass;
 
 struct layer_data {
@@ -54,7 +53,6 @@ struct layer_data {
     VkLayerInstanceDispatchTable* instance_dispatch_table;
 
     std::unordered_map<VkShaderModule, shader_module *> shader_module_map;
-    std::unordered_map<VkShader, shader_object *> shader_object_map;
     std::unordered_map<VkDescriptorSetLayout, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
     std::unordered_map<VkPipelineLayout, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
     std::unordered_map<VkRenderPass, render_pass *> render_pass_map;
@@ -82,19 +80,6 @@ struct shader_module {
         type_def_index() {
 
         build_type_def_index(words, type_def_index);
-    }
-};
-
-struct shader_object {
-    std::string name;
-    struct shader_module *module;
-    VkShaderStageFlagBits stage;
-
-    shader_object(layer_data *my_data, VkShaderCreateInfo const *pCreateInfo)
-    {
-        module = my_data->shader_module_map[pCreateInfo->module];
-        stage = pCreateInfo->stage;
-        name = pCreateInfo->pName;
     }
 };
 
@@ -636,21 +621,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShader(
-        VkDevice device,
-        const VkShaderCreateInfo *pCreateInfo,
-        const VkAllocationCallbacks* pAllocator,
-        VkShader *pShader)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult res = my_data->device_dispatch_table->CreateShader(device, pCreateInfo, pAllocator, pShader);
-
-    loader_platform_thread_lock_mutex(&globalLock);
-    my_data->shader_object_map[*pShader] = new shader_object(my_data, pCreateInfo);
-    loader_platform_thread_unlock_mutex(&globalLock);
-    return res;
-}
-
 VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
         VkDevice device,
         const VkRenderPassCreateInfo *pCreateInfo,
@@ -1054,22 +1024,20 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
         if (pStage->sType == VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO) {
 
-            // always true; pStage->stage may be revived in a later revision and
-            // this will make sense again
-            if ((VK_SHADER_STAGE_VERTEX_BIT & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+            if ((pStage->stage & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                                   | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)) == 0) {
                 if (log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_UNKNOWN_STAGE, "SC",
-                        "Unknown shader stage %d", VK_SHADER_STAGE_VERTEX_BIT)) {
+                        "Unknown shader stage %d", pStage->stage)) {
                     pass = false;
                 }
             }
             else {
-                struct shader_object *shader = my_data->shader_object_map[pStage->shader];
-                shaders[get_shader_stage_id(shader->stage)] = shader->module;
+                shader_module *module = my_data->shader_module_map[pStage->module];
+                shaders[get_shader_stage_id(pStage->stage)] = module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
                 std::map<std::pair<unsigned, unsigned>, interface_var> descriptor_uses;
-                collect_interface_by_descriptor_slot(my_data, dev, shader->module, spv::StorageClassUniform,
+                collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
                         descriptor_uses);
 
                 auto layout = pCreateInfo->layout != VK_NULL_HANDLE ?
@@ -1082,7 +1050,7 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
 
                     if (binding == nullptr) {
                         char type_name[1024];
-                        describe_type(type_name, shader->module, it->second.type_id);
+                        describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,
                                 SHADER_CHECKER_MISSING_DESCRIPTOR, "SC",
                                 "Shader uses descriptor slot %u.%u (used as type `%s`) but not declared in pipeline layout",
@@ -1280,7 +1248,6 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
 
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkCreateShaderModule);
-    ADD_HOOK(vkCreateShader);
     ADD_HOOK(vkCreateRenderPass);
     ADD_HOOK(vkDestroyDevice);
     ADD_HOOK(vkCreateGraphicsPipelines);

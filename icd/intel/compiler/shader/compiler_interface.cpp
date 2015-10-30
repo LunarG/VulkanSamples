@@ -346,17 +346,12 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
                                   const void *code, size_t size,
                                   VkShaderStageFlagBits stage)
 {
-    // Wrap this path in a mutex until we can clean up initialization
-    static mtx_t mutex = _MTX_INITIALIZER_NP;
-    mtx_lock(&mutex);
-
     struct icd_spv_header header;
     struct gl_context local_ctx;
     struct gl_context *ctx = &local_ctx;
 
     memcpy(&header, code, sizeof(header));
     if (header.magic != ICD_SPV_MAGIC) {
-        mtx_unlock(&mutex);
         return NULL;
     }
 
@@ -436,7 +431,6 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     if (!shader->CompileStatus) {
         _mesa_destroy_shader_compiler();
-        mtx_unlock(&mutex);
         return NULL;
     }
 
@@ -455,16 +449,28 @@ struct intel_ir *shader_create_ir(const struct intel_gpu *gpu,
 
     if (!shader_program->LinkStatus) {
         _mesa_destroy_shader_compiler();
-        mtx_unlock(&mutex);
         return NULL;
     }
 
     _mesa_destroy_shader_compiler();
 
-    mtx_unlock(&mutex);
     return (struct intel_ir *) shader_program;
 }
 
+void shader_create_ir_with_lock(const struct intel_gpu *gpu,
+                                const void *code, size_t size,
+                                VkShaderStageFlagBits stage,
+                                struct intel_ir **ir)
+{
+    // Wrap this path in a mutex until we can clean up initialization
+    static mtx_t mutex = _MTX_INITIALIZER_NP;
+    mtx_lock(&mutex);
+
+    if (!*ir)
+        *ir = shader_create_ir(gpu, code, size, stage);
+
+    mtx_unlock(&mutex);
+}
 
 void shader_destroy_ir(struct intel_ir *ir)
 {

@@ -34,9 +34,58 @@ static void shader_module_destroy(struct intel_obj *obj)
 {
     struct intel_shader_module *sm = intel_shader_module_from_obj(obj);
 
+    if (sm->vs)
+        shader_destroy_ir(sm->vs);
+    if (sm->tcs)
+        shader_destroy_ir(sm->tcs);
+    if (sm->tes)
+        shader_destroy_ir(sm->tes);
+    if (sm->gs)
+        shader_destroy_ir(sm->gs);
+    if (sm->fs)
+        shader_destroy_ir(sm->fs);
+    if (sm->cs)
+        shader_destroy_ir(sm->cs);
+
     free(sm->code);
     sm->code = 0;
+
     intel_base_destroy(&sm->obj.base);
+}
+
+const struct intel_ir *intel_shader_module_get_ir(struct intel_shader_module *sm,
+                                                  VkShaderStageFlagBits stage)
+{
+    struct intel_ir **ir;
+
+    switch (stage) {
+    case VK_SHADER_STAGE_VERTEX_BIT:
+        ir = &sm->vs;
+        break;
+    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+        ir = &sm->tcs;
+        break;
+    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+        ir = &sm->tes;
+        break;
+    case VK_SHADER_STAGE_GEOMETRY_BIT:
+        ir = &sm->gs;
+        break;
+    case VK_SHADER_STAGE_FRAGMENT_BIT:
+        ir = &sm->fs;
+        break;
+    case VK_SHADER_STAGE_COMPUTE_BIT:
+        ir = &sm->cs;
+        break;
+    default:
+        assert(!"unsupported shader stage");
+        return NULL;
+        break;
+    }
+
+    shader_create_ir_with_lock(sm->gpu, sm->code, sm->code_size, stage, ir);
+
+    return *ir;
 }
 
 static VkResult shader_module_create(struct intel_dev *dev,
@@ -50,6 +99,7 @@ static VkResult shader_module_create(struct intel_dev *dev,
     if (!sm)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+    sm->gpu = dev->gpu;
     sm->code_size = info->codeSize;
     sm->code = malloc(info->codeSize);
     if (!sm->code) {
@@ -83,67 +133,6 @@ ICD_EXPORT void VKAPI vkDestroyShaderModule(
 
  {
     struct intel_obj *obj = intel_obj(shaderModule);
-
-    obj->destroy(obj);
- }
-
-
-static void shader_destroy(struct intel_obj *obj)
-{
-    struct intel_shader *sh = intel_shader_from_obj(obj);
-
-    if (sh->ir)
-        shader_destroy_ir(sh->ir);
-    intel_base_destroy(&sh->obj.base);
-}
-
-static VkResult shader_create(struct intel_dev *dev,
-                                const VkShaderCreateInfo *info,
-                                struct intel_shader **sh_ret)
-{
-    struct intel_shader *sh;
-
-    sh = (struct intel_shader *) intel_base_create(&dev->base.handle,
-            sizeof(*sh), dev->base.dbg, VK_OBJECT_TYPE_SHADER, info, 0);
-    if (!sh)
-        return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-    struct intel_shader_module *sm = intel_shader_module(info->module);
-
-    sh->stage = info->stage;
-    sh->ir = shader_create_ir(dev->gpu, sm->code, sm->code_size, info->stage);
-    if (!sh->ir) {
-        shader_destroy(&sh->obj);
-        /* TODOVV: Can this move to validation layer? */
-//        return VK_ERROR_BAD_SHADER_CODE;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    sh->obj.destroy = shader_destroy;
-
-    *sh_ret = sh;
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VkResult VKAPI vkCreateShader(
-        VkDevice                                  device,
-        const VkShaderCreateInfo*               pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
-        VkShader*                                 pShader)
-{
-    struct intel_dev *dev = intel_dev(device);
-
-    return shader_create(dev, pCreateInfo, (struct intel_shader **) pShader);
-}
-
-ICD_EXPORT void VKAPI vkDestroyShader(
-    VkDevice                                device,
-    VkShader                                shader,
-    const VkAllocationCallbacks*                     pAllocator)
-
- {
-    struct intel_obj *obj = intel_obj(shader);
 
     obj->destroy(obj);
  }

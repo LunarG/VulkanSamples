@@ -79,11 +79,6 @@ private:
 
     int m_frameNumber;
 
-    struct shaderPair {
-        VkShader *addr;
-        VkShader val;
-    };
-
     struct ValidationMsg {
         VkFlags msgFlags;
         VkDbgObjectType objType;
@@ -109,7 +104,6 @@ private:
     VkResult manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket);
     //VkResult manually_replay_vkGetObjectInfo(packet_vkGetObjectInfo* pPacket);
     //VkResult manually_replay_vkGetImageSubresourceInfo(packet_vkGetImageSubresourceInfo* pPacket);
-    VkResult manually_replay_vkCreateShader(packet_vkCreateShader* pPacket);
     void manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorSets* pPacket);
     VkResult manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket);
     void manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDescriptorSetLayout* pPacket);
