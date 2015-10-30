@@ -98,9 +98,9 @@ int main(int argc, char **argv)
             info.uniform_data.mem, 0);
     assert(res == VK_SUCCESS);
 
-    info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
-    info.uniform_data.desc.bufferInfo.offset = 0;
-    info.uniform_data.desc.bufferInfo.range = sizeof(info.MVP);
+    info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
+    info.uniform_data.buffer_info.offset = 0;
+    info.uniform_data.buffer_info.range = sizeof(info.MVP);
     /* VULKAN_KEY_END */
 
     vkDestroyBuffer(info.device, info.uniform_data.buf);
