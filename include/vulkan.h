@@ -838,6 +838,10 @@ typedef enum VkSparseImageFormatFlagBits {
     VK_SPARSE_IMAGE_FORMAT_NONSTANDARD_BLOCK_SIZE_BIT = 0x00000004,
 } VkSparseImageFormatFlagBits;
 typedef VkFlags VkSparseImageFormatFlags;
+
+typedef enum {
+    VK_SPARSE_MEMORY_BIND_METADATA_BIT = 0x00000001,
+} VkSparseMemoryBindFlagBits;
 typedef VkFlags VkSparseMemoryBindFlags;
 
 typedef enum VkFenceCreateFlagBits {
