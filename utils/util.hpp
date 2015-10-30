@@ -194,17 +194,17 @@ struct sample_info {
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkDescriptorInfo desc;
+        VkDescriptorBufferInfo buffer_info;
     } uniform_data;
 
     struct {
-        VkDescriptorInfo desc;
+        VkDescriptorImageInfo image_info;
     } texture_data;
 
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkDescriptorInfo desc;
+        VkDescriptorBufferInfo buffer_info;
     } vertex_buffer;
     VkVertexInputBindingDescription vi_binding;
     VkVertexInputAttributeDescription vi_attribs[2];

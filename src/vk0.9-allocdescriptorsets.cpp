@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     writes[0].destSet = info.desc_set[0];
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writes[0].pDescriptors = &info.uniform_data.desc;
+    writes[0].pBufferInfo = &info.uniform_data.buffer_info;
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 

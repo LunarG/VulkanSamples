@@ -1017,9 +1017,9 @@ void init_uniform_buffer(struct sample_info &info)
             info.uniform_data.mem, 0);
     assert(res == VK_SUCCESS);
 
-    info.uniform_data.desc.bufferInfo.buffer = info.uniform_data.buf;
-    info.uniform_data.desc.bufferInfo.offset = 0;
-    info.uniform_data.desc.bufferInfo.range = sizeof(info.MVP);
+    info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
+    info.uniform_data.buffer_info.offset = 0;
+    info.uniform_data.buffer_info.range = sizeof(info.MVP);
 }
 
 void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture)
@@ -1355,7 +1355,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     writes[0].destSet = info.desc_set[0];
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writes[0].pDescriptors = &info.uniform_data.desc;
+    writes[0].pBufferInfo = &info.uniform_data.buffer_info;
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 
@@ -1366,7 +1366,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         writes[1].destBinding = 1;
         writes[1].count = 1;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writes[1].pDescriptors = &info.texture_data.desc;
+        writes[1].pImageInfo = &info.texture_data.image_info;
         writes[1].destArrayElement = 0;
     }
 
@@ -1828,11 +1828,9 @@ void init_texture(struct sample_info &info, const char* textureName)
 
     /* track a description of the texture */
     assert(info.textures.size() == 1);
-    info.texture_data.desc.imageView = 0;
-    info.texture_data.desc.bufferView = 0;
-    info.texture_data.desc.imageInfo.imageView = info.textures[0].view;
-    info.texture_data.desc.imageInfo.sampler = info.textures[0].sampler;
-    info.texture_data.desc.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    info.texture_data.image_info.imageView = info.textures[0].view;
+    info.texture_data.image_info.sampler = info.textures[0].sampler;
+    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 }
 

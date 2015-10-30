@@ -203,7 +203,7 @@ int main(int argc, char **argv)
     descriptor_writes[0].destSet = descriptor_sets[uniform_set_index];
     descriptor_writes[0].count = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_writes[0].pDescriptors = &info.uniform_data.desc; // populated by init_uniform_buffer()
+    descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
     descriptor_writes[0].destArrayElement = 0;
     descriptor_writes[0].destBinding = 0;
 
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     descriptor_writes[1].destSet = descriptor_sets[sampler_set_index];
     descriptor_writes[1].count = 1;
     descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptor_writes[1].pDescriptors = &info.texture_data.desc; // populated by init_texture()
+    descriptor_writes[1].pImageInfo = &info.texture_data.image_info; // populated by init_texture()
     descriptor_writes[1].destArrayElement = 0;
     descriptor_writes[1].destBinding = 0;
 

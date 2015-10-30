@@ -152,6 +152,7 @@ int main(int argc, char **argv)
             texelMem, 0);
     assert(res == VK_SUCCESS);
 
+    VkBufferView texel_view;
     VkBufferViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
     view_info.pNext = NULL;
@@ -159,16 +160,12 @@ int main(int argc, char **argv)
     view_info.format = VK_FORMAT_R32_SFLOAT;
     view_info.offset = 0;
     view_info.range = sizeof(texels);
+    vkCreateBufferView(info.device, &view_info, &texel_view);
 
-    VkDescriptorInfo texelDesc = {};
-    res = vkCreateBufferView(info.device, &view_info,
-            &texelDesc.bufferView);
-    assert(res == VK_SUCCESS);
-
-    texelDesc.bufferInfo.buffer = texelBuf;
-    texelDesc.bufferInfo.offset = 0;
-    texelDesc.bufferInfo.range = sizeof(texels);
-
+    VkDescriptorBufferInfo texel_buffer_info = {};
+    texel_buffer_info.buffer = texelBuf;
+    texel_buffer_info.offset = 0;
+    texel_buffer_info.range = sizeof(texels);
 
     // init_descriptor_and_pipeline_layouts(info, false);
     VkDescriptorSetLayoutBinding layout_bindings[1];
@@ -222,16 +219,16 @@ int main(int argc, char **argv)
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetAllocInfo alloc_info[1];
-    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
-    alloc_info[0].pNext = NULL;
-    alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].count = NUM_DESCRIPTOR_SETS;
-    alloc_info[0].pSetLayouts = info.desc_layout.data();
+    VkDescriptorSetAllocInfo desc_alloc_info[1];
+    desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    desc_alloc_info[0].pNext = NULL;
+    desc_alloc_info[0].descriptorPool = info.desc_pool;
+    desc_alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    desc_alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res = vkAllocDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
@@ -241,7 +238,8 @@ int main(int argc, char **argv)
     writes[0].destBinding = 1;
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-    writes[0].pDescriptors = &texelDesc;
+    writes[0].pBufferInfo = &texel_buffer_info;
+    writes[0].pTexelBufferView = &texel_view;
     writes[0].destArrayElement = 0;
 
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
