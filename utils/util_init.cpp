@@ -1507,8 +1507,6 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
     cb.logicOp = VK_LOGIC_OP_NOOP;
-    cb.alphaToCoverageEnable = VK_FALSE;
-    cb.alphaToOneEnable = VK_FALSE;
     cb.blendConst[0] = 1.0f;
     cb.blendConst[1] = 1.0f;
     cb.blendConst[2] = 1.0f;
@@ -1544,6 +1542,8 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ms.pSampleMask = NULL;
     ms.rasterSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
+    ms.alphaToCoverageEnable = VK_FALSE;
+    ms.alphaToOneEnable = VK_FALSE;
     ms.minSampleShading = 0.0;
 
     VkGraphicsPipelineCreateInfo pipeline;
