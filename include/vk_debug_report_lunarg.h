@@ -23,9 +23,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Jon Ashburn <jon@lunarg.com>
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
+ * Author: Cody Northrop <cody@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ *
  */
 
 #ifndef __VK_DEBUG_REPORT_LUNARG_H__

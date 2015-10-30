@@ -18,6 +18,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
+//
+// Author: Cody Northrop <cody@lunarg.com>
+// Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 
 #ifndef VKTESTBINDING_H
 #define VKTESTBINDING_H

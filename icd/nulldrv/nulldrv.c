@@ -20,6 +20,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
+ * Author: Cody Northrop <cody@lunarg.com>
+ * Author: David Pinedo <david@lunarg.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ *
  */
 
 #include "nulldrv.h"

@@ -20,8 +20,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *    Chia-I Wu <olv@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Jeremy Hayes <jeremy@lunarg.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ *
  */
 
 #include <string.h> /* for memcpy */

@@ -20,10 +20,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Jon Ashburn <jon@lunarg.com>
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
- *   Ian Elliott <ian@lunarg.com>
+ * Author: Ian Elliott <ian@lunarg.com>
+ *
  */
 
 #include "vk_loader_platform.h"

@@ -20,6 +20,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
+ * Author: Chris Forbes <chrisf@ijw.co.nz>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ *
  */
 
 #include "dev.h"

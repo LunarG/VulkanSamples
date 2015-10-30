@@ -20,8 +20,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Chris Forbes <chrisf@ijw.co.nz>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Tony Barbour <tony@LunarG.com>
+ *
  */
 
 #ifndef LOADER_H

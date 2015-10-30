@@ -20,8 +20,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ *
  */
 
 #ifndef GENERIC_H

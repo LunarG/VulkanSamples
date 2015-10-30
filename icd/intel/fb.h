@@ -20,6 +20,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Chris Forbes <chrisf@ijw.co.nz>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ *
  */
 
 #ifndef FB_H

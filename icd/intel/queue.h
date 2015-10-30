@@ -20,8 +20,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
+ *
  */
 
 #ifndef QUEUE_H

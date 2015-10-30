@@ -20,9 +20,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Cody Northrop <cody@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ *
  */
 
 #include "genhw/genhw.h"

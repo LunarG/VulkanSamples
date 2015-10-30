@@ -20,9 +20,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
- *   Ian Elliott <ian@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Mike Stroyan <mike@LunarG.com>
+ *
  */
 
 #define _GNU_SOURCE 1

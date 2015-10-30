@@ -20,9 +20,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
- *   Chia-I Wu <olv@lunarg.com>
+ * Author: Chris Forbes <chrisf@ijw.co.nz>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ *
  */
 
 #ifndef SHADER_H

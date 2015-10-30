@@ -20,8 +20,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ *
  */
 
 #ifndef EXTENSION_INFO_H

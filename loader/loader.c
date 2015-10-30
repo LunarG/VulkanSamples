@@ -20,11 +20,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Chia-I Wu <olv@lunarg.com>
- *   Jon Ashburn <jon@lunarg.com>
- *   Courtney Goeltzenleuchter <courtney@lunarg.com>
- *   Ian Elliott <ian@lunarg.com>
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ *
  */
 #define _GNU_SOURCE
 #include <stdio.h>

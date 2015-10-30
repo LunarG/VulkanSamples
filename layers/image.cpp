@@ -19,6 +19,11 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Jeremy Hayes <jeremy@lunarg.com>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Mike Stroyan <mike@LunarG.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
  */
 
 #include <inttypes.h>

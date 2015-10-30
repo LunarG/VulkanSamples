@@ -19,6 +19,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Cody Northrop <cody@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Piers Daniell <pdaniell@nvidia.com>
  */
 /*
  * Draw a textured triangle with depth testing.  This is written against Intel

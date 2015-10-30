@@ -23,9 +23,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Jon Ashburn <jon@luanrg.com>
- *   Ian Elliott <ian@lunarg.com>
+ * Author: James Jones <jajones@nvidia.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
+ *
  */
 #pragma once
 

@@ -19,6 +19,11 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
  */
 #define _GNU_SOURCE
 #include <stdio.h>

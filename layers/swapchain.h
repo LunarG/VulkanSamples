@@ -20,8 +20,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   Ian Elliott <ian@lunarg.com>
+ * Author: Ian Elliott <ian@lunarg.com>
+ *
  */
 
 #ifndef SWAPCHAIN_H

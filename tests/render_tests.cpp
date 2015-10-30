@@ -48,6 +48,13 @@
 //  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
+//
+// Author: Chia-I Wu <olvaffe@gmail.com>
+// Author: Cody Northrop <cody@lunarg.com>
+// Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+// Author: GregF <greg@LunarG.com>
+// Author: Tobin Ehlis <tobin@lunarg.com>
+// Author: Tony Barbour <tony@LunarG.com>
 
 // Basic rendering tests
 

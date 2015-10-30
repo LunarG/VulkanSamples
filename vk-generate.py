@@ -21,8 +21,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# Authors:
-#   Chia-I Wu <olv@lunarg.com>
+# Author: Chia-I Wu <olv@lunarg.com>
+# Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+# Author: Jon Ashburn <jon@lunarg.com>
 
 import sys
 
@@ -83,6 +84,8 @@ class Subcommand(object):
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  */"""
 
     def generate_header(self):
@@ -300,6 +303,8 @@ class WinDefFileSubcommand(Subcommand):
 ; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 ; DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 ;;;;  End Copyright Notice ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"""
 
     def generate_header(self):

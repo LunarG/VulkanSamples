@@ -19,6 +19,8 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
+ *
+ * Author: Chris Forbes <chrisf@ijw.co.nz>
  */
 #include "vk_layer.h"
 #include "vk_debug_report_lunarg.h"
