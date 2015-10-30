@@ -173,7 +173,6 @@ int main(int argc, char **argv)
     VkDescriptorPoolCreateInfo pool_info[1] = {};
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
-    pool_info[0].poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
     pool_info[0].maxSets = descriptor_set_count;
     pool_info[0].count = sizeof(type_count) / sizeof(VkDescriptorTypeCount);
     pool_info[0].pTypeCount = type_count;
@@ -182,15 +181,16 @@ int main(int argc, char **argv)
     res = vkCreateDescriptorPool(info.device, pool_info, descriptor_pool);
     assert(res == VK_SUCCESS);
 
-    // Populate the descriptor sets
+    VkDescriptorSetAllocInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info[0].pNext = NULL;
+    alloc_info[0].descriptorPool = descriptor_pool[0];
+    alloc_info[0].count = descriptor_set_count;
+    alloc_info[0].pSetLayouts = descriptor_layouts;
+
+    // Populate descriptor sets
     VkDescriptorSet descriptor_sets[descriptor_set_count] = {};
-    res = vkAllocDescriptorSets(
-            info.device,
-            descriptor_pool[0],
-            VK_DESCRIPTOR_SET_USAGE_STATIC,
-            descriptor_set_count,
-            descriptor_layouts,
-            descriptor_sets);
+    res = vkAllocDescriptorSets(info.device, alloc_info, descriptor_sets);
     assert(res == VK_SUCCESS);
 
     // Using empty brace initializer on the next line triggers a bug in older versions of gcc, so memset instead

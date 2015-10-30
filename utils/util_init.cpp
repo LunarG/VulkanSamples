@@ -1183,14 +1183,14 @@ void init_command_buffer(struct sample_info &info)
     /* DEPENDS on init_swapchain_extension() and init_command_pool() */
     VkResult U_ASSERT_ONLY res;
 
-    VkCmdBufferCreateInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO;
+    VkCmdBufferAllocInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
     cmd.pNext = NULL;
     cmd.cmdPool = info.cmd_pool;
     cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
-    cmd.flags = 0;
+    cmd.count = 1;
 
-    res = vkCreateCommandBuffer(info.device, &cmd, &info.cmd);
+    res = vkAllocCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 }
 void execute_begin_command_buffer(struct sample_info &info)
@@ -1322,7 +1322,6 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
-    descriptor_pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
     descriptor_pool.maxSets = 1;
     descriptor_pool.count = use_texture?2:1;
     descriptor_pool.pTypeCount = type_count;
@@ -1338,11 +1337,15 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     VkResult U_ASSERT_ONLY res;
 
+    VkDescriptorSetAllocInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info[0].pNext = NULL;
+    alloc_info[0].descriptorPool = info.desc_pool;
+    alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    alloc_info[0].pSetLayouts = info.desc_layout.data();
+
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, info.desc_pool,
-            VK_DESCRIPTOR_SET_USAGE_STATIC,
-            NUM_DESCRIPTOR_SETS, info.desc_layout.data(),
-            info.desc_set.data());
+    res = vkAllocDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
@@ -1871,7 +1874,8 @@ void destroy_shaders(struct sample_info &info)
 
 void destroy_command_buffer(struct sample_info &info)
 {
-    vkDestroyCommandBuffer(info.device, info.cmd);
+    VkCmdBuffer cmd_bufs[1] = { info.cmd };
+    vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
 }
 
 void destroy_command_pool(struct sample_info &info)

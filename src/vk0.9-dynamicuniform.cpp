@@ -213,7 +213,6 @@ int main(int argc, char **argv)
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
-    descriptor_pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
     descriptor_pool.maxSets = 1;
     descriptor_pool.count = 1;
     descriptor_pool.pTypeCount = type_count;
@@ -222,12 +221,16 @@ int main(int argc, char **argv)
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
+    VkDescriptorSetAllocInfo desc_alloc_info[1];
+    desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    desc_alloc_info[0].pNext = NULL;
+    desc_alloc_info[0].descriptorPool = info.desc_pool;
+    desc_alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    desc_alloc_info[0].pSetLayouts = info.desc_layout.data();
+
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, info.desc_pool,
-            VK_DESCRIPTOR_SET_USAGE_STATIC,
-            NUM_DESCRIPTOR_SETS, info.desc_layout.data(),
-            info.desc_set.data());
+    res = vkAllocDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
@@ -237,7 +240,7 @@ int main(int argc, char **argv)
     writes[0].destSet = info.desc_set[0];
     writes[0].count = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    writes[0].pDescriptors = &info.uniform_data.desc;
+    writes[0].pBufferInfo = &info.uniform_data.buffer_info;
     writes[0].destArrayElement = 0;
     writes[0].destBinding = 0;
 

@@ -54,7 +54,6 @@ int main(int argc, char **argv)
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
-    descriptor_pool.poolUsage = VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT;
     descriptor_pool.maxSets = 1;
     descriptor_pool.count = 1;
     descriptor_pool.pTypeCount = type_count;
@@ -63,11 +62,15 @@ int main(int argc, char **argv)
         &descriptor_pool, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
+    VkDescriptorSetAllocInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info[0].pNext = NULL;
+    alloc_info[0].descriptorPool = info.desc_pool;
+    alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    alloc_info[0].pSetLayouts = info.desc_layout.data();
+
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, info.desc_pool,
-            VK_DESCRIPTOR_SET_USAGE_STATIC,
-            NUM_DESCRIPTOR_SETS, info.desc_layout.data(),
-            info.desc_set.data());
+    res = vkAllocDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
