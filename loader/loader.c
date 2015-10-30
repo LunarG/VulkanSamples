@@ -167,7 +167,7 @@ void* loader_heap_realloc(
 
 void *loader_tls_heap_alloc(size_t size)
 {
-    return loader_heap_alloc(tls_instance, size, VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION);
+    return loader_heap_alloc(tls_instance, size, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
 }
 
 void loader_tls_heap_free(void *pMemory)
@@ -1806,14 +1806,14 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
                     if (out_files->count == 0) {
                         out_files->filename_list = loader_heap_alloc(inst,
                                               alloced_count * sizeof(char *),
-                                              VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION);
+                                              VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
                     }
                     else if (out_files->count == alloced_count) {
                         out_files->filename_list = loader_heap_realloc(inst,
                                         out_files->filename_list,
                                         alloced_count * sizeof(char *),
                                         alloced_count * sizeof(char *) * 2,
-                                        VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION);
+                                        VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
                         alloced_count *= 2;
                     }
                     if (out_files->filename_list == NULL) {
@@ -1823,7 +1823,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
                     out_files->filename_list[out_files->count] = loader_heap_alloc(
                                                 inst,
                                                 strlen(name) + 1,
-                                                VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION);
+                                                VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
                     if (out_files->filename_list[out_files->count] == NULL) {
                         loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Out of memory can't get manifest files");
                         return;

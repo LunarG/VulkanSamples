@@ -187,14 +187,14 @@ typedef enum VkStructureType {
 } VkStructureType;
 
 typedef enum VkSystemAllocationScope {
-    VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION = 0,
+    VK_SYSTEM_ALLOCATION_SCOPE_COMMAND = 0,
     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT = 1,
     VK_SYSTEM_ALLOCATION_SCOPE_CACHE = 2,
     VK_SYSTEM_ALLOCATION_SCOPE_DEVICE = 3,
     VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE = 4,
-    VK_SYSTEM_ALLOCATION_SCOPE_BEGIN_RANGE = VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION,
+    VK_SYSTEM_ALLOCATION_SCOPE_BEGIN_RANGE = VK_SYSTEM_ALLOCATION_SCOPE_COMMAND,
     VK_SYSTEM_ALLOCATION_SCOPE_END_RANGE = VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE,
-    VK_SYSTEM_ALLOCATION_SCOPE_RANGE_SIZE = (VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE - VK_SYSTEM_ALLOCATION_SCOPE_FUNCTION + 1),
+    VK_SYSTEM_ALLOCATION_SCOPE_RANGE_SIZE = (VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE - VK_SYSTEM_ALLOCATION_SCOPE_COMMAND + 1),
     VK_SYSTEM_ALLOCATION_SCOPE_MAX_ENUM = 0x7FFFFFFF
 } VkSystemAllocationScope;
 
@@ -1044,33 +1044,33 @@ typedef enum VkQueryControlFlagBits {
 typedef VkFlags VkQueryControlFlags;
 
 typedef void* (VKAPI *PFN_vkAllocationFunction)(
-    void*              pUserData,
-    size_t             size,
-    size_t             alignment,
-    VkSystemAllocationScope allocationScope);
+    void*                                       pUserData,
+    size_t                                      size,
+    size_t                                      alignment,
+    VkSystemAllocationScope                     allocationScope);
 
 typedef void* (VKAPI *PFN_vkReallocationFunction)(
-    void*              pUserData,
-    void*              pOriginal,
-    size_t             size,
-    size_t             alignment,
-    VkSystemAllocationScope allocationScope);
+    void*                                       pUserData,
+    void*                                       pOriginal,
+    size_t                                      size,
+    size_t                                      alignment,
+    VkSystemAllocationScope                     allocationScope);
 
 typedef void (VKAPI *PFN_vkFreeFunction)(
-    void*                           pUserData,
-    void*                           pMemory);
+    void*                                       pUserData,
+    void*                                       pMemory);
 
 typedef void (VKAPI *PFN_vkInternalAllocationNotification)(
-    void*              pUserData,
-    size_t                           size,
-    VkInternalAllocationType              allocationType,
-    VkSystemAllocationScope               allocationScope);
+    void*                                       pUserData,
+    size_t                                      size,
+    VkInternalAllocationType                    allocationType,
+    VkSystemAllocationScope                     allocationScope);
 
 typedef void (VKAPI *PFN_vkInternalFreeNotification)(
-    void*              pUserData,
-    size_t                           size,
-    VkInternalAllocationType              allocationType,
-    VkSystemAllocationScope               allocationScope);
+    void*                                       pUserData,
+    size_t                                      size,
+    VkInternalAllocationType                    allocationType,
+    VkSystemAllocationScope                     allocationScope);
 
 typedef void (VKAPI *PFN_vkVoidFunction)(void);
 
