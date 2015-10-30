@@ -41,8 +41,6 @@
 #include <vk_ext_khr_device_swapchain.h>
 #include "vk_debug_report_lunarg.h"
 
-#include "icd-spv.h"
-
 #include "vk_sdk_platform.h"
 #include "linmath.h"
 
@@ -321,7 +319,6 @@ struct demo {
 #endif // _WIN32
     bool prepared;
     bool use_staging_buffer;
-    bool use_glsl;
 
     VkInstance inst;
     VkPhysicalDevice gpu;
@@ -1402,29 +1399,11 @@ static VkShaderModule demo_prepare_shader_module(struct demo* demo,
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
 
-    if (!demo->use_glsl) {
-        moduleCreateInfo.codeSize = size;
-        moduleCreateInfo.pCode = code;
-        moduleCreateInfo.flags = 0;
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
-        assert(!err);
-    } else {
-        // Create fake SPV structure to feed GLSL
-        // to the driver "under the covers"
-        moduleCreateInfo.codeSize = 3 * sizeof(uint32_t) + size + 1;
-        moduleCreateInfo.pCode = malloc(moduleCreateInfo.codeSize);
-        moduleCreateInfo.flags = 0;
-
-        /* try version 0 first: VkShaderStage followed by GLSL */
-        ((uint32_t *) moduleCreateInfo.pCode)[0] = ICD_SPV_MAGIC;
-        ((uint32_t *) moduleCreateInfo.pCode)[1] = 0;
-        ((uint32_t *) moduleCreateInfo.pCode)[2] = stage;
-        memcpy(((uint32_t *) moduleCreateInfo.pCode + 3), code, size + 1);
-
-        err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
-        assert(!err);
-        free((void *) moduleCreateInfo.pCode);
-    }
+    moduleCreateInfo.codeSize = size;
+    moduleCreateInfo.pCode = code;
+    moduleCreateInfo.flags = 0;
+    err = vkCreateShaderModule(demo->device, &moduleCreateInfo, NULL, &module);
+    assert(!err);
 
     return module;
 }
@@ -1455,74 +1434,30 @@ char *demo_read_spv(const char *filename, size_t *psize)
 
 static VkShaderModule demo_prepare_vs(struct demo *demo)
 {
-    if (!demo->use_glsl) {
-        void *vertShaderCode;
-        size_t size;
+    void *vertShaderCode;
+    size_t size;
 
-        vertShaderCode = demo_read_spv("cube-vert.spv", &size);
-        demo->vert_shader_module = demo_prepare_shader_module(demo,
+    vertShaderCode = demo_read_spv("cube-vert.spv", &size);
+
+    demo->vert_shader_module = demo_prepare_shader_module(demo,
                 VK_SHADER_STAGE_VERTEX_BIT, vertShaderCode, size);
-        free(vertShaderCode);
-    } else {
-        static const char *vertShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "\n"
-                "layout(binding = 0) uniform buf {\n"
-                "        mat4 MVP;\n"
-                "        vec4 position[12*3];\n"
-                "        vec4 attr[12*3];\n"
-                "} ubuf;\n"
-                "\n"
-                "layout (location = 0) out vec4 texcoord;\n"
-                "\n"
-                "void main() \n"
-                "{\n"
-                "   texcoord = ubuf.attr[gl_VertexID];\n"
-                "   gl_Position = ubuf.MVP * ubuf.position[gl_VertexID];\n"
-                "\n"
-                "   // GL->VK conventions\n"
-                "   gl_Position.y = -gl_Position.y;\n"
-                "   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;\n"
-                "}\n";
 
-        demo->vert_shader_module = demo_prepare_shader_module(demo,
-                VK_SHADER_STAGE_VERTEX_BIT,
-                (const void *) vertShaderText, strlen(vertShaderText));
-    }
+    free(vertShaderCode);
 
     return demo->vert_shader_module;
 }
 
 static VkShaderModule demo_prepare_fs(struct demo *demo)
 {
-    if (!demo->use_glsl) {
-        void *fragShaderCode;
-        size_t size;
+    void *fragShaderCode;
+    size_t size;
 
-        fragShaderCode = demo_read_spv("cube-frag.spv", &size);
+    fragShaderCode = demo_read_spv("cube-frag.spv", &size);
 
-        demo->frag_shader_module = demo_prepare_shader_module(demo,
+    demo->frag_shader_module = demo_prepare_shader_module(demo,
                 VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, size);
-        free(fragShaderCode);
-    } else {
-        static const char *fragShaderText =
-                "#version 140\n"
-                "#extension GL_ARB_separate_shader_objects : enable\n"
-                "#extension GL_ARB_shading_language_420pack : enable\n"
-                "layout (binding = 1) uniform sampler2D tex;\n"
-                "\n"
-                "layout (location = 0) in vec4 texcoord;\n"
-                "layout (location = 0) out vec4 uFragColor;\n"
-                "void main() {\n"
-                "   uFragColor = texture(tex, texcoord.xy);\n"
-                "}\n";
 
-        demo->frag_shader_module = demo_prepare_shader_module(demo,
-                VK_SHADER_STAGE_FRAGMENT_BIT,
-                (const void *) fragShaderText, strlen(fragShaderText));
-    }
+    free(fragShaderCode);
 
     return demo->frag_shader_module;
 }
@@ -2586,10 +2521,6 @@ static void demo_init(struct demo *demo, int argc, char **argv)
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
             demo->use_staging_buffer = true;
-            continue;
-        }
-        if (strcmp(argv[i], "--use_glsl") == 0) {
-            demo->use_glsl = true;
             continue;
         }
         if (strcmp(argv[i], "--break") == 0) {
