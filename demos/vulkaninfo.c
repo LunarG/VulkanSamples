@@ -827,6 +827,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxStorageBufferRange                    = 0x%" PRIxLEAST32 "\n", limits->maxStorageBufferRange                 );
     printf("\t\tmaxPushConstantsSize                    = 0x%" PRIxLEAST32 "\n", limits->maxPushConstantsSize                   );
     printf("\t\tmaxMemoryAllocationCount                = 0x%" PRIxLEAST32 "\n", limits->maxMemoryAllocationCount               );
+    printf("\t\tmaxSamplerAllocationCount               = 0x%" PRIxLEAST32 "\n", limits->maxSamplerAllocationCount              );
     printf("\t\tbufferImageGranularity                  = 0x%" PRIxLEAST64 "\n", limits->bufferImageGranularity                 );
     printf("\t\tsparseAddressSpaceSize                  = 0x%" PRIxLEAST64 "\n", limits->sparseAddressSpaceSize                 );
     printf("\t\tmaxBoundDescriptorSets                  = 0x%" PRIxLEAST32 "\n", limits->maxBoundDescriptorSets                 );

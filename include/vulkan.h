@@ -123,9 +123,10 @@ typedef enum VkResult {
     VK_ERROR_EXTENSION_NOT_PRESENT = -7,
     VK_ERROR_FEATURE_NOT_PRESENT = -8,
     VK_ERROR_INCOMPATIBLE_DRIVER = -9,
-    VK_RESULT_BEGIN_RANGE = VK_ERROR_INCOMPATIBLE_DRIVER,
+    VK_ERROR_TOO_MANY_OBJECTS = -10,
+    VK_RESULT_BEGIN_RANGE = VK_ERROR_TOO_MANY_OBJECTS,
     VK_RESULT_END_RANGE = VK_INCOMPLETE,
-    VK_RESULT_RANGE_SIZE = (VK_INCOMPLETE - VK_ERROR_INCOMPATIBLE_DRIVER + 1),
+    VK_RESULT_RANGE_SIZE = (VK_INCOMPLETE - VK_ERROR_TOO_MANY_OBJECTS + 1),
     VK_RESULT_MAX_ENUM = 0x7FFFFFFF
 } VkResult;
 
@@ -1192,6 +1193,7 @@ typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    maxStorageBufferRange;
     uint32_t                                    maxPushConstantsSize;
     uint32_t                                    maxMemoryAllocationCount;
+    uint32_t                                    maxSamplerAllocationCount;
     VkDeviceSize                                bufferImageGranularity;
     VkDeviceSize                                sparseAddressSpaceSize;
     uint32_t                                    maxBoundDescriptorSets;
