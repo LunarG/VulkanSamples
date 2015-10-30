@@ -2937,7 +2937,7 @@ void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
-        uint32_t                                samples,
+        VkSampleCountFlagBits                   samples,
         VkImageUsageFlags                       usage,
         VkImageTiling                           tiling,
         uint32_t*                               pNumProperties,

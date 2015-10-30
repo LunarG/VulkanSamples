@@ -575,46 +575,46 @@ static void deletePipelines(layer_data* my_data)
     my_data->pipelineMap.clear();
 }
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
-static uint32_t getNumSamples(layer_data* my_data, const VkPipeline pipeline)
+static VkSampleCountFlagBits getNumSamples(layer_data* my_data, const VkPipeline pipeline)
 {
     PIPELINE_NODE* pPipe = my_data->pipelineMap[pipeline];
     if (VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO == pPipe->msStateCI.sType) {
         return pPipe->msStateCI.rasterizationSamples;
     }
-    return 1;
+    return VK_SAMPLE_COUNT_1_BIT;
 }
 // Validate state related to the PSO
 static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE* pCB, const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline)
 {
     if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
         // Verify that any MSAA request in PSO matches sample# in bound FB
-        uint32_t psoNumSamples = getNumSamples(my_data, pipeline);
+        VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
         if (pCB->activeRenderPass) {
             const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass];
             const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
-            int subpassNumSamples = 0;
+            VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits) 0;
             uint32_t i;
 
             for (i = 0; i < pSD->colorAttachmentCount; i++) {
-                uint32_t samples;
+                VkSampleCountFlagBits samples;
 
                 if (pSD->pColorAttachments[i].attachment == VK_ATTACHMENT_UNUSED)
                     continue;
 
                 samples = pRPCI->pAttachments[pSD->pColorAttachments[i].attachment].samples;
-                if (subpassNumSamples == 0) {
+                if (subpassNumSamples == (VkSampleCountFlagBits) 0) {
                     subpassNumSamples = samples;
                 } else if (subpassNumSamples != samples) {
-                    subpassNumSamples = -1;
+                    subpassNumSamples = (VkSampleCountFlagBits) -1;
                     break;
                 }
             }
             if (pSD->pDepthStencilAttachment && pSD->pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
-                const uint32_t samples = pRPCI->pAttachments[pSD->pDepthStencilAttachment->attachment].samples;
-                if (subpassNumSamples == 0)
+                const VkSampleCountFlagBits samples = pRPCI->pAttachments[pSD->pDepthStencilAttachment->attachment].samples;
+                if (subpassNumSamples == (VkSampleCountFlagBits) 0)
                     subpassNumSamples = samples;
                 else if (subpassNumSamples != samples)
-                    subpassNumSamples = -1;
+                    subpassNumSamples = (VkSampleCountFlagBits) -1;
             }
 
             if (psoNumSamples != subpassNumSamples) {

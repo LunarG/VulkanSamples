@@ -49,10 +49,10 @@ typedef struct _IMAGE_STATE
     uint32_t    mipLevels;
     uint32_t    arraySize;
     VkFormat    format;
-    uint32_t    samples;
+    VkSampleCountFlagBits samples;
     VkImageType imageType;
     VkExtent3D  extent;
-    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(0), imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{} {};
+    _IMAGE_STATE():mipLevels(0), arraySize(0), format(VK_FORMAT_UNDEFINED), samples(VK_SAMPLE_COUNT_1_BIT), imageType(VK_IMAGE_TYPE_RANGE_SIZE), extent{} {};
     _IMAGE_STATE(const VkImageCreateInfo* pCreateInfo):
         mipLevels(pCreateInfo->mipLevels),
         arraySize(pCreateInfo->arrayLayers),

@@ -350,7 +350,7 @@ static enum intel_dev_meta_shader get_shader_id(const struct intel_dev *dev,
             INTEL_DEV_META_FS_COPY_1D_ARRAY : INTEL_DEV_META_FS_COPY_1D;
         break;
     case VK_IMAGE_TYPE_2D:
-        shader_id = (img->samples > 1) ? INTEL_DEV_META_FS_COPY_2D_MS :
+        shader_id = (img->sample_count > 1) ? INTEL_DEV_META_FS_COPY_2D_MS :
                     (copy_array) ?  INTEL_DEV_META_FS_COPY_2D_ARRAY :
                     INTEL_DEV_META_FS_COPY_2D;
         break;
@@ -417,7 +417,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     meta.mode = INTEL_CMD_META_VS_POINTS;
 
     meta.height = 1;
-    meta.samples = 1;
+    meta.sample_count = 1;
 
     format = VK_FORMAT_UNDEFINED;
 
@@ -502,7 +502,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
             (raw_copy) ? raw_format : src->layout.format,
             VK_IMAGE_ASPECT_COLOR_BIT, &meta);
 
-    meta.samples = dst->samples;
+    meta.sample_count = dst->sample_count;
 
     for (i = 0; i < regionCount; i++) {
         const VkImageCopy *region = &pRegions[i];
@@ -586,7 +586,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
     meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_COPY_MEM_TO_IMG;
-    meta.samples = img->samples;
+    meta.sample_count = img->sample_count;
 
     format = cmd_meta_img_raw_format(cmd, img->layout.format);
     block_width = icd_format_get_block_width(img->layout.format);
@@ -682,7 +682,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
             VK_IMAGE_ASPECT_COLOR_BIT, &meta);
     cmd_meta_set_dst_for_buf(cmd, buf, buf_format, &meta);
 
-    meta.samples = 1;
+    meta.sample_count = 1;
 
     for (i = 0; i < regionCount; i++) {
         const VkBufferImageCopy *region = &pRegions[i];
@@ -735,7 +735,7 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     meta.dst.x = dstOffset / 4;
     meta.width = dataSize / 4;
     meta.height = 1;
-    meta.samples = 1;
+    meta.sample_count = 1;
 
     /*
      * INTEL_DEV_META_VS_COPY_MEM is untyped but expects the stride to be 16
@@ -771,7 +771,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     meta.dst.x = dstOffset / 4;
     meta.width = size / 4;
     meta.height = 1;
-    meta.samples = 1;
+    meta.sample_count = 1;
 
     /*
      * INTEL_DEV_META_VS_FILL_MEM is untyped but expects the stride to be 16
@@ -858,7 +858,7 @@ void cmd_meta_ds_op(struct intel_cmd *cmd,
 
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
-    meta.samples = img->samples;
+    meta.sample_count = img->sample_count;
 
     meta.ds.op = op;
     meta.ds.optimal = true;
@@ -883,7 +883,7 @@ void cmd_meta_clear_color_image(
     meta.mode = INTEL_CMD_META_FS_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_COLOR;
-    meta.samples = img->samples;
+    meta.sample_count = img->sample_count;
 
     meta.clear_val[0] = pClearColor->uint32[0];
     meta.clear_val[1] = pClearColor->uint32[1];
@@ -925,7 +925,7 @@ void cmd_meta_clear_depth_stencil_image(
     meta.mode = INTEL_CMD_META_DEPTH_STENCIL_RECT;
 
     meta.shader_id = INTEL_DEV_META_FS_CLEAR_DEPTH;
-    meta.samples = img->samples;
+    meta.sample_count = img->sample_count;
 
     meta.clear_val[0] = u_fui(depth);
     meta.clear_val[1] = stencil;
@@ -1075,7 +1075,7 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     memset(&meta, 0, sizeof(meta));
     meta.mode = INTEL_CMD_META_FS_RECT;
 
-    switch (src->samples) {
+    switch (src->sample_count) {
     case 2:
     default:
         meta.shader_id = INTEL_DEV_META_FS_RESOLVE_2X;
@@ -1091,7 +1091,7 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
         break;
     }
 
-    meta.samples = 1;
+    meta.sample_count = 1;
 
     format = cmd_meta_img_raw_format(cmd, src->layout.format);
     cmd_meta_set_src_for_img(cmd, src, format, VK_IMAGE_ASPECT_COLOR_BIT, &meta);

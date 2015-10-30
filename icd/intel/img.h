@@ -41,7 +41,7 @@ struct intel_img {
     uint32_t mip_levels;
     uint32_t array_size;
     VkFlags usage;
-    uint32_t samples;
+    uint32_t sample_count;
     struct intel_layout layout;
 
     /* layout of separate stencil */

@@ -890,7 +890,7 @@ static void demo_prepare_depth(struct demo *demo)
         .extent = { demo->width, demo->height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
-        .samples = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_OPTIMAL,
         .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         .flags = 0,
@@ -1041,7 +1041,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         .extent = { tex_width, tex_height, 1 },
         .mipLevels = 1,
         .arrayLayers = 1,
-        .samples = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = tiling,
         .usage = usage,
         .flags = 0,
@@ -1335,7 +1335,7 @@ static void demo_prepare_render_pass(struct demo *demo)
     const VkAttachmentDescription attachments[2] = {
         [0] = {
             .format = demo->format,
-            .samples = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -1345,7 +1345,7 @@ static void demo_prepare_render_pass(struct demo *demo)
         },
         [1] = {
             .format = demo->depth.format,
-            .samples = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -1598,7 +1598,7 @@ static void demo_prepare_pipeline(struct demo *demo)
     memset(&ms, 0, sizeof(ms));
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pSampleMask = NULL;
-    ms.rasterizationSamples = 1;
+    ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     // Two stages: vs and fs
     pipeline.stageCount = 2;

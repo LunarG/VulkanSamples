@@ -2961,15 +2961,16 @@ static void gen6_meta_wm(struct intel_cmd *cmd)
     if (cmd_gen(cmd) >= INTEL_GEN(7)) {
         cmd_batch_pointer(cmd, 4, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (4 - 2);
-        dw[1] = (meta->samples <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
-                (meta->samples <= 4) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4 :
-                                       GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
+        dw[1] =
+            (meta->sample_count <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
+            (meta->sample_count <= 4) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4 :
+                                        GEN7_MULTISAMPLE_DW1_NUMSAMPLES_8;
         dw[2] = 0;
         dw[3] = 0;
     } else {
         cmd_batch_pointer(cmd, 3, &dw);
         dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_MULTISAMPLE) | (3 - 2);
-        dw[1] = (meta->samples <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
+        dw[1] = (meta->sample_count <= 1) ? GEN6_MULTISAMPLE_DW1_NUMSAMPLES_1 :
                                        GEN6_MULTISAMPLE_DW1_NUMSAMPLES_4;
         dw[2] = 0;
     }
@@ -2977,7 +2978,7 @@ static void gen6_meta_wm(struct intel_cmd *cmd)
     /* 3DSTATE_SAMPLE_MASK */
     cmd_batch_pointer(cmd, 2, &dw);
     dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_SAMPLE_MASK) | (2 - 2);
-    dw[1] = (1 << meta->samples) - 1;
+    dw[1] = (1 << meta->sample_count) - 1;
 
     /* 3DSTATE_DRAWING_RECTANGLE */
     cmd_batch_pointer(cmd, 4, &dw);
@@ -3151,7 +3152,7 @@ static void gen6_meta_ps(struct intel_cmd *cmd)
             GEN6_WM_DW6_ZW_INTERP_PIXEL |
             sh->barycentric_interps << GEN6_WM_DW6_BARYCENTRIC_INTERP__SHIFT |
             GEN6_WM_DW6_POINT_RASTRULE_UPPER_RIGHT;
-    if (meta->samples > 1) {
+    if (meta->sample_count > 1) {
         dw[6] |= GEN6_WM_DW6_MSRASTMODE_ON_PATTERN |
                  GEN6_WM_DW6_MSDISPMODE_PERPIXEL;
     } else {
@@ -3254,7 +3255,8 @@ static void gen7_meta_ps(struct intel_cmd *cmd)
 
     if (cmd_gen(cmd) >= INTEL_GEN(7.5)) {
         dw[4] |= (sh->max_threads - 1) << GEN75_PS_DW4_MAX_THREADS__SHIFT;
-        dw[4] |= ((1 << meta->samples) - 1) << GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
+        dw[4] |= ((1 << meta->sample_count) - 1) <<
+            GEN75_PS_DW4_SAMPLE_MASK__SHIFT;
     } else {
         dw[4] |= (sh->max_threads - 1) << GEN7_PS_DW4_MAX_THREADS__SHIFT;
     }

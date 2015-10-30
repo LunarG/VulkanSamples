@@ -117,21 +117,20 @@ layout_get_slice_size(const struct intel_layout *layout,
     */
    if (layout->interleaved_samples) {
       switch (info->samples) {
-      case 0:
-      case 1:
+      case VK_SAMPLE_COUNT_1_BIT:
          break;
-      case 2:
+      case VK_SAMPLE_COUNT_2_BIT:
          w = u_align(w, 2) * 2;
          break;
-      case 4:
+      case VK_SAMPLE_COUNT_4_BIT:
          w = u_align(w, 2) * 2;
          h = u_align(h, 2) * 2;
          break;
-      case 8:
+      case VK_SAMPLE_COUNT_8_BIT:
          w = u_align(w, 2) * 4;
          h = u_align(h, 2) * 2;
          break;
-      case 16:
+      case VK_SAMPLE_COUNT_16_BIT:
          w = u_align(w, 2) * 4;
          h = u_align(h, 2) * 4;
          break;
@@ -165,8 +164,8 @@ layout_get_num_layers(const struct intel_layout *layout,
    unsigned num_layers = info->arrayLayers;
 
    /* samples of the same index are stored in a layer */
-   if (info->samples > 1 && !layout->interleaved_samples)
-      num_layers *= info->samples;
+   if (info->samples != VK_SAMPLE_COUNT_1_BIT && !layout->interleaved_samples)
+      num_layers *= (uint32_t) info->samples;
 
    return num_layers;
 }
@@ -222,7 +221,8 @@ layout_init_layer_height(struct intel_layout *layout,
    layout->layer_height = params->h0 + params->h1 +
       ((intel_gpu_gen(params->gpu) >= INTEL_GEN(7)) ? 12 : 11) * layout->align_j;
 
-   if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) && info->samples > 1 &&
+   if (intel_gpu_gen(params->gpu) == INTEL_GEN(6) &&
+       info->samples != VK_SAMPLE_COUNT_1_BIT &&
        layout->height0 % 4 == 1)
       layout->layer_height += 4;
 
@@ -430,7 +430,7 @@ layout_init_alignments(struct intel_layout *layout,
       }
    } else {
       const bool valign_4 =
-         (info->samples > 1) ||
+         (info->samples != VK_SAMPLE_COUNT_1_BIT) ||
          (intel_gpu_gen(params->gpu) >= INTEL_GEN(8)) ||
          (intel_gpu_gen(params->gpu) >= INTEL_GEN(7) &&
           layout->tiling == GEN6_TILING_Y &&
@@ -624,7 +624,7 @@ layout_init_walk_gen7(struct intel_layout *layout,
        * As multisampled resources are not mipmapped, we never use
        * ARYSPC_FULL for them.
        */
-      if (info->samples > 1)
+      if (info->samples != VK_SAMPLE_COUNT_1_BIT)
          assert(info->mipLevels == 1);
 
       layout->walk =
@@ -746,9 +746,10 @@ layout_want_mcs(struct intel_layout *layout,
     *     "This field must be set to 0 for all SINT MSRTs when all RT channels
     *      are not written"
     */
-   if (info->samples > 1 && !icd_format_is_int(info->format)) {
+   if (info->samples != VK_SAMPLE_COUNT_1_BIT &&
+       !icd_format_is_int(info->format)) {
       want_mcs = true;
-   } else if (info->samples <= 1) {
+   } else if (info->samples == VK_SAMPLE_COUNT_1_BIT) {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 326:
        *
@@ -980,7 +981,7 @@ layout_calculate_bo_size(struct intel_layout *layout,
                layout->tiling = GEN6_TILING_NONE;
                /* MCS support for non-MSRTs is limited to tiled RTs */
                if (layout->aux == INTEL_LAYOUT_AUX_MCS &&
-                   params->info->samples <= 1)
+                   params->info->samples == VK_SAMPLE_COUNT_1_BIT)
                   layout->aux = INTEL_LAYOUT_AUX_NONE;
 
                continue;
@@ -1123,22 +1124,21 @@ layout_calculate_hiz_size(struct intel_layout *layout,
    hz_clear_w = 8;
    hz_clear_h = 4;
    switch (info->samples) {
-   case 0:
-   case 1:
+   case VK_SAMPLE_COUNT_1_BIT:
    default:
       break;
-   case 2:
+   case VK_SAMPLE_COUNT_2_BIT:
       hz_clear_w /= 2;
       break;
-   case 4:
+   case VK_SAMPLE_COUNT_4_BIT:
       hz_clear_w /= 2;
       hz_clear_h /= 2;
       break;
-   case 8:
+   case VK_SAMPLE_COUNT_8_BIT:
       hz_clear_w /= 4;
       hz_clear_h /= 2;
       break;
-   case 16:
+   case VK_SAMPLE_COUNT_16_BIT:
       hz_clear_w /= 4;
       hz_clear_h /= 4;
       break;
@@ -1170,7 +1170,7 @@ layout_calculate_mcs_size(struct intel_layout *layout,
 
    assert(layout->aux == INTEL_LAYOUT_AUX_MCS);
 
-   if (info->samples > 1) {
+   if (info->samples != VK_SAMPLE_COUNT_1_BIT) {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 326, the clear
        * rectangle is scaled down by 8x2 for 4X MSAA and 2x2 for 8X MSAA.  The
@@ -1185,18 +1185,18 @@ layout_calculate_mcs_size(struct intel_layout *layout,
        * pixel block in the RT.
        */
       switch (info->samples) {
-      case 2:
-      case 4:
+      case VK_SAMPLE_COUNT_2_BIT:
+      case VK_SAMPLE_COUNT_4_BIT:
          downscale_x = 8;
          downscale_y = 2;
          mcs_cpp = 1;
          break;
-      case 8:
+      case VK_SAMPLE_COUNT_8_BIT:
          downscale_x = 2;
          downscale_y = 2;
          mcs_cpp = 4;
          break;
-      case 16:
+      case VK_SAMPLE_COUNT_16_BIT:
          downscale_x = 2;
          downscale_y = 1;
          mcs_cpp = 8;

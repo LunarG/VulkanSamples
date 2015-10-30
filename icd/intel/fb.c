@@ -133,7 +133,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
         struct intel_render_pass_attachment *att = &rp->attachments[i];
 
         att->format = info->pAttachments[i].format;
-        att->sample_count = info->pAttachments[i].samples;
+        att->sample_count = (uint32_t) info->pAttachments[i].samples;
         att->initial_layout = info->pAttachments[i].initialLayout;
         att->final_layout = info->pAttachments[i].finalLayout;
 

@@ -561,7 +561,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -636,7 +636,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 //        .extent          = { tex_width, tex_height, 1 },
 //        .mipLevels       = 1,
 //        .arraySize       = 1,
-//        .samples         = 1,
+//        .samples         = VK_SAMPLE_COUNT_1_BIT,
 //        .tiling          = VK_IMAGE_TILING_LINEAR,
 //        .usage           = VK_IMAGE_USAGE_SAMPLED_BIT,
 //        .flags           = 0,
@@ -708,7 +708,7 @@ TEST_F(VkLayerTest, RebindMemory)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -843,7 +843,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
         .extent = e3d,
         .mipLevels = 1,
         .arraySize = 1,
-        .samples = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = VK_IMAGE_TILING_LINEAR,
         .usage = 0, // Not setting VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
         .flags = 0,
@@ -977,7 +977,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -1048,7 +1048,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -1405,7 +1405,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterizationSamples = 1;
+        pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -2671,7 +2671,7 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
     image_create_info.extent.depth          = 1;
     image_create_info.mipLevels             = 1;
     image_create_info.arrayLayers             = 1;
-    image_create_info.samples               = 1;
+    image_create_info.samples               = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling                = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage                 = VK_IMAGE_USAGE_SAMPLED_BIT;
 
@@ -3596,7 +3596,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterizationSamples = 4;
+        pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -3688,7 +3688,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterizationSamples = 4;
+        pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -3794,7 +3794,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkPipelineMultisampleStateCreateInfo pipe_ms_state_ci = {};
         pipe_ms_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pipe_ms_state_ci.pNext = NULL;
-        pipe_ms_state_ci.rasterizationSamples = 1;
+        pipe_ms_state_ci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         pipe_ms_state_ci.sampleShadingEnable = 0;
         pipe_ms_state_ci.minSampleShading = 1.0;
         pipe_ms_state_ci.pSampleMask = NULL;
@@ -4590,7 +4590,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
     image_create_info.extent.depth  = 1;
     image_create_info.mipLevels     = 1;
     image_create_info.arrayLayers     = 1;
-    image_create_info.samples       = 1;
+    image_create_info.samples       = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags         = 0;
@@ -4629,7 +4629,7 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
     image_create_info.extent.depth  = 1;
     image_create_info.mipLevels     = 1;
     image_create_info.arrayLayers     = 1;
-    image_create_info.samples       = 1;
+    image_create_info.samples       = VK_SAMPLE_COUNT_1_BIT;
     image_create_info.tiling        = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.flags         = 0;
@@ -4640,7 +4640,7 @@ TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
     image_create_info.extent.height = 8192;
     image_create_info.extent.depth  = 16;
     image_create_info.arrayLayers     = 4;
-    image_create_info.samples       = 2;
+    image_create_info.samples       = VK_SAMPLE_COUNT_2_BIT;
     image_create_info.format        = VK_FORMAT_R8G8B8A8_UNORM;
     vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
 
@@ -4745,7 +4745,7 @@ TEST_F(VkLayerTest, InvalidImageView)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -4797,7 +4797,7 @@ TEST_F(VkLayerTest, InvalidImageViewAspect)
         image_create_info.extent.height = tex_height;
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
         image_create_info.flags = 0;
@@ -4851,7 +4851,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
@@ -4956,7 +4956,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
@@ -5056,7 +5056,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
@@ -5159,7 +5159,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 2;
+        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -5264,7 +5264,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 2;
+        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -5277,7 +5277,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.format = VK_FORMAT_R32_SFLOAT;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
@@ -5371,7 +5371,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 2;
+        image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -5383,7 +5383,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.imageType = VK_IMAGE_TYPE_1D;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
 
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &dstImage);
     ASSERT_VK_SUCCESS(err);
@@ -5521,7 +5521,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
         image_create_info.extent.depth = 1;
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
-        image_create_info.samples = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         image_create_info.flags = 0;

@@ -1187,7 +1187,6 @@ typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    maxImageDimension3D;
     uint32_t                                    maxImageDimensionCube;
     uint32_t                                    maxImageArrayLayers;
-    VkSampleCountFlags                          sampleCounts;
     uint32_t                                    maxTexelBufferElements;
     uint32_t                                    maxUniformBufferRange;
     uint32_t                                    maxStorageBufferRange;
@@ -1259,15 +1258,16 @@ typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    maxFramebufferWidth;
     uint32_t                                    maxFramebufferHeight;
     uint32_t                                    maxFramebufferLayers;
-    uint32_t                                    maxFramebufferColorSamples;
-    uint32_t                                    maxFramebufferDepthSamples;
-    uint32_t                                    maxFramebufferStencilSamples;
+    VkSampleCountFlags                          framebufferColorSampleCounts;
+    VkSampleCountFlags                          framebufferDepthSampleCounts;
+    VkSampleCountFlags                          framebufferStencilSampleCounts;
+    VkSampleCountFlags                          framebufferNoAttachmentsSampleCounts;
     uint32_t                                    maxColorAttachments;
-    uint32_t                                    maxSampledImageColorSamples;
-    uint32_t                                    maxSampledImageDepthSamples;
-    uint32_t                                    maxSampledImageStencilSamples;
-    uint32_t                                    maxSampledImageIntegerSamples;
-    uint32_t                                    maxStorageImageSamples;
+    VkSampleCountFlags                          sampledImageColorSampleCounts;
+    VkSampleCountFlags                          sampledImageIntegerSampleCounts;
+    VkSampleCountFlags                          sampledImageDepthSampleCounts;
+    VkSampleCountFlags                          sampledImageStencilSampleCounts;
+    VkSampleCountFlags                          storageImageSampleCounts;
     uint32_t                                    maxSampleMaskWords;
     float                                       timestampPeriod;
     uint32_t                                    maxClipDistances;
@@ -1526,7 +1526,7 @@ typedef struct VkImageCreateInfo {
     VkExtent3D                                  extent;
     uint32_t                                    mipLevels;
     uint32_t                                    arrayLayers;
-    uint32_t                                    samples;
+    VkSampleCountFlagBits                       samples;
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
     VkSharingMode                               sharingMode;
@@ -1699,7 +1699,7 @@ typedef struct VkPipelineMultisampleStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineMultisampleStateCreateFlags       flags;
-    uint32_t                                    rasterizationSamples;
+    VkSampleCountFlagBits                       rasterizationSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
     const VkSampleMask*                         pSampleMask;
@@ -1920,7 +1920,7 @@ typedef struct VkFramebufferCreateInfo {
 typedef struct VkAttachmentDescription {
     VkAttachmentDescriptionFlags                flags;
     VkFormat                                    format;
-    uint32_t                                    samples;
+    VkSampleCountFlagBits                       samples;
     VkAttachmentLoadOp                          loadOp;
     VkAttachmentStoreOp                         storeOp;
     VkAttachmentLoadOp                          stencilLoadOp;
@@ -2165,7 +2165,7 @@ typedef VkResult (VKAPI *PFN_vkBindImageMemory)(VkDevice device, VkImage image, 
 typedef void (VKAPI *PFN_vkGetBufferMemoryRequirements)(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements);
 typedef void (VKAPI *PFN_vkGetImageMemoryRequirements)(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements);
 typedef void (VKAPI *PFN_vkGetImageSparseMemoryRequirements)(VkDevice device, VkImage image, uint32_t* pSparseMemoryRequirementCount, VkSparseImageMemoryRequirements* pSparseMemoryRequirements);
-typedef void (VKAPI *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties);
+typedef void (VKAPI *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparse)(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFence* pFence);
 typedef void (VKAPI *PFN_vkDestroyFence)(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator);
@@ -2442,7 +2442,7 @@ void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
-    uint32_t                                    samples,
+    VkSampleCountFlagBits                       samples,
     VkImageUsageFlags                           usage,
     VkImageTiling                               tiling,
     uint32_t*                                   pPropertyCount,

@@ -888,12 +888,12 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_MISMATCHED_IMAGE_TYPE, "IMAGE", str);
         }
-        if (srcImageEntry->second.samples <= 1) {
+        if (srcImageEntry->second.samples == VK_SAMPLE_COUNT_1_BIT) {
             char const str[] =  "vkCmdResolveImage called with source sample count less than 2.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES,  "IMAGE", str);
         }
-        if (dstImageEntry->second.samples > 1) {
+        if (dstImageEntry->second.samples != VK_SAMPLE_COUNT_1_BIT) {
             char const str[] =  "vkCmdResolveImage called with dest sample count greater than 1.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
                                 (uint64_t)commandBuffer, 0, IMAGE_INVALID_RESOLVE_SAMPLES, "IMAGE", str);

@@ -110,6 +110,22 @@ static int translate_stencil_op(VkStencilOp op)
     }
 }
 
+static int translate_sample_count(VkSampleCountFlagBits samples)
+{
+    switch (samples) {
+    case VK_SAMPLE_COUNT_1_BIT:     return 1;
+    case VK_SAMPLE_COUNT_2_BIT:     return 2;
+    case VK_SAMPLE_COUNT_4_BIT:     return 4;
+    case VK_SAMPLE_COUNT_8_BIT:     return 8;
+    case VK_SAMPLE_COUNT_16_BIT:    return 16;
+    case VK_SAMPLE_COUNT_32_BIT:    return 32;
+    case VK_SAMPLE_COUNT_64_BIT:    return 64;
+    default:
+      assert(!"unknown sample count");
+      return 1;
+    }
+}
+
 struct intel_pipeline_create_info {
     VkFlags                                use_pipeline_dynamic_state;
     VkGraphicsPipelineCreateInfo           graphics;
@@ -961,7 +977,8 @@ static void pipeline_build_msaa(struct intel_pipeline *pipeline,
 
     INTEL_GPU_ASSERT(pipeline->dev->gpu, 6, 7.5);
 
-    pipeline->sample_count = (info->ms.rasterizationSamples <= 1) ? 1 : info->ms.rasterizationSamples;
+    pipeline->sample_count =
+        translate_sample_count(info->ms.rasterizationSamples);
 
     pipeline->alphaToCoverageEnable = info->ms.alphaToCoverageEnable;
     pipeline->alphaToOneEnable = info->ms.alphaToOneEnable;
@@ -1201,7 +1218,7 @@ static VkResult pipeline_create_info_init(struct intel_pipeline_create_info  *in
      * Do we need to set safe defaults in case the app doesn't provide all of
      * the necessary create infos?
      */
-    info->ms.rasterizationSamples    = 1;
+    info->ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     info->ms.pSampleMask = NULL;
 
     memcpy(&info->graphics, vkinfo, sizeof (info->graphics));

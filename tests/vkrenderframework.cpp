@@ -277,7 +277,7 @@ void VkRenderFramework::InitRenderTarget(uint32_t targets, VkImageView *dsBindin
 
     VkAttachmentDescription att = {};
     att.format = m_render_target_fmt;
-    att.samples = 1;
+    att.samples = VK_SAMPLE_COUNT_1_BIT;
     att.loadOp = (m_clear_via_load_op) ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     att.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     att.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -1143,7 +1143,7 @@ VkPipelineObj::VkPipelineObj(VkDeviceObj *device)
     m_ms_state.pSampleMask = NULL;
     m_ms_state.alphaToCoverageEnable = VK_FALSE;
     m_ms_state.alphaToOneEnable = VK_FALSE;
-    m_ms_state.rasterizationSamples = 1;
+    m_ms_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     m_ms_state.minSampleShading = 0;
     m_ms_state.sampleShadingEnable = 0;
 
@@ -1662,7 +1662,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
-    image_info.samples = 1;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;

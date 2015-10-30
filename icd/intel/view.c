@@ -428,7 +428,7 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
     * means the samples are interleaved.  The layouts are the same when the
     * number of samples is 1.
     */
-   if (img->layout.interleaved_samples && img->samples > 1) {
+   if (img->layout.interleaved_samples && img->sample_count > 1) {
       assert(!is_rt);
       dw[4] |= GEN7_SURFACE_DW4_MSFMT_DEPTH_STENCIL;
    }
@@ -436,9 +436,9 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
       dw[4] |= GEN7_SURFACE_DW4_MSFMT_MSS;
    }
 
-   if (img->samples > 4)
+   if (img->sample_count > 4)
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_8;
-   else if (img->samples > 2)
+   else if (img->sample_count > 2)
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_4;
    else
       dw[4] |= GEN7_SURFACE_DW4_MULTISAMPLECOUNT_1;
@@ -671,7 +671,7 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
    /* non-full array spacing is supported only on GEN7+ */
    assert(img->layout.walk != INTEL_LAYOUT_WALK_LOD);
    /* non-interleaved samples are supported only on GEN7+ */
-   if (img->samples > 1)
+   if (img->sample_count > 1)
       assert(img->layout.interleaved_samples);
 
    if (is_rt) {
@@ -733,8 +733,8 @@ static void surface_state_tex_gen6(const struct intel_gpu *gpu,
    dw[4] = first_level << GEN6_SURFACE_DW4_MIN_LOD__SHIFT |
            first_layer << 17 |
            (num_layers - 1) << 8 |
-           ((img->samples > 1) ? GEN6_SURFACE_DW4_MULTISAMPLECOUNT_4 :
-                                         GEN6_SURFACE_DW4_MULTISAMPLECOUNT_1);
+           ((img->sample_count > 1) ? GEN6_SURFACE_DW4_MULTISAMPLECOUNT_4 :
+                                      GEN6_SURFACE_DW4_MULTISAMPLECOUNT_1);
 
    dw[5] = 0;
 

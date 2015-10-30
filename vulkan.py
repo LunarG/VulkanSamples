@@ -381,7 +381,7 @@ core = Extension(
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkImageType", "type"),
-             Param("uint32_t", "samples"),
+             Param("VkSampleCountFlagBits", "samples"),
              Param("VkImageUsageFlags", "usage"),
              Param("VkImageTiling", "tiling"),
              Param("uint32_t*", "pPropertyCount"),

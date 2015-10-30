@@ -79,7 +79,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     img->mip_levels = info->mipLevels;
     img->array_size = info->arrayLayers;
     img->usage = info->usage;
-    img->samples = info->samples;
+    img->sample_count = (uint32_t) info->samples;
     intel_layout_init(layout, dev, info, scanout);
 
     img->total_size = img->layout.bo_stride * img->layout.bo_height;

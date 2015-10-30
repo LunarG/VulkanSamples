@@ -158,7 +158,7 @@ static void writePPM( const char *filename, VkImage image1)
         {width, height, 1},
         1,
         1,
-        1,
+        VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_TILING_LINEAR,
         (VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
     };

@@ -137,7 +137,7 @@ struct intel_cmd_meta {
     uint32_t clear_val[4];
 
     uint32_t width, height;
-    uint32_t samples;
+    uint32_t sample_count;
 };
 
 static inline int cmd_gen(const struct intel_cmd *cmd)

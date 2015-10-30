@@ -663,7 +663,7 @@ inline VkImageCreateInfo Image::create_info()
     info.extent.depth = 1;
     info.mipLevels = 1;
     info.arrayLayers = 1;
-    info.samples = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
     return info;
 }
 

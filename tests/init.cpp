@@ -323,7 +323,7 @@ void VkTest::CreateImageTest()
 //        VkExtent3D                            extent;
 //        uint32_t                                mipLevels;
 //        uint32_t                                arraySize;
-//        uint32_t                                samples;
+//        VkSampleCountFlagBits                   samples;
 //        VkImageTiling                        tiling;
 //        VkFlags                               usage;                      // VkImageUsageFlags
 //        VkFlags                               flags;                      // VkImageCreateFlags
@@ -339,7 +339,7 @@ void VkTest::CreateImageTest()
     imageCreateInfo.extent.height = h;
     imageCreateInfo.extent.depth = 1;
     imageCreateInfo.mipLevels = mipCount;
-    imageCreateInfo.samples = 1;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     if (image_fmt.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) {
         imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
     }

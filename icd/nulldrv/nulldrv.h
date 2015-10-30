@@ -99,7 +99,7 @@ struct nulldrv_img {
     uint32_t mip_levels;
     uint32_t array_size;
     VkFlags usage;
-    uint32_t samples;
+    VkSampleCountFlagBits samples;
     size_t total_size;
 };
 
