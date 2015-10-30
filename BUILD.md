@@ -115,6 +115,67 @@ sudo service lightdm restart
 ```
 xdpyinfo | grep DRI
 ```
+### Ubuntu 15.10 support of DRI 3
+
+Ubuntu 15.10 has never shipped a xserver-xorg-video-intel package with supported DRI 3 on intel graphics.
+The xserver-xorg-video-intel package can be built from source with DRI 3 enabled.
+Use the following commands to enable DRI3 on ubuntu 15.10.
+
+- Install packages used to build:
+```
+sudo apt-get update
+sudo apt-get dist-upgrade
+sudo apt-get install devscripts
+sudo apt-get build-dep xserver-xorg-video-intel
+```
+
+- Get the source code for xserver-xorg-video-intel
+```
+mkdir xserver-xorg-video-intel_source
+cd xserver-xorg-video-intel_source
+apt-get source xserver-xorg-video-intel
+cd xserver-xorg-video-intel-2.99.917+git20150808
+debian/rules patch
+quilt new 'enable-DRI3'
+quilt edit configure.ac
+```
+
+- Use the editor to make these changes.
+```
+Index: xserver-xorg-video-intel-2.99.917+git20150808/configure.ac
+===================================================================
+--- xserver-xorg-video-intel-2.99.917+git20150808.orig/configure.ac
++++ xserver-xorg-video-intel-2.99.917+git20150808/configure.ac
+@@ -356,7 +356,7 @@ AC_ARG_WITH(default-dri,
+            AS_HELP_STRING([--with-default-dri],
+                           [Select the default maximum DRI level [default 2]]),
+              [DRI_DEFAULT=$withval],
+-             [DRI_DEFAULT=2])
++             [DRI_DEFAULT=3])
+ if test "x$DRI_DEFAULT" = "x0"; then
+        AC_DEFINE(DEFAULT_DRI_LEVEL, 0,[Default DRI level])
+ else
+```
+- Build and install xserver-xorg-video-intel
+```
+quilt refresh
+debian/rules clean
+debuild -us -uc
+sudo dpkg -i ../xserver-xorg-video-intel_2.99.917+git20150808-0ubuntu4_amd64.deb
+```
+- Prevent updates from replacing this version of the package.
+```
+sudo bash -c 'echo xserver-xorg-video-intel hold | dpkg --set-selections'
+```
+- save your work then restart the X server with the next command.
+```
+sudo service lightdm restart
+```
+- After logging in again, check for success with this command and look for DRI3.
+```
+xdpyinfo | grep DRI
+```
+
 
 ## Clone the repository
 
