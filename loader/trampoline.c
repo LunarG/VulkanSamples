@@ -226,12 +226,12 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
+LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
     disp = loader_get_instance_dispatch(physicalDevice);
-    disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
+    return disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 }
 
 LOADER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(

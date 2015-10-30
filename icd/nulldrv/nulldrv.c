@@ -2151,7 +2151,7 @@ ICD_EXPORT VkResult xcbQueuePresent(void *queue, void *image, void* fence)
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -2160,4 +2160,5 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
+    return VK_SUCCESS;
 }

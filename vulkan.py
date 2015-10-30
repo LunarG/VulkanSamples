@@ -233,7 +233,7 @@ core = Extension(
              Param("VkFormat", "format"),
              Param("VkFormatProperties*", "pFormatProperties")]),
 
-        Proto("void", "GetPhysicalDeviceImageFormatProperties",
+        Proto("VkResult", "GetPhysicalDeviceImageFormatProperties",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("VkFormat", "format"),
              Param("VkImageType", "type"),

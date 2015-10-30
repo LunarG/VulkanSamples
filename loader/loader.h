@@ -290,7 +290,8 @@ void VKAPI loader_GetPhysicalDeviceFormatProperties(
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo);
 
-void VKAPI loader_GetPhysicalDeviceImageFormatProperties(VkPhysicalDevice                        physicalDevice,
+VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+        VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
         VkImageTiling                           tiling,

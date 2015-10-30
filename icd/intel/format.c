@@ -697,7 +697,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
 //      maximum is 2 GB for all products and all surface types."
 static const size_t intel_max_resource_size = 1u << 31;
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -716,4 +716,6 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     pImageFormatProperties->maxExtent.depth  = 8192;
     pImageFormatProperties->maxArrayLayers   = 2048;
     pImageFormatProperties->maxResourceSize  = intel_max_resource_size;
+
+    return VK_SUCCESS;
 }

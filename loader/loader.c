@@ -2916,7 +2916,7 @@ void VKAPI loader_GetPhysicalDeviceFormatProperties(
         icd->GetPhysicalDeviceFormatProperties(phys_dev->phys_dev, format, pFormatInfo);
 }
 
-void VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2928,9 +2928,11 @@ void VKAPI loader_GetPhysicalDeviceImageFormatProperties(
     struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
     struct loader_icd *icd = phys_dev->this_icd;
 
-    if (icd->GetPhysicalDeviceImageFormatProperties)
-        icd->GetPhysicalDeviceImageFormatProperties(phys_dev->phys_dev, format,
-                                type, tiling, usage, flags, pImageFormatProperties);
+    if (!icd->GetPhysicalDeviceImageFormatProperties)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    return icd->GetPhysicalDeviceImageFormatProperties(phys_dev->phys_dev, format,
+            type, tiling, usage, flags, pImageFormatProperties);
 }
 
 void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(

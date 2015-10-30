@@ -1865,7 +1865,8 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     VkImageTiling tiling,
     VkImageUsageFlags usage,
     VkImageCreateFlags flags,
-    VkImageFormatProperties* pImageFormatProperties)
+    VkImageFormatProperties* pImageFormatProperties,
+    VkResult result)
 {
 
     if(format < VK_FORMAT_BEGIN_RANGE ||
@@ -1897,10 +1898,17 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     {
     }
 
+    if(result < VK_SUCCESS)
+    {
+        std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        return false;
+    }
+
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
+VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkImageType type,
@@ -1909,9 +1917,11 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags flags,
     VkImageFormatProperties* pImageFormatProperties)
 {
-    get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
+    VkResult result = get_dispatch_table(pc_instance_table_map, physicalDevice)->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 
-    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
+    PostGetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties, result);
+
+    return result;
 }
 
 bool PostGetPhysicalDeviceProperties(
