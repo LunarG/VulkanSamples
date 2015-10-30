@@ -1848,7 +1848,7 @@ typedef struct VkDescriptorSetLayoutCreateInfo {
     const void*                                 pNext;
     VkDescriptorSetLayoutCreateFlags            flags;
     uint32_t                                    bindingCount;
-    const VkDescriptorSetLayoutBinding*         pBindings;
+    const VkDescriptorSetLayoutBinding*         pBinding;
 } VkDescriptorSetLayoutCreateInfo;
 
 typedef struct VkDescriptorPoolSize {

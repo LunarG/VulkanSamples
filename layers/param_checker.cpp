@@ -4259,16 +4259,16 @@ bool PreCreateDescriptorSetLayout(
         "vkCreateDescriptorSetLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
-    if(pCreateInfo->pBindings != nullptr)
+    if(pCreateInfo->pBinding != nullptr)
     {
-    if(pCreateInfo->pBindings->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
-        pCreateInfo->pBindings->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
+    if(pCreateInfo->pBinding->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
+        pCreateInfo->pBinding->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBinding->descriptorType, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->pBindings->pImmutableSamplers != nullptr)
+    if(pCreateInfo->pBinding->pImmutableSamplers != nullptr)
     {
     }
     }

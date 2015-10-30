@@ -1065,7 +1065,7 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .pNext = NULL,
         .bindingCount = 1,
-        .pBindings = &layout_binding,
+        .pBinding = &layout_binding,
     };
     VkResult U_ASSERT_ONLY err;
 

@@ -149,7 +149,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
         loader_platform_thread_lock_mutex(&globalLock);
         auto& bindings = my_data->descriptor_set_layout_map[*pSetLayout];
         bindings = new std::vector<VkDescriptorSetLayoutBinding>(
-                pCreateInfo->pBindings, pCreateInfo->pBindings + pCreateInfo->bindingCount);
+                pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->bindingCount);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 

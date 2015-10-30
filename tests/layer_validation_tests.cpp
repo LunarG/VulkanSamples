@@ -907,7 +907,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -1124,7 +1124,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1385,7 +1385,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -1485,7 +1485,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -1546,7 +1546,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -1661,7 +1661,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -1826,7 +1826,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -1925,7 +1925,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2047,7 +2047,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2155,7 +2155,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2262,7 +2262,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2422,7 +2422,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2867,7 +2867,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -2963,7 +2963,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -3060,7 +3060,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -3155,7 +3155,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -3251,7 +3251,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -3325,7 +3325,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);
@@ -3429,7 +3429,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 2;
-        ds_layout_ci.pBindings = dsl_binding;
+        ds_layout_ci.pBinding = dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -3569,7 +3569,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     ds_layout_ci.pNext = NULL;
     ds_layout_ci.bindingCount = 1;
-    ds_layout_ci.pBindings = &dsl_binding;
+    ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -3660,7 +3660,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -3765,7 +3765,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
 
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
@@ -5477,7 +5477,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
         ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBindings = &dsl_binding;
+        ds_layout_ci.pBinding = &dsl_binding;
     VkDescriptorSetLayout ds_layout;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
     ASSERT_VK_SUCCESS(err);

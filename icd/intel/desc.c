@@ -572,7 +572,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* initialize bindings */
     for (i = 0; i < info->bindingCount; i++) {
-        const VkDescriptorSetLayoutBinding *lb = &info->pBindings[i];
+        const VkDescriptorSetLayoutBinding *lb = &info->pBinding[i];
         struct intel_desc_layout_binding *binding = &layout->bindings[i];
         struct intel_desc_offset size;
 

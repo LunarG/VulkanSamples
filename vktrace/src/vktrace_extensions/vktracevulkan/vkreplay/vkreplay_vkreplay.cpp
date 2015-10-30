@@ -1025,17 +1025,17 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
     VkDescriptorSetLayoutCreateInfo *pInfo = (VkDescriptorSetLayoutCreateInfo*) pPacket->pCreateInfo;
     while (pInfo != NULL)
     {
-        if (pInfo->pBindings != NULL)
+        if (pInfo->pBinding != NULL)
         {
             for (unsigned int i = 0; i < pInfo->bindingCount; i++)
             {
-                VkDescriptorSetLayoutBinding *pBindings = (VkDescriptorSetLayoutBinding *) &pInfo->pBindings[i];
-                if (pBindings->pImmutableSamplers != NULL)
+                VkDescriptorSetLayoutBinding *pBinding = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
+                if (pBinding->pImmutableSamplers != NULL)
                 {
-                    for (unsigned int j = 0; j < pBindings->arraySize; j++)
+                    for (unsigned int j = 0; j < pBinding->arraySize; j++)
                     {
-                        VkSampler* pSampler = (VkSampler*)&pBindings->pImmutableSamplers[j];
-                        *pSampler = m_objMapper.remap_samplers(pBindings->pImmutableSamplers[j]);
+                        VkSampler* pSampler = (VkSampler*)&pBinding->pImmutableSamplers[j];
+                        *pSampler = m_objMapper.remap_samplers(pBinding->pImmutableSamplers[j]);
                     }
                 }
             }
