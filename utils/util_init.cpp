@@ -1652,7 +1652,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
-    subres.aspect = VK_IMAGE_ASPECT_COLOR;
+    subres.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     subres.mipLevel = 0;
     subres.arrayLayer = 0;
 
@@ -1723,14 +1723,17 @@ void init_texture(struct sample_info &info, const char* textureName)
                           VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
         VkImageCopy copy_region;
-        copy_region.srcSubresource.arrayLayer = 0;
+        copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
+        copy_region.srcSubresource.baseArrayLayer = 0;
+        copy_region.srcSubresource.numLayers = 1;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
-        copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-        copy_region.destSubresource.arrayLayer = 0;
+        copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.destSubresource.mipLevel = 0;
+        copy_region.destSubresource.baseArrayLayer = 0;
+        copy_region.destSubresource.numLayers = 1;
         copy_region.destOffset.x = 0;
         copy_region.destOffset.y = 0;
         copy_region.destOffset.z = 0;
