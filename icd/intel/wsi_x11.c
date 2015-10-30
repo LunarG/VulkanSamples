@@ -37,6 +37,8 @@
 #include <xcb/dri3.h>
 #include <xcb/present.h>
 
+#define VK_USE_PLATFORM_XCB_KHR
+
 #include "kmd/winsys.h"
 #include "kmd/libdrm/xf86drmMode.h"
 #include "dev.h"
@@ -61,6 +63,16 @@ struct intel_x11_display {
     uint32_t mode_count;
 };
 
+// This struct corresponds to the VkSurfaceKHR object:
+struct intel_xcb_surface {
+    struct intel_handle handle;
+
+    struct intel_instance *instance;
+
+    xcb_connection_t *c;
+    xcb_window_t window;
+};
+
 typedef enum intel_x11_swap_chain_image_state_
 {
     INTEL_SC_STATE_UNUSED = 0,
@@ -69,6 +81,7 @@ typedef enum intel_x11_swap_chain_image_state_
     INTEL_SC_STATE_DISPLAYED = 3,
 } intel_x11_swap_chain_image_state;
 
+// This struct corresponds to the VkSwapchainHR object:
 struct intel_x11_swap_chain {
     struct intel_handle handle;
 
@@ -120,6 +133,35 @@ static const VkFormat x11_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_SRGB,
     VK_FORMAT_B5G6R5_UNORM_PACK16,
 };
+
+// Create a VkSurfaceKHR object for XCB window connections:
+static VkResult x11_surface_create(struct intel_instance *instance,
+                                   xcb_connection_t* connection,
+                                   xcb_window_t window,
+                                   struct intel_xcb_surface **surface_ret)
+{
+    struct intel_xcb_surface *surface;
+
+    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+    if (!surface)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    memset(surface, 0, sizeof(*surface));
+    intel_handle_init(&surface->handle, VK_OBJECT_TYPE_SURFACE_KHR, instance);
+
+    surface->instance = instance;
+    surface->c = connection;
+    surface->window = window;
+
+    *surface_ret = surface;
+
+    return VK_SUCCESS;
+}
+
+static inline struct intel_xcb_surface *xcb_surface(VkSurfaceKHR surface)
+{
+    return (struct intel_xcb_surface *) surface.handle;
+}
 
 static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapchainKHR sc)
 {
@@ -218,17 +260,12 @@ static int x11_get_drawable_depth(xcb_connection_t *c,
 }
 
 static VkResult x11_get_surface_capabilities(
-    const VkSurfaceDescriptionKHR *pSurfaceDescription,
+    VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceProperties)
 {
-    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowKHR*) pSurfaceDescription;
-    VkPlatformHandleXcbKHR *pPlatformHandleXcb = (VkPlatformHandleXcbKHR *)
-        pSurfaceDescriptionWindow->pPlatformHandle;
-    xcb_connection_t *c = (xcb_connection_t *)
-        pPlatformHandleXcb->connection;
-    xcb_window_t window = *((xcb_window_t *)
-                            pSurfaceDescriptionWindow->pPlatformWindow);
+    const struct intel_xcb_surface *s = xcb_surface(surface);
+    xcb_connection_t *c = s->c;
+    xcb_window_t window = s->window;
     xcb_get_geometry_cookie_t cookie;
     xcb_get_geometry_reply_t *reply;
 
@@ -750,14 +787,10 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
                                       struct intel_x11_swap_chain **sc_ret)
 {
     const xcb_randr_provider_t provider = 0;
-    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowKHR*) info->pSurfaceDescription;
-    VkPlatformHandleXcbKHR *pPlatformHandleXcb = (VkPlatformHandleXcbKHR *)
-        pSurfaceDescriptionWindow->pPlatformHandle;
-    xcb_connection_t *c = (xcb_connection_t *)
-        pPlatformHandleXcb->connection;
-    xcb_window_t window = *((xcb_window_t *)
-                            pSurfaceDescriptionWindow->pPlatformWindow);
+
+    const struct intel_xcb_surface *s = xcb_surface(info->surface);
+    xcb_connection_t *c = s->c;
+    xcb_window_t window = s->window;
     struct intel_x11_swap_chain *sc;
     int fd;
 
@@ -914,33 +947,35 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
     return x11_swap_chain_wait(data->swap_chain, data->serial, timeout_ns);
 }
 
+
+ICD_EXPORT VkResult VKAPI vkCreateXcbSurfaceKHR(
+    VkInstance                              instance,
+    xcb_connection_t*                       connection,
+    xcb_window_t                            window,
+    VkSurfaceKHR*                           pSurface)
+{
+    return x11_surface_create((struct intel_instance *) instance,
+                              connection, window,
+                              (struct intel_xcb_surface **) pSurface);
+}
+
+
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
     VkSurfaceKHR                            surface,
     VkBool32*                               pSupported)
 {
-    VkResult ret = VK_SUCCESS;
-    const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
-        (VkSurfaceDescriptionWindowKHR*) pSurfaceDescription;
+    const struct intel_xcb_surface *s = xcb_surface(surface);
 
-    *pSupported = false;
-
-    // TODOVV: Move this check to a validation layer (i.e. the driver should
-    // assume the correct data type, and not check):
-    if (pSurfaceDescriptionWindow->sType != VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR) {
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
-    // TODOVV: NEED TO ALSO CHECK:
-    // - queueNodeIndex
-    // - pSurfaceDescriptionWindow->pPlatformHandle (can try to use it)
-    // - pSurfaceDescriptionWindow->pPlatformWindow (can try to use it)
-    if (pSurfaceDescriptionWindow->platform == VK_PLATFORM_XCB_KHR) {
+    // Just make sure we have a non-zero connection:
+    if (s->c) {
         *pSupported = true;
+    } else {
+        *pSupported = false;
     }
 
-    return ret;
+    return VK_SUCCESS;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -1111,7 +1146,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 
     for (i = 0; i < num_swapchains; i++) {
         struct intel_x11_swap_chain *sc =
-            x11_swap_chain(pPresentInfo->swapchains[i]);
+            x11_swap_chain(pPresentInfo->pSwapchains[i]);
         struct intel_img *img = 
             sc->persistent_images[pPresentInfo->imageIndices[i]];
         struct intel_x11_fence_data *data =
