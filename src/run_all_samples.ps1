@@ -51,6 +51,8 @@ echo "Initialize Pipeline"
 echo "Draw Cube"
 & $dPath\vk0.9-drawcube
 echo "Draw Textured Cube"
+& $dPath\vk0.9-copyblitimage
+echo "Copy/Blit Image"
 & $dPath\vk0.9-drawtexturedcube
 echo "Draw Cubes with Dynamic Uniform Buffer"
 & $dPath\vk0.9-dynamicuniform
