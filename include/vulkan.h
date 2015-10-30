@@ -1279,6 +1279,7 @@ typedef struct VkPhysicalDeviceLimits {
     float                                       pointSizeGranularity;
     float                                       lineWidthGranularity;
     VkBool32                                    strictLines;
+    VkBool32                                    standardSampleLocations;
     VkDeviceSize                                optimalBufferCopyOffsetAlignment;
     VkDeviceSize                                optimalBufferCopyRowPitchAlignment;
 } VkPhysicalDeviceLimits;

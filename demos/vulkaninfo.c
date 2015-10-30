@@ -920,6 +920,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tpointSizeGranularity                    = %f\n",                 limits->pointSizeGranularity                   );
     printf("\t\tlineWidthGranularity                    = %f\n",                 limits->lineWidthGranularity                   );
     printf("\t\tstrictLines                             = %u\n",                 limits->strictLines                            );
+    printf("\t\tstandardSampleLocations                 = %u\n",                 limits->standardSampleLocations                );
     printf("\t\toptimalBufferCopyOffsetAlignment    = 0x%" PRIxLEAST64 "\n", limits->optimalBufferCopyOffsetAlignment   );
     printf("\t\toptimalBufferCopyRowPitchAlignment  = 0x%" PRIxLEAST64 "\n", limits->optimalBufferCopyRowPitchAlignment );
 }
