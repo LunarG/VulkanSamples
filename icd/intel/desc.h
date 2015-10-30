@@ -106,6 +106,7 @@ struct intel_desc_layout {
 
     /* homogeneous bindings in this layout */
     struct intel_desc_layout_binding {
+        uint32_t binding;
         VkDescriptorType type;
         uint32_t array_size;
         const struct intel_sampler **immutable_samplers;

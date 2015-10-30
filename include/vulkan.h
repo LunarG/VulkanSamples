@@ -1831,6 +1831,7 @@ typedef struct VkSamplerCreateInfo {
 } VkSamplerCreateInfo;
 
 typedef struct VkDescriptorSetLayoutBinding {
+    uint32_t                                    binding;
     VkDescriptorType                            descriptorType;
     uint32_t                                    arraySize;
     VkShaderStageFlags                          stageFlags;

@@ -1056,6 +1056,7 @@ static void demo_prepare_vertices(struct demo *demo)
 static void demo_prepare_descriptor_layout(struct demo *demo)
 {
     const VkDescriptorSetLayoutBinding layout_binding = {
+        .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .arraySize = DEMO_TEXTURE_COUNT,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,

@@ -61,12 +61,19 @@ bool intel_desc_iter_init_for_binding(struct intel_desc_iter *iter,
                                       uint32_t binding_index, uint32_t array_base)
 {
     const struct intel_desc_layout_binding *binding;
+    uint32_t i;
 
-    if (binding_index >= layout->binding_count ||
-        array_base >= layout->bindings[binding_index].array_size)
+    /* should we waste some memory to get rid of this loop? */
+    for (i = 0; i < layout->binding_count; i++) {
+        if (layout->bindings[i].binding == binding_index)
+            break;
+    }
+
+    if (i >= layout->binding_count ||
+        array_base >= layout->bindings[i].array_size)
         return false;
 
-    binding = &layout->bindings[binding_index];
+    binding = &layout->bindings[i];
 
     iter->type = binding->type;
     iter->increment = binding->increment;
@@ -586,6 +593,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
         }
 
         /* lb->stageFlags does not gain us anything */
+        binding->binding = lb->binding;
         binding->type = lb->descriptorType;
         binding->array_size = lb->arraySize;
         binding->offset = offset;

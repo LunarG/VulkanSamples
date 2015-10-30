@@ -501,6 +501,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer
     vector<VkDescriptorSetLayoutBinding> bindings;
     bindings.resize(m_type_counts.size());
     for (int i = 0; i < m_type_counts.size(); i++) {
+        bindings[i].binding = i;
         bindings[i].descriptorType = m_type_counts[i].type;
         bindings[i].arraySize = m_type_counts[i].descriptorCount;
         bindings[i].stageFlags = VK_SHADER_STAGE_ALL;

@@ -1290,12 +1290,14 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
 {
     const VkDescriptorSetLayoutBinding layout_bindings[2] = {
         [0] = {
+            .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .arraySize = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = NULL,
         },
         [1] = {
+            .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .arraySize = DEMO_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,

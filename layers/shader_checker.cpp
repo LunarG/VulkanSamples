@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <vector>
 #include <string>
@@ -53,8 +54,8 @@ struct layer_data {
     VkLayerInstanceDispatchTable* instance_dispatch_table;
 
     std::unordered_map<VkShaderModule, shader_module *> shader_module_map;
-    std::unordered_map<VkDescriptorSetLayout, std::vector<VkDescriptorSetLayoutBinding>*> descriptor_set_layout_map;
-    std::unordered_map<VkPipelineLayout, std::vector<std::vector<VkDescriptorSetLayoutBinding>*>*> pipeline_layout_map;
+    std::unordered_map<VkDescriptorSetLayout, std::unordered_set<uint32_t>*> descriptor_set_layout_map;
+    std::unordered_map<VkPipelineLayout, std::vector<std::unordered_set<uint32_t>*>*> pipeline_layout_map;
     std::unordered_map<VkRenderPass, render_pass *> render_pass_map;
 
     layer_data() :
@@ -133,8 +134,11 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         auto& bindings = my_data->descriptor_set_layout_map[*pSetLayout];
-        bindings = new std::vector<VkDescriptorSetLayoutBinding>(
-                pCreateInfo->pBinding, pCreateInfo->pBinding + pCreateInfo->bindingCount);
+        bindings = new std::unordered_set<uint32_t>();
+        bindings->reserve(pCreateInfo->bindingCount);
+        for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++)
+            bindings->insert(pCreateInfo->pBinding[i].binding);
+
         loader_platform_thread_unlock_mutex(&globalLock);
     }
 
@@ -153,7 +157,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
         auto& layouts = my_data->pipeline_layout_map[*pPipelineLayout];
-        layouts = new std::vector<std::vector<VkDescriptorSetLayoutBinding>*>();
+        layouts = new std::vector<std::unordered_set<uint32_t>*>();
         layouts->reserve(pCreateInfo->setLayoutCount);
         for (unsigned i = 0; i < pCreateInfo->setLayoutCount; i++) {
             layouts->push_back(my_data->descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
@@ -979,22 +983,19 @@ shader_stage_attribs[] = {
 };
 
 
-static VkDescriptorSetLayoutBinding *
-find_descriptor_binding(std::vector<std::vector<VkDescriptorSetLayoutBinding>*>* layout,
-                        std::pair<unsigned, unsigned> slot)
+static bool
+has_descriptor_binding(std::vector<std::unordered_set<uint32_t>*>* layout,
+                       std::pair<unsigned, unsigned> slot)
 {
     if (!layout)
-        return nullptr;
+        return false;
 
     if (slot.first >= layout->size())
-        return nullptr;
+        return false;
 
     auto set = (*layout)[slot.first];
 
-    if (slot.second >= set->size())
-        return nullptr;
-
-    return &(*set)[slot.second];
+    return (set->find(slot.second) != set->end());
 }
 
 static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
@@ -1046,9 +1047,9 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
                 for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
 
                     /* find the matching binding */
-                    auto binding = find_descriptor_binding(layout, it->first);
+                    auto found = has_descriptor_binding(layout, it->first);
 
-                    if (binding == nullptr) {
+                    if (!found) {
                         char type_name[1024];
                         describe_type(type_name, module, it->second.type_id);
                         if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0,

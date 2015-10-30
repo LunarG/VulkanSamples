@@ -697,7 +697,9 @@ static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const
 static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
 {
     uint32_t offsetIndex = 0;
-    for (uint32_t i = 0; i<binding; i++) {
+    for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
+        if (pLayout->createInfo.pBinding[i].binding == binding)
+            break;
         offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
     }
     return offsetIndex;
@@ -706,8 +708,10 @@ static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t 
 static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
 {
     uint32_t offsetIndex = 0;
-    for (uint32_t i = 0; i<=binding; i++) {
+    for (uint32_t i = 0; i <  pLayout->createInfo.bindingCount; i++) {
         offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
+        if (pLayout->createInfo.pBinding[i].binding == binding)
+            break;
     }
     return offsetIndex-1;
 }
@@ -1024,7 +1028,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         uint32_t binding = 0, endIndex = 0;
         binding = pWDS[i].dstBinding;
         // Make sure that layout being updated has the binding being updated
-        if (pLayout->createInfo.bindingCount < binding) {
+        if (pLayout->bindings.find(binding) == pLayout->bindings.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                     "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
         } else {
@@ -1075,11 +1079,11 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         pSrcLayout = pSrcSet->pLayout;
         pDstLayout = pDstSet->pLayout;
         // Validate that src binding is valid for src set layout
-        if (pSrcLayout->createInfo.bindingCount < pCDS[i].srcBinding) {
+        if (pSrcLayout->bindings.find(pCDS[i].srcBinding) == pSrcLayout->bindings.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pSrcSet->set, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                 "Copy descriptor update %u has srcBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
                 i, pCDS[i].srcBinding, (uint64_t) pSrcLayout->layout, pSrcLayout->createInfo.bindingCount-1);
-        } else if (pDstLayout->createInfo.bindingCount < pCDS[i].dstBinding) {
+        } else if (pDstLayout->bindings.find(pCDS[i].dstBinding) == pDstLayout->bindings.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDstSet->set, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
                 "Copy descriptor update %u has dstBinding %u which is out of bounds for underlying SetLayout %#" PRIxLEAST64 " which only has bindings 0-%u.",
                 i, pCDS[i].dstBinding, (uint64_t) pDstLayout->layout, pDstLayout->createInfo.bindingCount-1);
@@ -2029,8 +2033,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
         pNewNode->createInfo.pBinding = new VkDescriptorSetLayoutBinding[pCreateInfo->bindingCount];
         memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->bindingCount);
+        // g++ does not like reserve with size 0
+        if (pCreateInfo->bindingCount)
+            pNewNode->bindings.reserve(pCreateInfo->bindingCount);
         uint32_t totalCount = 0;
         for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
+            if (!pNewNode->bindings.insert(pCreateInfo->pBinding[i].binding).second) {
+                if (log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) *pSetLayout, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
+                            "duplicated binding number in VkDescriptorSetLayoutBinding"))
+                    return VK_ERROR_VALIDATION_FAILED;
+            }
+
             totalCount += pCreateInfo->pBinding[i].arraySize;
             if (pCreateInfo->pBinding[i].pImmutableSamplers) {
                 VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
