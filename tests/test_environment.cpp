@@ -66,8 +66,8 @@ void Environment::SetUp()
     std::vector<const char *> device_extension_names;
     std::vector<const char *> device_layer_names;
 
-    instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
-    device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     VkBool32 extFound;
 

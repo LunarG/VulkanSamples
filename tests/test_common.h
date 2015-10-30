@@ -7,10 +7,15 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#else
+#define VK_USE_PLATFORM_XCB_KHR
+#endif
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_sdk_platform.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #pragma warning( push )
 /*
     warnings 4251 and 4275 have to do with potential dll-interface mismatch
@@ -23,7 +28,7 @@
 #endif
 #include "gtest/gtest.h"
 #include "gtest-1.7.0/include/gtest/gtest.h"
-#ifdef WIN32
+#ifdef _WIN32
 #pragma warning( pop )
 #endif
 #include "vktestbinding.h"

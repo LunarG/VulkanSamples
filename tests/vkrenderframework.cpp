@@ -26,8 +26,6 @@
  */
 
 #include "vkrenderframework.h"
-#include <vulkan/VK_KHR_surface.h>
-#include <vulkan/VK_KHR_swapchain.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
@@ -179,18 +177,29 @@ void VkRenderFramework::InitState()
     // Get the list of VkFormat's that are supported:
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
     uint32_t formatCount;
-    VkSurfaceDescriptionKHR surface_description;
-    surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
-    surface_description.pNext = NULL;
+#ifdef _WIN32
+    // FIXME: Call vkCreateWin32SurfaceKHR()
+    // FIXME: Call vkCreateWin32SurfaceKHR()
+    // FIXME: Call vkCreateWin32SurfaceKHR()
+    // FIXME: Call vkCreateWin32SurfaceKHR()
+#else // _WIN32
+    // FIXME: Call vkCreateXcbSurfaceKHR()
+    // FIXME: Call vkCreateXcbSurfaceKHR()
+    // FIXME: Call vkCreateXcbSurfaceKHR()
+    // FIXME: Call vkCreateXcbSurfaceKHR()
+#endif // _WIN32
+    VkSurfaceKHR surface; //FIXME: MUST GET THIS FROM SOMEWHERE--OLD CODE WASN'T FILLING IN THE SURFACE DESCRIPTION!!!
     GET_DEVICE_PROC_ADDR(device(), GetPhysicalDeviceSurfaceFormatsKHR);
-    err = fpGetPhysicalDeviceSurfaceFormatsKHR(device(),
-                                    (VkSurfaceDescriptionKHR *) &surface_description,
+    err = fpGetPhysicalDeviceSurfaceFormatsKHR(
+                                    m_device->phy().handle(),
+                                    surface,
                                     &formatCount, NULL);
     ASSERT_VK_SUCCESS(err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = fpGetPhysicalDeviceSurfaceFormatsKHR(device(),
-                                    (VkSurfaceDescriptionKHR *) &surface_description,
+    err = fpGetPhysicalDeviceSurfaceFormatsKHR(
+                                    m_device->phy().handle(),
+                                    surface,
                                     &formatCount, surfFormats);
     ASSERT_VK_SUCCESS(err);
     m_render_target_fmt = surfFormats[0].format;
