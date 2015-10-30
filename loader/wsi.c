@@ -43,25 +43,33 @@ static const VkExtensionProperties wsi_win32_surface_extension_info = {
         .specVersion = VK_KHR_WIN32_SURFACE_REVISION,
 };
 #else // _WIN32
+#ifdef VK_USE_PLATFORM_MIR_KHR
 static const VkExtensionProperties wsi_mir_surface_extension_info = {
         .extensionName = VK_KHR_MIR_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_MIR_SURFACE_REVISION,
 };
+#endif // VK_USE_PLATFORM_MIR_KHR
 
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
 static const VkExtensionProperties wsi_wayland_surface_extension_info = {
         .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_WAYLAND_SURFACE_REVISION,
 };
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
 
+#ifdef VK_USE_PLATFORM_XCB_KHR
 static const VkExtensionProperties wsi_xcb_surface_extension_info = {
         .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_XCB_SURFACE_REVISION,
 };
+#endif // VK_USE_PLATFORM_XCB_KHR
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
 static const VkExtensionProperties wsi_xlib_surface_extension_info = {
         .extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_XLIB_SURFACE_REVISION,
 };
+#endif // VK_USE_PLATFORM_XLIB_KHR
 #endif // _WIN32
 
 void wsi_add_instance_extensions(
@@ -72,10 +80,18 @@ void wsi_add_instance_extensions(
 #ifdef _WIN32
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_win32_surface_extension_info);
 #else // _WIN32
+#ifdef VK_USE_PLATFORM_MIR_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_mir_surface_extension_info);
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_wayland_surface_extension_info);
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_xcb_surface_extension_info);
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_xlib_surface_extension_info);
+#endif // VK_USE_PLATFORM_XLIB_KHR
 #endif // _WIN32
 }
 
@@ -83,7 +99,7 @@ void wsi_create_instance(
         struct loader_instance *ptr_instance,
         const VkInstanceCreateInfo *pCreateInfo)
 {
-    ptr_instance->wsi_enabled = false;
+    ptr_instance->wsi_surface_enabled = false;
 #ifdef _WIN32
     ptr_instance->wsi_surface_enabled = true;
 #else // _WIN32
@@ -103,18 +119,26 @@ void wsi_create_instance(
             ptr_instance->wsi_surface_enabled = true;
         }
 #else // _WIN32
+#ifdef VK_USE_PLATFORM_MIR_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_mir_surface_enabled = true;
         }
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_wayland_surface_enabled = true;
         }
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_xcb_surface_enabled = true;
         }
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_xlib_surface_enabled = true;
         }
+#endif // VK_USE_PLATFORM_XLIB_KHR
 #endif // _WIN32
     }
 }

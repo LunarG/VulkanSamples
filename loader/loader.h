@@ -32,6 +32,14 @@
 #ifndef LOADER_H
 #define LOADER_H
 
+#if defined _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#else
+//#define VK_USE_PLATFORM_MIR_KHR
+//#define VK_USE_PLATFORM_WAYLAND_KHR
+#define VK_USE_PLATFORM_XCB_KHR
+//#define VK_USE_PLATFORM_XLIB_KHR
+#endif
 #include <vulkan/vulkan.h>
 #include <vk_loader_platform.h>
 
