@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 201, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 202, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -840,7 +840,7 @@ typedef enum VkSparseImageFormatFlagBits {
 } VkSparseImageFormatFlagBits;
 typedef VkFlags VkSparseImageFormatFlags;
 
-typedef enum {
+typedef enum VkSparseMemoryBindFlagBits {
     VK_SPARSE_MEMORY_BIND_METADATA_BIT = 0x00000001,
 } VkSparseMemoryBindFlagBits;
 typedef VkFlags VkSparseMemoryBindFlags;
