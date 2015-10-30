@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     init_swap_chain(info);
     init_uniform_buffer(info); 
     init_descriptor_and_pipeline_layouts(info, false);
+    init_renderpass(info, false);
     init_framebuffers(info, false);
     init_descriptor_pool(info, false);
     init_descriptor_set(info, false);
