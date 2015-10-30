@@ -1965,7 +1965,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
 
     VkPipelineInputAssemblyStateCreateInfo iaCI = {};
         iaCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        iaCI.topology = VK_PRIMITIVE_TOPOLOGY_PATCH;
+        iaCI.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 
     VkPipelineTessellationStateCreateInfo tsCI = {};
         tsCI.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;

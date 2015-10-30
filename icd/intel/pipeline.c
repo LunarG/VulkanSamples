@@ -343,7 +343,7 @@ static VkResult pipeline_build_ia(struct intel_pipeline *pipeline,
     case VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY:
         pipeline->prim_type = GEN6_3DPRIM_TRISTRIP_ADJ;
         break;
-    case VK_PRIMITIVE_TOPOLOGY_PATCH:
+    case VK_PRIMITIVE_TOPOLOGY_PATCH_LIST:
         pipeline->prim_type = GEN7_3DPRIM_PATCHLIST_1 +
             info->tess.patchControlPoints - 1;
         break;
