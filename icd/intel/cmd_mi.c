@@ -175,7 +175,7 @@ static void cmd_write_event_value(struct intel_cmd *cmd, struct intel_event *eve
      * With no other PIPE_CONTROL flags set, it behaves as VK_PIPE_EVENT_TOP_OF_PIPE.
      * All other pipeEvent values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
-    if (stageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) {
+    if (stageMask & ~VK_PIPELINE_STAGE_HOST_BIT) {
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
     }
 
@@ -228,7 +228,7 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     struct intel_bo *bo = query->obj.mem->bo;
     const VkDeviceSize offset = query->slot_stride * slot;
 
-    if ((pipelineStage & VK_PIPELINE_STAGE_ALL_GPU_COMMANDS) &&
+    if ((pipelineStage & ~VK_PIPELINE_STAGE_HOST_BIT) &&
         pipelineStage != VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) {
         cmd_batch_timestamp(cmd, bo, offset);
     } else {

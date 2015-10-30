@@ -1216,11 +1216,13 @@ std::string EnumeratorString(VkShaderStageFlagBits const& enumerator)
 static
 bool ValidateEnumerator(VkPipelineStageFlagBits const& enumerator)
 {
-    VkPipelineStageFlagBits allFlags = (VkPipelineStageFlagBits)(VK_PIPELINE_STAGE_ALL_GRAPHICS |
+    VkPipelineStageFlagBits allFlags = (VkPipelineStageFlagBits)(
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT|
+        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|
         VK_PIPELINE_STAGE_HOST_BIT |
         VK_PIPELINE_STAGE_TRANSFER_BIT |
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-        VK_PIPELINE_STAGE_ALL_GPU_COMMANDS |
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT |
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
         VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
@@ -1249,9 +1251,13 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
     }
 
     std::vector<std::string> strings;
-    if(enumerator & VK_PIPELINE_STAGE_ALL_GRAPHICS)
+    if(enumerator & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
     {
-        strings.push_back("VK_PIPELINE_STAGE_ALL_GRAPHICS");
+        strings.push_back("VK_PIPELINE_STAGE_ALL_COMMANDS_BIT");
+    }
+    if(enumerator & VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT)
+    {
+        strings.push_back("VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT");
     }
     if(enumerator & VK_PIPELINE_STAGE_HOST_BIT)
     {
@@ -1265,9 +1271,9 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
     {
         strings.push_back("VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT");
     }
-    if(enumerator & VK_PIPELINE_STAGE_ALL_GPU_COMMANDS)
+    if(enumerator & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)
     {
-        strings.push_back("VK_PIPELINE_STAGE_ALL_GPU_COMMANDS");
+        strings.push_back("VK_PIPELINE_STAGE_ALL_COMMANDS_BIT");
     }
     if(enumerator & VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)
     {

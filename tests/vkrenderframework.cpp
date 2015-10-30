@@ -577,8 +577,8 @@ void VkImageObj::ImageMemoryBarrier(
 
     VkImageMemoryBarrier *pmemory_barrier = &barrier;
 
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     // write barrier to the command buffer
     vkCmdPipelineBarrier(cmd_buf->handle(), src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
@@ -974,8 +974,8 @@ void VkConstantBufferObj::BufferMemoryBarrier(
         buffer_memory_barrier(srcAccessMask, dstAccessMask, 0, m_numVertices * m_stride);
     VkBufferMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     // write barrier to the command buffer
     m_commandBuffer->PipelineBarrier(src_stages, dest_stages, 0, 1, (const void **)&pmemory_barrier);
@@ -1371,8 +1371,8 @@ void VkCommandBufferObj::ClearAllBuffers(VkClearColorValue clear_color, float de
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     for (i = 0; i < m_renderTargets.size(); i++) {
         memory_barrier.image = m_renderTargets[i]->image();
@@ -1477,8 +1477,8 @@ void VkCommandBufferObj::PrepareAttachments()
     memory_barrier.subresourceRange = srRange;
     VkImageMemoryBarrier *pmemory_barrier = &memory_barrier;
 
-    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+    VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
     for(i=0; i<m_renderTargets.size(); i++)
     {

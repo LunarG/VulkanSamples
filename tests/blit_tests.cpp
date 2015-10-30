@@ -1234,8 +1234,8 @@ protected:
 
         cmd_.begin();
 
-        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, 1, (const void * const*)&p_to_clear[0]);
 
         vkCmdClearColorImage(cmd_.handle(),
@@ -1420,8 +1420,8 @@ protected:
 
         cmd_.begin();
 
-        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
-        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_GPU_COMMANDS;
+        VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         vkCmdPipelineBarrier(cmd_.handle(), src_stages, dest_stages, 0, to_clear.size(), (const void * const*) p_to_clear.data());
 
         VkClearDepthStencilValue clear_value = {

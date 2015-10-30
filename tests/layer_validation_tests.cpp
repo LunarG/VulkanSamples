@@ -3852,7 +3852,7 @@ extern "C" void *AddToCommandBuffer(void *arg)
     struct thread_data_struct *data = (struct thread_data_struct *) arg;
 
     for (int i = 0; i<10000; i++) {
-        vkCmdSetEvent(data->commandBuffer, data->event, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS);
+        vkCmdSetEvent(data->commandBuffer, data->event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
         if (data->bailout) {
             break;
         }

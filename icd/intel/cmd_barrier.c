@@ -314,8 +314,8 @@ ICD_EXPORT void VKAPI vkCmdPipelineBarrier(
      * All other pEvents values will behave as VK_PIPE_EVENT_COMMANDS_COMPLETE.
      */
 
-    if ((srcStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS) ||
-            (dstStageMask & VK_PIPELINE_STAGE_ALL_GRAPHICS)){
+    if ((srcStageMask & ~VK_PIPELINE_STAGE_HOST_BIT) ||
+        (dstStageMask & ~VK_PIPELINE_STAGE_HOST_BIT)){
         pipe_control_flags = GEN6_PIPE_CONTROL_CS_STALL;
     }
 
