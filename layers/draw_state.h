@@ -27,6 +27,7 @@
  */
 #include "vulkan/vk_layer.h"
 #include "vulkan/vk_ext_debug_report.h"
+#include <atomic>
 #include <vector>
 #include <memory>
 
@@ -47,6 +48,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
     DRAWSTATE_INVALID_COMMAND_BUFFER,           // Invalid CommandBuffer referenced
     DRAWSTATE_INVALID_BARRIER,                  // Invalid Barrier
+    DRAWSTATE_INVALID_BUFFER,                   // Invalid Buffer
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -93,6 +95,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,      // A Descriptor of *_TEXEL_BUFFER type is being updated with an invalid or bad BufferView
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,          // At draw time the dynamic offset combined with buffer offset and range oversteps size of buffer
+    DRAWSTATE_DOUBLE_DESTROY,                   // Destroying an object twice
+    DRAWSTATE_OBJECT_INUSE,                     // Destroying an object in use by a command buffer
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
@@ -187,6 +191,11 @@ typedef struct _PIPELINE_NODE {
                      {};
 } PIPELINE_NODE;
 
+class BASE_NODE {
+  public:
+    std::atomic_int in_use;
+};
+
 typedef struct _SAMPLER_NODE {
     VkSampler           sampler;
     VkSamplerCreateInfo createInfo;
@@ -202,6 +211,12 @@ typedef struct _IMAGE_CMD_BUF_NODE {
     VkImageLayout layout;
     VkImageLayout initialLayout;
 } IMAGE_CMD_BUF_NODE;
+
+class BUFFER_NODE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    unique_ptr<VkBufferCreateInfo> create_info;
+};
 
 struct RENDER_PASS_NODE {
     VkRenderPassCreateInfo const* pCreateInfo;
@@ -229,6 +244,26 @@ struct RENDER_PASS_NODE {
             subpassColorFormats.push_back(color_formats);
         }
     }
+};
+
+class FENCE_NODE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    vector<VkCommandBuffer> cmdBuffers;
+    bool needsSignaled;
+    VkFence priorFence;
+};
+
+class QUEUE_NODE {
+  public:
+    VkDevice device;
+    VkFence priorFence;
+    vector<VkCommandBuffer> untrackedCmdBuffers;
+};
+
+class DEVICE_NODE {
+  public:
+    vector<VkQueue> queues;
 };
 
 // Descriptor Data structures
@@ -404,6 +439,10 @@ typedef struct stencil_data {
     uint32_t                     reference;
 } CBStencilData;
 
+typedef struct _DRAW_DATA {
+    vector<VkBuffer> buffers;
+} DRAW_DATA;
+
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCommandBuffer              commandBuffer;
@@ -441,6 +480,8 @@ typedef struct _GLOBAL_CB_NODE {
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
+    vector<DRAW_DATA>            drawData;
+    DRAW_DATA                    currentDrawData;
 } GLOBAL_CB_NODE;
 
 typedef struct _SWAPCHAIN_NODE {
