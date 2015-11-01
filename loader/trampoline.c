@@ -205,11 +205,6 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return res;
 }
 
-
-
-
-
-
 LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceFeatures *pFeatures)

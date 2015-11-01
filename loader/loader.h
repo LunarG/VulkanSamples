@@ -43,8 +43,6 @@
 #  define LOADER_EXPORT
 #endif
 
-#define MAX_EXTENSION_NAME_SIZE (VK_MAX_EXTENSION_NAME_SIZE-1)
-#define MAX_GPUS_PER_ICD 16
 #define MAX_STRING_SIZE 1024
 #define VK_MAJOR(version) (version >> 22)
 #define VK_MINOR(version) ((version >> 12) & 0x3ff)
@@ -126,8 +124,6 @@ struct loader_icd {
     const struct loader_instance *this_instance;
 
     struct loader_device *logical_device_list;
-    uint32_t gpu_count;
-    VkPhysicalDevice *gpus;    // enumerated PhysicalDevices
     VkInstance instance;       // instance object from the icd
     PFN_vkGetDeviceProcAddr GetDeviceProcAddr;
     PFN_vkDestroyInstance DestroyInstance;
@@ -145,12 +141,6 @@ struct loader_icd {
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
 
-    /*
-     * Fill in the cache of available device extensions from
-     * this physical device. This cache will be used to satisfy
-     * calls to EnumerateDeviceExtensionProperties
-     */
-    struct loader_extension_list device_extension_cache[MAX_GPUS_PER_ICD];
     struct loader_icd *next;
 };
 
@@ -166,6 +156,7 @@ struct loader_instance {
     VkLayerInstanceDispatchTable *disp; // must be first entry in structure
 
     uint32_t total_gpu_count;
+    struct loader_physical_device *phys_devs;
     uint32_t total_icd_count;
     struct loader_icd *icds;
     struct loader_instance *next;
@@ -184,6 +175,20 @@ struct loader_instance {
     VkAllocationCallbacks alloc_callbacks;
 
     bool wsi_swapchain_enabled;
+};
+
+/* per enumerated PhysicalDevice structure */
+struct loader_physical_device {
+    VkLayerInstanceDispatchTable *disp; // must be first entry in structure
+    struct loader_instance *this_instance;
+    struct loader_icd *this_icd;
+    VkPhysicalDevice phys_dev;          // object from ICD
+    /*
+     * Fill in the cache of available device extensions from
+     * this physical device. This cache will be used to satisfy
+     * calls to EnumerateDeviceExtensionProperties
+     */
+    struct loader_extension_list device_extension_cache;
 };
 
 struct loader_struct {
@@ -341,7 +346,7 @@ bool has_vk_extension_property(
         const VkExtensionProperties *vk_ext_prop,
         const struct loader_extension_list *ext_list);
 
-void loader_add_to_ext_list(
+VkResult loader_add_to_ext_list(
         const struct loader_instance *inst,
         struct loader_extension_list *ext_list,
         uint32_t prop_list_count,
@@ -376,9 +381,6 @@ struct loader_icd *loader_get_icd_and_device(
         struct loader_device **found_dev);
 struct loader_instance *loader_get_instance(
         const VkInstance instance);
-struct loader_icd * loader_get_icd(
-        const VkPhysicalDevice gpu,
-        uint32_t *gpu_index);
 void loader_remove_logical_device(
         const struct loader_instance *inst,
         VkDevice device);

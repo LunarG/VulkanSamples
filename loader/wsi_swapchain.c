@@ -94,15 +94,15 @@ VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
         const VkSurfaceDescriptionKHR*          pSurfaceDescription,
         VkBool32*                               pSupported)
 {
-    uint32_t gpu_index;
-    struct loader_icd *icd = loader_get_icd(physicalDevice, &gpu_index);
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
 
     assert(pSupported && "GetPhysicalDeviceSurfaceSupportKHR: Error, null pSupported");
     *pSupported = false;
 
     assert(icd->GetPhysicalDeviceSurfaceSupportKHR && "loader: null GetPhysicalDeviceSurfaceSupportKHR ICD pointer");
 
-    return icd->GetPhysicalDeviceSurfaceSupportKHR(physicalDevice,
+    return icd->GetPhysicalDeviceSurfaceSupportKHR(phys_dev->phys_dev,
                                                   queueNodeIndex,
                                                   pSurfaceDescription,
                                                   pSupported);
