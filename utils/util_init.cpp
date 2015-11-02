@@ -1380,7 +1380,6 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
 
     std::vector<unsigned int> vtx_spv;
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
     info.shaderStages[0].pNext  = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
 
@@ -1409,7 +1408,6 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    info.shaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
     info.shaderStages[1].pNext  = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
 
