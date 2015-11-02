@@ -1522,6 +1522,7 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'CreateComputePipelines' : ['basePipelineHandle'],
                                    'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
                                    'QueueSubmit' : ['fence'],
+                                   'UpdateDescriptorSets' : ['pTexelBufferView'],
                                   }
         param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:

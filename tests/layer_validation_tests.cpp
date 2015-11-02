@@ -1091,76 +1091,6 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     vkFreeMemory(m_device->device(), mem, NULL);
 }
 
-TEST_F(VkLayerTest, InvalidBufferViewObject)
-{
-    // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
-    VkResult        err;
-
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
-        "Invalid VkBufferView Object 0xbaadbeef");
-
-    ASSERT_NO_FATAL_FAILURE(InitState());
-    VkDescriptorPoolSize ds_type_count = {};
-        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-        ds_type_count.descriptorCount = 1;
-
-    VkDescriptorPoolCreateInfo ds_pool_ci = {};
-        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        ds_pool_ci.pNext = NULL;
-        ds_pool_ci.maxSets = 1;
-        ds_pool_ci.poolSizeCount = 1;
-        ds_pool_ci.pPoolSizes = &ds_type_count;
-
-    VkDescriptorPool ds_pool;
-    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSetLayoutBinding dsl_binding = {};
-        dsl_binding.binding = 0;
-        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-        dsl_binding.arraySize = 1;
-        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
-        dsl_binding.pImmutableSamplers = NULL;
-
-    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
-        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        ds_layout_ci.pNext = NULL;
-        ds_layout_ci.bindingCount = 1;
-        ds_layout_ci.pBinding = &dsl_binding;
-    VkDescriptorSetLayout ds_layout;
-    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
-    ASSERT_VK_SUCCESS(err);
-
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
-    alloc_info.setLayoutCount = 1;
-    alloc_info.descriptorPool = ds_pool;
-    alloc_info.pSetLayouts = &ds_layout;
-    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
-    ASSERT_VK_SUCCESS(err);
-
-    VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
-
-    VkWriteDescriptorSet descriptor_write;
-    memset(&descriptor_write, 0, sizeof(descriptor_write));
-    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.dstSet = descriptorSet;
-    descriptor_write.dstBinding = 0;
-    descriptor_write.descriptorCount = 1;
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-    descriptor_write.pTexelBufferView = &view;
-
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
-
-    if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did nto receive Error 'Invalid VkBufferView Object 0xbaadbeef'";
-        m_errorMonitor->DumpFailureMsgs();
-    }
-
-    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
-    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
-}
 #endif // OBJ_TRACKER_TESTS
 
 #if DRAW_STATE_TESTS
@@ -1710,6 +1640,77 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     }
 
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, InvalidBufferViewObject)
+{
+    // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
+    VkResult        err;
+
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+        "Attempt to update descriptor with invalid bufferView ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+    descriptor_write.pTexelBufferView = &view;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'Invalid VkBufferView Object 0xbaadbeef'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
