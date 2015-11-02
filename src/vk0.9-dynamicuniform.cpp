@@ -347,7 +347,7 @@ int main(int argc, char **argv)
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
 
     /* Make sure buffer is ready for rendering */
     res = vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
