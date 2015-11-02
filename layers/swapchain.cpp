@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "swapchain.h"
-#include "vk_loader_platform.h"
 #include "vk_layer_extension_utils.h"
 
 // FIXME/TODO: Make sure this layer is thread-safe!
