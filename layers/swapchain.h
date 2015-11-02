@@ -28,7 +28,6 @@
 #ifndef SWAPCHAIN_H
 #define SWAPCHAIN_H
 
-#include "vk_loader_platform.h"
 #include "vk_layer.h"
 #include "vk_debug_report_lunarg.h"
 #include "vk_layer_config.h"

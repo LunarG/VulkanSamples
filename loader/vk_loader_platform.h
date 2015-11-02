@@ -198,6 +198,14 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 // Headers:
 #include <WinSock2.h>
 #include <windows.h>
+// WinBase.h defines CreateSemaphore and synchapi.h defines CreateEvent
+//  undefine them to avoid conflicts with VkLayerDispatchTable struct members.
+#ifdef CreateSemaphore
+#undef CreateSemaphore
+#endif
+#ifdef CreateEvent
+#undef CreateEvent
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <io.h>
