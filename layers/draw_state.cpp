@@ -1169,14 +1169,31 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         {
             case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
                 pWDS = (VkWriteDescriptorSet*)pFreeUpdate;
-                if (pWDS->pImageInfo) {
-                    delete[] pWDS->pImageInfo;
-                }
-                if (pWDS->pBufferInfo) {
-                    delete[] pWDS->pBufferInfo;
-                }
-                if (pWDS->pTexelBufferView) {
-                    delete[] pWDS->pTexelBufferView;
+                switch (pWDS->descriptorType) {
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                    {
+                        delete[] pWDS->pImageInfo;
+                    }
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                    {
+                        delete[] pWDS->pTexelBufferView;
+                    }
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                    {
+                        delete[] pWDS->pBufferInfo;
+                    }
+                    break;
+                default:
+                    break;
                 }
                 break;
             case VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET:
