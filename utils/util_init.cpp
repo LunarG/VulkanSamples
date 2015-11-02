@@ -1484,9 +1484,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     rs.depthClampEnable = include_depth;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
-    rs.depthBias = 0;
+    rs.depthBiasConstantFactor = 0;
     rs.depthBiasClamp = 0;
-    rs.slopeScaledDepthBias = 0;
+    rs.depthBiasSlopeFactor = 0;
     rs.lineWidth = 0;
 
     VkPipelineColorBlendStateCreateInfo cb;

@@ -143,9 +143,9 @@ int main(int argc, char **argv)
     rs.depthClampEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
-    rs.depthBias = 0;
+    rs.depthBiasConstantFactor = 0;
     rs.depthBiasClamp = 0;
-    rs.slopeScaledDepthBias = 0;
+    rs.depthBiasSlopeFactor = 0;
     rs.lineWidth = 0;
 
     VkPipelineColorBlendStateCreateInfo cb;
