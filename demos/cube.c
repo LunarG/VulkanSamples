@@ -1142,9 +1142,9 @@ static void demo_prepare_textures(struct demo *demo)
                                    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
             VkImageCopy copy_region = {
-                .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 },
+                .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
                 .srcOffset = { 0, 0, 0 },
-                .destSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 },
+                .destSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
                 .destOffset = { 0, 0, 0 },
                 .extent = { staging_texture.tex_width, staging_texture.tex_height, 1 },
             };
