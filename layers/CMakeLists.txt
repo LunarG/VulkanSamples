@@ -14,6 +14,13 @@ macro(run_vk_layer_generate subcmd output)
 	)
 endmacro()
 
+macro(run_vk_layer_xml_generate subcmd output)
+	add_custom_command(OUTPUT ${output}
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/genvk.py -registry ${PROJECT_SOURCE_DIR}/vk.xml ${output}
+		DEPENDS ${PROJECT_SOURCE_DIR}/vk.xml ${PROJECT_SOURCE_DIR}/generator.py ${PROJECT_SOURCE_DIR}/genvk.py ${PROJECT_SOURCE_DIR}/reg.py
+	)
+endmacro()
+
 set(LAYER_JSON_FILES
     VkLayer_draw_state
     VkLayer_image
@@ -135,7 +142,7 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 )
 
 run_vk_layer_generate(object_tracker object_tracker.cpp)
-run_vk_layer_generate(threading threading.cpp)
+run_vk_layer_xml_generate(Threading thread_check.h)
 run_vk_layer_generate(unique_objects unique_objects.cpp)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
@@ -155,5 +162,5 @@ add_vk_layer(param_checker param_checker.cpp vk_layer_debug_marker_table.cpp vk_
 add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
-add_vk_layer(threading threading.cpp vk_layer_table.cpp)
+add_vk_layer(threading threading.cpp thread_check.h vk_layer_table.cpp)
 add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp)

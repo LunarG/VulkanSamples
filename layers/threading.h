@@ -31,6 +31,7 @@
 
 #ifndef THREADING_H
 #define THREADING_H
+#include <vector>
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 
@@ -42,24 +43,286 @@ typedef enum _THREADING_CHECKER_ERROR
     THREADING_CHECKER_SINGLE_THREAD_REUSE,              // Object used simultaneously by recursion in single thread
 } THREADING_CHECKER_ERROR;
 
+struct object_use_data {
+    loader_platform_thread_id thread;
+    int reader_count;
+    int writer_count;
+};
+
+struct layer_data;
+using namespace std;
+
+static int threadingLockInitialized = 0;
+static loader_platform_thread_mutex threadingLock;
+static loader_platform_thread_cond threadingCond;
+
+template <typename T> class counter {
+    public:
+    const char *typeName;
+    VkDebugReportObjectTypeEXT objectType;
+    unordered_map<T, object_use_data> uses;
+    void startWrite(debug_report_data *report_data, T object)
+    {
+        VkBool32 skipCall = VK_FALSE;
+        loader_platform_thread_id tid = loader_platform_get_thread_id();
+        loader_platform_thread_lock_mutex(&threadingLock);
+        if (uses.find(object) == uses.end()) {
+            // There is no current use of the object.  Record writer thread.
+            struct object_use_data *use_data = &uses[object];
+            use_data->reader_count = 0;
+            use_data->writer_count = 1;
+            use_data->thread = tid;
+        } else {
+            struct object_use_data *use_data = &uses[object];
+            if (use_data->reader_count == 0) {
+                // There are no readers.  Two writers just collided.
+                if (use_data->thread != tid) {
+                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
+                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                        "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld",
+                        typeName, use_data->thread, tid);
+                    if (skipCall) {
+                        // Wait for thread-safe access to object instead of skipping call.
+                        while (uses.find(object) != uses.end()) {
+                            loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                        }
+                        // There is now no current use of the object.  Record writer thread.
+                        struct object_use_data *use_data = &uses[object];
+                        use_data->thread = tid ;
+                        use_data->reader_count = 0;
+                        use_data->writer_count = 1;
+                    } else {
+                        // Continue with an unsafe use of the object.
+                        use_data->writer_count += 1;
+                    }
+                } else {
+                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
+                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                        "THREADING ERROR : object of type %s is recursively used in thread %ld",
+                        typeName, tid);
+                    // There is no way to make recursion safe.  Just forge ahead.
+                    use_data->writer_count += 1;
+                }
+            } else {
+                // There are readers.  This writer collided with them.
+                if (use_data->thread != tid) {
+                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
+                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                        "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld",
+                        typeName, use_data->thread, tid);
+                    if (skipCall) {
+                        // Wait for thread-safe access to object instead of skipping call.
+                        while (uses.find(object) != uses.end()) {
+                            loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                        }
+                        // There is now no current use of the object.  Record writer thread.
+                        struct object_use_data *use_data = &uses[object];
+                        use_data->thread = tid ;
+                        use_data->reader_count = 0;
+                        use_data->writer_count = 1;
+                    } else {
+                        // Continue with an unsafe use of the object.
+                        use_data->writer_count += 1;
+                    }
+                } else {
+                    skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
+                        /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                        "THREADING ERROR : object of type %s is recursively used in thread %ld",
+                        typeName, tid);
+                    // There is no way to make recursion safe.  Just forge ahead.
+                    use_data->writer_count += 1;
+                }
+            }
+        }
+        loader_platform_thread_unlock_mutex(&threadingLock);
+    }
+
+    void finishWrite(T object)
+    {
+        // Object is no longer in use
+        loader_platform_thread_lock_mutex(&threadingLock);
+        uses[object].writer_count -= 1;
+        if ((uses[object].reader_count == 0) && (uses[object].writer_count == 0)) {
+            uses.erase(object);
+        }
+        // Notify any waiting threads that this object may be safe to use
+        loader_platform_thread_cond_broadcast(&threadingCond);
+        loader_platform_thread_unlock_mutex(&threadingLock);
+    }
+
+    void startRead(debug_report_data *report_data, T object) {
+        VkBool32 skipCall = VK_FALSE;
+        loader_platform_thread_id tid = loader_platform_get_thread_id();
+        loader_platform_thread_lock_mutex(&threadingLock);
+        if (uses.find(object) == uses.end()) {
+            // There is no current use of the object.  Record reader count
+            struct object_use_data *use_data = &uses[object];
+            use_data->reader_count = 1;
+            use_data->writer_count = 0;
+            use_data->thread = tid;
+        } else if (uses[object].writer_count > 0) {
+            // There is a writer of the object.
+            skipCall |= log_msg(report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, objectType, reinterpret_cast<uint64_t>(object),
+                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",
+                "THREADING ERROR : object of type %s is simultaneously used in thread %ld and thread %ld",
+                typeName, uses[object].thread, tid);
+            if (skipCall) {
+                // Wait for thread-safe access to object instead of skipping call.
+                while (uses.find(object) != uses.end()) {
+                    loader_platform_thread_cond_wait(&threadingCond, &threadingLock);
+                }
+                // There is no current use of the object.  Record reader count
+                struct object_use_data *use_data = &uses[object];
+                use_data->reader_count = 1;
+                use_data->writer_count = 0;
+                use_data->thread = tid;
+            } else {
+                uses[object].reader_count += 1;
+            }
+        } else {
+            // There are other readers of the object.  Increase reader count
+            uses[object].reader_count += 1;
+        }
+        loader_platform_thread_unlock_mutex(&threadingLock);
+    }
+    void finishRead(T object) {
+        loader_platform_thread_lock_mutex(&threadingLock);
+        uses[object].reader_count -= 1;
+        if ((uses[object].reader_count == 0) && (uses[object].writer_count == 0)) {
+            uses.erase(object);
+        }
+        // Notify and waiting threads that this object may be safe to use
+        loader_platform_thread_cond_broadcast(&threadingCond);
+        loader_platform_thread_unlock_mutex(&threadingLock);
+    }
+    counter(const char *name = "",
+            VkDebugReportObjectTypeEXT type=VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT) {
+        typeName = name;
+        objectType=type;
+    }
+};
+
 struct layer_data {
     debug_report_data *report_data;
-    VkDebugReportCallbackEXT   logging_callback;
-
-    layer_data() :
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
+    VkLayerDispatchTable* device_dispatch_table;
+    VkLayerInstanceDispatchTable* instance_dispatch_table;
+    counter<VkCommandBuffer> c_VkCommandBuffer;
+    counter<VkDevice> c_VkDevice;
+    counter<VkInstance> c_VkInstance;
+    counter<VkQueue> c_VkQueue;
+    counter<VkBuffer> c_VkBuffer;
+    counter<VkBufferView> c_VkBufferView;
+    counter<VkCommandPool> c_VkCommandPool;
+    counter<VkDescriptorPool> c_VkDescriptorPool;
+    counter<VkDescriptorSet> c_VkDescriptorSet;
+    counter<VkDescriptorSetLayout> c_VkDescriptorSetLayout;
+    counter<VkDeviceMemory> c_VkDeviceMemory;
+    counter<VkEvent> c_VkEvent;
+    counter<VkFence> c_VkFence;
+    counter<VkFramebuffer> c_VkFramebuffer;
+    counter<VkImage> c_VkImage;
+    counter<VkImageView> c_VkImageView;
+    counter<VkPipeline> c_VkPipeline;
+    counter<VkPipelineCache> c_VkPipelineCache;
+    counter<VkPipelineLayout> c_VkPipelineLayout;
+    counter<VkQueryPool> c_VkQueryPool;
+    counter<VkRenderPass> c_VkRenderPass;
+    counter<VkSampler> c_VkSampler;
+    counter<VkSemaphore> c_VkSemaphore;
+    counter<VkShaderModule> c_VkShaderModule;
+    counter<VkDebugReportCallbackEXT> c_VkDebugReportCallbackEXT;
+    layer_data():
         report_data(nullptr),
-        logging_callback(VK_NULL_HANDLE)
+        c_VkCommandBuffer("VkCommandBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT),
+        c_VkDevice("VkDevice", VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT),
+        c_VkInstance("VkInstance", VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT),
+        c_VkQueue("VkQueue", VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT),
+        c_VkBuffer("VkBuffer", VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT),
+        c_VkBufferView("VkBufferView", VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT),
+        c_VkCommandPool("VkCommandPool", VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT),
+        c_VkDescriptorPool("VkDescriptorPool", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT),
+        c_VkDescriptorSet("VkDescriptorSet", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT),
+        c_VkDescriptorSetLayout("VkDescriptorSetLayout", VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT),
+        c_VkDeviceMemory("VkDeviceMemory", VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT),
+        c_VkEvent("VkEvent", VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT),
+        c_VkFence("VkFence", VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT),
+        c_VkFramebuffer("VkFramebuffer", VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT),
+        c_VkImage("VkImage", VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT),
+        c_VkImageView("VkImageView", VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT),
+        c_VkPipeline("VkPipeline", VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT),
+        c_VkPipelineCache("VkPipelineCache", VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT),
+        c_VkPipelineLayout("VkPipelineLayout", VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT),
+        c_VkQueryPool("VkQueryPool", VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT),
+        c_VkRenderPass("VkRenderPass", VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT),
+        c_VkSampler("VkSampler", VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT),
+        c_VkSemaphore("VkSemaphore", VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT),
+        c_VkShaderModule("VkShaderModule", VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT),
+        c_VkDebugReportCallbackEXT("VkDebugReportCallbackEXT", VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_EXT)
     {};
 };
 
-static std::unordered_map<void*, layer_data *> layer_data_map;
-static device_table_map                        threading_device_table_map;
-static instance_table_map                      threading_instance_table_map;
+#define WRAPPER(type) \
+static void startWriteObject(struct layer_data *my_data, type object){my_data->c_##type.startWrite(my_data->report_data, object);}\
+static void finishWriteObject(struct layer_data *my_data, type object){my_data->c_##type.finishWrite(object);}\
+static void startReadObject(struct layer_data *my_data, type object){my_data->c_##type.startRead(my_data->report_data, object);}\
+static void finishReadObject(struct layer_data *my_data, type object){my_data->c_##type.finishRead(object);}
 
-static inline debug_report_data *mdd(const void* object)
+WRAPPER(VkDevice)
+WRAPPER(VkInstance)
+WRAPPER(VkQueue)
+WRAPPER(VkBuffer)
+WRAPPER(VkBufferView)
+WRAPPER(VkCommandPool)
+WRAPPER(VkDescriptorPool)
+WRAPPER(VkDescriptorSet)
+WRAPPER(VkDescriptorSetLayout)
+WRAPPER(VkDeviceMemory)
+WRAPPER(VkEvent)
+WRAPPER(VkFence)
+WRAPPER(VkFramebuffer)
+WRAPPER(VkImage)
+WRAPPER(VkImageView)
+WRAPPER(VkPipeline)
+WRAPPER(VkPipelineCache)
+WRAPPER(VkPipelineLayout)
+WRAPPER(VkQueryPool)
+WRAPPER(VkRenderPass)
+WRAPPER(VkSampler)
+WRAPPER(VkSemaphore)
+WRAPPER(VkShaderModule)
+WRAPPER(VkDebugReportCallbackEXT)
+
+static std::unordered_map<void*, layer_data *> layer_data_map;
+static std::unordered_map<VkCommandBuffer, VkCommandPool> command_pool_map;
+
+// VkCommandBuffer needs check for implicit use of command pool
+static void startWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=true)
 {
-    dispatch_key key = get_dispatch_key(object);
-    layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    return my_data->report_data;
+    if (lockPool) {
+        my_data->c_VkCommandPool.startWrite(my_data->report_data, command_pool_map[object]);
+    }
+    my_data->c_VkCommandBuffer.startWrite(my_data->report_data, object);
+}
+static void finishWriteObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=true)
+{
+    my_data->c_VkCommandBuffer.finishWrite(object);
+    if (lockPool) {
+        my_data->c_VkCommandPool.finishWrite(command_pool_map[object]);
+    }
+}
+static void startReadObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=false)
+{
+    if (lockPool) {
+        my_data->c_VkCommandPool.startRead(my_data->report_data, command_pool_map[object]);
+    }
+    my_data->c_VkCommandBuffer.startRead(my_data->report_data, object);
+}
+static void finishReadObject(struct layer_data *my_data, VkCommandBuffer object, bool lockPool=false)
+{
+    my_data->c_VkCommandBuffer.finishRead(object);
+    if (lockPool) {
+        my_data->c_VkCommandPool.finishRead(command_pool_map[object]);
+    }
 }
 #endif // THREADING_H

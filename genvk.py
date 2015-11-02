@@ -23,7 +23,7 @@
 
 import sys, time, pdb, string, cProfile
 from reg import *
-from generator import write, CGeneratorOptions, COutputGenerator, DocGeneratorOptions, DocOutputGenerator, PyOutputGenerator, ValidityOutputGenerator, HostSynchronizationOutputGenerator
+from generator import write, CGeneratorOptions, COutputGenerator, DocGeneratorOptions, DocOutputGenerator, PyOutputGenerator, ValidityOutputGenerator, HostSynchronizationOutputGenerator, ThreadGeneratorOptions, ThreadOutputGenerator
 
 # debug - start header generation in debugger
 # dump - dump registry after loading
@@ -166,7 +166,7 @@ buildList = [
     # change to 'defaultExtensions = None' below.
     [ COutputGenerator,
       CGeneratorOptions(
-        filename          = '../vulkan/vulkan.h',
+        filename          = 'include/vulkan/vulkan.h',
         apiname           = 'vulkan',
         profile           = None,
         versions          = allVersions,
@@ -247,6 +247,28 @@ buildList = [
         addExtensions     = None,
         removeExtensions  = None,
         genDirectory      = '../../doc/specs/vulkan')
+    ],
+    # Vulkan 1.0 draft - thread checking layer
+    [ ThreadOutputGenerator,
+      ThreadGeneratorOptions(
+        filename          = 'thread_check.h',
+        apiname           = 'vulkan',
+        profile           = None,
+        versions          = allVersions,
+        emitversions      = allVersions,
+        defaultExtensions = 'vulkan',
+        addExtensions     = None,
+        removeExtensions  = None,
+        prefixText        = prefixStrings + vkPrefixStrings,
+        genFuncPointers   = True,
+        protectFile       = protectFile,
+        protectFeature    = False,
+        protectProto      = True,
+        protectProtoStr   = 'VK_PROTOTYPES',
+        apicall           = '',
+        apientry          = 'VKAPI_CALL ',
+        apientryp         = 'VKAPI_PTR *',
+        alignFuncParam    = 48)
     ],
     None
 ]
