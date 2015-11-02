@@ -306,7 +306,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].waitSemCount = 0;

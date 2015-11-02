@@ -240,7 +240,7 @@ int main(int argc, char **argv)
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
     swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain.handle = 0;
+    swap_chain.oldSwapchain = NULL;
     swap_chain.clipped = true;
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;

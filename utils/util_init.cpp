@@ -752,7 +752,7 @@ void init_presentable_image(struct sample_info &info)
 void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
 {
     VkResult U_ASSERT_ONLY res;
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].waitSemCount = 0;
@@ -902,7 +902,7 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.preTransform = preTransform;
     swap_chain.imageArraySize = 1;
     swap_chain.presentMode = swapchainPresentMode;
-    swap_chain.oldSwapchain.handle = 0;
+    swap_chain.oldSwapchain = VK_NULL_HANDLE;
     swap_chain.clipped = true;
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -1221,7 +1221,7 @@ void execute_queue_command_buffer(struct sample_info &info)
 
     /* Queue the command buffer for execution */
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].waitSemCount = 0;
@@ -1756,7 +1756,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         res = vkEndCommandBuffer(info.cmd);
         assert(res == VK_SUCCESS);
         const VkCmdBuffer cmd_bufs[] = { info.cmd };
-        VkFence nullFence = { VK_NULL_HANDLE };
+        VkFence nullFence = VK_NULL_HANDLE;
 
         VkSubmitInfo submit_info[1] = {};
         submit_info[0].waitSemCount = 0;
