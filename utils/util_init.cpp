@@ -743,10 +743,6 @@ void init_presentable_image(struct sample_info &info)
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(!res);
-
-    /* Make sure buffer is ready for rendering */
-    res = vkQueueWaitSemaphore(info.queue, info.presentCompleteSemaphore);
-    assert(res == VK_SUCCESS);
 }
 
 void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
@@ -755,8 +751,8 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].waitSemCount = 1;
+    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
     submit_info[0].cmdBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemCount = 0;
