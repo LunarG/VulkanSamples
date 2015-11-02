@@ -258,7 +258,6 @@ int main(int argc, char **argv)
     clear_values[1].depthStencil.depth     = 1.0f;
     clear_values[1].depthStencil.stencil   = 0;
 
-    VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
     presentCompleteSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     presentCompleteSemaphoreCreateInfo.pNext = NULL;
@@ -266,13 +265,13 @@ int main(int argc, char **argv)
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
-                            &presentCompleteSemaphore);
+                            &info.presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
     // Get the index of the next available swapchain image:
     res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
-                                      presentCompleteSemaphore,
+                                      info.presentCompleteSemaphore,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -323,17 +322,13 @@ int main(int argc, char **argv)
     res = vkEndCommandBuffer(info.cmd);
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
 
-    /* Make sure buffer is ready for rendering */
-    res = vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
-    assert(res == VK_SUCCESS);
-
     execute_queue_cmdbuf(info, cmd_bufs);
     execute_present_image(info);
 
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroySemaphore(info.device, info.presentCompleteSemaphore);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_descriptor_pool(info);

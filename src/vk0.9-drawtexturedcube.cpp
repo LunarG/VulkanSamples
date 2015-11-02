@@ -197,16 +197,12 @@ int main(int argc, char **argv)
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
-    /* Make sure buffer is ready for rendering */
-    res = vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
-    assert(res == VK_SUCCESS);
-
     const VkCmdBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].waitSemCount = 1;
+    submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
     submit_info[0].cmdBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemCount = 0;
