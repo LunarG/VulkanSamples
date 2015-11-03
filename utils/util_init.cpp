@@ -1290,16 +1290,16 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
 
     info.vi_binding.binding = 0;
     info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
-    info.vi_binding.strideInBytes = dataStride;
+    info.vi_binding.stride = dataStride;
 
     info.vi_attribs[0].binding = 0;
     info.vi_attribs[0].location = 0;
     info.vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    info.vi_attribs[0].offsetInBytes = 0;
+    info.vi_attribs[0].offset = 0;
     info.vi_attribs[1].binding = 0;
     info.vi_attribs[1].location = 1;
     info.vi_attribs[1].format = use_texture?VK_FORMAT_R32G32_SFLOAT:VK_FORMAT_R32G32B32A32_SFLOAT;
-    info.vi_attribs[1].offsetInBytes = 16;
+    info.vi_attribs[1].offset = 16;
 }
 
 void init_descriptor_pool(struct sample_info &info, bool use_texture)
