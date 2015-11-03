@@ -291,7 +291,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     if (pLayerName == NULL) {
         dispatch_key key = get_dispatch_key(physicalDevice);
         layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-        my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+        return my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
                                                     physicalDevice,
                                                     NULL,
                                                     pCount,

@@ -185,7 +185,7 @@ typedef struct _POOL_NODE {
             createInfo.pPoolSizes = new VkDescriptorPoolSize[poolSizeCountSize];
             memcpy((void*)createInfo.pPoolSizes, pCreateInfo->pPoolSizes, poolSizeCountSize);
             // Now set max counts for each descriptor type based on count of that type times maxSets
-            int32_t i=0;
+            uint32_t i=0;
             for (i=0; i<createInfo.poolSizeCount; ++i) {
                 uint32_t typeIndex = static_cast<uint32_t>(createInfo.pPoolSizes[i].type);
                 uint32_t poolSizeCount = createInfo.pPoolSizes[i].descriptorCount;

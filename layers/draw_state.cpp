@@ -52,7 +52,7 @@
 #include "vk_layer_utils.h"
 
 struct devExts {
-    bool debug_marker_enabled;
+    VkBool32 debug_marker_enabled;
 };
 
 struct layer_data {
@@ -868,7 +868,7 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
                 "vkUpdateDescriptorSets: Attempt to update descriptor with invalid image handle %#" PRIxLEAST64 " in imageView %#" PRIxLEAST64, (uint64_t) image, (uint64_t) *pImageView);
         } else {
             VkFormat format = (*imgIt).second->format;
-            bool ds = vk_format_is_depth_or_stencil(format);
+            VkBool32 ds = vk_format_is_depth_or_stencil(format);
             switch (imageLayout) {
                 case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
                     // Only Color bit must be set
@@ -3292,7 +3292,7 @@ struct DAGNode {
     std::vector<uint32_t> next;
 };
 
-bool FindDependency(const int index, const int dependent, const std::vector<DAGNode>& subpass_to_node, std::unordered_set<uint32_t>& processed_nodes) {
+VkBool32 FindDependency(const int index, const int dependent, const std::vector<DAGNode>& subpass_to_node, std::unordered_set<uint32_t>& processed_nodes) {
     // If we have already checked this node we have not found a dependency path so return false.
     if (processed_nodes.count(index))
         return false;
@@ -3310,8 +3310,8 @@ bool FindDependency(const int index, const int dependent, const std::vector<DAGN
     return false;
 }
 
-bool CheckDependencyExists(const layer_data* my_data, VkDevice device, const int subpass, const std::vector<uint32_t>& dependent_subpasses, const std::vector<DAGNode>& subpass_to_node, bool& skip_call) {
-    bool result = true;
+VkBool32 CheckDependencyExists(const layer_data* my_data, VkDevice device, const int subpass, const std::vector<uint32_t>& dependent_subpasses, const std::vector<DAGNode>& subpass_to_node, VkBool32& skip_call) {
+    VkBool32 result = true;
     // Loop through all subpasses that share the same attachment and make sure a dependency exists
     for (uint32_t k = 0; k < dependent_subpasses.size(); ++k) {
         if (subpass == dependent_subpasses[k])
@@ -3339,20 +3339,20 @@ bool CheckDependencyExists(const layer_data* my_data, VkDevice device, const int
     return result;
 }
 
-bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const int index, const int attachment, const std::vector<DAGNode>& subpass_to_node, int depth, bool& skip_call) {
+VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const int index, const int attachment, const std::vector<DAGNode>& subpass_to_node, int depth, VkBool32& skip_call) {
     const DAGNode& node = subpass_to_node[index];
     // If this node writes to the attachment return true as next nodes need to preserve the attachment.
     const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
     for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
         if (attachment == subpass.pColorAttachments[j].attachment)
-            return true;
+            return VK_TRUE;
     }
     if (subpass.pDepthStencilAttachment &&
         subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
         if (attachment == subpass.pDepthStencilAttachment->attachment)
-            return true;
+            return VK_TRUE;
     }
-    bool result = false;
+    VkBool32 result = VK_FALSE;
     // Loop through previous nodes and see if any of them write to the attachment.
     for (auto elem : node.prev) {
         result |= CheckPreserved(my_data, device, pCreateInfo, elem, attachment, subpass_to_node, depth + 1, skip_call);
@@ -3360,7 +3360,7 @@ bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPa
     // If the attachment was written to by a previous node than this node needs to preserve it.
     if (result && depth > 0) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[index];
-        bool has_preserved = false;
+        VkBool32 has_preserved = false;
         for (uint32_t j = 0; j < subpass.preserveAttachmentCount; ++j) {
             if (subpass.pPreserveAttachments[j].attachment == attachment) {
                 has_preserved = true;
@@ -3375,8 +3375,8 @@ bool CheckPreserved(const layer_data* my_data, VkDevice device, const VkRenderPa
     return result;
 }
 
-bool validateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
-    bool skip_call = false;
+VkBool32 validateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
+    VkBool32 skip_call = false;
     std::vector<DAGNode> subpass_to_node(pCreateInfo->subpassCount);
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
     std::vector<std::vector<uint32_t>> input_attachment_to_subpass(pCreateInfo->attachmentCount);
