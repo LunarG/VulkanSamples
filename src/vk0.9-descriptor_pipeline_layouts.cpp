@@ -56,8 +56,8 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
-    descriptor_layout.count = 1;
-    descriptor_layout.pBinding = &layout_binding;
+    descriptor_layout.bindingCount = 1;
+    descriptor_layout.pBindings = &layout_binding;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     res = vkCreateDescriptorSetLayout(info.device,
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     pPipelineLayoutCreateInfo.pNext                  = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount     = NUM_DESCRIPTOR_SETS;
+    pPipelineLayoutCreateInfo.setLayoutCount         = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     res = vkCreatePipelineLayout(info.device,

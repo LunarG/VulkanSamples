@@ -128,8 +128,8 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutCreateInfo uniform_layout_info[1] = {};
     uniform_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     uniform_layout_info[0].pNext = NULL;
-    uniform_layout_info[0].count = 1;
-    uniform_layout_info[0].pBinding = uniform_binding;
+    uniform_layout_info[0].bindingCount = 1;
+    uniform_layout_info[0].pBindings = uniform_binding;
 
     // Create second layout containing combined sampler/image data
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
@@ -140,8 +140,8 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutCreateInfo sampler2D_layout_info[1] = {};
     sampler2D_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     sampler2D_layout_info[0].pNext = NULL;
-    sampler2D_layout_info[0].count = 1;
-    sampler2D_layout_info[0].pBinding = sampler2D_binding;
+    sampler2D_layout_info[0].bindingCount = 1;
+    sampler2D_layout_info[0].pBindings = sampler2D_binding;
 
     // Create multiple sets, using each createInfo
     static const unsigned uniform_set_index = 0;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     pipelineLayoutCreateInfo[0].pNext                  = NULL;
     pipelineLayoutCreateInfo[0].pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo[0].pPushConstantRanges    = NULL;
-    pipelineLayoutCreateInfo[0].descriptorSetCount     = descriptor_set_count;
+    pipelineLayoutCreateInfo[0].setLayoutCount         = descriptor_set_count;
     pipelineLayoutCreateInfo[0].pSetLayouts            = descriptor_layouts;
     res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
@@ -166,16 +166,16 @@ int main(int argc, char **argv)
     // Create a single pool to contain data for our two descriptor sets
     VkDescriptorTypeCount type_count[2] = {};
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    type_count[0].count = 1;
+    type_count[0].descriptorCount = 1;
     type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    type_count[1].count = 1;
+    type_count[1].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo pool_info[1] = {};
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].count = sizeof(type_count) / sizeof(VkDescriptorTypeCount);
-    pool_info[0].pTypeCount = type_count;
+    pool_info[0].typeCount = sizeof(type_count) / sizeof(VkDescriptorTypeCount);
+    pool_info[0].pTypeCounts = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
     res = vkCreateDescriptorPool(info.device, pool_info, descriptor_pool);
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = descriptor_pool[0];
-    alloc_info[0].count = descriptor_set_count;
+    alloc_info[0].setLayoutCount = descriptor_set_count;
     alloc_info[0].pSetLayouts = descriptor_layouts;
 
     // Populate descriptor sets
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[0].pNext = NULL;
     descriptor_writes[0].destSet = descriptor_sets[uniform_set_index];
-    descriptor_writes[0].count = 1;
+    descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
     descriptor_writes[0].destArrayElement = 0;
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[1].pNext = NULL;
     descriptor_writes[1].destSet = descriptor_sets[sampler_set_index];
-    descriptor_writes[1].count = 1;
+    descriptor_writes[1].descriptorCount = 1;
     descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor_writes[1].pImageInfo = &info.texture_data.image_info; // populated by init_texture()
     descriptor_writes[1].destArrayElement = 0;
@@ -305,11 +305,11 @@ int main(int argc, char **argv)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 1;
+    submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
-    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemCount = 0;
+    submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */

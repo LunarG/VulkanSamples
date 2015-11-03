@@ -198,11 +198,11 @@ int main(int argc, char **argv)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 0;
+    submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
-    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemCount = 0;
+    submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */

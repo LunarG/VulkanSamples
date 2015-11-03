@@ -244,9 +244,9 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
     inst_info.pAllocCb = NULL;
-    inst_info.layerCount = info.instance_layer_names.size();
+    inst_info.enabledLayerNameCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
-    inst_info.extensionCount = info.instance_extension_names.size();
+    inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
@@ -268,7 +268,7 @@ VkResult init_device(struct sample_info &info)
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
-    queue_info.queueCount = 1;
+    queue_info.queuePriorityCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
 
     VkDeviceCreateInfo device_info = {};
@@ -276,10 +276,10 @@ VkResult init_device(struct sample_info &info)
     device_info.pNext = NULL;
     device_info.requestedQueueCount = 1;
     device_info.pRequestedQueues = &queue_info;
-    device_info.layerCount = info.device_layer_names.size();
+    device_info.enabledLayerNameCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
             device_info.layerCount ? info.device_layer_names.data() : NULL;
-    device_info.extensionCount = info.device_extension_names.size();
+    device_info.enabledExtensionNameCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
@@ -751,11 +751,11 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 1;
+    submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
-    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemCount = 0;
+    submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
@@ -1038,8 +1038,8 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
-    descriptor_layout.count = use_texture?2:1;
-    descriptor_layout.pBinding = layout_bindings;
+    descriptor_layout.bindingCount = use_texture?2:1;
+    descriptor_layout.pBindings = layout_bindings;
 
     VkResult U_ASSERT_ONLY err;
 
@@ -1054,7 +1054,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     pPipelineLayoutCreateInfo.pNext                  = NULL;
     pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pPipelineLayoutCreateInfo.pPushConstantRanges    = NULL;
-    pPipelineLayoutCreateInfo.descriptorSetCount     = NUM_DESCRIPTOR_SETS;
+    pPipelineLayoutCreateInfo.setLayoutCount         = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     err = vkCreatePipelineLayout(info.device,
@@ -1106,15 +1106,15 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     subpass.pNext = NULL;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
-    subpass.inputCount = 0;
+    subpass.inputAttachmentCount = 0;
     subpass.pInputAttachments = NULL;
-    subpass.colorCount = 1;
+    subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_reference;
     subpass.pResolveAttachments = NULL;
     subpass.depthStencilAttachment.attachment = include_depth?1:VK_ATTACHMENT_UNUSED;
     subpass.depthStencilAttachment.layout = include_depth?VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
                                                           VK_IMAGE_LAYOUT_UNDEFINED;
-    subpass.preserveCount = 0;
+    subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};
@@ -1184,7 +1184,7 @@ void init_command_buffer(struct sample_info &info)
     cmd.pNext = NULL;
     cmd.cmdPool = info.cmd_pool;
     cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
-    cmd.count = 1;
+    cmd.bufferCount = 1;
 
     res = vkAllocCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
@@ -1220,11 +1220,11 @@ void execute_queue_command_buffer(struct sample_info &info)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
-    submit_info[0].waitSemCount = 0;
+    submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
-    submit_info[0].cmdBufferCount = 1;
+    submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemCount = 0;
+    submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
     res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
@@ -1308,7 +1308,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     VkResult U_ASSERT_ONLY res;
     VkDescriptorTypeCount type_count[2];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    type_count[0].count = 1;
+    type_count[0].descriptorCount = 1;
     if (use_texture)
     {
         type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1319,8 +1319,8 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
     descriptor_pool.maxSets = 1;
-    descriptor_pool.count = use_texture?2:1;
-    descriptor_pool.pTypeCount = type_count;
+    descriptor_pool.typeCount = use_texture?2:1;
+    descriptor_pool.pTypeCounts = type_count;
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, &info.desc_pool);
@@ -1337,7 +1337,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
@@ -1349,7 +1349,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
     writes[0].destSet = info.desc_set[0];
-    writes[0].count = 1;
+    writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &info.uniform_data.buffer_info;
     writes[0].destArrayElement = 0;
@@ -1360,7 +1360,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[1].destSet = info.desc_set[0];
         writes[1].destBinding = 1;
-        writes[1].count = 1;
+        writes[1].descriptorCount = 1;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writes[1].pImageInfo = &info.texture_data.image_info;
         writes[1].destArrayElement = 0;
@@ -1755,11 +1755,11 @@ void init_texture(struct sample_info &info, const char* textureName)
         VkFence nullFence = VK_NULL_HANDLE;
 
         VkSubmitInfo submit_info[1] = {};
-        submit_info[0].waitSemCount = 0;
+        submit_info[0].waitSemaphoreCount = 0;
         submit_info[0].pWaitSemaphores = NULL;
-        submit_info[0].cmdBufferCount = 1;
+        submit_info[0].commandBufferCount = 1;
         submit_info[0].pCommandBuffers = cmd_bufs;
-        submit_info[0].signalSemCount = 0;
+        submit_info[0].signalSemaphoreCount = 0;
         submit_info[0].pSignalSemaphores = NULL;
 
         /* Queue the command buffer for execution */

@@ -114,9 +114,9 @@ int main(int argc, char **argv)
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
     inst_info.pAllocCb = NULL;
-    inst_info.layerCount = info.instance_layer_names.size();
+    inst_info.enabledLayerNameCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
-    inst_info.extensionCount = info.instance_extension_names.size();
+    inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
     VkResult res = vkCreateInstance(&inst_info, &info.inst);
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
-    queue_info.queueCount = 1;
+    queue_info.queuePriorityCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
 
     VkDeviceCreateInfo device_info = {};
@@ -158,10 +158,10 @@ int main(int argc, char **argv)
     device_info.pNext = NULL;
     device_info.requestedQueueCount = 1;
     device_info.pRequestedQueues = &queue_info;
-    device_info.layerCount = info.device_layer_names.size();
+    device_info.enabledLayerNameCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
             device_info.layerCount ? info.device_layer_names.data(): NULL;
-    device_info.extensionCount = info.device_extension_names.size();
+    device_info.enabledExtensionNameCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;

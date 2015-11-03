@@ -49,14 +49,14 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_START */
     VkDescriptorTypeCount type_count[1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    type_count[0].count = 1;
+    type_count[0].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo descriptor_pool = {};
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
     descriptor_pool.maxSets = 1;
-    descriptor_pool.count = 1;
-    descriptor_pool.pTypeCount = type_count;
+    descriptor_pool.typeCount = 1;
+    descriptor_pool.pTypeCounts = type_count;
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, &info.desc_pool);
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
-    alloc_info[0].count = NUM_DESCRIPTOR_SETS;
+    alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
     writes[0].destSet = info.desc_set[0];
-    writes[0].count = 1;
+    writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &info.uniform_data.buffer_info;
     writes[0].destArrayElement = 0;
