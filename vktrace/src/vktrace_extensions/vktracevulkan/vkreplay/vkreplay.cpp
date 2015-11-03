@@ -21,6 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  **************************************************************************/
 #include <inttypes.h>
 #include "vkreplay.h"

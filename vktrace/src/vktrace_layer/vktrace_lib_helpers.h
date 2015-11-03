@@ -1,7 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
- * Copyright (C) 2015 Valve Corporation
+ * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
  */
 #pragma once
 #include <unordered_map>

@@ -1,7 +1,7 @@
 /*
- * VKTRACE & vulkan
  *
  * Copyright (C) 2015 Valve Corporation
+ * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
  */
 
 #include <stdio.h>

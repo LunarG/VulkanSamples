@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2014 Lunarg, Inc.
+ * Copyright 2014 Valve Software
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
+ * Author: Jon Ashburn <jon@lunarg.com>
  **************************************************************************/
 #pragma once
 #include <stdbool.h>

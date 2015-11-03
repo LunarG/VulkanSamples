@@ -21,6 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
+ * Author: Jon Ashburn <jon@lunarg.com>
  **************************************************************************/
 #pragma once
 #include "vkreplay_window.h"

@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * All Rights Reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,7 +21,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
  */
 
 #pragma once
