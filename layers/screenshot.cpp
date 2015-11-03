@@ -418,7 +418,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkExtensionProperties*                      pProperties)
 {
     /* ScreenShot does not have any physical device extensions */
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    if (pLayerName == NULL) {
+        VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(physicalDevice);
+        return pTable->EnumerateDeviceExtensionProperties(
+                                                    physicalDevice,
+                                                    NULL,
+                                                    pCount,
+                                                    pProperties);
+    } else {
+        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
@@ -714,6 +723,8 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
 
     if (!strcmp(funcName, "vkEnumeratePhysicalDevices"))
 		return (PFN_vkVoidFunction)vkEnumeratePhysicalDevices;
+    if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
+		return (PFN_vkVoidFunction)vkEnumerateDeviceExtensionProperties;
 
     VkLayerInstanceDispatchTable* pTable = instance_dispatch_table(instance);
     if (pTable->GetInstanceProcAddr == NULL)

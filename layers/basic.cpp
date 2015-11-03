@@ -80,8 +80,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         uint32_t               *pCount,
         VkExtensionProperties  *pProperties)
 {
-    return util_GetExtensionProperties(ARRAY_SIZE(basic_physicaldevice_extensions), basic_physicaldevice_extensions,
-                                       pCount, pProperties);
+    if (pLayerName == NULL) {
+        return instance_dispatch_table(physicalDevice)->EnumerateDeviceExtensionProperties(
+                                            physicalDevice,
+                                            NULL,
+                                            pCount,
+                                            pProperties);
+    } else {
+        return util_GetExtensionProperties(ARRAY_SIZE(basic_physicaldevice_extensions),
+                                           basic_physicaldevice_extensions,
+                                           pCount, pProperties);
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI basic_EnumeratePhysicalDevices(

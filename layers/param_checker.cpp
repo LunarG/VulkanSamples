@@ -170,7 +170,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkExtensionProperties*                      pProperties)
 {
     /* ParamChecker does not have any physical device extensions */
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    if (pLayerName == NULL) {
+        return get_dispatch_table(pc_instance_table_map, physicalDevice)->EnumerateDeviceExtensionProperties(
+                                    physicalDevice,
+                                    NULL,
+                                    pCount,
+                                    pProperties);
+    } else {
+        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(

@@ -1709,9 +1709,20 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         uint32_t*                                   pCount,
         VkExtensionProperties*                      pProperties)
 {
-    /* Mem tracker does not have any physical device extensions */
-    return util_GetExtensionProperties(ARRAY_SIZE(ds_device_extensions), ds_device_extensions,
-                                       pCount, pProperties);
+    if (pLayerName == NULL) {
+        dispatch_key key = get_dispatch_key(physicalDevice);
+        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+        VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
+        return pTable->EnumerateDeviceExtensionProperties(
+                                                    physicalDevice,
+                                                    NULL,
+                                                    pCount,
+                                                    pProperties);
+    } else {
+        return util_GetExtensionProperties(ARRAY_SIZE(ds_device_extensions),
+                                           ds_device_extensions,
+                                           pCount, pProperties);
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(

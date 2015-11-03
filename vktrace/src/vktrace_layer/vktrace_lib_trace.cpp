@@ -482,7 +482,14 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceExtensionProperties(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mid(physicalDevice)->instTable.EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pPropertyCount, pProperties);
+    // Only call down chain if querying ICD rather than layer device extensions
+    if (pLayerName == NULL)
+        result = mid(physicalDevice)->instTable.EnumerateDeviceExtensionProperties(physicalDevice, NULL, pPropertyCount, pProperties);
+    else
+    {
+        *pPropertyCount = 0;
+        return VK_SUCCESS;
+    }
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkEnumerateDeviceExtensionProperties, ((pLayerName != NULL) ? strlen(pLayerName) + 1 : 0) + sizeof(uint32_t) + (*pPropertyCount * sizeof(VkExtensionProperties)));
     pHeader->vktrace_begin_time = vktraceStartTime;

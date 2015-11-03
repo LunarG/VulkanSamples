@@ -299,7 +299,17 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
         VkExtensionProperties*                      pProperties)
 {
     /* Shader checker does not have any physical device extensions */
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    if (pLayerName == NULL) {
+        dispatch_key key = get_dispatch_key(physicalDevice);
+        layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+        my_data->instance_dispatch_table->EnumerateDeviceExtensionProperties(
+                                                    physicalDevice,
+                                                    NULL,
+                                                    pCount,
+                                                    pProperties);
+    } else {
+        return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    }
 }
 
 VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
