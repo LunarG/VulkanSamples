@@ -27,9 +27,7 @@
 # Author: Mark Lobodzinski <mark@lunarg.com>
 # Author: Mike Stroyan <mike@LunarG.com>
 # Author: Tony Barbour <tony@LunarG.com>
-#
-# Authors:
-#   Chia-I Wu <olv@lunarg.com>
+# Author: Chia-I Wu <olv@lunarg.com>
 
 import sys
 import os

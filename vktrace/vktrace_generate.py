@@ -24,6 +24,7 @@
 #
 # Author: Jon Ashburn <jon@lunarg.com>
 # Author: Tobin Ehlis <tobin@lunarg.com>
+# Author: Peter Lohrmann <peterl@valvesoftware.com>
 #
 
 import os, sys

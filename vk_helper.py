@@ -550,6 +550,12 @@ class StructWrapperGen:
         copyright.append(' * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING');
         copyright.append(' * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER');
         copyright.append(' * DEALINGS IN THE SOFTWARE.');
+<<<<<<< HEAD
+=======
+        copyright.append(' *')
+        copyright.append(' * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>')
+        copyright.append(' * Author: Tobin Ehlis <tobin@lunarg.com>')
+>>>>>>> 2edc2f8... misc: Fix build errors from the author changes
         copyright.append(' */');
         copyright.append('');
         return "\n".join(copyright)
