@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     descriptor_pool.pTypeCounts = type_count;
 
     res = vkCreateDescriptorPool(info.device,
-        &descriptor_pool, &info.desc_pool);
+        &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocInfo alloc_info[1];
@@ -87,7 +87,7 @@ int main(int argc, char **argv)
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
     /* VULKAN_KEY_END */
 
-    vkDestroyDescriptorPool(info.device, info.desc_pool);
+    vkDestroyDescriptorPool(info.device, info.desc_pool, NULL);
     destroy_uniform_buffer(info);
     destroy_descriptor_and_pipeline_layouts(info);
     destroy_device(info);

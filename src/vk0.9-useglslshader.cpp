@@ -57,15 +57,15 @@ int main(int argc, char **argv)
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
+    inst_info.flags = 0;
+    inst_info.pApplicationInfo = &app_info;
     inst_info.enabledExtensionNameCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
 
     VkInstance inst;
     VkResult res;
 
-    res = vkCreateInstance(&inst_info, &inst);
+    res = vkCreateInstance(&inst_info, NULL, &inst);
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "cannot find a compatible Vulkan ICD\n";
         exit(-1);
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     std::string reldatadir = get_data_dir( __FILE__ );
     /* VULKAN_KEY_END */
 
-    vkDestroyInstance(inst);
+    vkDestroyInstance(inst, NULL);
 
     return 0;
 }

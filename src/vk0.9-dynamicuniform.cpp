@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &info.uniform_data.buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
+    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     /* Map the buffer memory and copy both matrices */
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     res = vkCreateDescriptorSetLayout(info.device,
-            &descriptor_layout, info.desc_layout.data());
+            &descriptor_layout, NULL, info.desc_layout.data());
     assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     res = vkCreatePipelineLayout(info.device,
-                                 &pPipelineLayoutCreateInfo,
+                                 &pPipelineLayoutCreateInfo, NULL
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
     descriptor_pool.pTypeCounts = type_count;
 
     res = vkCreateDescriptorPool(info.device,
-        &descriptor_pool, &info.desc_pool);
+        &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocInfo desc_alloc_info[1];
@@ -265,6 +265,7 @@ int main(int argc, char **argv)
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
+                            NULL,
                             &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
@@ -376,7 +377,7 @@ int main(int argc, char **argv)
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_descriptor_pool(info);

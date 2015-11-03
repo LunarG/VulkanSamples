@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &info.vertex_buffer.buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
+    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -164,8 +164,8 @@ int main(int argc, char **argv)
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    vkFreeMemory(info.device, info.vertex_buffer.mem);
+    vkDestroyBuffer(info.device, info.vertex_buffer.buf, NULL);
+    vkFreeMemory(info.device, info.vertex_buffer.mem, NULL);
     destroy_framebuffers(info);
     destroy_renderpass(info);
     destroy_depth_buffer(info);

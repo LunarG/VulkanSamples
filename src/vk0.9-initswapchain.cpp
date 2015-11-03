@@ -300,7 +300,7 @@ int main(int argc, char **argv)
         color_image_view.image = info.buffers[i].image;
 
         res = vkCreateImageView(info.device,
-                &color_image_view, &info.buffers[i].view);
+                &color_image_view, NULL, &info.buffers[i].view);
         assert(res == VK_SUCCESS);
     }
     execute_end_command_buffer(info);
@@ -310,9 +310,9 @@ int main(int argc, char **argv)
     /* Clean Up */
     VkCmdBuffer cmd_bufs[1] = { info.cmd };
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
+    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(info.device, info.buffers[i].view);
+        vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
     destroy_device(info);
     destroy_instance(info);

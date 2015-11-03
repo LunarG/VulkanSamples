@@ -110,13 +110,13 @@ int main(int argc, char **argv)
     rp_info.dependencyCount = 0;
     rp_info.pDependencies = NULL;
 
-    res = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
+    res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    vkDestroyRenderPass(info.device, info.render_pass);
+    vkDestroyRenderPass(info.device, info.render_pass, NULL);
     destroy_depth_buffer(info);
     destroy_swap_chain(info);
     destroy_command_buffer(info);

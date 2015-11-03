@@ -147,9 +147,9 @@ int main(int argc, char **argv)
     static const unsigned uniform_set_index = 0;
     static const unsigned sampler_set_index = 1;
     VkDescriptorSetLayout descriptor_layouts[descriptor_set_count] = {};
-    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, &descriptor_layouts[uniform_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, uniform_layout_info, NULL, &descriptor_layouts[uniform_set_index]);
     assert(res == VK_SUCCESS);
-    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, &descriptor_layouts[sampler_set_index]);
+    res = vkCreateDescriptorSetLayout(info.device, sampler2D_layout_info, NULL, &descriptor_layouts[sampler_set_index]);
     assert(res == VK_SUCCESS);
 
     // Create pipeline layout with multiple descriptor sets
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
     pipelineLayoutCreateInfo[0].pPushConstantRanges    = NULL;
     pipelineLayoutCreateInfo[0].setLayoutCount         = descriptor_set_count;
     pipelineLayoutCreateInfo[0].pSetLayouts            = descriptor_layouts;
-    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, &info.pipeline_layout);
+    res = vkCreatePipelineLayout(info.device, pipelineLayoutCreateInfo, NULL, &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our two descriptor sets
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
     pool_info[0].pTypeCounts = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
-    res = vkCreateDescriptorPool(info.device, pool_info, descriptor_pool);
+    res = vkCreateDescriptorPool(info.device, pool_info, NULL, descriptor_pool);
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocInfo alloc_info[1];
@@ -244,6 +244,7 @@ int main(int argc, char **argv)
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
+                            NULL,
                             &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
@@ -330,13 +331,13 @@ int main(int argc, char **argv)
 
     wait_seconds(1);
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_texture(info);
 
     // instead of destroy_descriptor_pool(info);
-    vkDestroyDescriptorPool(info.device, descriptor_pool[0]);
+    vkDestroyDescriptorPool(info.device, descriptor_pool[0], NULL);
 
     destroy_vertex_buffer(info);
     destroy_framebuffers(info);
@@ -345,8 +346,8 @@ int main(int argc, char **argv)
 
     //instead of destroy_descriptor_and_pipeline_layouts(info);
     for(int i = 0; i < descriptor_set_count; i++)
-        vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i]);
-    vkDestroyPipelineLayout(info.device, info.pipeline_layout);
+        vkDestroyDescriptorSetLayout(info.device, descriptor_layouts[i], NULL);
+    vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 
     destroy_uniform_buffer(info);
     destroy_depth_buffer(info);

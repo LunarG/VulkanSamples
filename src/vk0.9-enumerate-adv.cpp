@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_END */
 
-    vkDestroyInstance(info.inst);
+    vkDestroyInstance(info.inst, NULL);
 
     return 0;
 }
