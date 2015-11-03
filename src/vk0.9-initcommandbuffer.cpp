@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 
     /* Create the command buffer from the command pool */
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
     VkCmdBuffer cmd_bufs[1] = { info.cmd };
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
-    vkDestroyCommandPool(info.device, info.cmd_pool);
+    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     destroy_window(info);
     destroy_device(info);
     destroy_instance(info);

@@ -141,8 +141,8 @@ int main(int argc, char **argv)
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
+    inst_info.flags = 0;
+    inst_info.pApplicationInfo = &app_info;
     inst_info.enabledExtensionNameCount = 1;
     inst_info.ppEnabledExtensionNames = extension_names;
     inst_info.enabledLayerNameCount = 0;
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
     VkInstance inst;
 
-    res = vkCreateInstance(&inst_info, &inst);
+    res = vkCreateInstance(&inst_info, NULL, &inst);
     if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
         std::cout << "cannot find a compatible Vulkan ICD\n";
         exit(-1);
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
     /* Clean up callback */
     dbgDestroyMsgCallback(inst, msg_callback);
 
-    vkDestroyInstance(inst);
+    vkDestroyInstance(inst, NULL);
 
     /* VULKAN_KEY_END */
 

@@ -242,14 +242,14 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
+    inst_info.flags = 0;
+    inst_info.pApplicationInfo = &app_info;
     inst_info.enabledLayerNameCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
     inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
-    VkResult res = vkCreateInstance(&inst_info, &info.inst);
+    VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
     return res;
@@ -284,7 +284,7 @@ VkResult init_device(struct sample_info &info)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
-    res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
+    res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
 
     return res;
@@ -575,7 +575,7 @@ void init_depth_buffer(struct sample_info &info)
     info.depth.format = depth_format;
 
     /* Create image */
-    res = vkCreateImage(info.device, &image_info,
+    res = vkCreateImage(info.device, &image_info, NULL,
                         &info.depth.image);
     assert(res == VK_SUCCESS);
 
@@ -591,7 +591,7 @@ void init_depth_buffer(struct sample_info &info)
     assert(pass);
 
     /* Allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
+    res = vkAllocMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
     assert(res == VK_SUCCESS);
 
     /* Bind memory */
@@ -607,7 +607,7 @@ void init_depth_buffer(struct sample_info &info)
 
     /* Create image view */
    view_info.image = info.depth.image;
-   res = vkCreateImageView(info.device, &view_info, &info.depth.view);
+   res = vkCreateImageView(info.device, &view_info, NULL, &info.depth.view);
    assert(res == VK_SUCCESS);
 }
 
@@ -732,6 +732,7 @@ void init_presentable_image(struct sample_info &info)
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
+                            NULL,
                             &info.presentCompleteSemaphore);
     assert(!res);
 
@@ -949,7 +950,7 @@ void init_swap_chain(struct sample_info &info)
         color_image_view.image = sc_buffer.image;
 
         res = vkCreateImageView(info.device,
-                &color_image_view, &sc_buffer.view);
+                &color_image_view, NULL, &sc_buffer.view);
         info.buffers.push_back(sc_buffer);
         assert(res == VK_SUCCESS);
     }
@@ -979,7 +980,7 @@ void init_uniform_buffer(struct sample_info &info)
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &info.uniform_data.buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
@@ -997,7 +998,7 @@ void init_uniform_buffer(struct sample_info &info)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
+    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -1045,7 +1046,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     err = vkCreateDescriptorSetLayout(info.device,
-            &descriptor_layout, info.desc_layout.data());
+            &descriptor_layout, NULL, info.desc_layout.data());
     assert(!err);
 
     /* Now use the descriptor layout to create a pipeline layout */
@@ -1058,7 +1059,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     err = vkCreatePipelineLayout(info.device,
-                                 &pPipelineLayoutCreateInfo,
+                                 &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
     assert(!err);
 }
@@ -1127,7 +1128,7 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     rp_info.dependencyCount = 0;
     rp_info.pDependencies = NULL;
 
-    res = vkCreateRenderPass(info.device, &rp_info, &info.render_pass);
+    res = vkCreateRenderPass(info.device, &rp_info, NULL, &info.render_pass);
     assert(res == VK_SUCCESS);
 }
 
@@ -1155,7 +1156,7 @@ void init_framebuffers(struct sample_info &info, bool include_depth)
 
     for (i = 0; i < info.swapchainImageCount; i++) {
         attachments[0] = info.buffers[i].view;
-        res = vkCreateFramebuffer(info.device, &fb_info, &info.framebuffers[i]);
+        res = vkCreateFramebuffer(info.device, &fb_info, NULL, &info.framebuffers[i]);
         assert(res == VK_SUCCESS);
     }
 }
@@ -1170,7 +1171,7 @@ void init_command_pool(struct sample_info &info)
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 }
 
@@ -1253,7 +1254,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, &info.vertex_buffer.buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &info.vertex_buffer.buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
@@ -1271,7 +1272,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, &(info.vertex_buffer.mem));
+    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -1323,7 +1324,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     descriptor_pool.pTypeCounts = type_count;
 
     res = vkCreateDescriptorPool(info.device,
-        &descriptor_pool, &info.desc_pool);
+        &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 }
 
@@ -1389,7 +1390,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.vert_shader_module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.vert_shader_module);
     assert(res == VK_SUCCESS);
 
     VkShaderCreateInfo shaderCreateInfo;
@@ -1399,7 +1400,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.module = info.vert_shader_module;
     shaderCreateInfo.pName = "main";
     shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[0].shader);
+    res = vkCreateShader(info.device, &shaderCreateInfo, NULL, &info.shaderStages[0].shader);
     assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
@@ -1415,7 +1416,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, &info.frag_shader_module);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.frag_shader_module);
     assert(res == VK_SUCCESS);
 
     shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
@@ -1424,7 +1425,7 @@ void init_shaders(struct sample_info &info, const char *vertShaderText, const ch
     shaderCreateInfo.module = info.frag_shader_module;
     shaderCreateInfo.pName = "main";
     shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    res = vkCreateShader(info.device, &shaderCreateInfo, &info.shaderStages[1].shader);
+    res = vkCreateShader(info.device, &shaderCreateInfo, NULL, &info.shaderStages[1].shader);
     assert(res == VK_SUCCESS);
 
     finalize_glslang();
@@ -1441,7 +1442,7 @@ void init_pipeline_cache(struct sample_info &info)
     pipelineCache.initialSize = 0;
     pipelineCache.maxSize = 0;
 
-    res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 }
 
@@ -1561,7 +1562,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     pipeline.renderPass          = info.render_pass;
     pipeline.subpass             = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
 }
 
@@ -1622,7 +1623,7 @@ void init_texture(struct sample_info &info, const char* textureName)
 
     /* Create a mappable image.  It will be the texture if linear images are ok to be textures */
     /* or it will be the staging image if they are not.                                        */
-    res = vkCreateImage(info.device, &image_create_info,
+    res = vkCreateImage(info.device, &image_create_info, NULL,
             &mappableImage);
     assert(res == VK_SUCCESS);
 
@@ -1636,7 +1637,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(pass);
 
     /* allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc,
+    res = vkAllocMemory(info.device, &mem_alloc, NULL,
                 &(mappableMemory));
     assert(res == VK_SUCCESS);
 
@@ -1681,7 +1682,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-        res = vkCreateImage(info.device, &image_create_info,
+        res = vkCreateImage(info.device, &image_create_info, NULL,
                 &texObj.image);
         assert(res == VK_SUCCESS);
 
@@ -1694,7 +1695,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         assert(pass);
 
         /* allocate memory */
-        res = vkAllocMemory(info.device, &mem_alloc,
+        res = vkAllocMemory(info.device, &mem_alloc, NULL,
                     &texObj.mem);
         assert(res == VK_SUCCESS);
 
@@ -1774,8 +1775,8 @@ void init_texture(struct sample_info &info, const char* textureName)
                                texObj.imageLayout);
 
         /* Release the resources for the staging image */
-        vkFreeMemory(info.device, mappableMemory);
-        vkDestroyImage(info.device, mappableImage);
+        vkFreeMemory(info.device, mappableMemory, NULL);
+        vkDestroyImage(info.device, mappableImage, NULL);
     }
 
     VkSamplerCreateInfo samplerCreateInfo = {};
@@ -1795,7 +1796,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     /* create sampler */
-    res = vkCreateSampler(info.device, &samplerCreateInfo,
+    res = vkCreateSampler(info.device, &samplerCreateInfo, NULL,
             &texObj.sampler);
     assert(res == VK_SUCCESS);
 
@@ -1817,7 +1818,7 @@ void init_texture(struct sample_info &info, const char* textureName)
 
     /* create image view */
     view_info.image = texObj.image;
-    res = vkCreateImageView(info.device, &view_info,
+    res = vkCreateImageView(info.device, &view_info, NULL,
             &texObj.view);
     assert(res == VK_SUCCESS);
 
@@ -1833,38 +1834,38 @@ void init_texture(struct sample_info &info, const char* textureName)
 
 void destroy_pipeline(struct sample_info &info)
 {
-    vkDestroyPipeline(info.device, info.pipeline);
+    vkDestroyPipeline(info.device, info.pipeline, NULL);
 }
 
 void destroy_pipeline_cache(struct sample_info &info)
 {
-    vkDestroyPipelineCache(info.device, info.pipelineCache);
+    vkDestroyPipelineCache(info.device, info.pipelineCache, NULL);
 }
 
 void destroy_uniform_buffer(struct sample_info &info)
 {
-    vkDestroyBuffer(info.device, info.uniform_data.buf);
-    vkFreeMemory(info.device, info.uniform_data.mem);
+    vkDestroyBuffer(info.device, info.uniform_data.buf, NULL);
+    vkFreeMemory(info.device, info.uniform_data.mem, NULL);
 }
 
 void destroy_descriptor_and_pipeline_layouts(struct sample_info &info)
 {
     for(int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
-        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i]);
-    vkDestroyPipelineLayout(info.device, info.pipeline_layout);
+        vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
+    vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 }
 
 void destroy_descriptor_pool(struct sample_info &info)
 {
-   vkDestroyDescriptorPool(info.device, info.desc_pool);
+   vkDestroyDescriptorPool(info.device, info.desc_pool, NULL);
 }
 
 void destroy_shaders(struct sample_info &info)
 {
-    vkDestroyShader(info.device,info.shaderStages[0].shader);
-    vkDestroyShader(info.device,info.shaderStages[1].shader);
-    vkDestroyShaderModule(info.device, info.vert_shader_module);
-    vkDestroyShaderModule(info.device, info.frag_shader_module);
+    vkDestroyShader(info.device,info.shaderStages[0].shader, NULL);
+    vkDestroyShader(info.device,info.shaderStages[1].shader, NULL);
+    vkDestroyShaderModule(info.device, info.vert_shader_module, NULL);
+    vkDestroyShaderModule(info.device, info.frag_shader_module, NULL);
 }
 
 void destroy_command_buffer(struct sample_info &info)
@@ -1875,26 +1876,26 @@ void destroy_command_buffer(struct sample_info &info)
 
 void destroy_command_pool(struct sample_info &info)
 {
-    vkDestroyCommandPool(info.device, info.cmd_pool);
+    vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
 }
 
 void destroy_depth_buffer(struct sample_info &info)
 {
-    vkDestroyImageView(info.device, info.depth.view);
-    vkDestroyImage(info.device, info.depth.image);
-    vkFreeMemory(info.device, info.depth.mem);
+    vkDestroyImageView(info.device, info.depth.view, NULL);
+    vkDestroyImage(info.device, info.depth.image, NULL);
+    vkFreeMemory(info.device, info.depth.mem, NULL);
 }
 
 void destroy_vertex_buffer(struct sample_info &info)
 {
-    vkDestroyBuffer(info.device, info.vertex_buffer.buf);
-    vkFreeMemory(info.device, info.vertex_buffer.mem);
+    vkDestroyBuffer(info.device, info.vertex_buffer.buf, NULL);
+    vkFreeMemory(info.device, info.vertex_buffer.mem, NULL);
 }
 
 void destroy_swap_chain(struct sample_info &info)
 {
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyImageView(info.device, info.buffers[i].view);
+        vkDestroyImageView(info.device, info.buffers[i].view, NULL);
     }
     info.fpDestroySwapchainKHR(info.device, info.swap_chain);
 }
@@ -1902,7 +1903,7 @@ void destroy_swap_chain(struct sample_info &info)
 void destroy_framebuffers(struct sample_info &info)
 {
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
-        vkDestroyFramebuffer(info.device, info.framebuffers[i]);
+        vkDestroyFramebuffer(info.device, info.framebuffers[i], NULL);
     }
     free(info.framebuffers);
 
@@ -1910,23 +1911,23 @@ void destroy_framebuffers(struct sample_info &info)
 
 void destroy_renderpass(struct sample_info &info)
 {
-    vkDestroyRenderPass(info.device, info.render_pass);
+    vkDestroyRenderPass(info.device, info.render_pass, NULL);
 }
 
 void destroy_device(struct sample_info &info)
 {
-    vkDestroyDevice(info.device);
+    vkDestroyDevice(info.device, NULL);
 }
 
 void destroy_instance(struct sample_info &info)
 {
-    vkDestroyInstance(info.inst);
+    vkDestroyInstance(info.inst, NULL);
 }
 
 void destroy_texture(struct sample_info &info)
 {
-    vkDestroySampler(info.device, info.textures[0].sampler);
-    vkDestroyImageView(info.device, info.textures[0].view);
-    vkDestroyImage(info.device, info.textures[0].image);
-    vkFreeMemory(info.device, info.textures[0].mem);
+    vkDestroySampler(info.device, info.textures[0].sampler, NULL);
+    vkDestroyImageView(info.device, info.textures[0].view, NULL);
+    vkDestroyImage(info.device, info.textures[0].image, NULL);
+    vkFreeMemory(info.device, info.textures[0].mem, NULL);
 }

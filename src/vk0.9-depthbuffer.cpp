@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     info.depth.format = depth_format;
 
     /* Create image */
-    res = vkCreateImage(info.device, &image_info,
+    res = vkCreateImage(info.device, &image_info, NULL
                         &info.depth.image);
     assert(res == VK_SUCCESS);
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
     assert(pass);
 
     /* Allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, &info.depth.mem);
+    res = vkAllocMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
     assert(res == VK_SUCCESS);
 
     /* Bind memory */
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
     /* Create image view */
     view_info.image = info.depth.image;
-    res = vkCreateImageView(info.device, &view_info, &info.depth.view);
+    res = vkCreateImageView(info.device, &view_info, NULL, &info.depth.view);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
@@ -159,9 +159,9 @@ int main(int argc, char **argv)
 
     /* Clean Up */
 
-    vkDestroyImageView(info.device, info.depth.view);
-    vkDestroyImage(info.device, info.depth.image);
-    vkFreeMemory(info.device, info.depth.mem);
+    vkDestroyImageView(info.device, info.depth.view, NULL);
+    vkDestroyImage(info.device, info.depth.image, NULL);
+    vkFreeMemory(info.device, info.depth.mem, NULL);
     destroy_command_buffer(info);
     destroy_command_pool(info);
     destroy_window(info);

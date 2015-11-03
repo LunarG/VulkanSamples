@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, &info.uniform_data.buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &info.uniform_data.buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, &(info.uniform_data.mem));
+    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -103,8 +103,8 @@ int main(int argc, char **argv)
     info.uniform_data.buffer_info.range = sizeof(info.MVP);
     /* VULKAN_KEY_END */
 
-    vkDestroyBuffer(info.device, info.uniform_data.buf);
-    vkFreeMemory(info.device, info.uniform_data.mem);
+    vkDestroyBuffer(info.device, info.uniform_data.buf, NULL);
+    vkFreeMemory(info.device, info.uniform_data.mem, NULL);
     destroy_device(info);
     destroy_instance(info);
 }

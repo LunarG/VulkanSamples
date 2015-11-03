@@ -112,14 +112,14 @@ int main(int argc, char **argv)
     VkInstanceCreateInfo inst_info = {};
     inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     inst_info.pNext = NULL;
-    inst_info.pAppInfo = &app_info;
-    inst_info.pAllocCb = NULL;
+    inst_info.flags = 0;
+    inst_info.pApplicationInfo = &app_info;
     inst_info.enabledLayerNameCount = info.instance_layer_names.size();
     inst_info.ppEnabledLayerNames = info.instance_layer_names.size() ? info.instance_layer_names.data() : NULL;
     inst_info.enabledExtensionNameCount = info.instance_extension_names.size();
     inst_info.ppEnabledExtensionNames = info.instance_extension_names.data();
 
-    VkResult res = vkCreateInstance(&inst_info, &info.inst);
+    VkResult res = vkCreateInstance(&inst_info, NULL, &info.inst);
     assert(res == VK_SUCCESS);
 
     init_enumerate_device(info);
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
             device_info.extensionCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
-    res = vkCreateDevice(info.gpus[0], &device_info, &info.device);
+    res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
 
     VkDbgMsgCallback msg_callback;
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
 
-    res = vkCreateCommandPool(info.device, &cmd_pool_info, &info.cmd_pool);
+    res = vkCreateCommandPool(info.device, &cmd_pool_info, NULL, &info.cmd_pool);
     assert(res == VK_SUCCESS);
 
     /*
@@ -217,14 +217,14 @@ int main(int argc, char **argv)
      */
     std::cout << "calling vkDestroyDevice before destroying command pool\n";
     std::cout << "this should result in an error\n";
-    vkDestroyDevice(info.device);
+    vkDestroyDevice(info.device, NULL);
 
     /* Clean up callback */
     info.dbgDestroyMsgCallback(info.inst, msg_callback);
 
     /* VULKAN_KEY_END */
 
-    vkDestroyInstance(info.inst);
+    vkDestroyInstance(info.inst, NULL);
 
     return 0;
 }

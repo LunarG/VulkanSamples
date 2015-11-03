@@ -123,6 +123,7 @@ int main(int argc, char **argv)
 
     res = vkCreateSemaphore(info.device,
                             &presentCompleteSemaphoreCreateInfo,
+                            NULL,
                             &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_texture(info);

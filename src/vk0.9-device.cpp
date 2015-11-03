@@ -61,10 +61,10 @@ int main(int argc, char **argv)
     device_info.pEnabledFeatures = NULL;
 
     VkDevice device;
-    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, &device);
+    VkResult U_ASSERT_ONLY res = vkCreateDevice(info.gpus[0], &device_info, NULL, &device);
     assert(res == VK_SUCCESS);
 
-    vkDestroyDevice(device);
+    vkDestroyDevice(device, NULL);
 
     /* VULKAN_KEY_END */
 

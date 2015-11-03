@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 
     /* Create a mappable image.  It will be the texture if linear images are ok to be textures */
     /* or it will be the staging image if they are not.                                        */
-    res = vkCreateImage(info.device, &image_create_info,
+    res = vkCreateImage(info.device, &image_create_info, NULL,
             &mappableImage);
     assert(res == VK_SUCCESS);
 
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     assert(pass);
 
     /* allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc,
+    res = vkAllocMemory(info.device, &mem_alloc, NULL,
                 &(mappableMemory));
     assert(res == VK_SUCCESS);
 
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-        res = vkCreateImage(info.device, &image_create_info,
+        res = vkCreateImage(info.device, &image_create_info, NULL,
                 &texObj.image);
         assert(res == VK_SUCCESS);
 
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
         assert(pass);
 
         /* allocate memory */
-        res = vkAllocMemory(info.device, &mem_alloc,
+        res = vkAllocMemory(info.device, &mem_alloc, NULL,
                     &texObj.mem);
         assert(res == VK_SUCCESS);
 
@@ -239,8 +239,8 @@ int main(int argc, char **argv)
                                texObj.imageLayout);
 
         /* Release the resources for the staging image */
-        vkFreeMemory(info.device, mappableMemory);
-        vkDestroyImage(info.device, mappableImage);
+        vkFreeMemory(info.device, mappableMemory, NULL);
+        vkDestroyImage(info.device, mappableImage, NULL);
     }
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
     /* create sampler */
-    res = vkCreateSampler(info.device, &samplerCreateInfo,
+    res = vkCreateSampler(info.device, &samplerCreateInfo, NULL,
             &texObj.sampler);
     assert(res == VK_SUCCESS);
 
@@ -284,7 +284,7 @@ int main(int argc, char **argv)
 
     /* create image view */
     view_info.image = texObj.image;
-    res = vkCreateImageView(info.device, &view_info,
+    res = vkCreateImageView(info.device, &view_info, NULL,
             &texObj.view);
     assert(res == VK_SUCCESS);
 
@@ -292,9 +292,9 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    vkDestroySampler(info.device, texObj.sampler);
-    vkDestroyImageView(info.device, texObj.view);
-    vkDestroyImage(info.device, texObj.image);
+    vkDestroySampler(info.device, texObj.sampler, NULL);
+    vkDestroyImageView(info.device, texObj.view, NULL);
+    vkDestroyImage(info.device, texObj.image, NULL);
     vkFreeMemory(info.device, texObj.mem);
     destroy_command_buffer(info);
     destroy_command_pool(info);

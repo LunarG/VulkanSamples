@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     pipelineCache.initialSize = 0;
     pipelineCache.maxSize = 0;
 
-    res = vkCreatePipelineCache(info.device, &pipelineCache, &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
     VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
@@ -223,14 +223,14 @@ int main(int argc, char **argv)
     pipeline.renderPass          = info.render_pass;
     pipeline.subpass             = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, &info.pipeline);
+    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, NULL, &info.pipeline);
     assert(res == VK_SUCCESS);
     execute_end_command_buffer(info);
     execute_queue_command_buffer(info);
     /* VULKAN_KEY_END */
 
-    vkDestroyPipeline(info.device, info.pipeline);
-    vkDestroyPipelineCache(info.device, info.pipelineCache);
+    vkDestroyPipeline(info.device, info.pipeline, NULL);
+    vkDestroyPipelineCache(info.device, info.pipelineCache, NULL);
     destroy_descriptor_pool(info);
     destroy_vertex_buffer(info);
     destroy_framebuffers(info);
