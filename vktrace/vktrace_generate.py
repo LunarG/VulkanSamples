@@ -102,6 +102,8 @@ class Subcommand(object):
  * DEALINGS IN THE SOFTWARE.
  *
  * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
+ * Author: Peter Lohrmann <peterl@valvesoftware.com>
  */"""
 
     def generate_header(self, extensionName):
