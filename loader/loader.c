@@ -247,11 +247,11 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
         while ((rtn_value = RegEnumValue(key, idx++, name, &name_size, NULL, NULL, (LPBYTE) &value, &value_size)) == ERROR_SUCCESS) {
             if (value_size == sizeof(value) && value == 0) {
                 if (out == NULL) {
-                    out = loader_heap_alloc(inst, total_size, VK_SYSTEM_ALLOCATION_TYPE_INTERNAL);
+                    out = loader_heap_alloc(inst, total_size, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                     out[0] = '\0';
                 }
                 else if (strlen(out) + name_size + 1 > total_size) {
-                    out = loader_heap_realloc(inst, out, total_size, total_size * 2, VK_SYSTEM_ALLOCATION_TYPE_INTERNAL);
+                    out = loader_heap_realloc(inst, out, total_size, total_size * 2, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
                     total_size *= 2;
                 }
                 if (out == NULL) {
