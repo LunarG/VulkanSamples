@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs.pNext = NULL;
     rs.fillMode = VK_FILL_MODE_SOLID;
-    rs.cullMode = VK_CULL_MODE_BACK;
+    rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CCW;
     rs.depthClampEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;

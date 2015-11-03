@@ -1071,8 +1071,6 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     VkResult U_ASSERT_ONLY res;
     /* Need attachments for render target and depth buffer */
     VkAttachmentDescription attachments[2];
-    attachments[0].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
-    attachments[0].pNext = NULL;
     attachments[0].format = info.format;
     attachments[0].samples = NUM_SAMPLES;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1085,8 +1083,6 @@ void init_renderpass(struct sample_info &info, bool include_depth)
 
     if (include_depth)
     {
-        attachments[1].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION;
-        attachments[1].pNext = NULL;
         attachments[1].format = info.depth.format;
         attachments[1].samples = NUM_SAMPLES;
         attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1102,9 +1098,11 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     color_reference.attachment = 0;
     color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentReference depth_reference = {};
+    depth_reference.attachment = 1;
+    depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpass = {};
-    subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION;
-    subpass.pNext = NULL;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
     subpass.inputAttachmentCount = 0;
@@ -1112,9 +1110,7 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_reference;
     subpass.pResolveAttachments = NULL;
-    subpass.depthStencilAttachment.attachment = include_depth?1:VK_ATTACHMENT_UNUSED;
-    subpass.depthStencilAttachment.layout = include_depth?VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-                                                          VK_IMAGE_LAYOUT_UNDEFINED;
+    subpass.pDepthStencilAttachment = &depth_reference;
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
@@ -1476,7 +1472,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
     rs.pNext = NULL;
     rs.fillMode = VK_FILL_MODE_SOLID;
-    rs.cullMode = VK_CULL_MODE_BACK;
+    rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClampEnable = include_depth;
     rs.rasterizerDiscardEnable = VK_FALSE;
