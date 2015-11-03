@@ -1781,12 +1781,12 @@ void init_texture(struct sample_info &info, const char* textureName)
 
     VkSamplerCreateInfo samplerCreateInfo = {};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCreateInfo.magFilter = VK_TEX_FILTER_NEAREST;
-    samplerCreateInfo.minFilter = VK_TEX_FILTER_NEAREST;
-    samplerCreateInfo.mipMode = VK_TEX_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressModeU = VK_TEX_ADDRESS_MODE_CLAMP;
-    samplerCreateInfo.addressModeV = VK_TEX_ADDRESS_MODE_CLAMP;
-    samplerCreateInfo.addressModeW = VK_TEX_ADDRESS_MODE_CLAMP;
+    samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+    samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+    samplerCreateInfo.mipMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
