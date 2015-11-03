@@ -37,6 +37,7 @@
 }
 
 VkRenderFramework::VkRenderFramework() :
+    m_commandPool(),
     m_commandBuffer(),
     m_renderPass(VK_NULL_HANDLE),
     m_framebuffer(VK_NULL_HANDLE),
@@ -722,6 +723,10 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     imageCreateInfo.extent.height = h;
     imageCreateInfo.mipLevels = mipCount;
     imageCreateInfo.tiling = tiling;
+    if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+        imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    else
+        imageCreateInfo.initialLayout = m_descriptorImageInfo.imageLayout;
 
     imageCreateInfo.usage = usage;
 
@@ -1681,6 +1686,7 @@ void VkDepthStencilObj::Init(VkDeviceObj *device, int32_t width, int32_t height,
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     init(*m_device, image_info);
