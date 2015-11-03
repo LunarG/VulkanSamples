@@ -112,8 +112,8 @@ void set_image_layout(
     VkImageMemoryBarrier image_memory_barrier = {};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     image_memory_barrier.pNext = NULL;
-    image_memory_barrier.outputMask = 0;
-    image_memory_barrier.inputMask = 0;
+    image_memory_barrier.srcAccessMask = 0;
+    image_memory_barrier.dstAccessMask = 0;
     image_memory_barrier.oldLayout = old_image_layout;
     image_memory_barrier.newLayout = new_image_layout;
     image_memory_barrier.image = image;

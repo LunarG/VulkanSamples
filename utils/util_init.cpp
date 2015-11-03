@@ -782,8 +782,8 @@ void execute_pre_present_barrier(struct sample_info &info)
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     prePresentBarrier.pNext = NULL;
-    prePresentBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
-    prePresentBarrier.inputMask = 0;
+    prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    prePresentBarrier.dstAccessMask = 0;
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1647,7 +1647,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
-    subres.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     subres.mipLevel = 0;
     subres.arrayLayer = 0;
 
