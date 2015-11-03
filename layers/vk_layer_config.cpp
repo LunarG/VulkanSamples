@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2014 Lunarg, Inc.
+ * Copyright 2014 Valve Software
  * Copyright 2015 Google Inc.
  * All Rights Reserved.
  *
@@ -22,6 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
+ * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Tobin Ehlis <tobin@lunarg.com>
  **************************************************************************/
 #include <fstream>
 #include <string>

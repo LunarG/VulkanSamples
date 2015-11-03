@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2015 Lunarg, Inc.
+ * Copyright 2015 Valve Software
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,6 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
+ * Author: Mark Lobodzinski <mark@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  **************************************************************************/
 #pragma once
 #include <stdbool.h>
