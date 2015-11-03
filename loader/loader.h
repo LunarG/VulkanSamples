@@ -185,8 +185,7 @@ struct loader_physical_device {
     VkPhysicalDevice phys_dev;          // object from ICD
     /*
      * Fill in the cache of available device extensions from
-     * this physical device. This cache will be used to satisfy
-     * calls to EnumerateDeviceExtensionProperties
+     * this physical device. This cache can be used during CreateDevice
      */
     struct loader_extension_list device_extension_cache;
 };

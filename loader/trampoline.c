@@ -304,8 +304,20 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    //TODO convert over to using instance chain dispatch
-    res = loader_EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pPropertyCount, pProperties);
+
+    /* If pLayerName == NULL, then querying ICD extensions, pass this call
+       down the instance chain which will terminate in the ICD. This allows
+       layers to filter the extensions coming back up the chain.
+       If pLayerName != NULL then get layer extensions from manifest file.  */
+    if (pLayerName == NULL  || strlen(pLayerName) == 0) {
+        const VkLayerInstanceDispatchTable *disp;
+
+        disp = loader_get_instance_dispatch(physicalDevice);
+        res = disp->EnumerateDeviceExtensionProperties(physicalDevice, NULL, pPropertyCount, pProperties);
+    } else {
+        res = loader_EnumerateDeviceExtensionProperties(physicalDevice, pLayerName, pPropertyCount, pProperties);
+    }
+
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
@@ -318,7 +330,9 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     VkResult res;
 
     loader_platform_thread_lock_mutex(&loader_lock);
-    //TODO convert over to using instance chain dispatch
+
+    /* Don't dispatch this call down the instance chain, want all device layers
+       enumerated and instance chain may not contain all device layers */
     res = loader_EnumerateDeviceLayerProperties(physicalDevice, pPropertyCount, pProperties);
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;

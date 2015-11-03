@@ -536,9 +536,44 @@ static void loader_add_global_extensions(
     return;
 }
 
+/*
+ * Initialize ext_list with the physical device extensions.
+ * The extension properties are passed as inputs in count and ext_props.
+ */
+static VkResult loader_init_physical_device_extensions(
+        const struct loader_instance *inst,
+        struct loader_physical_device *phys_dev,
+        uint32_t count,
+        VkExtensionProperties *ext_props,
+        struct loader_extension_list *ext_list)
+{
+    VkResult res;
+    uint32_t i;
+
+    if (!loader_init_ext_list(inst, ext_list)) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    for (i = 0; i < count; i++) {
+        char spec_version[64];
+
+        snprintf(spec_version, sizeof (spec_version), "%d.%d.%d",
+                VK_MAJOR(ext_props[i].specVersion),
+                VK_MINOR(ext_props[i].specVersion),
+                VK_PATCH(ext_props[i].specVersion));
+        loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                "PhysicalDevice Extension: %s (%s) version %s",
+                ext_props[i].extensionName, phys_dev->this_icd->this_icd_lib->lib_name, spec_version);
+        res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+        if (res != VK_SUCCESS)
+            return res;
+    }
+
+    return VK_SUCCESS;
+}
+
 static VkResult loader_add_physical_device_extensions(
         const struct loader_instance *inst,
-        PFN_vkEnumerateDeviceExtensionProperties get_phys_dev_ext_props,
         VkPhysicalDevice physical_device,
         const char *lib_name,
         struct loader_extension_list *ext_list)
@@ -547,35 +582,32 @@ static VkResult loader_add_physical_device_extensions(
     VkResult res;
     VkExtensionProperties *ext_props;
 
-    if (!get_phys_dev_ext_props) {
-        /* No EnumerateDeviceExtensionProperties defined */
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
-        res = get_phys_dev_ext_props(physical_device, NULL, &count, NULL);
-        if (res == VK_SUCCESS && count > 0) {
-            ext_props = loader_stack_alloc(count * sizeof(VkExtensionProperties));
-
-            res = get_phys_dev_ext_props(physical_device, NULL, &count, ext_props);
-            for (i = 0; i < count; i++) {
-                char spec_version[64];
-
-                snprintf(spec_version, sizeof(spec_version), "%d.%d.%d",
-                         VK_MAJOR(ext_props[i].specVersion),
-                         VK_MINOR(ext_props[i].specVersion),
-                         VK_PATCH(ext_props[i].specVersion));
-                loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
-                           "PhysicalDevice Extension: %s (%s) version %s",
-
-                           ext_props[i].extensionName, lib_name, spec_version);
-                res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
-                if (!res)
-                    return res;
-            }
-        } else {
-            loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting physical device extension info count from library %s", lib_name);
+    res = loader_EnumerateDeviceExtensionProperties(physical_device, NULL, &count, NULL);
+    if (res == VK_SUCCESS && count > 0) {
+        ext_props = loader_stack_alloc(count * sizeof (VkExtensionProperties));
+        if (!ext_props)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        res = loader_EnumerateDeviceExtensionProperties(physical_device, NULL, &count, ext_props);
+        if (res != VK_SUCCESS)
             return res;
+        for (i = 0; i < count; i++) {
+            char spec_version[64];
+
+            snprintf(spec_version, sizeof (spec_version), "%d.%d.%d",
+                    VK_MAJOR(ext_props[i].specVersion),
+                    VK_MINOR(ext_props[i].specVersion),
+                    VK_PATCH(ext_props[i].specVersion));
+            loader_log(VK_DBG_REPORT_DEBUG_BIT, 0,
+                    "PhysicalDevice Extension: %s (%s) version %s",
+                    ext_props[i].extensionName, lib_name, spec_version);
+            res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
+            if (res != VK_SUCCESS)
+                return res;
         }
+    } else {
+        loader_log(VK_DBG_REPORT_ERROR_BIT, 0, "Error getting physical device extension info count from library %s", lib_name);
+        return res;
+    }
 
     return VK_SUCCESS;
 }
@@ -2784,30 +2816,8 @@ VkResult loader_init_physical_device_info(struct loader_instance *ptr_instance)
                 inst_phys_devs[idx].this_instance = ptr_instance;
                 inst_phys_devs[idx].this_icd = icd;
                 inst_phys_devs[idx].phys_dev = phys_devs[i].phys_devs[j];
+                memset(&inst_phys_devs[idx].device_extension_cache, 0, sizeof(struct loader_extension_list));
 
-                // convenient time to init this ICDs device extension list
-                if (!loader_init_ext_list(ptr_instance, &inst_phys_devs[idx].device_extension_cache)) {
-                    ptr_instance->total_gpu_count -= phys_devs[i].count - j;
-                    return VK_ERROR_OUT_OF_HOST_MEMORY;
-                }
-
-                res = loader_add_physical_device_extensions(
-                                ptr_instance,
-                                icd->EnumerateDeviceExtensionProperties,
-                                phys_devs[i].phys_devs[j],
-                                icd->this_icd_lib->lib_name,
-                                &inst_phys_devs[idx].device_extension_cache);
-
-                if (res != VK_SUCCESS) {
-                    /* clean up any extension lists previously created before this request failed */
-                    for (uint32_t k = 0; k < j; k++) {
-                        loader_destroy_ext_list(
-                                ptr_instance,
-                                &inst_phys_devs[idx - k - 1].device_extension_cache);
-                    }
-
-                    return res;
-                }
                 idx++;
             }
         } else
@@ -2970,6 +2980,20 @@ VkResult VKAPI loader_CreateDevice(
         }
     }
 
+    /* Get the physical device extensions if they haven't been retrieved yet */
+    if (phys_dev->device_extension_cache.capacity == 0) {
+        if (!loader_init_ext_list(inst, &phys_dev->device_extension_cache)) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
+        res = loader_add_physical_device_extensions(
+                            inst, physicalDevice,
+                            phys_dev->this_icd->this_icd_lib->lib_name,
+                            &phys_dev->device_extension_cache);
+        if (res != VK_SUCCESS) {
+            return res;
+        }
+    }
+    /* make sure requested extensions to be enabled are supported */
     res = loader_validate_device_extensions(phys_dev, &inst->device_layer_list, pCreateInfo);
     if (res != VK_SUCCESS) {
         return res;
@@ -3260,7 +3284,17 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
         }
     }
     else {
-        dev_ext_list = &phys_dev->device_extension_cache;
+        /* this case is during the call down the instance chain */
+        struct loader_icd *icd = phys_dev->this_icd;
+        VkResult res;
+        res = icd->EnumerateDeviceExtensionProperties(phys_dev->phys_dev, NULL, pPropertyCount, pProperties);
+        if (pProperties != NULL  && res == VK_SUCCESS) {
+            /* initialize dev_extension list within the physicalDevice object */
+            res = loader_init_physical_device_extensions(phys_dev->this_instance,
+                               phys_dev, *pPropertyCount, pProperties,
+                               &phys_dev->device_extension_cache);
+        }
+        return res;
     }
 
     count = (dev_ext_list == NULL) ? 0: dev_ext_list->count;
