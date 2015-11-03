@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
-    queue_info.queueCount = 1;
+    queue_info.queuePriorityCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
 
     VkDeviceCreateInfo device_info = {};
@@ -54,9 +54,9 @@ int main(int argc, char **argv)
     device_info.pNext = NULL;
     device_info.requestedQueueCount = 1;
     device_info.pRequestedQueues = &queue_info;
-    device_info.extensionCount = 0;
+    device_info.enabledExtensionNameCount = 0;
     device_info.ppEnabledExtensionNames = NULL;
-    device_info.layerCount = 0;
+    device_info.enabledExtensionNameCount = 0;
     device_info.ppEnabledLayerNames = NULL;
     device_info.pEnabledFeatures = NULL;
 

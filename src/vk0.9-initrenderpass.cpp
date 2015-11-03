@@ -90,14 +90,14 @@ int main(int argc, char **argv)
     subpass.pNext = NULL;
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.flags = 0;
-    subpass.inputCount = 0;
+    subpass.inputAttachmentCount = 0;
     subpass.pInputAttachments = NULL;
-    subpass.colorCount = 1;
+    subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_reference;
     subpass.pResolveAttachments = NULL;
     subpass.depthStencilAttachment.attachment = 1;
     subpass.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    subpass.preserveCount = 0;
+    subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
     VkRenderPassCreateInfo rp_info = {};

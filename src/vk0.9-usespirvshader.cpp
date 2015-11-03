@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     inst_info.pNext = NULL;
     inst_info.pAppInfo = &app_info;
     inst_info.pAllocCb = NULL;
-    inst_info.extensionCount = 0;
+    inst_info.enabledExtensionNameCount = 0;
     inst_info.ppEnabledExtensionNames = NULL;
 
     VkInstance inst;
