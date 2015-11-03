@@ -2801,6 +2801,8 @@ VkResult loader_init_physical_device_info(struct loader_instance *ptr_instance)
         phys_devs[i].phys_devs = (VkPhysicalDevice *) loader_stack_alloc(
                         phys_devs[i].count * sizeof(VkPhysicalDevice));
         if (!phys_devs[i].phys_devs) {
+            loader_heap_free(ptr_instance, ptr_instance->phys_devs);
+            ptr_instance->phys_devs = NULL;
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         res = icd->EnumeratePhysicalDevices(
@@ -2820,8 +2822,11 @@ VkResult loader_init_physical_device_info(struct loader_instance *ptr_instance)
 
                 idx++;
             }
-        } else
+        } else {
+            loader_heap_free(ptr_instance, ptr_instance->phys_devs);
+            ptr_instance->phys_devs = NULL;
             return res;
+        }
 
         icd = icd->next;
     }
