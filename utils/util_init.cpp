@@ -792,7 +792,7 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_FALSE, 1, (const void * const*)&pmemory_barrier);
+                         0, 1, (const void * const*)&pmemory_barrier);
 }
 
 void execute_present_image(struct sample_info &info)

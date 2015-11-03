@@ -137,7 +137,7 @@ void set_image_layout(
     VkPipelineStageFlags src_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     VkPipelineStageFlags dest_stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, false, 1, (const void * const*)&pmemory_barrier);
+    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 1, (const void * const*)&pmemory_barrier);
 }
 
 bool read_ppm(char const*const filename, int& width, int& height, uint64_t rowPitch, unsigned char* dataPtr)
