@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkImageSubresource subres = {};
-    subres.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     subres.mipLevel = 0;
     subres.arrayLayer = 0;
 
