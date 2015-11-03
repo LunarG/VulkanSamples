@@ -1,7 +1,6 @@
 /*
- * Vulkan
  *
- * Copyright (C) 2014 LunarG, Inc.
+ * Copyright (C) 2015 Valve Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +20,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Authors:
- *   LunarG
+ * Author: Chia-I Wu <olvaffe@gmail.com>
+ * Author: Cody Northrop <cody@lunarg.com>
+ * Author: GregF <greg@LunarG.com>
+ *
  */
 
 extern "C" {
