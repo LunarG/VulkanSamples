@@ -1694,7 +1694,6 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     ASSERT_VK_SUCCESS(err);
 
     VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
-
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1712,6 +1711,108 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     }
 
     vkDestroyDescriptorSetLayout(m_device->device(), ds_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+
+TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
+{
+    // Create a descriptorSet w/ some dynamic descriptors and then don't send offsets when binding
+    VkResult        err;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+        "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0. ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkDescriptorPoolSize ds_type_count = {};
+        ds_type_count.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        ds_type_count.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = 1;
+        ds_pool_ci.pPoolSizes = &ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSetLayoutBinding dsl_binding = {};
+        dsl_binding.binding = 0;
+        dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        dsl_binding.arraySize = 1;
+        dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBinding = &dsl_binding;
+    VkDescriptorSetLayout ds_layout;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    VkDescriptorSet descriptorSet;
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.setLayoutCount = 1;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = &ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.setLayoutCount = 1;
+        pipeline_layout_ci.pSetLayouts = &ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer to update the descriptor with
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buffCI = {};
+        buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffCI.size = 1024;
+        buffCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffCI.queueFamilyIndexCount = 1;
+        buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer dyub;
+    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub);
+    ASSERT_VK_SUCCESS(err);
+    // Correctly update descriptor to avoid "NOT_UPDATED" error
+    VkDescriptorBufferInfo buffInfo = {};
+        buffInfo.buffer = dyub;
+        buffInfo.offset = 0;
+        buffInfo.range = 1024;
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptorSet;
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 1;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    descriptor_write.pBufferInfo = &buffInfo;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    BeginCommandBuffer();
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 

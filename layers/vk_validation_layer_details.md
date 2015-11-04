@@ -68,7 +68,6 @@ The DrawState layer tracks state leading into Draw cmds. This includes the Pipel
 ### DrawState Pending Work
 Additional checks to be added to DrawState
 
- 5. dynamicOffsetCount lists how many entries are present in pDynamicOffsets - account for this (not certain of what needs to be done here but we don't have any test cases for dynamicOffsets, so keeping this task around until we do)
  7. Lifetime validation (See [bug 13383](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13383))
 	 8. XGL_DESCRIPTOR_SET
 		 9. Cannot be deleted until no longer in use on GPU, or referenced in any pending command.
@@ -84,8 +83,6 @@ Additional checks to be added to DrawState
 		 22. Cannot be deleted until the descriptors referencing the objects are deleted.
 	 23. For ClearAttachments function, verify that the index of referenced attachment actually exists
  24. GetRenderAreaGranularity - The pname:renderPass parameter must be the same as the one given in the sname:VkRenderPassBeginInfo structure for which the render area is relevant.
- 26. vkFreeDescriptorSets must not be called for sets created on top of one-shot pool
- 27. If Cmd Buffer one-time submit flag is set, then verify that cmd buffer is only submitted once
  28. Verify that all relevent dynamic state objects are bound (See https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14323)
  29. Flag an error if CommandBuffer has Begin called while it's being constructed - this is not a reset, this is a violation
  30. At PSO creation time, there is no case when NOT including a FS should flag an error since there exist dynamic state configurations that can be set to cause a FS to not be required. Instead, in the case when no FS is in the PSO, validation should detect at runtime if dynamic state will require a FS, and in those case issue a runtime warning about undefined behavior. (see bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14429)
