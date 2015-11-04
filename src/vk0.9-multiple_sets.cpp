@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     uniform_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     uniform_layout_info[0].pNext = NULL;
     uniform_layout_info[0].bindingCount = 1;
-    uniform_layout_info[0].pBindings = uniform_binding;
+    uniform_layout_info[0].pBinding = uniform_binding;
 
     // Create second layout containing combined sampler/image data
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     sampler2D_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     sampler2D_layout_info[0].pNext = NULL;
     sampler2D_layout_info[0].bindingCount = 1;
-    sampler2D_layout_info[0].pBindings = sampler2D_binding;
+    sampler2D_layout_info[0].pBinding = sampler2D_binding;
 
     // Create multiple sets, using each createInfo
     static const unsigned uniform_set_index = 0;
