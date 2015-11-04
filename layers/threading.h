@@ -42,7 +42,7 @@ struct layer_data {
 
     layer_data() :
         report_data(nullptr),
-        logging_callback(nullptr)
+        logging_callback(VK_NULL_HANDLE)
     {};
 };
 
