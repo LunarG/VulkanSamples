@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = 1;
-    descriptor_layout.pBindings = &layout_binding;
+    descriptor_layout.pBinding = &layout_binding;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
     res = vkCreateDescriptorSetLayout(info.device,

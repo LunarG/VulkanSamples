@@ -1046,7 +1046,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = use_texture?2:1;
-    descriptor_layout.pBindings = layout_bindings;
+    descriptor_layout.pBinding = layout_bindings;
 
     VkResult U_ASSERT_ONLY err;
 
