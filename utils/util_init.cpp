@@ -1026,6 +1026,7 @@ void init_uniform_buffer(struct sample_info &info)
 void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture)
 {
     VkDescriptorSetLayoutBinding layout_bindings[2];
+    layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_bindings[0].arraySize = 1;
     layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -1033,6 +1034,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
 
     if (use_texture)
     {
+        layout_bindings[1].binding = 1;
         layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         layout_bindings[1].arraySize = 1;
         layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;

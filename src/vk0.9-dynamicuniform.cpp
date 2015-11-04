@@ -174,6 +174,7 @@ int main(int argc, char **argv)
 
     /* Init desciptor and pipeline layouts - descriptor type is UNIFORM_BUFFER_DYNAMIC */
     VkDescriptorSetLayoutBinding layout_bindings[2];
+    layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     layout_bindings[0].arraySize = 1;
     layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
