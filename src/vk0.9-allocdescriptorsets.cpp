@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     init_descriptor_and_pipeline_layouts(info, false);
 
     /* VULKAN_KEY_START */
-    VkDescriptorTypeCount type_count[1];
+    VkDescriptorPoolSize type_count[1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].descriptorCount = 1;
 
@@ -55,8 +55,8 @@ int main(int argc, char **argv)
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
     descriptor_pool.maxSets = 1;
-    descriptor_pool.typeCount = 1;
-    descriptor_pool.pTypeCounts = type_count;
+    descriptor_pool.poolSizeCount = 1;
+    descriptor_pool.pPoolSizes = type_count;
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, NULL, &info.desc_pool);

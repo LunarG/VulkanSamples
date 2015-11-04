@@ -135,9 +135,9 @@ int main(int argc, char **argv)
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineRasterStateCreateInfo rs;
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
-    rs.fillMode = VK_FILL_MODE_SOLID;
+    rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CCW;
     rs.depthClampEnable = VK_TRUE;
@@ -152,14 +152,14 @@ int main(int argc, char **argv)
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb.pNext = NULL;
     VkPipelineColorBlendAttachmentState att_state[1];
-    att_state[0].channelWriteMask = 0xf;
+    att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
-    att_state[0].blendOpAlpha = VK_BLEND_OP_ADD;
-    att_state[0].blendOpColor = VK_BLEND_OP_ADD;
-    att_state[0].srcBlendColor = VK_BLEND_ZERO;
-    att_state[0].destBlendColor = VK_BLEND_ZERO;
-    att_state[0].srcBlendAlpha = VK_BLEND_ZERO;
-    att_state[0].destBlendAlpha = VK_BLEND_ZERO;
+    att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].destBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].destBlendAlpha = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
@@ -187,9 +187,9 @@ int main(int argc, char **argv)
     ds.minDepthBounds = 0;
     ds.maxDepthBounds = 0;
     ds.stencilTestEnable = VK_FALSE;
-    ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds.back.failOp = VK_STENCIL_OP_KEEP;
+    ds.back.passOp = VK_STENCIL_OP_KEEP;
+    ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
     ds.front = ds.back;
 
     VkPipelineMultisampleStateCreateInfo   ms;

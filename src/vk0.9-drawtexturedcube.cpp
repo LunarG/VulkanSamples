@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
@@ -162,8 +162,8 @@ int main(int argc, char **argv)
     viewport.width = (float) info.width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
-    viewport.originX = 0;
-    viewport.originY = 0;
+    viewport.x = 0;
+    viewport.y = 0;
     vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
