@@ -308,7 +308,7 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     /* Clean Up */
-    VkCmdBuffer cmd_bufs[1] = { info.cmd };
+    VkCommandBuffer cmd_bufs[1] = { info.cmd };
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
     vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     for (uint32_t i = 0; i < info.swapchainImageCount; i++) {

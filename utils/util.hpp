@@ -56,7 +56,7 @@
 
 /* Number of samples needs to be the same at image creation,      */
 /* renderpass creation and pipeline creation.                     */
-#define NUM_SAMPLES 1
+#define NUM_SAMPLES VK_SAMPLE_COUNT_1_BIT
 
 /* Number of viewports and number of scissors have to be the same */
 /* at pipeline creation and in any call to set them dynamically   */
@@ -179,7 +179,7 @@ struct sample_info {
     std::vector<swap_chain_buffer> buffers;
     VkSemaphore presentCompleteSemaphore;
 
-    VkCmdPool cmd_pool;
+    VkCommandPool cmd_pool;
 
     struct {
         VkFormat format;
@@ -214,7 +214,7 @@ struct sample_info {
     glm::mat4 Model;
     glm::mat4 MVP;
 
-    VkCmdBuffer cmd;  // Buffer for initialization commands
+    VkCommandBuffer cmd;  // Buffer for initialization commands
     VkPipelineLayout pipeline_layout;
     std::vector<VkDescriptorSetLayout> desc_layout;
     VkPipelineCache pipelineCache;

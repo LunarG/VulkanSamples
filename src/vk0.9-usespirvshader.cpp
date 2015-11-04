@@ -40,8 +40,8 @@ int main(int argc, char **argv)
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
-    app_info.pAppName = APP_SHORT_NAME;
-    app_info.appVersion = 1;
+    app_info.pApplicationName = APP_SHORT_NAME;
+    app_info.applicationVersion = 1;
     app_info.pEngineName = APP_SHORT_NAME;
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION;

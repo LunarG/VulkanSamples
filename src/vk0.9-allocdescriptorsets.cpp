@@ -62,7 +62,7 @@ int main(int argc, char **argv)
         &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetAllocInfo alloc_info[1];
+    VkDescriptorSetAllocateInfo alloc_info[1];
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
@@ -70,19 +70,19 @@ int main(int argc, char **argv)
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
-    writes[0].destSet = info.desc_set[0];
+    writes[0].dstSet = info.desc_set[0];
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &info.uniform_data.buffer_info;
-    writes[0].destArrayElement = 0;
-    writes[0].destBinding = 0;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
 
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
     /* VULKAN_KEY_END */

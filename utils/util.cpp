@@ -119,10 +119,10 @@ void set_image_layout(
     image_memory_barrier.image = image;
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.numLevels = 1;
-    image_memory_barrier.subresourceRange.numLayers = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.layerCount = 0;
 
-    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL) {
+    if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
         image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
     }

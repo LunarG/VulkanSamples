@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     std::cout << "Instance Extensions:" << std::endl;
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         VkExtensionProperties *props = &vk_props[i];
-        std::cout << props->extName << ":" << std::endl;
+        std::cout << props->extensionName << ":" << std::endl;
         std::cout << "\tVersion: " << props->specVersion << std::endl;
         std::cout << std::endl << std::endl;
     }

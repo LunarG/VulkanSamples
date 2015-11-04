@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(info.device, texelBuf, &mem_reqs);
 
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     assert(pass);
 
     VkDeviceMemory texelMem;
-    res = vkAllocMemory(info.device, &alloc_info, NULL, &texelMem);
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &texelMem);
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
         &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetAllocInfo desc_alloc_info[1];
+    VkDescriptorSetAllocateInfo desc_alloc_info[1];
     desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     desc_alloc_info[0].pNext = NULL;
     desc_alloc_info[0].descriptorPool = info.desc_pool;
@@ -228,19 +228,19 @@ int main(int argc, char **argv)
 
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[0].destSet = info.desc_set[0];
-    writes[0].destBinding = 1;
+    writes[0].dstSet = info.desc_set[0];
+    writes[0].dstBinding = 1;
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
     writes[0].pBufferInfo = &texel_buffer_info;
     writes[0].pTexelBufferView = &texel_view;
-    writes[0].destArrayElement = 0;
+    writes[0].dstArrayElement = 0;
 
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
 
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
     execute_pre_present_barrier(info);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
 
     execute_queue_cmdbuf(info, cmd_bufs);
     execute_present_image(info);

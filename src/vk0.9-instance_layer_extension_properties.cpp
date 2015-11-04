@@ -126,7 +126,7 @@ int main(int argc, char **argv)
                 uint32_t major, minor, patch;
                 extract_version(props->extensions[j].specVersion, major, minor, patch);
 
-                std::cout << props->extensions[j].extName << "(" << major << "." << minor << "." << patch << ")";
+                std::cout << props->extensions[j].extensionName << "(" << major << "." << minor << "." << patch << ")";
             }
         } else {
             std::cout << "Layer Extensions: None";

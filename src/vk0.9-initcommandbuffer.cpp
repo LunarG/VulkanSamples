@@ -51,8 +51,8 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_START */
 
     /* Create a command pool to allocate our command buffer from */
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = NULL;
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
@@ -61,19 +61,19 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     /* Create the command buffer from the command pool */
-    VkCmdBufferAllocInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
+    VkCommandBufferAllocateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
     cmd.pNext = NULL;
-    cmd.cmdPool = info.cmd_pool;
-    cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
+    cmd.commandPool = info.cmd_pool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmd.bufferCount = 1;
 
-    res = vkAllocCommandBuffers(info.device, &cmd, &info.cmd);
+    res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 
     /* VULKAN_KEY_END */
 
-    VkCmdBuffer cmd_bufs[1] = { info.cmd };
+    VkCommandBuffer cmd_bufs[1] = { info.cmd };
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
     vkDestroyCommandPool(info.device, info.cmd_pool, NULL);
     destroy_window(info);

@@ -183,19 +183,19 @@ int main(int argc, char **argv)
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.numLevels = 1;
+    prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.numLayers = 1;
+    prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};

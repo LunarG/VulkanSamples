@@ -93,14 +93,14 @@ int main(int argc, char **argv)
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
+    image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     assert(pass);
 
     /* allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, NULL,
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL,
                 &(mappableMemory));
     assert(res == VK_SUCCESS);
 
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     } else {
         /* The mappable image cannot be our texture, so create an optimally tiled image and blit to it */
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
         res = vkCreateImage(info.device, &image_create_info, NULL,
                 &texObj.image);
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
         assert(pass);
 
         /* allocate memory */
-        res = vkAllocMemory(info.device, &mem_alloc, NULL,
+        res = vkAllocateMemory(info.device, &mem_alloc, NULL,
                     &texObj.mem);
         assert(res == VK_SUCCESS);
 
@@ -198,44 +198,44 @@ int main(int argc, char **argv)
         set_image_layout(info, mappableImage,
                           VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
+                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image,
                           VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.numLayers = 1;
+        copy_region.srcSubresource.layerCount = 1;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
-        copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_region.destSubresource.mipLevel = 0;
-        copy_region.destSubresource.baseArrayLayer = 0;
-        copy_region.destSubresource.numLayers = 1;
-        copy_region.destOffset.x = 0;
-        copy_region.destOffset.y = 0;
-        copy_region.destOffset.z = 0;
+        copy_region.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.dstSubresource.mipLevel = 0;
+        copy_region.dstSubresource.baseArrayLayer = 0;
+        copy_region.dstSubresource.layerCount = 1;
+        copy_region.dstOffset.x = 0;
+        copy_region.dstOffset.y = 0;
+        copy_region.dstOffset.z = 0;
         copy_region.extent.width = texObj.tex_width;
         copy_region.extent.height = texObj.tex_height;
         copy_region.extent.depth = 1;
 
         /* Put the copy command into the command buffer */
         vkCmdCopyImage(info.cmd,
-                        mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                        texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         1, &copy_region);
 
         /* Set the layout for the texture image from DESTINATION_OPTIMAL to SHADER_READ_ONLY */
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
                                VK_IMAGE_ASPECT_COLOR_BIT,
-                               VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                texObj.imageLayout);
 
         /* Release the resources for the staging image */

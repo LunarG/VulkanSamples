@@ -103,8 +103,8 @@ int main(int argc, char **argv)
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
-    app_info.pAppName = "vulkansamples_enable_validation_with_callback";
-    app_info.appVersion = 1;
+    app_info.pApplicationName = "vulkansamples_enable_validation_with_callback";
+    app_info.applicationVersion = 1;
     app_info.pEngineName = "Vulkan Samples";
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION;
@@ -202,8 +202,8 @@ int main(int argc, char **argv)
     }
 
     /* Create a command pool */
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = NULL;
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
