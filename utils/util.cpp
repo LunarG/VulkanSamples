@@ -124,12 +124,12 @@ void set_image_layout(
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
-        image_memory_barrier.inputMask = VK_MEMORY_INPUT_TRANSFER_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     }
 
     if (new_image_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         /* Make sure any Copy or CPU writes to image are flushed */
-        image_memory_barrier.outputMask = VK_MEMORY_OUTPUT_HOST_WRITE_BIT | VK_MEMORY_OUTPUT_TRANSFER_BIT;
+        image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     }
 
     VkImageMemoryBarrier *pmemory_barrier = &image_memory_barrier;
