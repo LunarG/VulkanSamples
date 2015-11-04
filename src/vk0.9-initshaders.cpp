@@ -83,6 +83,9 @@ int main(int argc, char **argv)
     info.shaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[0].pNext  = NULL;
     info.shaderStages[0].pSpecializationInfo = NULL;
+    info.shaderStages[0].flags = 0;
+    info.shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    info.shaderStages[0].pName = "main";
 
     init_glslang();
     retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText, vtx_spv);
@@ -94,23 +97,16 @@ int main(int argc, char **argv)
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = vtx_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.vert_shader_module);
-    assert(res == VK_SUCCESS);
-
-    VkShaderCreateInfo shaderCreateInfo;
-    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    shaderCreateInfo.pNext = NULL;
-    shaderCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shaderCreateInfo.flags = 0;
-    shaderCreateInfo.module = info.vert_shader_module;
-    shaderCreateInfo.pName = "main";
-    res = vkCreateShader(info.device, &shaderCreateInfo, NULL, &info.shaderStages[0].shader);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[0].module);
     assert(res == VK_SUCCESS);
 
     std::vector<unsigned int> frag_spv;
     info.shaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     info.shaderStages[1].pNext  = NULL;
     info.shaderStages[1].pSpecializationInfo = NULL;
+    info.shaderStages[1].flags = 0;
+    info.shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    info.shaderStages[1].pName = "main";
 
     retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText, frag_spv);
     assert(retVal);
@@ -120,25 +116,14 @@ int main(int argc, char **argv)
     moduleCreateInfo.flags = 0;
     moduleCreateInfo.codeSize = frag_spv.size() * sizeof(unsigned int);
     moduleCreateInfo.pCode = frag_spv.data();
-    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.frag_shader_module);
-    assert(res == VK_SUCCESS);
-
-    shaderCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO;
-    shaderCreateInfo.pNext = NULL;
-    shaderCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shaderCreateInfo.flags = 0;
-    shaderCreateInfo.module = info.frag_shader_module;
-    shaderCreateInfo.pName = "main";
-    res = vkCreateShader(info.device, &shaderCreateInfo, NULL, &info.shaderStages[1].shader);
+    res = vkCreateShaderModule(info.device, &moduleCreateInfo, NULL, &info.shaderStages[1].module);
     assert(res == VK_SUCCESS);
 
     finalize_glslang();
     /* VULKAN_KEY_END */
 
-    vkDestroyShader(info.device,info.shaderStages[0].shader, NULL);
-    vkDestroyShader(info.device,info.shaderStages[1].shader, NULL);
-    vkDestroyShaderModule(info.device, info.vert_shader_module, NULL);
-    vkDestroyShaderModule(info.device, info.frag_shader_module, NULL);
+    vkDestroyShaderModule(info.device, info.shaderStages[0].module, NULL);
+    vkDestroyShaderModule(info.device, info.shaderStages[1].module, NULL);
     destroy_device(info);
     destroy_instance(info);
 }

@@ -221,8 +221,6 @@ struct sample_info {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    VkShaderModule vert_shader_module;
-    VkShaderModule frag_shader_module;
     VkPipelineShaderStageCreateInfo shaderStages[2];
 
     VkDescriptorPool desc_pool;
