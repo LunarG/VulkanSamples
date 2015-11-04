@@ -522,7 +522,13 @@ void init_depth_buffer(struct sample_info &info)
 {
     VkResult U_ASSERT_ONLY res;
     VkImageCreateInfo image_info = {};
-    const VkFormat depth_format = VK_FORMAT_D16_UNORM;
+
+    /* allow custom depth formats */
+    if(info.depth.format == VK_FORMAT_UNDEFINED)
+        info.depth.format = VK_FORMAT_D16_UNORM;
+
+    const VkFormat depth_format = info.depth.format;
+
     VkFormatProperties props;
     res = vkGetPhysicalDeviceFormatProperties(info.gpus[0], depth_format, &props);
     assert(res == VK_SUCCESS);
@@ -532,7 +538,7 @@ void init_depth_buffer(struct sample_info &info)
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         /* Try other depth formats? */
-        std::cout << "VK_FORMAT_D16_UNORM Unsupported.\n";
+        std::cout << "depth_format " << depth_format << " Unsupported.\n";
         exit(-1);
     }
 
@@ -571,9 +577,13 @@ void init_depth_buffer(struct sample_info &info)
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 
-    VkMemoryRequirements mem_reqs;
+    if(depth_format == VK_FORMAT_D16_UNORM_S8_UINT ||
+       depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
+       depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+        view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
 
-    info.depth.format = depth_format;
+    VkMemoryRequirements mem_reqs;
 
     /* Create image */
     res = vkCreateImage(info.device, &image_info,
@@ -602,7 +612,7 @@ void init_depth_buffer(struct sample_info &info)
 
     /* Set the image layout to depth stencil optimal */
     set_image_layout(info, info.depth.image,
-                          VK_IMAGE_ASPECT_DEPTH_BIT,
+                          view_info.subresourceRange.aspectMask,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
