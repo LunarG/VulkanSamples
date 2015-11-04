@@ -201,7 +201,7 @@ int main(int argc, char **argv)
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
     res = vkCreatePipelineLayout(info.device,
-                                 &pPipelineLayoutCreateInfo, NULL
+                                 &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
@@ -340,7 +340,7 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
     prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.enabledLayerNameCount = 1;
+    prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,

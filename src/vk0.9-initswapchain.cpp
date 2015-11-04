@@ -245,7 +245,7 @@ int main(int argc, char **argv)
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
     swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swap_chain.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swap_chain.queueFamilyIndexCount = 0;
+    swap_chain.queueFamilyCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
 
     res = info.fpCreateSwapchainKHR(info.device, &swap_chain, &info.swap_chain);
@@ -285,7 +285,7 @@ int main(int argc, char **argv)
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
-        color_image_view.subresourceRange.enabledLayerNameCount = 1;
+        color_image_view.subresourceRange.layerCount = 1;
         color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.flags = 0;
 

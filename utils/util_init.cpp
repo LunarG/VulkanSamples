@@ -1494,17 +1494,17 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].dstBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].dstBlendAlpha = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
     cb.logicOp = VK_LOGIC_OP_NO_OP;
-    cb.blendConst[0] = 1.0f;
-    cb.blendConst[1] = 1.0f;
-    cb.blendConst[2] = 1.0f;
-    cb.blendConst[3] = 1.0f;
+    cb.blendConstants[0] = 1.0f;
+    cb.blendConstants[1] = 1.0f;
+    cb.blendConstants[2] = 1.0f;
+    cb.blendConstants[3] = 1.0f;
 
     VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -1782,7 +1782,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
     samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-    samplerCreateInfo.mipMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
     samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
