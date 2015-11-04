@@ -358,13 +358,13 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     if (dynViewport) {
         if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
             result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic viewportCount from vkCmdSetViewport() is %u, but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+                "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
         }
     }
     if (dynScissor) {
         if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
             result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic scissorCount from vkCmdSetScissor() is %u, but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+                "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
         }
     }
     return result;
@@ -1040,7 +1040,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
         // Make sure that layout being updated has the binding being updated
         if (pLayout->bindings.find(binding) == pLayout->bindings.end()) {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) ds, 0, DRAWSTATE_INVALID_UPDATE_INDEX, "DS",
-                    "Descriptor Set %p does not have binding to match update binding %u for update type %s!", ds, binding, string_VkStructureType(pUpdate->sType));
+                    "Descriptor Set %" PRIu64 " does not have binding to match update binding %u for update type %s!", reinterpret_cast<uint64_t>(ds), binding, string_VkStructureType(pUpdate->sType));
         } else {
             // Next verify that update falls within size of given binding
             endIndex = getUpdateEndIndex(my_data, device, pLayout, binding, pWDS[i].dstArrayElement, pUpdate);
@@ -1325,7 +1325,7 @@ static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCom
 {
     // TODO : How to pass cb as srcObj here?
     return log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NO_BEGIN_COMMAND_BUFFER, "DS",
-            "You must call vkBeginCommandBuffer() before this call to %s", (void*)caller_name);
+            "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
 }
 
 bool validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
@@ -1475,7 +1475,7 @@ static VkBool32 printPipeline(layer_data* my_data, const VkCommandBuffer cb)
             // nothing to print
         } else {
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
-                    vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
+                    "%s", vk_print_vkgraphicspipelinecreateinfo(&pPipeTrav->graphicsPipelineCI, "{DS}").c_str());
         }
     }
     return skipCall;
@@ -1503,7 +1503,7 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
         LAYOUT_NODE* pLayout = pSet->pLayout;
         // Print layout details
         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
-                "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, (void*)pLayout->layout, (void*)pSet->set);
+                "Layout #%u, (object %#" PRIxLEAST64 ") for DS %#" PRIxLEAST64 ".", index+1, reinterpret_cast<uint64_t>(pLayout->layout), reinterpret_cast<uint64_t>(pSet->set));
         sprintf(prefix, "  [L%u] ", index);
         string DSLstr = vk_print_vkdescriptorsetlayoutcreateinfo(&pLayout->createInfo, prefix).c_str();
         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
@@ -1515,7 +1515,7 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
                     "Update Chain [UC] for descriptor set %#" PRIxLEAST64 ":", (uint64_t) pSet->set);
             sprintf(prefix, "  [UC] ");
             skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
-                    dynamic_display(pUpdate, prefix).c_str());
+                    "%s", dynamic_display(pUpdate, prefix).c_str());
             // TODO : If there is a "view" associated with this update, print CI for that view
         } else {
             if (0 != pSet->descriptorCount) {
@@ -1540,7 +1540,7 @@ static void printCB(layer_data* my_data, const VkCommandBuffer cb)
         for (auto ii=pCmds.begin(); ii!=pCmds.end(); ++ii) {
             // TODO : Need to pass cb as srcObj here
             log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
-                "  CMD#%lu: %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
+                "  CMD#%" PRIu64 ": %s", (*ii)->cmdNumber, cmdTypeToString((*ii)->type).c_str());
         }
     } else {
         // Nothing to print
@@ -1813,7 +1813,7 @@ bool ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
         auto image_data = dev_data->imageLayoutMap.find(cb_image_data.first);
         if (image_data == dev_data->imageLayoutMap.end()) {
             skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
-                                 "Cannot submit cmd buffer using deleted image %d.", cb_image_data.first);
+                                 "Cannot submit cmd buffer using deleted image %" PRIu64 ".", reinterpret_cast<uint64_t>(cb_image_data.first));
         } else {
             if (dev_data->imageLayoutMap[cb_image_data.first]->layout != cb_image_data.second.initialLayout) {
                 skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
@@ -2451,7 +2451,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPi
                 } else {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, (uint64_t) pipeline,
                                         0, DRAWSTATE_INVALID_PIPELINE, "DS",
-                                        "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", (void*)pipeline);
+                                        "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(pipeline));
                 }
             }
         } else {
@@ -2802,7 +2802,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t ver
             skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
             // TODO : Need to pass commandBuffer as srcObj here
             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
-                    "vkCmdDraw() call #%lu, reporting DS state:", g_drawCount[DRAW]++);
+                    "vkCmdDraw() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW]++);
             skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
             if (VK_FALSE == skipCall) {
                 updateCBTracking(pCB);
@@ -2828,7 +2828,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint3
             skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
             // TODO : Need to pass commandBuffer as srcObj here
             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
-                    "vkCmdDrawIndexed() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED]++);
+                    "vkCmdDrawIndexed() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDEXED]++);
             skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
             if (VK_FALSE == skipCall) {
                 updateCBTracking(pCB);
@@ -2854,7 +2854,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBu
             skipCall |= validate_draw_state(dev_data, pCB, VK_FALSE);
             // TODO : Need to pass commandBuffer as srcObj here
             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
-                    "vkCmdDrawIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
+                    "vkCmdDrawIndirect() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDIRECT]++);
             skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
             if (VK_FALSE == skipCall) {
                 updateCBTracking(pCB);
@@ -2880,7 +2880,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffe
             skipCall |= validate_draw_state(dev_data, pCB, VK_TRUE);
             // TODO : Need to pass commandBuffer as srcObj here
             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_NONE, "DS",
-                    "vkCmdDrawIndexedIndirect() call #%lu, reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
+                    "vkCmdDrawIndexedIndirect() call #%" PRIu64 ", reporting DS state:", g_drawCount[DRAW_INDEXED_INDIRECT]++);
             skipCall |= synchAndPrintDSConfig(dev_data, commandBuffer);
             if (VK_FALSE == skipCall) {
                 updateCBTracking(pCB);

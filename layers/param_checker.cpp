@@ -1789,7 +1789,7 @@ bool PostEnumeratePhysicalDevices(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkEnumeratePhysicalDevices parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -1903,7 +1903,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(physicalDevice), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2099,7 +2099,7 @@ bool PostQueueSubmit(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueSubmit parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2131,7 +2131,7 @@ bool PostQueueWaitIdle(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2156,7 +2156,7 @@ bool PostDeviceWaitIdle(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkDeviceWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2203,7 +2203,7 @@ bool PostAllocateMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2246,7 +2246,7 @@ bool PostMapMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkMapMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2295,7 +2295,7 @@ bool PostFlushMappedMemoryRanges(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkFlushMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2343,7 +2343,7 @@ bool PostInvalidateMappedMemoryRanges(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkInvalidateMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2402,7 +2402,7 @@ bool PostBindBufferMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2436,7 +2436,7 @@ bool PostBindImageMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindImageMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2636,7 +2636,7 @@ bool PostQueueBindSparse(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueBindSparse parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(queue), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2688,7 +2688,7 @@ bool PostCreateFence(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateFence parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2731,7 +2731,7 @@ bool PostResetFences(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2762,7 +2762,7 @@ bool PostGetFenceStatus(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetFenceStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2805,7 +2805,7 @@ bool PostWaitForFences(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkWaitForFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2858,7 +2858,7 @@ bool PostCreateSemaphore(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2910,7 +2910,7 @@ bool PostCreateEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2942,7 +2942,7 @@ bool PostGetEventStatus(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetEventStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2970,7 +2970,7 @@ bool PostSetEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkSetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2998,7 +2998,7 @@ bool PostResetEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3053,7 +3053,7 @@ bool PostCreateQueryPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateQueryPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3098,7 +3098,7 @@ bool PostGetQueryPoolResults(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetQueryPoolResults parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3162,7 +3162,7 @@ bool PostCreateBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3221,7 +3221,7 @@ bool PostCreateBufferView(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBufferView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3304,7 +3304,7 @@ bool PostCreateImage(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImage parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3443,7 +3443,7 @@ bool PostCreateImageView(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImageView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3496,7 +3496,7 @@ bool PostCreateShaderModule(
 {
     if(result < VK_SUCCESS) {
         std::string reason = "vkCreateShaderModule parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3548,7 +3548,7 @@ bool PostCreatePipelineCache(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreatePipelineCache parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3590,7 +3590,7 @@ bool PostGetPipelineCacheData(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPipelineCacheData parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3633,7 +3633,7 @@ bool PostMergePipelineCaches(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkMergePipelineCaches parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3947,7 +3947,7 @@ bool PostCreateGraphicsPipelines(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateGraphicsPipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4020,7 +4020,7 @@ bool PostCreateComputePipelines(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateComputePipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4080,7 +4080,7 @@ bool PostCreatePipelineLayout(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreatePipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4188,7 +4188,7 @@ bool PostCreateSampler(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSampler parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4253,7 +4253,7 @@ bool PostCreateDescriptorSetLayout(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4318,7 +4318,7 @@ bool PostCreateDescriptorPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4350,7 +4350,7 @@ bool PostResetDescriptorPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4396,7 +4396,7 @@ bool PostAllocateDescriptorSets(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4440,7 +4440,7 @@ bool PostFreeDescriptorSets(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkFreeDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4554,7 +4554,7 @@ bool PostCreateFramebuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4719,7 +4719,7 @@ bool PostCreateRenderPass(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateRenderPass parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4795,7 +4795,7 @@ bool PostCreateCommandPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4829,7 +4829,7 @@ bool PostResetCommandPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4885,7 +4885,7 @@ bool PostCreateCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4931,7 +4931,7 @@ bool PostBeginCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBeginCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4959,7 +4959,7 @@ bool PostEndCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkEndCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4986,7 +4986,7 @@ bool PostResetCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 

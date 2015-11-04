@@ -253,6 +253,18 @@ static inline VkBool32 will_log_msg(
  * Takes format and variable arg list so that output string
  * is only computed if a message needs to be logged
  */
+#ifndef WIN32
+static inline VkBool32 log_msg(
+    debug_report_data          *debug_data,
+    VkFlags                     msgFlags,
+    VkDbgObjectType             objectType,
+    uint64_t                    srcObject,
+    size_t                      location,
+    int32_t                     msgCode,
+    const char*                 pLayerPrefix,
+    const char*                 format,
+    ...) __attribute__ ((format (printf, 8, 9)));
+#endif
 static inline VkBool32 log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,

@@ -457,7 +457,7 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkImage object)
     if ((VkImageMap.find((void*)object)        == VkImageMap.end()) &&
         (swapchainImageMap.find((void*)object) == swapchainImageMap.end())) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkImage Object %p", object);
+            "Invalid VkImage Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -467,7 +467,7 @@ static VkBool32 validate_object(VkCommandBuffer dispatchable_object, VkImage obj
     if ((VkImageMap.find((void*)object)        == VkImageMap.end()) &&
         (swapchainImageMap.find((void*)object) == swapchainImageMap.end())) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkImage Object %p", object);
+            "Invalid VkImage Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -476,7 +476,7 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkCommandBuffer obj
 {
     if (VkCommandBufferMap.find(object) == VkCommandBufferMap.end()) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkCommandBuffer Object %p",reinterpret_cast<uint64_t>(object));
+            "Invalid VkCommandBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -485,7 +485,7 @@ static VkBool32 validate_object(VkCommandBuffer dispatchable_object, VkDescripto
 {
     if (VkDescriptorSetMap.find((void*)object) == VkDescriptorSetMap.end()) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkDescriptorSet Object %p", object);
+            "Invalid VkDescriptorSet Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -494,7 +494,7 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkBuffer object)
 {
     if (VkBufferMap.find((void*)object) != VkBufferMap.end()) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkBuffer Object %p", object);
+            "Invalid VkBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -521,7 +521,7 @@ static VkBool32 validate_object(VkQueue dispatchable_object, VkSemaphore object)
 {
     if (VkSemaphoreMap.find((void*)object) == VkSemaphoreMap.end()) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkSemaphore Object %p", object);
+            "Invalid VkSemaphore Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -530,7 +530,7 @@ static VkBool32 validate_object(VkDevice dispatchable_object, VkCommandBuffer ob
 {
     if (VkCommandBufferMap.find(object) == VkCommandBufferMap.end()) {
         return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
-            "Invalid VkCommandBuffer Object %p",reinterpret_cast<uint64_t>(object));
+            "Invalid VkCommandBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
@@ -620,7 +620,7 @@ static void destroy_obj(VkDevice dispatchable_object, VkSwapchainKHR object)
         assert(numObjs[objIndex] > 0);
         numObjs[objIndex]--;
         log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
-           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",
+           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
             string_VkDbgObjectType(pNode->objType), (uint64_t) object, numTotalObjs, numObjs[objIndex],
             string_VkDbgObjectType(pNode->objType));
         delete pNode;

@@ -680,14 +680,14 @@ class GenericLayerSubcommand(Subcommand):
                      '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    sprintf(str, "At start of Generic layered %s\\n");\n'
                      '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,'
-                     '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", (char *) str);\n'
+                     '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", (char *) str);\n'
+                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
@@ -734,7 +734,7 @@ class GenericLayerSubcommand(Subcommand):
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        initGeneric(my_data);\n'
                          '        sprintf(str, "Completed Generic layered %s\\n");\n'
-                         '        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", (char *) str);\n'
+                         '        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
@@ -1253,7 +1253,7 @@ class ObjectTrackerSubcommand(Subcommand):
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find(object) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object %%p",reinterpret_cast<uint64_t>(object));' % o)
+                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
             else:
                 if o == "VkPipelineCache":
                     procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
@@ -1266,7 +1266,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 else:
                     procs_txt.append('    if (%sMap.find((void*)object) == %sMap.end()) {' % (o, o))
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object %%p", object);' % o)
+                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
@@ -1286,7 +1286,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
             procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_NONE, "OBJTRACK",')
-            procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%lu total objs remain & %lu %s objs).",')
+            procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType));')
             procs_txt.append('        delete pNode;')
@@ -1471,7 +1471,7 @@ class ObjectTrackerSubcommand(Subcommand):
             cbv_txt.append('{')
             cbv_txt.append('    if (%sMap.find((void*)object) == %sMap.end()) {' % (o, o))
             cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-            cbv_txt.append('            "Invalid %s Object %%p", object);' % (o))
+            cbv_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % (o))
             cbv_txt.append('    }')
             cbv_txt.append('    return VK_FALSE;')
             cbv_txt.append('}')

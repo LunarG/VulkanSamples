@@ -476,7 +476,7 @@ static VkBool32 reportMemReferencesAndCleanUp(layer_data* my_data,
 
     if ((pMemObjInfo->pCommandBufferBindings.size() + pMemObjInfo->pObjBindings.size()) != 0) {
         skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pMemObjInfo->mem, 0, MEMTRACK_FREED_MEM_REF, "MEM",
-                       "Attempting to free memory object %#" PRIxLEAST64 " which still contains %lu references",
+                       "Attempting to free memory object %#" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER " references",
                        (uint64_t) pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
     }
 
@@ -812,7 +812,7 @@ static void print_mem_list(layer_data* my_data,
 
     // Just printing each msg individually for now, may want to package these into single large print
     log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-            "Details of Memory Object list (of size %lu elements)", my_data->memObjMap.size());
+            "Details of Memory Object list (of size " PRINTF_SIZE_T_SPECIFIER " elements)", my_data->memObjMap.size());
     log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "=============================");
 
@@ -825,7 +825,7 @@ static void print_mem_list(layer_data* my_data,
         log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
             "    ===MemObjInfo at %p===", (void*)pInfo);
         log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                "    Mem object: %#" PRIxLEAST64, (void*)pInfo->mem);
+                "    Mem object: %#" PRIxLEAST64, reinterpret_cast<uint64_t>(pInfo->mem));
         log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
                 "    Ref Count: %u", pInfo->refCount);
         if (0 != pInfo->allocInfo.allocationSize) {
@@ -838,16 +838,16 @@ static void print_mem_list(layer_data* my_data,
         }
 
         log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                "    VK OBJECT Binding list of size %lu elements:", pInfo->pObjBindings.size());
+                "    VK OBJECT Binding list of size " PRINTF_SIZE_T_SPECIFIER " elements:", pInfo->pObjBindings.size());
         if (pInfo->pObjBindings.size() > 0) {
             for (list<MT_OBJ_HANDLE_TYPE>::iterator it = pInfo->pObjBindings.begin(); it != pInfo->pObjBindings.end(); ++it) {
                 log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                        "       VK OBJECT %p", (*it));
+                        "       VK OBJECT %" PRIu64, it->handle);
             }
         }
 
         log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                "    VK Command Buffer (CB) binding list of size %lu elements", pInfo->pCommandBufferBindings.size());
+                "    VK Command Buffer (CB) binding list of size " PRINTF_SIZE_T_SPECIFIER " elements", pInfo->pCommandBufferBindings.size());
         if (pInfo->pCommandBufferBindings.size() > 0)
         {
             for (list<VkCommandBuffer>::iterator it = pInfo->pCommandBufferBindings.begin(); it != pInfo->pCommandBufferBindings.end(); ++it) {
@@ -869,7 +869,7 @@ static void printCBList(layer_data* my_data,
     }
 
     log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-        "Details of CB list (of size %lu elements)", my_data->cbMap.size());
+        "Details of CB list (of size " PRINTF_SIZE_T_SPECIFIER " elements)", my_data->cbMap.size());
     log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
         "==================");
 
@@ -888,7 +888,7 @@ static void printCBList(layer_data* my_data,
             continue;
         for (list<VkDeviceMemory>::iterator it = pCBInfo->pMemObjList.begin(); it != pCBInfo->pMemObjList.end(); ++it) {
             log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, 0, 0, MEMTRACK_NONE, "MEM",
-                    "      Mem obj %p", (*it));
+                    "      Mem obj %" PRIu64, reinterpret_cast<uint64_t>(*it));
         }
     }
 }
@@ -1034,8 +1034,8 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
             pInfo = &(*ii).second;
             if (pInfo->allocInfo.allocationSize != 0) {
                 skipCall |= log_msg(my_device_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pInfo->mem, 0, MEMTRACK_MEMORY_LEAK, "MEM",
-                                 "Mem Object %p has not been freed. You should clean up this memory by calling "
-                                 "vkFreeMemory(%p) prior to vkDestroyDevice().", pInfo->mem, pInfo->mem);
+                                 "Mem Object %" PRIu64 " has not been freed. You should clean up this memory by calling "
+                                 "vkFreeMemory(%" PRIu64 ") prior to vkDestroyDevice().", reinterpret_cast<uint64_t>(pInfo->mem), reinterpret_cast<uint64_t>(pInfo->mem));
             }
         }
     }
@@ -1286,7 +1286,7 @@ VkBool32 deleteMemRanges(
     if (mem_element != my_data->memObjMap.end()) {
         if (!mem_element->second.memRange.size) {
             skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0, MEMTRACK_INVALID_MAP, "MEM",
-                               "Unmapping Memory without memory being mapped: mem obj %#" PRIxLEAST64, mem);
+                               "Unmapping Memory without memory being mapped: mem obj %#" PRIxLEAST64, (uint64_t)mem);
         }
         mem_element->second.memRange.size = 0;
         if (mem_element->second.pData) {
@@ -1389,13 +1389,13 @@ VkBool32 validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t 
                 for (auto j = 0; j < half_size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)pMemRanges[i].memory,
-                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, pMemRanges[i].memory);
+                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
                 }
                 for (auto j = size + half_size; j < 2 * size; ++j) {
                     if (data[j] != NoncoherentMemoryFillValue) {
                         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)pMemRanges[i].memory,
-                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, pMemRanges[i].memory);
+                                            0, MEMTRACK_INVALID_MAP, "MEM", "Memory overflow was detected on mem obj %" PRIxLEAST64, (uint64_t)pMemRanges[i].memory);
                     }
                 }
                 memcpy(mem_element->second.pDriverData, static_cast<void*>(data + half_size), size);
@@ -2568,7 +2568,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
 
             if (mismatch) {
                 log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t) swapchain, 0, MEMTRACK_NONE, "SWAP_CHAIN",
-                        "vkGetSwapchainInfoKHR(%p, VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", swapchain);
+                        "vkGetSwapchainInfoKHR(%" PRIu64 ", VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_KHR) returned mismatching data", reinterpret_cast<uint64_t>(swapchain));
             }
         }
     }

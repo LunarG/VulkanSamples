@@ -323,7 +323,6 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
-
     }
     return result;
 }
@@ -396,10 +395,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDe
                               pPhysicalDevice->pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkInstance.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkInstance.",
+                              __FUNCTION__, VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
@@ -438,10 +435,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePropertiesKHR(VkDevice device, const 
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
@@ -475,10 +470,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfaceFormatsKHR(VkDevice device, const VkS
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
@@ -521,10 +514,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePresentModesKHR(VkDevice device, cons
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
@@ -575,10 +566,8 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                          SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                         "%s() called even though the "
-                         VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                         "extension was not enabled for this VkDevice.",
-                         fn);
+                         "%s() called even though the %s extension was not enabled for this VkDevice.",
+                         fn, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME );
     }
 
     // Validate pCreateInfo with the results for previous queries:
@@ -842,10 +831,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
 
     // Regardless of skipCall value, do some internal cleanup:
@@ -896,10 +883,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (!pSwapchain) {
@@ -952,10 +937,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                              "%s() called even though the "
-                              VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                              "extension was not enabled for this VkDevice.",
-                              __FUNCTION__);
+                              "%s() called even though the %s extension was not enabled for this VkDevice.",
+                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     }
     // Validate that a valid VkSwapchainKHR was used:
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
@@ -1028,11 +1011,8 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE,
                                       pSwapchain->pDevice, "VkDevice",
                                       SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
-                                      "%s() called even though the "
-                                      VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-                                      "extension was not enabled for this "
-                                      "VkDevice.",
-                                      __FUNCTION__);
+                                      "%s() called even though the %s extension was not enabled for this VkDevice.",
+                                      __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
             }
             if (index >= pSwapchain->imageCount) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
