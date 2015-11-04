@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     /* The fragment shader we intend to use needs no external resources, so nothing else is necessary  */
     /* Note that when we start using textures, this is where our sampler will need to be specified     */
     VkDescriptorSetLayoutBinding layout_binding = {};
+    layout_binding.binding = 0;
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_binding.arraySize = 1;
     layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;

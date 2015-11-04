@@ -121,6 +121,7 @@ int main(int argc, char **argv)
 
     // Create first layout to contain uniform buffer data
     VkDescriptorSetLayoutBinding uniform_binding[1] = {};
+    uniform_binding[0].binding = 0;
     uniform_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uniform_binding[0].arraySize = 1;
     uniform_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -133,6 +134,7 @@ int main(int argc, char **argv)
 
     // Create second layout containing combined sampler/image data
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
+    sampler2D_binding[0].binding = 0;
     sampler2D_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     sampler2D_binding[0].arraySize = 1;
     sampler2D_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
