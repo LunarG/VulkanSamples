@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.queueFamilyCount = 0;
+    image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
@@ -210,14 +210,14 @@ int main(int argc, char **argv)
         copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.layerCount = 1;
+        copy_region.srcSubresource.enabledLayerNameCount = 1;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
         copy_region.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.dstSubresource.mipLevel = 0;
         copy_region.dstSubresource.baseArrayLayer = 0;
-        copy_region.dstSubresource.layerCount = 1;
+        copy_region.dstSubresource.enabledLayerNameCount = 1;
         copy_region.dstOffset.x = 0;
         copy_region.dstOffset.y = 0;
         copy_region.dstOffset.z = 0;
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1;
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
+    view_info.subresourceRange.enabledLayerNameCount = 1;
 
     /* create image view */
     view_info.image = texObj.image;

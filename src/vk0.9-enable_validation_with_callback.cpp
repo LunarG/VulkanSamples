@@ -160,10 +160,10 @@ int main(int argc, char **argv)
     device_info.pRequestedQueues = &queue_info;
     device_info.enabledLayerNameCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
-            device_info.layerCount ? info.device_layer_names.data(): NULL;
+            device_info.enabledLayerNameCount ? info.device_layer_names.data(): NULL;
     device_info.enabledExtensionNameCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.extensionCount ? info.device_extension_names.data() : NULL;
+            device_info.enabledExtensionNameCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);

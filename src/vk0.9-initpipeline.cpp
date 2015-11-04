@@ -105,9 +105,9 @@ int main(int argc, char **argv)
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipelineCache.pNext = NULL;
-    pipelineCache.initialData = 0;
-    pipelineCache.initialSize = 0;
-    pipelineCache.maxSize = 0;
+    pipelineCache.initialDataSize = 0;
+    pipelineCache.pInitialData = NULL;
+    pipelineCache.flags = 0;
 
     res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
@@ -123,9 +123,9 @@ int main(int argc, char **argv)
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
-    vi.bindingCount = 1;
+    vi.vertexBindingDescriptionCount = 1;
     vi.pVertexBindingDescriptions = &info.vi_binding;
-    vi.attributeCount = 2;
+    vi.vertexAttributeDescriptionCount = 2;
     vi.pVertexAttributeDescriptions = info.vi_attribs;
 
     VkPipelineInputAssemblyStateCreateInfo ia;

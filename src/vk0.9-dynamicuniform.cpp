@@ -126,7 +126,7 @@ int main(int argc, char **argv)
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     buf_info.size = 2 * sizeof(info.MVP);
-    buf_info.queueFamilyCount = 0;
+    buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
@@ -340,7 +340,7 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
     prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.layerCount = 1;
+    prePresentBarrier.subresourceRange.enabledLayerNameCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
