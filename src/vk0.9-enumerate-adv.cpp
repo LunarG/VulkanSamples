@@ -64,8 +64,8 @@ int main(int argc, char **argv)
         std::cout << "driverVersion: " << properties.driverVersion << '\n';
 
         std::cout << std::showbase << std::internal << std::setfill('0') << std::hex;
-        std::cout << "vendorId: " << std::setw(6) << properties.vendorId << '\n';
-        std::cout << "deviceId: " << std::setw(6) << properties.deviceId << '\n';
+        std::cout << "vendorId: " << std::setw(6) << properties.vendorID << '\n';
+        std::cout << "deviceId: " << std::setw(6) << properties.deviceID << '\n';
         std::cout << std::noshowbase << std::right << std::setfill(' ') << std::dec;
 
         std::cout << "deviceType: ";

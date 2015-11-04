@@ -157,17 +157,17 @@ int main(int argc, char **argv)
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].dstBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].dstBlendAlpha = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
     cb.logicOp = VK_LOGIC_OP_NO_OP;
-    cb.blendConst[0] = 1.0f;
-    cb.blendConst[1] = 1.0f;
-    cb.blendConst[2] = 1.0f;
-    cb.blendConst[3] = 1.0f;
+    cb.blendConstants[0] = 1.0f;
+    cb.blendConstants[1] = 1.0f;
+    cb.blendConstants[2] = 1.0f;
+    cb.blendConstants[3] = 1.0f;
 
     VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
