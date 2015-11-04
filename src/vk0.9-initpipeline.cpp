@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
-    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo       dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -134,12 +134,12 @@ int main(int argc, char **argv)
     ia.primitiveRestartEnable = VK_FALSE;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VkPipelineRasterStateCreateInfo rs;
+    VkPipelineRasterizationStateCreateInfo rs;
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs.frontFace = VK_FRONT_FACE_CCW;
+    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rs.depthClampEnable = VK_TRUE;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
@@ -157,13 +157,13 @@ int main(int argc, char **argv)
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].destBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstBlendColor = VK_BLEND_FACTOR_ZERO;
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].destBlendAlpha = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstBlendAlpha = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
-    cb.logicOp = VK_LOGIC_OP_NOOP;
+    cb.logicOp = VK_LOGIC_OP_NO_OP;
     cb.blendConst[0] = 1.0f;
     cb.blendConst[1] = 1.0f;
     cb.blendConst[2] = 1.0f;
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     ds.pNext = NULL;
     ds.depthTestEnable = VK_TRUE;
     ds.depthWriteEnable = VK_TRUE;
-    ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.minDepthBounds = 0;
     ds.maxDepthBounds = 0;
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = NUM_SAMPLES;
+    ms.rasterizationSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
     ms.alphaToCoverageEnable = VK_FALSE;
     ms.alphaToOneEnable = VK_FALSE;
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     pipeline.flags               = 0;
     pipeline.pVertexInputState   = &vi;
     pipeline.pInputAssemblyState = &ia;
-    pipeline.pRasterState        = &rs;
+    pipeline.pRasterizationState        = &rs;
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;

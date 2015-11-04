@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     /* Map the buffer memory and copy both matrices */
@@ -221,7 +221,7 @@ int main(int argc, char **argv)
         &descriptor_pool, NULL, &info.desc_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetAllocInfo desc_alloc_info[1];
+    VkDescriptorSetAllocateInfo desc_alloc_info[1];
     desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     desc_alloc_info[0].pNext = NULL;
     desc_alloc_info[0].descriptorPool = info.desc_pool;
@@ -230,19 +230,19 @@ int main(int argc, char **argv)
 
     /* Allocate descriptor set with UNIFORM_BUFFER_DYNAMIC */
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, desc_alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[1];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
-    writes[0].destSet = info.desc_set[0];
+    writes[0].dstSet = info.desc_set[0];
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     writes[0].pBufferInfo = &info.uniform_data.buffer_info;
-    writes[0].destArrayElement = 0;
-    writes[0].destBinding = 0;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
 
     vkUpdateDescriptorSets(info.device, 1, writes, 0, NULL);
 
@@ -335,19 +335,19 @@ int main(int argc, char **argv)
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.numLevels = 1;
+    prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.numLayers = 1;
+    prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};

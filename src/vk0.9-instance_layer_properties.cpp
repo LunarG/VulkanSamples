@@ -71,7 +71,7 @@ int main(int argc, char **argv)
         VkLayerProperties *props = &vk_props[i];
         std::cout << props->layerName << ":" << std::endl;
         std::cout << "\tVersion: " << props->specVersion << std::endl;
-        std::cout << "\tAPI Version: " << props->implVersion << std::endl;
+        std::cout << "\tAPI Version: " << props->implementationVersion << std::endl;
         std::cout << "\tDescription: " << props->description << std::endl;
         std::cout << std::endl << std::endl;
     }

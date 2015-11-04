@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     res = vkCreateDescriptorPool(info.device, pool_info, NULL, descriptor_pool);
     assert(res == VK_SUCCESS);
 
-    VkDescriptorSetAllocInfo alloc_info[1];
+    VkDescriptorSetAllocateInfo alloc_info[1];
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = descriptor_pool[0];
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 
     // Populate descriptor sets
     VkDescriptorSet descriptor_sets[descriptor_set_count] = {};
-    res = vkAllocDescriptorSets(info.device, alloc_info, descriptor_sets);
+    res = vkAllocateDescriptorSets(info.device, alloc_info, descriptor_sets);
     assert(res == VK_SUCCESS);
 
     // Using empty brace initializer on the next line triggers a bug in older versions of gcc, so memset instead
@@ -200,22 +200,22 @@ int main(int argc, char **argv)
     // Populate with info about our uniform buffer
     descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[0].pNext = NULL;
-    descriptor_writes[0].destSet = descriptor_sets[uniform_set_index];
+    descriptor_writes[0].dstSet = descriptor_sets[uniform_set_index];
     descriptor_writes[0].descriptorCount = 1;
     descriptor_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptor_writes[0].pBufferInfo = &info.uniform_data.buffer_info; // populated by init_uniform_buffer()
-    descriptor_writes[0].destArrayElement = 0;
-    descriptor_writes[0].destBinding = 0;
+    descriptor_writes[0].dstArrayElement = 0;
+    descriptor_writes[0].dstBinding = 0;
 
     // Populate with info about our sampled image
     descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[1].pNext = NULL;
-    descriptor_writes[1].destSet = descriptor_sets[sampler_set_index];
+    descriptor_writes[1].dstSet = descriptor_sets[sampler_set_index];
     descriptor_writes[1].descriptorCount = 1;
     descriptor_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptor_writes[1].pImageInfo = &info.texture_data.image_info; // populated by init_texture()
-    descriptor_writes[1].destArrayElement = 0;
-    descriptor_writes[1].destBinding = 0;
+    descriptor_writes[1].dstArrayElement = 0;
+    descriptor_writes[1].dstBinding = 0;
 
     vkUpdateDescriptorSets(info.device, descriptor_set_count, descriptor_writes, 0, NULL);
 
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
     res = vkEndCommandBuffer(info.cmd);
     assert(res == VK_SUCCESS);
 
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};

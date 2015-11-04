@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     assert(pass);
 
     /* Allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
     assert(res == VK_SUCCESS);
 
     /* Bind memory */

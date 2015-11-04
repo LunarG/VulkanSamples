@@ -233,8 +233,8 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pNext = NULL;
-    app_info.pAppName = app_short_name;
-    app_info.appVersion = 1;
+    app_info.pApplicationName = app_short_name;
+    app_info.applicationVersion = 1;
     app_info.pEngineName = app_short_name;
     app_info.engineVersion = 1;
     app_info.apiVersion = VK_API_VERSION;
@@ -551,7 +551,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     image_info.flags = 0;
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
@@ -595,7 +595,7 @@ void init_depth_buffer(struct sample_info &info)
     assert(pass);
 
     /* Allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &info.depth.mem);
     assert(res == VK_SUCCESS);
 
     /* Bind memory */
@@ -750,7 +750,7 @@ void init_presentable_image(struct sample_info &info)
     assert(!res);
 }
 
-void execute_queue_cmdbuf(struct sample_info &info, const VkCmdBuffer *cmd_bufs)
+void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_bufs)
 {
     VkResult U_ASSERT_ONLY res;
     VkFence nullFence = VK_NULL_HANDLE;
@@ -787,12 +787,12 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.numLevels = 1;
+    prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.numLayers = 1;
+    prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
     vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -990,7 +990,7 @@ void init_uniform_buffer(struct sample_info &info)
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
@@ -1002,7 +1002,7 @@ void init_uniform_buffer(struct sample_info &info)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -1165,8 +1165,8 @@ void init_command_pool(struct sample_info &info)
     /* DEPENDS on init_swapchain_extension() */
     VkResult U_ASSERT_ONLY res;
 
-    VkCmdPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO;
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = NULL;
     cmd_pool_info.queueFamilyIndex = info.graphics_queue_family_index;
     cmd_pool_info.flags = 0;
@@ -1180,22 +1180,22 @@ void init_command_buffer(struct sample_info &info)
     /* DEPENDS on init_swapchain_extension() and init_command_pool() */
     VkResult U_ASSERT_ONLY res;
 
-    VkCmdBufferAllocInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_ALLOC_INFO;
+    VkCommandBufferAllocateInfo cmd = {};
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
     cmd.pNext = NULL;
-    cmd.cmdPool = info.cmd_pool;
-    cmd.level = VK_CMD_BUFFER_LEVEL_PRIMARY;
+    cmd.commandPool = info.cmd_pool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmd.bufferCount = 1;
 
-    res = vkAllocCommandBuffers(info.device, &cmd, &info.cmd);
+    res = vkAllocateCommandBuffers(info.device, &cmd, &info.cmd);
     assert(res == VK_SUCCESS);
 }
 void execute_begin_command_buffer(struct sample_info &info)
 {
     /* DEPENDS on init_command_buffer() */
     VkResult U_ASSERT_ONLY res;
-    VkCmdBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.renderPass = 0;  /* May only set renderPass and framebuffer */
     cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
@@ -1217,7 +1217,7 @@ void execute_queue_command_buffer(struct sample_info &info)
     VkResult U_ASSERT_ONLY res;
 
     /* Queue the command buffer for execution */
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
@@ -1260,7 +1260,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
 
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
@@ -1272,7 +1272,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
@@ -1334,7 +1334,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     VkResult U_ASSERT_ONLY res;
 
-    VkDescriptorSetAllocInfo alloc_info[1];
+    VkDescriptorSetAllocateInfo alloc_info[1];
     alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
@@ -1342,29 +1342,29 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     alloc_info[0].pSetLayouts = info.desc_layout.data();
 
     info.desc_set.resize(NUM_DESCRIPTOR_SETS);
-    res = vkAllocDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
     assert(res == VK_SUCCESS);
 
     VkWriteDescriptorSet writes[2];
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
-    writes[0].destSet = info.desc_set[0];
+    writes[0].dstSet = info.desc_set[0];
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     writes[0].pBufferInfo = &info.uniform_data.buffer_info;
-    writes[0].destArrayElement = 0;
-    writes[0].destBinding = 0;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
 
     if (use_texture)
     {
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].destSet = info.desc_set[0];
-        writes[1].destBinding = 1;
+        writes[1].dstSet = info.desc_set[0];
+        writes[1].dstBinding = 1;
         writes[1].descriptorCount = 1;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writes[1].pImageInfo = &info.texture_data.image_info;
-        writes[1].destArrayElement = 0;
+        writes[1].dstArrayElement = 0;
     }
 
     vkUpdateDescriptorSets(info.device, use_texture?2:1, writes, 0, NULL);
@@ -1450,7 +1450,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
 {
     VkResult U_ASSERT_ONLY res;
 
-    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_NUM];
+    VkDynamicState                         dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo       dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -1472,12 +1472,12 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ia.primitiveRestartEnable = VK_FALSE;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VkPipelineRasterStateCreateInfo rs;
+    VkPipelineRasterizationStateCreateInfo rs;
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs.frontFace = VK_FRONT_FACE_CW;
+    rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rs.depthClampEnable = include_depth;
     rs.rasterizerDiscardEnable = VK_FALSE;
     rs.depthBiasEnable = VK_FALSE;
@@ -1495,13 +1495,13 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].destBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstBlendColor = VK_BLEND_FACTOR_ZERO;
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    att_state[0].destBlendAlpha = VK_BLEND_FACTOR_ZERO;
+    att_state[0].dstBlendAlpha = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
-    cb.logicOp = VK_LOGIC_OP_NOOP;
+    cb.logicOp = VK_LOGIC_OP_NO_OP;
     cb.blendConst[0] = 1.0f;
     cb.blendConst[1] = 1.0f;
     cb.blendConst[2] = 1.0f;
@@ -1520,7 +1520,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ds.pNext = NULL;
     ds.depthTestEnable = include_depth;
     ds.depthWriteEnable = include_depth;
-    ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
+    ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;
     ds.back.failOp = VK_STENCIL_OP_KEEP;
@@ -1535,7 +1535,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
     ms.pSampleMask = NULL;
-    ms.rasterSamples = NUM_SAMPLES;
+    ms.rasterizationSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
     ms.alphaToCoverageEnable = VK_FALSE;
     ms.alphaToOneEnable = VK_FALSE;
@@ -1550,7 +1550,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     pipeline.flags               = 0;
     pipeline.pVertexInputState   = &vi;
     pipeline.pInputAssemblyState = &ia;
-    pipeline.pRasterState        = &rs;
+    pipeline.pRasterizationState        = &rs;
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;
@@ -1602,7 +1602,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     image_create_info.arrayLayers = 1;
     image_create_info.samples = NUM_SAMPLES;
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT:
+    image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
     image_create_info.queueFamilyCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
@@ -1610,7 +1610,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     image_create_info.flags = 0;
 
 
-    VkMemoryAllocInfo mem_alloc = {};
+    VkMemoryAllocateInfo mem_alloc = {};
     mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
@@ -1637,7 +1637,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     assert(pass);
 
     /* allocate memory */
-    res = vkAllocMemory(info.device, &mem_alloc, NULL,
+    res = vkAllocateMemory(info.device, &mem_alloc, NULL,
                 &(mappableMemory));
     assert(res == VK_SUCCESS);
 
@@ -1680,7 +1680,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     } else {
         /* The mappable image cannot be our texture, so create an optimally tiled image and blit to it */
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
         res = vkCreateImage(info.device, &image_create_info, NULL,
                 &texObj.image);
@@ -1695,7 +1695,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         assert(pass);
 
         /* allocate memory */
-        res = vkAllocMemory(info.device, &mem_alloc, NULL,
+        res = vkAllocateMemory(info.device, &mem_alloc, NULL,
                     &texObj.mem);
         assert(res == VK_SUCCESS);
 
@@ -1709,35 +1709,35 @@ void init_texture(struct sample_info &info, const char* textureName)
         set_image_layout(info, mappableImage,
                           VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL);
+                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
         /* Since we're going to blit to the texture image, set its layout to DESTINATION_OPTIMAL */
         set_image_layout(info, texObj.image,
                           VK_IMAGE_ASPECT_COLOR_BIT,
                           VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkImageCopy copy_region;
         copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcSubresource.baseArrayLayer = 0;
-        copy_region.srcSubresource.numLayers = 1;
+        copy_region.srcSubresource.layerCount = 1;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
-        copy_region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        copy_region.destSubresource.mipLevel = 0;
-        copy_region.destSubresource.baseArrayLayer = 0;
-        copy_region.destSubresource.numLayers = 1;
-        copy_region.destOffset.x = 0;
-        copy_region.destOffset.y = 0;
-        copy_region.destOffset.z = 0;
+        copy_region.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.dstSubresource.mipLevel = 0;
+        copy_region.dstSubresource.baseArrayLayer = 0;
+        copy_region.dstSubresource.layerCount = 1;
+        copy_region.dstOffset.x = 0;
+        copy_region.dstOffset.y = 0;
+        copy_region.dstOffset.z = 0;
         copy_region.extent.width = texObj.tex_width;
         copy_region.extent.height = texObj.tex_height;
         copy_region.extent.depth = 1;
 
-        VkCmdBufferBeginInfo cmd_buf_info = {};
-        cmd_buf_info.sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO;
+        VkCommandBufferBeginInfo cmd_buf_info = {};
+        cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
         cmd_buf_info.flags = 0;
 
@@ -1746,13 +1746,13 @@ void init_texture(struct sample_info &info, const char* textureName)
 
         /* Put the copy command into the command buffer */
         vkCmdCopyImage(info.cmd,
-                        mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL,
-                        texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                        mappableImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        texObj.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         1, &copy_region);
 
         res = vkEndCommandBuffer(info.cmd);
         assert(res == VK_SUCCESS);
-        const VkCmdBuffer cmd_bufs[] = { info.cmd };
+        const VkCommandBuffer cmd_bufs[] = { info.cmd };
         VkFence nullFence = VK_NULL_HANDLE;
 
         VkSubmitInfo submit_info[1] = {};
@@ -1771,7 +1771,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         texObj.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         set_image_layout(info, texObj.image,
                                VK_IMAGE_ASPECT_COLOR_BIT,
-                               VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                texObj.imageLayout);
 
         /* Release the resources for the staging image */
@@ -1870,7 +1870,7 @@ void destroy_shaders(struct sample_info &info)
 
 void destroy_command_buffer(struct sample_info &info)
 {
-    VkCmdBuffer cmd_bufs[1] = { info.cmd };
+    VkCommandBuffer cmd_bufs[1] = { info.cmd };
     vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
 }
 

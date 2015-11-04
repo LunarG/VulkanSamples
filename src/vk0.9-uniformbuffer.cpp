@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     VkMemoryRequirements mem_reqs;
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
-    VkMemoryAllocInfo alloc_info = {};
+    VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.uniform_data.mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
