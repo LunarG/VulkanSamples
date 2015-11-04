@@ -89,7 +89,7 @@ int main(int argc, char **argv)
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    image_info.queueFamilyCount = 0;
+    image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.flags = 0;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1
     view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
+    view_info.subresourceRange.enabledLayerNameCount = 1;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.flags = 0;
 

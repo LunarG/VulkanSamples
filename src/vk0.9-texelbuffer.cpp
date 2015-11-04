@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
     buf_info.size = sizeof(texels);
-    buf_info.queueFamilyCount = 0;
+    buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;

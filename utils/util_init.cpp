@@ -278,10 +278,10 @@ VkResult init_device(struct sample_info &info)
     device_info.pRequestedQueues = &queue_info;
     device_info.enabledLayerNameCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
-            device_info.layerCount ? info.device_layer_names.data() : NULL;
+            device_info.enabledLayerNameCount ? info.device_layer_names.data() : NULL;
     device_info.enabledExtensionNameCount = info.device_extension_names.size();
     device_info.ppEnabledExtensionNames =
-            device_info.extensionCount ? info.device_extension_names.data() : NULL;
+            device_info.enabledExtensionNameCount ? info.device_extension_names.data() : NULL;
     device_info.pEnabledFeatures = NULL;
 
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
@@ -545,7 +545,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.mipLevels = 1;
     image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
-    image_info.queueFamilyCount = 0;
+    image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -980,7 +980,7 @@ void init_uniform_buffer(struct sample_info &info)
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     buf_info.size = sizeof(info.MVP);
-    buf_info.queueFamilyCount = 0;
+    buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
@@ -1250,7 +1250,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     buf_info.size = sizeof(g_vb_solid_face_colors_Data);
-    buf_info.queueFamilyCount = 0;
+    buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
@@ -1313,7 +1313,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     if (use_texture)
     {
         type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        type_count[1].count = 1;
+        type_count[1].descriptorCount = 1;
     }
 
     VkDescriptorPoolCreateInfo descriptor_pool = {};
@@ -1438,10 +1438,9 @@ void init_pipeline_cache(struct sample_info &info)
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipelineCache.pNext = NULL;
-    pipelineCache.initialData = 0;
-    pipelineCache.initialSize = 0;
-    pipelineCache.maxSize = 0;
-
+    pipelineCache.initialDataSize = 0;
+    pipelineCache.pInitialData = NULL;
+    pipelineCache.flags = 0;
     res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 }
@@ -1461,9 +1460,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
-    vi.bindingCount = 1;
+    vi.vertexBindingDescriptionCount = 1;
     vi.pVertexBindingDescriptions = &info.vi_binding;
-    vi.attributeCount = 2;
+    vi.vertexAttributeDescriptionCount = 2;
     vi.pVertexAttributeDescriptions = info.vi_attribs;
 
     VkPipelineInputAssemblyStateCreateInfo ia;
@@ -1604,7 +1603,7 @@ void init_texture(struct sample_info &info, const char* textureName)
     image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
     image_create_info.usage = needStaging?VK_IMAGE_USAGE_TRANSFER_SRC_BIT:
                                           VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.queueFamilyCount = 0;
+    image_create_info.queueFamilyIndexCount = 0;
     image_create_info.pQueueFamilyIndices = NULL;
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_create_info.flags = 0;
@@ -1718,14 +1717,14 @@ void init_texture(struct sample_info &info, const char* textureName)
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkImageCopy copy_region;
-        copy_region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.srcSubresource.mipLevel = 0;
         copy_region.srcSubresource.baseArrayLayer = 0;
         copy_region.srcSubresource.layerCount = 1;
         copy_region.srcOffset.x = 0;
         copy_region.srcOffset.y = 0;
         copy_region.srcOffset.z = 0;
-        copy_region.dstSubresource.aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_region.dstSubresource.mipLevel = 0;
         copy_region.dstSubresource.baseArrayLayer = 0;
         copy_region.dstSubresource.layerCount = 1;
