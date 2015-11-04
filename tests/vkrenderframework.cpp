@@ -588,7 +588,7 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
                          VkImageAspectFlagBits aspect,
                          VkImageLayout image_layout)
 {
-    VkFlags output_mask, input_mask;
+    VkFlags src_mask, dst_mask;
     const VkFlags all_cache_outputs =
             VK_ACCESS_HOST_WRITE_BIT |
             VK_ACCESS_SHADER_WRITE_BIT |
@@ -612,27 +612,33 @@ void VkImageObj::SetLayout(VkCommandBufferObj *cmd_buf,
 
     switch (image_layout) {
     case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        if (m_descriptorImageInfo.imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        else
+            src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        if (m_descriptorImageInfo.imageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            src_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        else
+            src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        output_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        input_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        src_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        dst_mask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
         break;
 
     default:
-        output_mask =  all_cache_outputs;
-        input_mask = all_cache_inputs;
+        src_mask =  all_cache_outputs;
+        dst_mask = all_cache_inputs;
         break;
     }
 
-    ImageMemoryBarrier(cmd_buf, aspect, output_mask, input_mask, image_layout);
+    ImageMemoryBarrier(cmd_buf, aspect, src_mask, dst_mask, image_layout);
     m_descriptorImageInfo.imageLayout = image_layout;
 }
 
@@ -721,18 +727,15 @@ void VkImageObj::init(uint32_t w, uint32_t h,
     imageCreateInfo.tiling = tiling;
     if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
         imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    else if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+        imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     else
         imageCreateInfo.initialLayout = m_descriptorImageInfo.imageLayout;
 
+    layout(imageCreateInfo.initialLayout);
     imageCreateInfo.usage = usage;
 
     vk_testing::Image::init(*m_device, imageCreateInfo, reqs);
-
-    if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-        SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    } else {
-        SetLayout(VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_GENERAL);
-    }
 }
 
 VkResult VkImageObj::CopyImage(VkImageObj &src_image)
