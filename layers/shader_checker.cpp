@@ -607,13 +607,15 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
         VkShaderModule *pShaderModule)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    /* Protect the driver from non-SPIRV shaders */
+    bool skip_call = false;
     if (!shader_is_spirv(pCreateInfo)) {
-        log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE,
+        skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE,
                 /* dev */ 0, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
                 "Shader is not SPIR-V");
-        return VK_ERROR_VALIDATION_FAILED;
     }
+
+    if (skip_call)
+        return VK_ERROR_VALIDATION_FAILED;
 
     VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
