@@ -30,7 +30,7 @@ LOCAL_MODULE := VKLayerBasic
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/basic.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated
+                    $(SRC_DIR)/buildAndroid/generated
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -41,8 +41,8 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/draw_state.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_debug_marker_table.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -52,8 +52,8 @@ LOCAL_MODULE := VKLayerMemTracker
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/mem_tracker.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -63,8 +63,8 @@ LOCAL_MODULE := VKLayerShaderCheker
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/shader_checker.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -74,8 +74,8 @@ LOCAL_MODULE := VKLayerImage
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/image.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -86,8 +86,8 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/param_checker.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_debug_marker_table.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -97,9 +97,9 @@ LOCAL_MODULE := VKLayerGeneric
 LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/generic_layer.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/layers \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/layers \
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -109,9 +109,9 @@ LOCAL_MODULE := VKLayerAPIDump
 LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/api_dump.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/layers \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/layers \
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -121,9 +121,9 @@ LOCAL_MODULE := VKLayerObjectTracker
 LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/object_track.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/layers \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/layers \
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
@@ -133,9 +133,26 @@ LOCAL_MODULE := VKLayerThreading
 LOCAL_SRC_FILES += $(SRC_DIR)/buildAndroid/generated/threading.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-		    $(SRC_DIR)/layers \
-		    $(SRC_DIR)/buildAndroid/generated \
-		    $(SRC_DIR)/loader
+                    $(SRC_DIR)/layers \
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
 LOCAL_SHARED_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := VKLayerValidationTests
+LOCAL_SRC_FILES += $(SRC_DIR)/tests/layer_validation_tests.cpp \
+                   $(SRC_DIR)/tests/vktestbinding.cpp \
+                   $(SRC_DIR)/tests/vktestframeworkandroid.cpp \
+                   $(SRC_DIR)/tests/vkrenderframework.cpp
+LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(SRC_DIR)/layers \
+                    $(SRC_DIR)/libs \
+                    $(SRC_DIR)/icd/common
+LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES := googletest_main
+LOCAL_LDLIBS    := -lvulkan
+include $(BUILD_EXECUTABLE)
+
+$(call import-module,third_party/googletest)

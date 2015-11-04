@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,10 +28,18 @@
 #ifndef VKRENDERFRAMEWORK_H
 #define VKRENDERFRAMEWORK_H
 
+#ifdef ANDROID
+#include "vktestframeworkandroid.h"
+class VkImageObj;
+#else
 #include "vktestframework.h"
+#endif
 #include "vulkan/vk_debug_report_lunarg.h"
 #include "vulkan/vk_debug_marker_lunarg.h"
 
+#include <vector>
+
+using namespace std;
 
 class VkDeviceObj : public vk_testing::Device
 {

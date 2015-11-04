@@ -15,6 +15,6 @@
 APP_ABI := all
 APP_PLATFORM := android-22
 APP_STL := gnustl_static
-APP_MODULES := layer_utils VKLayerBasic VKLayerDrawState VKLayerMemTracker VKLayerShaderCheker VKLayerImage VKLayerParamChecker VKLayerGeneric VKLayerAPIDump VKLayerObjectTracker VKLayerThreading
+APP_MODULES := layer_utils VKLayerBasic VKLayerDrawState VKLayerMemTracker VKLayerShaderCheker VKLayerImage VKLayerParamChecker VKLayerGeneric VKLayerAPIDump VKLayerObjectTracker VKLayerThreading VKLayerValidationTests
 APP_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES
 NDK_TOOLCHAIN_VERSION := 4.8
