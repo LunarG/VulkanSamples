@@ -272,10 +272,10 @@ int main(int argc, char **argv)
     view_info.image = VK_NULL_HANDLE;
     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-    view_info.components.r = VK_CHANNEL_SWIZZLE_R;
-    view_info.components.g = VK_CHANNEL_SWIZZLE_G;
-    view_info.components.b = VK_CHANNEL_SWIZZLE_B;
-    view_info.components.a = VK_CHANNEL_SWIZZLE_A;
+    view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+    view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+    view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+    view_info.components.a = VK_COMPONENT_SWIZZLE_A;
     view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     view_info.subresourceRange.baseMipLevel = 0;
     view_info.subresourceRange.levelCount = 1;

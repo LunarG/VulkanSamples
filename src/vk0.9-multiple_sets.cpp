@@ -164,7 +164,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     // Create a single pool to contain data for our two descriptor sets
-    VkDescriptorTypeCount type_count[2] = {};
+    VkDescriptorPoolSize type_count[2] = {};
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].descriptorCount = 1;
     type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -174,8 +174,8 @@ int main(int argc, char **argv)
     pool_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info[0].pNext = NULL;
     pool_info[0].maxSets = descriptor_set_count;
-    pool_info[0].typeCount = sizeof(type_count) / sizeof(VkDescriptorTypeCount);
-    pool_info[0].pTypeCounts = type_count;
+    pool_info[0].poolSizeCount = sizeof(type_count) / sizeof(VkDescriptorPoolSize);
+    pool_info[0].pPoolSizes = type_count;
 
     VkDescriptorPool descriptor_pool[1] = {};
     res = vkCreateDescriptorPool(info.device, pool_info, NULL, descriptor_pool);
@@ -269,7 +269,7 @@ int main(int argc, char **argv)
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
@@ -283,8 +283,8 @@ int main(int argc, char **argv)
     viewport.width = (float) info.width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
-    viewport.originX = 0;
-    viewport.originY = 0;
+    viewport.x = 0;
+    viewport.y = 0;
     vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;

@@ -1289,7 +1289,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     assert(res == VK_SUCCESS);
 
     info.vi_binding.binding = 0;
-    info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
+    info.vi_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     info.vi_binding.stride = dataStride;
 
     info.vi_attribs[0].binding = 0;
@@ -1307,7 +1307,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     /* DEPENDS on init_uniform_buffer() and init_descriptor_and_pipeline_layouts() */
 
     VkResult U_ASSERT_ONLY res;
-    VkDescriptorTypeCount type_count[2];
+    VkDescriptorPoolSize type_count[2];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     type_count[0].descriptorCount = 1;
     if (use_texture)
@@ -1320,8 +1320,8 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture)
     descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descriptor_pool.pNext = NULL;
     descriptor_pool.maxSets = 1;
-    descriptor_pool.typeCount = use_texture?2:1;
-    descriptor_pool.pTypeCounts = type_count;
+    descriptor_pool.poolSizeCount = use_texture?2:1;
+    descriptor_pool.pPoolSizes = type_count;
 
     res = vkCreateDescriptorPool(info.device,
         &descriptor_pool, NULL, &info.desc_pool);
@@ -1473,9 +1473,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineRasterStateCreateInfo rs;
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO;
+    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
-    rs.fillMode = VK_FILL_MODE_SOLID;
+    rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CW;
     rs.depthClampEnable = include_depth;
@@ -1490,14 +1490,14 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     cb.pNext = NULL;
     VkPipelineColorBlendAttachmentState att_state[1];
-    att_state[0].channelWriteMask = 0xf;
+    att_state[0].colorWriteMask = 0xf;
     att_state[0].blendEnable = VK_FALSE;
-    att_state[0].blendOpAlpha = VK_BLEND_OP_ADD;
-    att_state[0].blendOpColor = VK_BLEND_OP_ADD;
-    att_state[0].srcBlendColor = VK_BLEND_ZERO;
-    att_state[0].destBlendColor = VK_BLEND_ZERO;
-    att_state[0].srcBlendAlpha = VK_BLEND_ZERO;
-    att_state[0].destBlendAlpha = VK_BLEND_ZERO;
+    att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].destBlendColor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].destBlendAlpha = VK_BLEND_FACTOR_ZERO;
     cb.attachmentCount = 1;
     cb.pAttachments = att_state;
     cb.logicOpEnable = VK_FALSE;
@@ -1523,9 +1523,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     ds.depthCompareOp = VK_COMPARE_OP_LESS_EQUAL;
     ds.depthBoundsTestEnable = VK_FALSE;
     ds.stencilTestEnable = VK_FALSE;
-    ds.back.stencilFailOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilPassOp = VK_STENCIL_OP_KEEP;
-    ds.back.stencilCompareOp = VK_COMPARE_OP_ALWAYS;
+    ds.back.failOp = VK_STENCIL_OP_KEEP;
+    ds.back.passOp = VK_STENCIL_OP_KEEP;
+    ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
     ds.minDepthBounds = 0;
     ds.maxDepthBounds = 0;
     ds.stencilTestEnable = VK_FALSE;

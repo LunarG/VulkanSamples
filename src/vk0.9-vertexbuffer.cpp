@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 
     /* We won't use these here, but we will need this info when creating the pipeline */
     info.vi_binding.binding = 0;
-    info.vi_binding.stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX;
+    info.vi_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     info.vi_binding.stride = sizeof(g_vb_solid_face_colors_Data[0]);
 
     info.vi_attribs[0].binding = 0;
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_RENDER_PASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindVertexBuffers(info.cmd,
                            0,                       /* Start Binding */
