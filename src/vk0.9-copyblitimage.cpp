@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     VkImage bltSrcImage;
     VkImage bltDstImage;
     VkMemoryRequirements memReq;
-    VkMemoryAllocInfo memAllocInfo;
+    VkMemoryAllocateInfo memAllocInfo;
     VkDeviceMemory dmem;
     unsigned int *pImgMem;
 
@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     presentCompleteSemaphoreCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     res = vkCreateSemaphore(info.device,
-                            &presentCompleteSemaphoreCreateInfo,
+                            &presentCompleteSemaphoreCreateInfo, NULL,
                             &presentCompleteSemaphore);
     assert(res == VK_SUCCESS);
 
@@ -99,26 +99,27 @@ int main(int argc, char **argv)
     image_info.extent.height = info.height;
     image_info.extent.depth = 1;
     image_info.mipLevels = 1;
-    image_info.arraySize = 1;
+    image_info.arrayLayers = 1;
     image_info.samples = NUM_SAMPLES;
-    image_info.queueFamilyCount = 0;
+    image_info.queueFamilyIndexCount = 0;
     image_info.pQueueFamilyIndices = NULL;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
+    image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_info.flags = 0;
     image_info.tiling = VK_IMAGE_TILING_LINEAR;
-    res = vkCreateImage(info.device, &image_info, &bltSrcImage);
+    res = vkCreateImage(info.device, &image_info, NULL, &bltSrcImage);
 
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
     memAllocInfo.pNext = NULL;
 
-    res = vkGetImageMemoryRequirements(info.device, bltSrcImage, &memReq);
-    res = memory_type_from_properties(info,
+    vkGetImageMemoryRequirements(info.device, bltSrcImage, &memReq);
+    bool pass = memory_type_from_properties(info,
                                       memReq.memoryTypeBits,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                       &memAllocInfo.memoryTypeIndex);
+    assert(pass);
     memAllocInfo.allocationSize = memReq.size;
-    res = vkAllocMemory(info.device, &memAllocInfo, &dmem);
+    res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
     res = vkMapMemory(info.device, dmem, 0,0,0,(void **)&pImgMem);
     for (int k = 0; k < memReq.size/4; k++) *pImgMem++ = 0xff0000ff;
@@ -127,7 +128,7 @@ int main(int argc, char **argv)
     VkMappedMemoryRange memRange;
     memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     memRange.pNext = NULL;
-    memRange.mem = dmem;
+    memRange.memory = dmem;
     memRange.offset = 0;
     memRange.size = memReq.size;
     res = vkFlushMappedMemoryRanges(info.device, 1, &memRange);
@@ -143,82 +144,86 @@ int main(int argc, char **argv)
 
     // Do a image copy to part of the dst image
     VkImageCopy cregion;
-    cregion.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     cregion.srcSubresource.mipLevel = 0;
-    cregion.srcSubresource.arrayLayer = 0;
-    cregion.srcSubresource.arraySize = 1;
+    cregion.srcSubresource.baseArrayLayer = 0;
+    cregion.srcSubresource.layerCount = 1;
     cregion.srcOffset.x = 0;
     cregion.srcOffset.y = 0;
     cregion.srcOffset.z = 0;
-    cregion.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-    cregion.destSubresource.mipLevel = 0;
-    cregion.destSubresource.arrayLayer = 0;
-    cregion.destSubresource.arraySize = 1;
-    cregion.destOffset.x = 0;
-    cregion.destOffset.y = 0;
-    cregion.destOffset.z = 0;
+    cregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    cregion.dstSubresource.mipLevel = 0;
+    cregion.dstSubresource.baseArrayLayer = 0;
+    cregion.dstSubresource.layerCount = 1;
+    cregion.dstOffset.x = 0;
+    cregion.dstOffset.y = 0;
+    cregion.dstOffset.z = 0;
     cregion.extent.width = info.width/2;
     cregion.extent.height = info.height/2;
     cregion.extent.depth = 1;
 
-	vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, bltDstImage,
-          VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL, 1, &cregion);
+        vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
+          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
 
     // Do a blit to all of the dst image
 	VkImageBlit region;
-    region.srcSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
+    region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
-    region.srcSubresource.arrayLayer = 0;
-    region.srcSubresource.arraySize = 1;
+    region.srcSubresource.baseArrayLayer = 0;
+    region.srcSubresource.layerCount = 1;
     region.srcOffset.x = 0;
     region.srcOffset.y = 0;
     region.srcOffset.z = 0;
     region.srcExtent.width = info.width;
     region.srcExtent.height = info.height;
     region.srcExtent.depth = 1;
-    region.destSubresource.aspect = VK_IMAGE_ASPECT_COLOR;
-    region.destSubresource.mipLevel = 0;
-    region.destSubresource.arrayLayer = 0;
-    region.destSubresource.arraySize = 1;
-    region.destOffset.x = 0;
-    region.destOffset.y = 0;
-    region.destOffset.z = 0;
-    region.destExtent.width = info.width;
-    region.destExtent.height = info.height;
-    region.destExtent.depth = 1;
+    region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.dstSubresource.mipLevel = 0;
+    region.dstSubresource.baseArrayLayer = 0;
+    region.dstSubresource.layerCount = 1;
+    region.dstOffset.x = 0;
+    region.dstOffset.y = 0;
+    region.dstOffset.z = 0;
+    region.dstExtent.width = info.width;
+    region.dstExtent.height = info.height;
+    region.dstExtent.depth = 1;
 
-	vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL, bltDstImage,
-        VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL, 1, &region, VK_TEX_FILTER_LINEAR);
+        vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
 
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     prePresentBarrier.pNext = NULL;
-    prePresentBarrier.outputMask = VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT;
-    prePresentBarrier.inputMask = 0;
+    prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    prePresentBarrier.dstAccessMask = 0;
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.destQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     prePresentBarrier.subresourceRange.baseMipLevel = 0;
-    prePresentBarrier.subresourceRange.mipLevels = 1;
+    prePresentBarrier.subresourceRange.levelCount = 1;
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
-    prePresentBarrier.subresourceRange.arraySize = 1;
+    prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_GPU_COMMANDS, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_FALSE, 1, (const void * const*)&pmemory_barrier);
 
     res = vkEndCommandBuffer(info.cmd);
-    const VkCmdBuffer cmd_bufs[] = { info.cmd };
+    const VkCommandBuffer cmd_bufs[] = { info.cmd };
     VkFence nullFence = { VK_NULL_HANDLE };
 
-    /* Make sure buffer is ready for rendering */
-    res = vkQueueWaitSemaphore(info.queue, presentCompleteSemaphore);
-    assert(res == VK_SUCCESS);
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].waitSemaphoreCount = 1;
+    submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
+    submit_info[0].commandBufferCount = 1;
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(res == VK_SUCCESS);
 
     /* Now present the image in the window */
@@ -236,7 +241,7 @@ int main(int argc, char **argv)
     wait_seconds(1);
     /* VULKAN_KEY_END */
 
-    vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_descriptor_pool(info);
     destroy_framebuffers(info);
     destroy_descriptor_and_pipeline_layouts(info);
