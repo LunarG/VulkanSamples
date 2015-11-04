@@ -2151,10 +2151,16 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
             pNewNode->stageFlags.resize(totalCount);
             uint32_t offset = 0;
             uint32_t j = 0;
+            VkDescriptorType dType;
             for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
+                dType = pCreateInfo->pBinding[i].descriptorType;
                 for (j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
-                    pNewNode->descriptorTypes[offset + j] = pCreateInfo->pBinding[i].descriptorType;
+                    pNewNode->descriptorTypes[offset + j] = dType;
                     pNewNode->stageFlags[offset + j] = pCreateInfo->pBinding[i].stageFlags;
+                    if ((dType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                        (dType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                        pNewNode->dynamicDescriptorCount++;
+                    }
                 }
                 offset += j;
             }
@@ -2689,12 +2695,6 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
-    // TODO : Validate dynamic offsets
-    //  If any of the sets being bound include dynamic uniform or storage buffers,
-    //  then pDynamicOffsets must include one element for each array element
-    //  in each dynamic descriptor type binding in each set.
-    //  dynamicOffsetCount is the total number of dynamic offsets provided, and
-    //  must equal the total number of dynamic descriptors in the sets being bound
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
@@ -2704,6 +2704,8 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                         "Incorrectly binding graphics DescriptorSets without an active RenderPass");
             } else {
+                // Track total count of dynamic descriptor types to make sure we have an offset for each one
+                uint32_t totalDynamicDescriptors = 0;
                 for (uint32_t i=0; i<setCount; i++) {
                     SET_NODE* pSet = getSetNode(dev_data, pDescriptorSets[i]);
                     if (pSet) {
@@ -2714,9 +2716,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer
                         loader_platform_thread_unlock_mutex(&globalLock);
                         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                        if (!pSet->pUpdateStructs)
+                        if (!pSet->pUpdateStructs) {
                             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                     "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
+                        }
+                        totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;
                     } else {
                         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS",
                                 "Attempt to bind DS %#" PRIxLEAST64 " that doesn't exist!", (uint64_t) pDescriptorSets[i]);
@@ -2724,6 +2728,11 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer
                 }
                 updateCBTracking(pCB);
                 skipCall |= addCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS);
+                //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
+                if (totalDynamicDescriptors != dynamicOffsetCount) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) commandBuffer, 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
+                            "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
+                }
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");

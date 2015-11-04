@@ -73,6 +73,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
+    DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with different number of dynamic descriptors that were included in dynamicOffsetCount
     DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
@@ -165,6 +166,7 @@ typedef struct _LAYOUT_NODE {
     VkDescriptorSetLayoutCreateInfo createInfo;
     uint32_t                        startIndex; // 1st index of this layout
     uint32_t                        endIndex; // last index of this layout
+    uint32_t                        dynamicDescriptorCount; // Total count of dynamic descriptors used by this layout
     vector<VkDescriptorType>        descriptorTypes; // Type per descriptor in this layout to verify correct updates
     vector<VkShaderStageFlags>      stageFlags; // stageFlags per descriptor in this layout to verify correct updates
     unordered_set<uint32_t>         bindings;
