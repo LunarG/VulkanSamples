@@ -1204,6 +1204,7 @@ typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    maxPerStageDescriptorSampledImages;
     uint32_t                                    maxPerStageDescriptorStorageImages;
     uint32_t                                    maxPerStageDescriptorInputAttachments;
+    uint32_t                                    maxPerStageResources;
     uint32_t                                    maxDescriptorSetSamplers;
     uint32_t                                    maxDescriptorSetUniformBuffers;
     uint32_t                                    maxDescriptorSetUniformBuffersDynamic;

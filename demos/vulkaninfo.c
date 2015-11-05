@@ -840,6 +840,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tmaxPerStageDescriptorSampledImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorSampledImages     );
     printf("\t\tmaxPerStageDescriptorStorageImages      = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorStorageImages     );
     printf("\t\tmaxPerStageDescriptorInputAttachments   = 0x%" PRIxLEAST32 "\n", limits->maxPerStageDescriptorInputAttachments  );
+    printf("\t\tmaxPerStageResources                    = 0x%" PRIxLEAST32 "\n", limits->maxPerStageResources                   );
     printf("\t\tmaxDescriptorSetSamplers                = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetSamplers               );
     printf("\t\tmaxDescriptorSetUniformBuffers          = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetUniformBuffers         );
     printf("\t\tmaxDescriptorSetUniformBuffersDynamic   = 0x%" PRIxLEAST32 "\n", limits->maxDescriptorSetUniformBuffersDynamic  );

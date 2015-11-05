@@ -264,6 +264,8 @@ void intel_gpu_get_limits(VkPhysicalDeviceLimits *pLimits)
 
     // storage images and buffers not implemented; left at zero
 
+    pLimits->maxPerStageResources  = 250;
+
     // required to support at least two queue priorities
     pLimits->discreteQueuePriorities = 2;
 }
