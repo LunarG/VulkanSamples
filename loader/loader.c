@@ -2021,7 +2021,7 @@ void loader_layer_scan(
     loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
-static PFN_vkVoidFunction VKAPI loader_gpa_instance_internal(VkInstance inst, const char * pName)
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_instance_internal(VkInstance inst, const char * pName)
 {
     // inst is not wrapped
     if (inst == VK_NULL_HANDLE) {
@@ -2439,7 +2439,7 @@ static VkResult loader_enable_device_layers(
  * we can't call CreateDevice twice we must terminate the
  * device chain with something else.
  */
-static VkResult VKAPI scratch_vkCreateDevice(
+static VKAPI_ATTR VkResult VKAPI_CALL scratch_vkCreateDevice(
     VkPhysicalDevice          physicalDevice,
     const VkDeviceCreateInfo *pCreateInfo,
     const VkAllocationCallbacks*   pAllocator,
@@ -2448,7 +2448,7 @@ static VkResult VKAPI scratch_vkCreateDevice(
     return VK_SUCCESS;
 }
 
-static PFN_vkVoidFunction VKAPI loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_GetDeviceChainProcAddr(VkDevice device, const char * name)
 {
     if (!strcmp(name, "vkGetDeviceProcAddr"))
         return (PFN_vkVoidFunction) loader_GetDeviceChainProcAddr;
@@ -2637,7 +2637,7 @@ VkResult loader_validate_device_extensions(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_CreateInstance(
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
         const VkInstanceCreateInfo*     pCreateInfo,
         const VkAllocationCallbacks*         pAllocator,
         VkInstance*                     pInstance)
@@ -2717,7 +2717,7 @@ VkResult VKAPI loader_CreateInstance(
     return VK_SUCCESS;
 }
 
-void VKAPI loader_DestroyInstance(
+VKAPI_ATTR void VKAPI_CALL loader_DestroyInstance(
         VkInstance                                instance,
         const VkAllocationCallbacks*                   pAllocator)
 {
@@ -2834,7 +2834,7 @@ VkResult loader_init_physical_device_info(struct loader_instance *ptr_instance)
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_EnumeratePhysicalDevices(
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices)
@@ -2859,7 +2859,7 @@ VkResult VKAPI loader_EnumeratePhysicalDevices(
     return res;
 }
 
-void VKAPI loader_GetPhysicalDeviceProperties(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceProperties(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceProperties*             pProperties)
 {
@@ -2870,7 +2870,7 @@ void VKAPI loader_GetPhysicalDeviceProperties(
         icd->GetPhysicalDeviceProperties(phys_dev->phys_dev, pProperties);
 }
 
-void VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceQueueFamilyProperties (
         VkPhysicalDevice                        physicalDevice,
         uint32_t*                               pQueueFamilyPropertyCount,
         VkQueueFamilyProperties*                pProperties)
@@ -2882,7 +2882,7 @@ void VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
         icd->GetPhysicalDeviceQueueFamilyProperties(phys_dev->phys_dev, pQueueFamilyPropertyCount, pProperties);
 }
 
-void VKAPI loader_GetPhysicalDeviceMemoryProperties (
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceMemoryProperties* pProperties)
 {
@@ -2893,7 +2893,7 @@ void VKAPI loader_GetPhysicalDeviceMemoryProperties (
         icd->GetPhysicalDeviceMemoryProperties(phys_dev->phys_dev, pProperties);
 }
 
-void VKAPI loader_GetPhysicalDeviceFeatures(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFeatures(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceFeatures*               pFeatures)
 {
@@ -2904,7 +2904,7 @@ void VKAPI loader_GetPhysicalDeviceFeatures(
         icd->GetPhysicalDeviceFeatures(phys_dev->phys_dev, pFeatures);
 }
 
-void VKAPI loader_GetPhysicalDeviceFormatProperties(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo)
@@ -2916,7 +2916,7 @@ void VKAPI loader_GetPhysicalDeviceFormatProperties(
         icd->GetPhysicalDeviceFormatProperties(phys_dev->phys_dev, format, pFormatInfo);
 }
 
-VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2935,7 +2935,7 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
             type, tiling, usage, flags, pImageFormatProperties);
 }
 
-void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceSparseImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -2952,7 +2952,7 @@ void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
         icd->GetPhysicalDeviceSparseImageFormatProperties(phys_dev->phys_dev, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
-VkResult VKAPI loader_CreateDevice(
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         VkPhysicalDevice                        physicalDevice,
         const VkDeviceCreateInfo*               pCreateInfo,
         const VkAllocationCallbacks*                 pAllocator,
@@ -3080,7 +3080,7 @@ VkResult VKAPI loader_CreateDevice(
  *    If instance is valid returns a trampoline entry point for all dispatchable Vulkan
  *    functions both core and extensions.
  */
-LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
+LOADER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char * pName)
 {
 
     void *addr;
@@ -3116,7 +3116,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
  *    entry points both core and extensions.
  *    Device relative means call down the device chain.
  */
-LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
+LOADER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char * pName)
 {
     void *addr;
 
@@ -3147,7 +3147,7 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, cons
     return disp_table->GetDeviceProcAddr(device, pName);
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
@@ -3213,7 +3213,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return VK_SUCCESS;
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
     uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
 {
@@ -3249,7 +3249,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties(
         VkPhysicalDevice                        physicalDevice,
         const char*                             pLayerName,
         uint32_t*                               pPropertyCount,
@@ -3305,7 +3305,7 @@ VkResult VKAPI loader_EnumerateDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI loader_EnumerateDeviceLayerProperties(
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceLayerProperties(
         VkPhysicalDevice                        physicalDevice,
         uint32_t*                               pPropertyCount,
         VkLayerProperties*                      pProperties)

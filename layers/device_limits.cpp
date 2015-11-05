@@ -135,7 +135,7 @@ static void init_device_limits(layer_data *my_data)
     }
 }
 /* DeviceLimits does not have any global extensions */
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -152,7 +152,7 @@ static const VkLayerProperties dl_global_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -161,7 +161,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable* pTable = my_data->instance_dispatch_table;
@@ -181,7 +181,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -205,7 +205,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAlloca
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
@@ -247,31 +247,31 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures)
 {
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceFeaturesState = QUERY_DETAILS;
     phy_dev_data->instance_dispatch_table->GetPhysicalDeviceFeatures(physicalDevice, pFeatures);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties)
 {
     get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table->GetPhysicalDeviceFormatProperties(
                                      physicalDevice, format, pFormatProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
 {
     return get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties)
 {
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, pProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkQueueFamilyProperties* pQueueFamilyProperties)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkQueueFamilyProperties* pQueueFamilyProperties)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
@@ -309,17 +309,17 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(VkPhysicalDe
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
     get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table->GetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties)
 {
     get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map)->instance_dispatch_table->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pNumProperties, pProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
@@ -332,7 +332,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
@@ -390,7 +390,7 @@ static VkBool32 validate_features_request(layer_data *phy_dev_data)
     return skipCall;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
@@ -432,7 +432,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     // Free device lifetime allocations
     dispatch_key key = get_dispatch_key(device);
@@ -443,36 +443,36 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCa
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
 {
     // TODO : Verify that requested QueueFamilyIndex for this pool exists
     VkResult result = get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags)
 {
     VkResult result = get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer)
 {
     VkResult result = get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t count, const VkCommandBuffer* pCommandBuffers)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t count, const VkCommandBuffer* pCommandBuffers)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -490,7 +490,7 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueFamil
     dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice                 device,
     const VkImageCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -545,7 +545,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
@@ -575,7 +575,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     dev_data->device_dispatch_table->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
@@ -605,7 +605,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
@@ -620,7 +620,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback)
 {
@@ -630,7 +630,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
     if (dev == NULL)
         return NULL;
@@ -676,7 +676,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction fptr;
     if (instance == NULL)

@@ -64,7 +64,7 @@ void intel_mem_free(struct intel_mem *mem)
     intel_base_destroy(&mem->base);
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
     VkDevice                                device,
     const VkMemoryAllocateInfo*                pAllocateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -75,7 +75,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateMemory(
     return intel_mem_alloc(dev, pAllocateInfo, (struct intel_mem **) pMemory);
 }
 
-ICD_EXPORT void VKAPI vkFreeMemory(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     VkDevice                                  device,
     VkDeviceMemory                            mem_,
     const VkAllocationCallbacks*                     pAllocator)
@@ -85,7 +85,7 @@ ICD_EXPORT void VKAPI vkFreeMemory(
     intel_mem_free(mem);
 }
 
-ICD_EXPORT VkResult VKAPI vkMapMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkDevice                                  device,
     VkDeviceMemory                            mem_,
     VkDeviceSize                              offset,
@@ -101,7 +101,7 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
     return (ptr) ? VK_SUCCESS : VK_ERROR_MEMORY_MAP_FAILED;
 }
 
-ICD_EXPORT void VKAPI vkUnmapMemory(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
@@ -110,7 +110,7 @@ ICD_EXPORT void VKAPI vkUnmapMemory(
     intel_mem_unmap(mem);
 }
 
-ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
     VkDevice                                  device,
     uint32_t                                  memoryRangeCount,
     const VkMappedMemoryRange*                pMemoryRanges)
@@ -118,7 +118,7 @@ ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     VkDevice                                  device,
     uint32_t                                  memoryRangeCount,
     const VkMappedMemoryRange*                pMemoryRanges)
@@ -126,7 +126,7 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetDeviceMemoryCommitment(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceMemoryCommitment(
     VkDevice                                  device,
     VkDeviceMemory                            memory,
     VkDeviceSize*                             pCommittedMemoryInBytes)

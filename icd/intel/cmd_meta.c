@@ -399,7 +399,7 @@ static VkFormat cmd_meta_img_raw_format(const struct intel_cmd *cmd,
     return format;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     VkCommandBuffer                 commandBuffer,
     VkBuffer                    srcBuffer,
     VkBuffer                    dstBuffer,
@@ -470,7 +470,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,
@@ -551,7 +551,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdBlitImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                  srcImage,
     VkImageLayout                            srcImageLayout,
@@ -567,7 +567,7 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
     assert(0 && "vkCmdBlitImage not implemented");
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  srcBuffer,
     VkImage                                   dstImage,
@@ -619,7 +619,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,
@@ -707,7 +707,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  dstBuffer,
     VkDeviceSize                                dstOffset,
@@ -749,7 +749,7 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     cmd_draw_meta(cmd, &meta);
 }
 
-ICD_EXPORT void VKAPI vkCmdFillBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  dstBuffer,
     VkDeviceSize                                dstOffset,
@@ -896,7 +896,7 @@ void cmd_meta_clear_color_image(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdClearColorImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkCommandBuffer                         commandBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
@@ -943,7 +943,7 @@ void cmd_meta_clear_depth_stencil_image(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     VkCommandBuffer                                 commandBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
@@ -1026,7 +1026,7 @@ static void cmd_clear_depth_stencil_attachment(
     }
 }
 
-void VKAPI vkCmdClearAttachments(
+VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
@@ -1056,7 +1056,7 @@ void VKAPI vkCmdClearAttachments(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdResolveImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,

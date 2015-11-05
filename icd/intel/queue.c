@@ -362,7 +362,7 @@ static void intel_signal_queue_semaphore(struct intel_queue *queue, struct intel
     semaphore->references++;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(
     VkQueue                                   queue_)
 {
     struct intel_queue *queue = intel_queue(queue_);
@@ -370,7 +370,7 @@ ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
     return intel_queue_wait(queue, -1);
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueSubmit(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkQueue                                   queue_,
     uint32_t                                  submitCount,
     const VkSubmitInfo*                       pSubmits,
@@ -437,7 +437,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice                                device,
     const VkSemaphoreCreateInfo            *pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -459,7 +459,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
            (struct intel_semaphore **) pSemaphore);
 }
 
-ICD_EXPORT void VKAPI vkDestroySemaphore(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore,
     const VkAllocationCallbacks*                     pAllocator)

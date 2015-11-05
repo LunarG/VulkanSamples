@@ -1617,7 +1617,7 @@ static void init_draw_state(layer_data *my_data)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -1637,7 +1637,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -1694,7 +1694,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
@@ -1707,7 +1707,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice gpu, const VkDevi
 }
 // prototype
 static void deleteRenderPasses(layer_data*);
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data* dev_data = get_my_data_ptr(key, layer_data_map);
@@ -1739,7 +1739,7 @@ static const VkLayerProperties ds_global_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -1748,7 +1748,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -1773,7 +1773,7 @@ static const VkLayerProperties ds_device_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -1795,7 +1795,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -1825,7 +1825,7 @@ bool ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
     return skip_call;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
@@ -1859,112 +1859,112 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFence(device, fence, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyEvent(device, event, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyQueryPool(device, queryPool, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
     dev_data->bufferMap.erase(buffer);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroyBufferView(device, bufferView, pAllocator);
     dev_data->bufferViewMap.erase(bufferView);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     dev_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
     dev_data->imageMap.erase(image);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyImageView(device, imageView, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyShaderModule(device, shaderModule, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipeline(device, pipeline, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySampler(device, sampler, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyDescriptorPool(device, descriptorPool, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t count, const VkCommandBuffer *pCommandBuffers)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t count, const VkCommandBuffer *pCommandBuffers)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator)
 {
     get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroyRenderPass(device, renderPass, pAllocator);
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
@@ -1977,7 +1977,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBufferView* pView)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBufferView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateBufferView(device, pCreateInfo, pAllocator, pView);
@@ -1989,7 +1989,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBuffe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
@@ -2004,7 +2004,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
@@ -2017,7 +2017,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
 }
 
 //TODO handle pipeline caches
-VkResult VKAPI vkCreatePipelineCache(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -2028,7 +2028,7 @@ VkResult VKAPI vkCreatePipelineCache(
     return result;
 }
 
-void VKAPI vkDestroyPipelineCache(
+VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     const VkAllocationCallbacks* pAllocator)
@@ -2037,7 +2037,7 @@ void VKAPI vkDestroyPipelineCache(
     dev_data->device_dispatch_table->DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
 
-VkResult VKAPI vkGetPipelineCacheData(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     size_t*                                     pDataSize,
@@ -2048,7 +2048,7 @@ VkResult VKAPI vkGetPipelineCacheData(
     return result;
 }
 
-VkResult VKAPI vkMergePipelineCaches(
+VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     VkDevice                                    device,
     VkPipelineCache                             dstCache,
     uint32_t                                    srcCacheCount,
@@ -2059,7 +2059,7 @@ VkResult VKAPI vkMergePipelineCaches(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
 {
     VkResult result = VK_SUCCESS;
     //TODO What to do with pipelineCache?
@@ -2101,7 +2101,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
@@ -2113,7 +2113,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerC
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pSetLayout)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pSetLayout)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
@@ -2177,7 +2177,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, cons
     return result;
 }
 
-VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
+VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
@@ -2196,7 +2196,7 @@ VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCre
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorPool* pDescriptorPool)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorPool* pDescriptorPool)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
@@ -2221,7 +2221,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkD
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->ResetDescriptorPool(device, descriptorPool, flags);
@@ -2231,7 +2231,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescript
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo* pAllocateInfo, VkDescriptorSet* pDescriptorSets)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo* pAllocateInfo, VkDescriptorSet* pDescriptorSets)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2293,7 +2293,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(VkDevice device, const V
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2323,7 +2323,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescripto
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     // dsUpdate will return VK_TRUE only if a bailout error occurs, so we want to call down tree when update returns VK_FALSE
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2332,7 +2332,7 @@ VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t desc
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice device, const VkCommandBufferAllocateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
@@ -2350,7 +2350,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(VkDevice device, const V
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo)
 {
     VkBool32 skipCall = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2389,7 +2389,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCommandBuffer commandBuffe
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCommandBuffer commandBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffer commandBuffer)
 {
     VkBool32 skipCall = VK_FALSE;
     VkResult result = VK_SUCCESS;
@@ -2416,7 +2416,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCommandBuffer commandBuffer)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(commandBuffer, flags);
@@ -2427,7 +2427,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCommandBuffer commandBuffe
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2468,7 +2468,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPi
         dev_data->device_dispatch_table->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
@@ -2493,7 +2493,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
         dev_data->device_dispatch_table->CmdSetViewport(commandBuffer, viewportCount, pViewports);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
@@ -2518,7 +2518,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
         dev_data->device_dispatch_table->CmdSetScissor(commandBuffer, scissorCount, pScissors);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2540,7 +2540,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, floa
         dev_data->device_dispatch_table->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(
     VkCommandBuffer                         commandBuffer,
     float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
@@ -2565,7 +2565,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
         dev_data->device_dispatch_table->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2584,7 +2584,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdSetBlendConstants(commandBuffer, blendConstants);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
     VkCommandBuffer                         commandBuffer,
     float                               minDepthBounds,
     float                               maxDepthBounds)
@@ -2607,7 +2607,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
         dev_data->device_dispatch_table->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            compareMask)
@@ -2636,7 +2636,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
         dev_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            writeMask)
@@ -2663,7 +2663,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
         dev_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            reference)
@@ -2690,7 +2690,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
         dev_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2742,7 +2742,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer
         dev_data->device_dispatch_table->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2776,7 +2776,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, V
         dev_data->device_dispatch_table->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
@@ -2800,7 +2800,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
         dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2826,7 +2826,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t ver
         dev_data->device_dispatch_table->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
@@ -2852,7 +2852,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint3
         dev_data->device_dispatch_table->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
@@ -2878,7 +2878,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBu
         dev_data->device_dispatch_table->CmdDrawIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2904,7 +2904,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffe
         dev_data->device_dispatch_table->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, count, stride);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2922,7 +2922,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t
         dev_data->device_dispatch_table->CmdDispatch(commandBuffer, x, y, z);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2940,7 +2940,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, 
         dev_data->device_dispatch_table->CmdDispatchIndirect(commandBuffer, buffer, offset);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3010,7 +3010,7 @@ bool VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkImage
     return skip_call;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer commandBuffer,
                                              VkImage srcImage,
                                              VkImageLayout srcImageLayout,
                                              VkImage dstImage,
@@ -3035,7 +3035,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCommandBuffer commandBuffer,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(VkCommandBuffer commandBuffer,
                                              VkImage srcImage, VkImageLayout srcImageLayout,
                                              VkImage dstImage, VkImageLayout dstImageLayout,
                                              uint32_t regionCount, const VkImageBlit* pRegions,
@@ -3057,7 +3057,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer,
                                                      VkBuffer srcBuffer,
                                                      VkImage dstImage, VkImageLayout dstImageLayout,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
@@ -3079,7 +3079,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer,
                                                      VkImage srcImage, VkImageLayout srcImageLayout,
                                                      VkBuffer dstBuffer,
                                                      uint32_t regionCount, const VkBufferImageCopy* pRegions)
@@ -3101,7 +3101,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t* pData)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3119,7 +3119,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBu
         dev_data->device_dispatch_table->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3137,7 +3137,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuff
         dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
@@ -3202,7 +3202,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
         dev_data->device_dispatch_table->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
         VkCommandBuffer commandBuffer,
         VkImage image, VkImageLayout imageLayout,
         const VkClearColorValue *pColor,
@@ -3224,7 +3224,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
         dev_data->device_dispatch_table->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
         VkCommandBuffer commandBuffer,
         VkImage image, VkImageLayout imageLayout,
         const VkClearDepthStencilValue *pDepthStencil,
@@ -3247,7 +3247,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
         dev_data->device_dispatch_table->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCommandBuffer commandBuffer,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(VkCommandBuffer commandBuffer,
                                                 VkImage srcImage, VkImageLayout srcImageLayout,
                                                 VkImage dstImage, VkImageLayout dstImageLayout,
                                                 uint32_t regionCount, const VkImageResolve* pRegions)
@@ -3268,7 +3268,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(VkCommandBuffer commandBuffer,
         dev_data->device_dispatch_table->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3286,7 +3286,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent 
         dev_data->device_dispatch_table->CmdSetEvent(commandBuffer, event, stageMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3464,7 +3464,7 @@ bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const
     return skip_call;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3483,7 +3483,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32
         dev_data->device_dispatch_table->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3502,7 +3502,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, V
         dev_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3519,7 +3519,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQuer
         dev_data->device_dispatch_table->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3536,7 +3536,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryP
         dev_data->device_dispatch_table->CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3554,7 +3554,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(VkCommandBuffer commandBuffer, Vk
         dev_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery,
                                                      uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset,
                                                      VkDeviceSize stride, VkQueryResultFlags flags)
 {
@@ -3575,7 +3575,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuff
                            startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3592,7 +3592,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, Vk
         dev_data->device_dispatch_table->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFramebuffer* pFramebuffer)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFramebuffer* pFramebuffer)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
@@ -3824,7 +3824,7 @@ bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPas
     return skip_call;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
     bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -4036,7 +4036,7 @@ void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPass
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo *pRenderPassBegin, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4069,7 +4069,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, c
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4090,7 +4090,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSub
         dev_data->device_dispatch_table->CmdNextSubpass(commandBuffer, contents);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4109,7 +4109,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
         dev_data->device_dispatch_table->CmdEndRenderPass(commandBuffer);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4150,7 +4150,7 @@ bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
     return skip_call;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
     VkDeviceSize     offset,
@@ -4166,7 +4166,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VkResult VKAPI vkBindImageMemory(
+VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDevice                                    device,
     VkImage                                     image,
     VkDeviceMemory                              mem,
@@ -4180,7 +4180,7 @@ VkResult VKAPI vkBindImageMemory(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
     VkSwapchainKHR                 *pSwapchain)
@@ -4198,7 +4198,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                        device,
     VkSwapchainKHR swapchain)
 {
@@ -4221,7 +4221,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     return dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                device,
     VkSwapchainKHR          swapchain,
     uint32_t*               pCount,
@@ -4245,7 +4245,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     bool skip_call = false;
@@ -4271,7 +4271,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
@@ -4288,7 +4288,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback)
 {
@@ -4299,7 +4299,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCommandBuffer commandBuffer, const char* pMarker)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerBegin(VkCommandBuffer commandBuffer, const char* pMarker)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4316,7 +4316,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerBegin(VkCommandBuffer commandBuffer, co
         debug_marker_dispatch_table(commandBuffer)->CmdDbgMarkerBegin(commandBuffer, pMarker);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCommandBuffer commandBuffer)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerEnd(VkCommandBuffer commandBuffer)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4333,7 +4333,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDbgMarkerEnd(VkCommandBuffer commandBuffer)
         debug_marker_dispatch_table(commandBuffer)->CmdDbgMarkerEnd(commandBuffer);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
     if (dev == NULL)
         return NULL;
@@ -4550,7 +4550,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice dev, const
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction fptr;
     if (instance == NULL)

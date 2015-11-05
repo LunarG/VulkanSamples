@@ -210,7 +210,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                             VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    //    VkResult VKAPI vkCreateImage(
+    //    VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     //        VkDevice                                  device,
     //        const VkImageCreateInfo*                pCreateInfo,
     //        VkImage*                                  pImage);
@@ -297,7 +297,7 @@ TEST_F(VkImageTest, CreateImageViewTest) {
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    //    VkResult VKAPI vkCreateImageView(
+    //    VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     //        VkDevice                                  device,
     //        const VkImageViewCreateInfo*           pCreateInfo,
     //        VkImageView*                             pView);

@@ -106,7 +106,7 @@ static void InitParamChecker(layer_data *data)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkInstance instance,
     VkFlags msgFlags,
     const PFN_vkDbgMsgCallback pfnMsgCallback,
@@ -125,7 +125,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance instance,
     VkDbgMsgCallback msgCallback)
 {
@@ -147,7 +147,7 @@ static const VkLayerProperties pc_global_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -156,7 +156,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -165,7 +165,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -183,7 +183,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -1728,7 +1728,7 @@ std::string EnumeratorString(VkQueryControlFlagBits const& enumerator)
     return enumeratorString;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
@@ -1747,7 +1747,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(
         return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     VkInstance instance,
     const VkAllocationCallbacks* pAllocator)
 {
@@ -1796,7 +1796,7 @@ bool PostEnumeratePhysicalDevices(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     VkInstance instance,
     uint32_t* pPhysicalDeviceCount,
     VkPhysicalDevice* pPhysicalDevices)
@@ -1820,7 +1820,7 @@ bool PostGetPhysicalDeviceFeatures(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceFeatures* pFeatures)
 {
@@ -1850,7 +1850,7 @@ bool PostGetPhysicalDeviceFormatProperties(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkFormatProperties* pFormatProperties)
@@ -1910,7 +1910,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkImageType type,
@@ -1945,7 +1945,7 @@ bool PostGetPhysicalDeviceProperties(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceProperties* pProperties)
 {
@@ -1971,7 +1971,7 @@ bool PostGetPhysicalDeviceQueueFamilyProperties(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pCount,
     VkQueueFamilyProperties* pQueueProperties)
@@ -1993,7 +1993,7 @@ bool PostGetPhysicalDeviceMemoryProperties(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice physicalDevice,
     VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
@@ -2002,7 +2002,7 @@ VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     PostGetPhysicalDeviceMemoryProperties(physicalDevice, pMemoryProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -2027,7 +2027,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     VkDevice device,
     const VkAllocationCallbacks* pAllocator)
 {
@@ -2059,7 +2059,7 @@ bool PostGetDeviceQueue(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice device,
     uint32_t queueFamilyIndex,
     uint32_t queueIndex,
@@ -2106,7 +2106,7 @@ bool PostQueueSubmit(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkQueue queue,
     uint32_t submitCount,
     const VkSubmitInfo* pSubmits,
@@ -2138,7 +2138,7 @@ bool PostQueueWaitIdle(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(
     VkQueue queue)
 {
     VkResult result = get_dispatch_table(pc_device_table_map, queue)->QueueWaitIdle(queue);
@@ -2163,7 +2163,7 @@ bool PostDeviceWaitIdle(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(
     VkDevice device)
 {
     VkResult result = get_dispatch_table(pc_device_table_map, device)->DeviceWaitIdle(device);
@@ -2210,7 +2210,7 @@ bool PostAllocateMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
     VkDevice device,
     const VkMemoryAllocateInfo* pAllocateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -2253,7 +2253,7 @@ bool PostMapMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkDevice device,
     VkDeviceMemory mem,
     VkDeviceSize offset,
@@ -2302,7 +2302,7 @@ bool PostFlushMappedMemoryRanges(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
     VkDevice device,
     uint32_t memoryRangeCount,
     const VkMappedMemoryRange* pMemoryRanges)
@@ -2350,7 +2350,7 @@ bool PostInvalidateMappedMemoryRanges(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     VkDevice device,
     uint32_t memoryRangeCount,
     const VkMappedMemoryRange* pMemoryRanges)
@@ -2378,7 +2378,7 @@ bool PostGetDeviceMemoryCommitment(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetDeviceMemoryCommitment(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceMemoryCommitment(
     VkDevice device,
     VkDeviceMemory memory,
     VkDeviceSize* pCommittedMemoryInBytes)
@@ -2409,7 +2409,7 @@ bool PostBindBufferMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindBufferMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDevice device,
     VkBuffer buffer,
     VkDeviceMemory mem,
@@ -2443,7 +2443,7 @@ bool PostBindImageMemory(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBindImageMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDevice device,
     VkImage image,
     VkDeviceMemory mem,
@@ -2470,7 +2470,7 @@ bool PostGetBufferMemoryRequirements(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetBufferMemoryRequirements(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     VkDevice device,
     VkBuffer buffer,
     VkMemoryRequirements* pMemoryRequirements)
@@ -2494,7 +2494,7 @@ bool PostGetImageMemoryRequirements(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetImageMemoryRequirements(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
     VkDevice device,
     VkImage image,
     VkMemoryRequirements* pMemoryRequirements)
@@ -2530,7 +2530,7 @@ bool PostGetImageSparseMemoryRequirements(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSparseMemoryRequirements(
     VkDevice device,
     VkImage image,
     uint32_t* pNumRequirements,
@@ -2596,7 +2596,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice physicalDevice,
     VkFormat format,
     VkImageType type,
@@ -2643,7 +2643,7 @@ bool PostQueueBindSparse(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     VkQueue queue,
     uint32_t bindInfoCount,
     const VkBindSparseInfo* pBindInfo,
@@ -2695,7 +2695,7 @@ bool PostCreateFence(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
     VkDevice device,
     const VkFenceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -2738,7 +2738,7 @@ bool PostResetFences(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     VkDevice device,
     uint32_t fenceCount,
     const VkFence* pFences)
@@ -2769,7 +2769,7 @@ bool PostGetFenceStatus(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     VkDevice device,
     VkFence fence)
 {
@@ -2812,7 +2812,7 @@ bool PostWaitForFences(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
     VkDevice device,
     uint32_t fenceCount,
     const VkFence* pFences,
@@ -2865,7 +2865,7 @@ bool PostCreateSemaphore(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice device,
     const VkSemaphoreCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -2917,7 +2917,7 @@ bool PostCreateEvent(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateEvent(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
     VkDevice device,
     const VkEventCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -2949,7 +2949,7 @@ bool PostGetEventStatus(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetEventStatus(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetEventStatus(
     VkDevice device,
     VkEvent event)
 {
@@ -2977,7 +2977,7 @@ bool PostSetEvent(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkSetEvent(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(
     VkDevice device,
     VkEvent event)
 {
@@ -3005,7 +3005,7 @@ bool PostResetEvent(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetEvent(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetEvent(
     VkDevice device,
     VkEvent event)
 {
@@ -3060,7 +3060,7 @@ bool PostCreateQueryPool(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateQueryPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
     VkDevice device,
     const VkQueryPoolCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3105,7 +3105,7 @@ bool PostGetQueryPoolResults(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetQueryPoolResults(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
     uint32_t startQuery,
@@ -3169,7 +3169,7 @@ bool PostCreateBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     VkDevice device,
     const VkBufferCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3228,7 +3228,7 @@ bool PostCreateBufferView(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     VkDevice device,
     const VkBufferViewCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3311,7 +3311,7 @@ bool PostCreateImage(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice device,
     const VkImageCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3358,7 +3358,7 @@ bool PostGetImageSubresourceLayout(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     VkDevice device,
     VkImage image,
     const VkImageSubresource* pSubresource,
@@ -3450,7 +3450,7 @@ bool PostCreateImageView(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     VkDevice device,
     const VkImageViewCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3503,7 +3503,7 @@ bool PostCreateShaderModule(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateShaderModule(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     VkDevice device,
     const VkShaderModuleCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3555,7 +3555,7 @@ bool PostCreatePipelineCache(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineCache(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     VkDevice device,
     const VkPipelineCacheCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -3597,7 +3597,7 @@ bool PostGetPipelineCacheData(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPipelineCacheData(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     VkDevice device,
     VkPipelineCache pipelineCache,
     size_t* pDataSize,
@@ -3640,7 +3640,7 @@ bool PostMergePipelineCaches(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMergePipelineCaches(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     VkDevice device,
     VkPipelineCache dstCache,
     uint32_t srcCacheCount,
@@ -3954,7 +3954,7 @@ bool PostCreateGraphicsPipelines(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
     VkDevice device,
     VkPipelineCache pipelineCache,
     uint32_t count,
@@ -4027,7 +4027,7 @@ bool PostCreateComputePipelines(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateComputePipelines(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     VkDevice device,
     VkPipelineCache pipelineCache,
     uint32_t count,
@@ -4087,7 +4087,7 @@ bool PostCreatePipelineLayout(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreatePipelineLayout(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(
     VkDevice device,
     const VkPipelineLayoutCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4195,7 +4195,7 @@ bool PostCreateSampler(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSampler(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(
     VkDevice device,
     const VkSamplerCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4260,7 +4260,7 @@ bool PostCreateDescriptorSetLayout(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(
     VkDevice device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4325,7 +4325,7 @@ bool PostCreateDescriptorPool(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDescriptorPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4357,7 +4357,7 @@ bool PostResetDescriptorPool(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetDescriptorPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     VkDescriptorPoolResetFlags flags)
@@ -4403,7 +4403,7 @@ bool PostAllocateDescriptorSets(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkDevice device,
     const VkDescriptorSetAllocateInfo* pAllocateInfo,
     VkDescriptorSet* pDescriptorSets)
@@ -4447,7 +4447,7 @@ bool PostFreeDescriptorSets(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkFreeDescriptorSets(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     uint32_t count,
@@ -4509,7 +4509,7 @@ bool PreUpdateDescriptorSets(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkUpdateDescriptorSets(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     VkDevice device,
     uint32_t descriptorWriteCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
@@ -4561,7 +4561,7 @@ bool PostCreateFramebuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFramebuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4726,7 +4726,7 @@ bool PostCreateRenderPass(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4755,7 +4755,7 @@ bool PostGetRenderAreaGranularity(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetRenderAreaGranularity(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetRenderAreaGranularity(
     VkDevice device,
     VkRenderPass renderPass,
     VkExtent2D* pGranularity)
@@ -4802,7 +4802,7 @@ bool PostCreateCommandPool(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkDevice device,
     const VkCommandPoolCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -4836,7 +4836,7 @@ bool PostResetCommandPool(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkDevice device,
     VkCommandPool commandPool,
     VkCommandPoolResetFlags flags)
@@ -4892,7 +4892,7 @@ bool PostCreateCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkDevice device,
     const VkCommandBufferAllocateInfo* pCreateInfo,
     VkCommandBuffer* pCommandBuffer)
@@ -4938,7 +4938,7 @@ bool PostBeginCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkCommandBuffer commandBuffer,
     const VkCommandBufferBeginInfo* pBeginInfo)
 {
@@ -4966,7 +4966,7 @@ bool PostEndCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(
     VkCommandBuffer commandBuffer)
 {
     VkResult result = get_dispatch_table(pc_device_table_map, commandBuffer)->EndCommandBuffer(commandBuffer);
@@ -4993,7 +4993,7 @@ bool PostResetCommandBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkCommandBuffer commandBuffer,
     VkCommandBufferResetFlags flags)
 {
@@ -5022,7 +5022,7 @@ bool PostCmdBindPipeline(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline pipeline)
@@ -5032,47 +5032,47 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
     PostCmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetViewport(commandBuffer, viewportCount, pViewports);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, scissorCount, pScissors);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetBlendConstants(commandBuffer, blendConstants);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
@@ -5117,7 +5117,7 @@ bool PostCmdBindDescriptorSets(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     VkCommandBuffer commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipelineLayout layout,
@@ -5154,7 +5154,7 @@ bool PostCmdBindIndexBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
@@ -5192,7 +5192,7 @@ bool PostCmdBindVertexBuffers(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer commandBuffer,
     uint32_t startBinding,
     uint32_t bindingCount,
@@ -5221,7 +5221,7 @@ bool PostCmdDraw(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDraw(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(
     VkCommandBuffer commandBuffer,
     uint32_t vertexCount,
     uint32_t instanceCount,
@@ -5250,7 +5250,7 @@ bool PostCmdDrawIndexed(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexed(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(
     VkCommandBuffer commandBuffer,
     uint32_t indexCount,
     uint32_t instanceCount,
@@ -5278,7 +5278,7 @@ bool PostCmdDrawIndirect(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
@@ -5305,7 +5305,7 @@ bool PostCmdDrawIndexedIndirect(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
     VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset,
@@ -5330,7 +5330,7 @@ bool PostCmdDispatch(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatch(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(
     VkCommandBuffer commandBuffer,
     uint32_t x,
     uint32_t y,
@@ -5352,7 +5352,7 @@ bool PostCmdDispatchIndirect(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
     VkCommandBuffer commandBuffer,
     VkBuffer buffer,
     VkDeviceSize offset)
@@ -5386,7 +5386,7 @@ bool PostCmdCopyBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
     VkBuffer dstBuffer,
@@ -5456,7 +5456,7 @@ bool PostCmdCopyImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
@@ -5537,7 +5537,7 @@ bool PostCmdBlitImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
@@ -5594,7 +5594,7 @@ bool PostCmdCopyBufferToImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer commandBuffer,
     VkBuffer srcBuffer,
     VkImage dstImage,
@@ -5649,7 +5649,7 @@ bool PostCmdCopyImageToBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
@@ -5688,7 +5688,7 @@ bool PostCmdUpdateBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
@@ -5717,7 +5717,7 @@ bool PostCmdFillBuffer(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
@@ -5766,7 +5766,7 @@ bool PostCmdClearColorImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
@@ -5820,7 +5820,7 @@ bool PostCmdClearDepthStencilImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     VkCommandBuffer commandBuffer,
     VkImage image,
     VkImageLayout imageLayout,
@@ -5851,7 +5851,7 @@ bool PreCmdClearAttachments(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearAttachments(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
@@ -5921,7 +5921,7 @@ bool PostCmdResolveImage(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer commandBuffer,
     VkImage srcImage,
     VkImageLayout srcImageLayout,
@@ -5948,7 +5948,7 @@ bool PostCmdSetEvent(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetEvent(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(
     VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
@@ -5969,7 +5969,7 @@ bool PostCmdResetEvent(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetEvent(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
     VkCommandBuffer commandBuffer,
     VkEvent event,
     VkPipelineStageFlags stageMask)
@@ -6010,7 +6010,7 @@ bool PostCmdWaitEvents(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWaitEvents(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
     VkCommandBuffer commandBuffer,
     uint32_t eventCount,
     const VkEvent* pEvents,
@@ -6052,7 +6052,7 @@ bool PostCmdPipelineBarrier(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPipelineBarrier(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     VkCommandBuffer commandBuffer,
     VkPipelineStageFlags srcStageMask,
     VkPipelineStageFlags dstStageMask,
@@ -6080,7 +6080,7 @@ bool PostCmdBeginQuery(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot,
@@ -6102,7 +6102,7 @@ bool PostCmdEndQuery(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t slot)
@@ -6125,7 +6125,7 @@ bool PostCmdResetQueryPool(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
@@ -6148,7 +6148,7 @@ bool PostCmdWriteTimestamp(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdWriteTimestamp(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
     VkCommandBuffer commandBuffer,
     VkPipelineStageFlagBits pipelineStage,
     VkQueryPool queryPool,
@@ -6180,7 +6180,7 @@ bool PostCmdCopyQueryPoolResults(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t startQuery,
@@ -6221,7 +6221,7 @@ bool PostCmdPushConstants(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdPushConstants(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(
     VkCommandBuffer commandBuffer,
     VkPipelineLayout layout,
     VkShaderStageFlags stageFlags,
@@ -6272,7 +6272,7 @@ bool PostCmdBeginRenderPass(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginRenderPass(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
     VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin,
     VkSubpassContents contents)
@@ -6300,7 +6300,7 @@ bool PostCmdNextSubpass(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdNextSubpass(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(
     VkCommandBuffer commandBuffer,
     VkSubpassContents contents)
 {
@@ -6316,7 +6316,7 @@ bool PostCmdEndRenderPass(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndRenderPass(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
     VkCommandBuffer commandBuffer)
 {
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdEndRenderPass(commandBuffer);
@@ -6344,7 +6344,7 @@ bool PostCmdExecuteCommands(
     return true;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
     VkCommandBuffer commandBuffer,
     uint32_t commandBuffersCount,
     const VkCommandBuffer* pCommandBuffers)
@@ -6356,7 +6356,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdExecuteCommands(
     PostCmdExecuteCommands(commandBuffer, commandBuffersCount);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     if (device == NULL) {
         return NULL;
@@ -6536,7 +6536,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     if (instance == NULL) {
         return NULL;

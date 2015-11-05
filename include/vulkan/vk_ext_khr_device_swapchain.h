@@ -144,60 +144,60 @@ typedef struct {
 // ------------------------------------------------------------------------------------------------
 // Function types
 
-typedef VkResult (VKAPI *PFN_vkGetSurfacePropertiesKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfacePropertiesKHR* pSurfaceProperties);
-typedef VkResult (VKAPI *PFN_vkGetSurfaceFormatsKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats);
-typedef VkResult (VKAPI *PFN_vkGetSurfacePresentModesKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes);
-typedef VkResult (VKAPI *PFN_vkCreateSwapchainKHR)(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, VkSwapchainKHR* pSwapchain);
-typedef VkResult (VKAPI *PFN_vkDestroySwapchainKHR)(VkDevice device, VkSwapchainKHR swapchain);
-typedef VkResult (VKAPI *PFN_vkGetSwapchainImagesKHR)(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pCount, VkImage* pSwapchainImages);
-typedef VkResult (VKAPI *PFN_vkAcquireNextImageKHR)(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, uint32_t* pImageIndex);
-typedef VkResult (VKAPI *PFN_vkQueuePresentKHR)(VkQueue queue, VkPresentInfoKHR* pPresentInfo);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSurfacePropertiesKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfacePropertiesKHR* pSurfaceProperties);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSurfaceFormatsKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSurfacePresentModesKHR)(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateSwapchainKHR)(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, VkSwapchainKHR* pSwapchain);
+typedef VkResult (VKAPI_PTR *PFN_vkDestroySwapchainKHR)(VkDevice device, VkSwapchainKHR swapchain);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSwapchainImagesKHR)(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pCount, VkImage* pSwapchainImages);
+typedef VkResult (VKAPI_PTR *PFN_vkAcquireNextImageKHR)(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, uint32_t* pImageIndex);
+typedef VkResult (VKAPI_PTR *PFN_vkQueuePresentKHR)(VkQueue queue, VkPresentInfoKHR* pPresentInfo);
 
 // ------------------------------------------------------------------------------------------------
 // Function prototypes
 
 #ifdef VK_PROTOTYPES
 
-VkResult VKAPI vkGetSurfacePropertiesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     VkSurfacePropertiesKHR*                  pSurfaceProperties);
 
-VkResult VKAPI vkGetSurfaceFormatsKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
     VkSurfaceFormatKHR*                      pSurfaceFormats);
 
-VkResult VKAPI vkGetSurfacePresentModesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
     VkPresentModeKHR*                        pPresentModes);
 
-VkResult VKAPI vkCreateSwapchainKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                 device,
     const VkSwapchainCreateInfoKHR*          pCreateInfo,
     VkSwapchainKHR*                          pSwapchain);
 
-VkResult VKAPI vkDestroySwapchainKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain);
 
-VkResult VKAPI vkGetSwapchainImagesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
     VkImage*                                 pSwapchainImages);
 
-VkResult VKAPI vkAcquireNextImageKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
     uint32_t*                                pImageIndex);
 
-VkResult VKAPI vkQueuePresentKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue                                  queue,
     VkPresentInfoKHR*                        pPresentInfo);
 

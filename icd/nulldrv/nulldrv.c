@@ -596,7 +596,7 @@ static VkResult nulldrv_buf_view_create(struct nulldrv_dev *dev,
 // Driver entry points
 //*********************************************
 
-ICD_EXPORT VkResult VKAPI vkCreateBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     VkDevice                                  device,
     const VkBufferCreateInfo*               pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -608,7 +608,7 @@ ICD_EXPORT VkResult VKAPI vkCreateBuffer(
     return nulldrv_buf_create(dev, pCreateInfo, (struct nulldrv_buf **) pBuffer);
 }
 
-ICD_EXPORT void VKAPI vkDestroyBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(
     VkDevice                                  device,
     VkBuffer                                  buffer,
     const VkAllocationCallbacks*                     pAllocator)
@@ -616,7 +616,7 @@ ICD_EXPORT void VKAPI vkDestroyBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkDevice                                    device,
     const VkCommandPoolCreateInfo*                  pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -626,7 +626,7 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyCommandPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
     VkDevice                                    device,
     VkCommandPool                                   commandPool,
     const VkAllocationCallbacks*                     pAllocator)
@@ -634,7 +634,7 @@ ICD_EXPORT void VKAPI vkDestroyCommandPool(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkResetCommandPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkDevice                                    device,
     VkCommandPool                                   commandPool,
     VkCommandPoolResetFlags                         flags)
@@ -643,7 +643,7 @@ ICD_EXPORT VkResult VKAPI vkResetCommandPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkDevice                                  device,
     const VkCommandBufferAllocateInfo*               pAllocateInfo,
     VkCommandBuffer*                              pCommandBuffers)
@@ -655,7 +655,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
             (struct nulldrv_cmd **) pCommandBuffers);
 }
 
-ICD_EXPORT void VKAPI vkFreeCommandBuffers(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
     VkDevice                                  device,
     VkCommandPool                                 commandPool,
     uint32_t                                  commandBufferCount,
@@ -667,7 +667,7 @@ ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkCommandBuffer                              commandBuffer,
     const VkCommandBufferBeginInfo            *info)
 {
@@ -675,14 +675,14 @@ ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(
     VkCommandBuffer                              commandBuffer)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkCommandBuffer                              commandBuffer,
     VkCommandBufferResetFlags flags)
 {
@@ -695,7 +695,7 @@ static const VkFormat nulldrv_presentable_formats[] = {
 };
 
 #if 0
-ICD_EXPORT VkResult VKAPI vkGetDisplayInfoKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayInfoKHR(
     VkDisplayKHR                            display,
     VkDisplayInfoTypeKHR                    infoType,
     size_t*                                 pDataSize,
@@ -737,7 +737,7 @@ ICD_EXPORT VkResult VKAPI vkGetDisplayInfoKHR(
 }
 #endif
 
-ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                device,
     const VkSwapchainCreateInfoKHR*         pCreateInfo,
     VkSwapchainKHR*                         pSwapchain)
@@ -758,7 +758,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                device,
     VkSwapchainKHR                          swapchain)
 {
@@ -770,7 +770,7 @@ ICD_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
@@ -799,7 +799,7 @@ ICD_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
@@ -811,7 +811,7 @@ ICD_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetSurfacePropertiesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     VkSurfacePropertiesKHR*                  pSurfaceProperties)
@@ -821,7 +821,7 @@ VkResult VKAPI vkGetSurfacePropertiesKHR(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetSurfaceFormatsKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
@@ -832,7 +832,7 @@ VkResult VKAPI vkGetSurfaceFormatsKHR(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkGetSurfacePresentModesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
@@ -843,7 +843,7 @@ VkResult VKAPI vkGetSurfacePresentModesKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
     const VkSurfaceDescriptionKHR*          pSurfaceDescription,
@@ -854,7 +854,7 @@ ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue                                  queue_,
     VkPresentInfoKHR*                        pPresentInfo)
 {
@@ -863,7 +863,7 @@ ICD_EXPORT VkResult VKAPI vkQueuePresentKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  srcBuffer,
     VkBuffer                                  dstBuffer,
@@ -873,7 +873,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,
@@ -885,7 +885,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBlitImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                  srcImage,
     VkImageLayout                            srcImageLayout,
@@ -898,7 +898,7 @@ ICD_EXPORT void VKAPI vkCmdBlitImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  srcBuffer,
     VkImage                                   dstImage,
@@ -909,7 +909,7 @@ ICD_EXPORT void VKAPI vkCmdCopyBufferToImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,
@@ -920,7 +920,7 @@ ICD_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  dstBuffer,
     VkDeviceSize                                dstOffset,
@@ -930,7 +930,7 @@ ICD_EXPORT void VKAPI vkCmdUpdateBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdFillBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  dstBuffer,
     VkDeviceSize                                dstOffset,
@@ -940,7 +940,7 @@ ICD_EXPORT void VKAPI vkCmdFillBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     VkCommandBuffer                                 commandBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
@@ -951,7 +951,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdClearAttachments(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
@@ -961,7 +961,7 @@ ICD_EXPORT void VKAPI vkCmdClearAttachments(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdClearColorImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkCommandBuffer                         commandBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
@@ -972,7 +972,7 @@ ICD_EXPORT void VKAPI vkCmdClearColorImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencil(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   image,
     VkImageLayout                            imageLayout,
@@ -984,7 +984,7 @@ ICD_EXPORT void VKAPI vkCmdClearDepthStencil(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdResolveImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer                              commandBuffer,
     VkImage                                   srcImage,
     VkImageLayout                            srcImageLayout,
@@ -996,7 +996,7 @@ ICD_EXPORT void VKAPI vkCmdResolveImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBeginQuery(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer                              commandBuffer,
     VkQueryPool                              queryPool,
     uint32_t                                    slot,
@@ -1005,7 +1005,7 @@ ICD_EXPORT void VKAPI vkCmdBeginQuery(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdEndQuery(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer                              commandBuffer,
     VkQueryPool                              queryPool,
     uint32_t                                    slot)
@@ -1013,7 +1013,7 @@ ICD_EXPORT void VKAPI vkCmdEndQuery(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdResetQueryPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer                              commandBuffer,
     VkQueryPool                              queryPool,
     uint32_t                                    startQuery,
@@ -1022,7 +1022,7 @@ ICD_EXPORT void VKAPI vkCmdResetQueryPool(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetEvent(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(
     VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
@@ -1030,7 +1030,7 @@ ICD_EXPORT void VKAPI vkCmdSetEvent(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdResetEvent(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
     VkCommandBuffer                              commandBuffer,
     VkEvent                                  event_,
     VkPipelineStageFlags                     stageMask)
@@ -1038,7 +1038,7 @@ ICD_EXPORT void VKAPI vkCmdResetEvent(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -1051,7 +1051,7 @@ ICD_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
     VkCommandBuffer                              commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,
@@ -1060,7 +1060,7 @@ ICD_EXPORT void VKAPI vkCmdWriteTimestamp(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindPipeline(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     VkCommandBuffer                              commandBuffer,
     VkPipelineBindPoint                      pipelineBindPoint,
     VkPipeline                               pipeline)
@@ -1068,52 +1068,52 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     VkCommandBuffer                              commandBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipelineLayout                        layout,
@@ -1126,7 +1126,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
@@ -1136,7 +1136,7 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -1145,7 +1145,7 @@ ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDraw(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
@@ -1155,7 +1155,7 @@ ICD_EXPORT void VKAPI vkCmdDraw(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndexed(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(
     VkCommandBuffer                              commandBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
@@ -1166,7 +1166,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexed(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -1176,7 +1176,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -1186,7 +1186,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDispatch(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(
     VkCommandBuffer                              commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
@@ -1195,7 +1195,7 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset)
@@ -1203,7 +1203,7 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     NULLDRV_LOG_FUNC;
 }
 
-void VKAPI vkCmdWaitEvents(
+VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
@@ -1215,7 +1215,7 @@ void VKAPI vkCmdWaitEvents(
     NULLDRV_LOG_FUNC;
 }
 
-void VKAPI vkCmdPipelineBarrier(
+VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
     VkCommandBuffer                                 commandBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        dstStageMask,
@@ -1226,7 +1226,7 @@ void VKAPI vkCmdPipelineBarrier(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDevice(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice                            gpu_,
     const VkDeviceCreateInfo*               pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1237,14 +1237,14 @@ ICD_EXPORT VkResult VKAPI vkCreateDevice(
     return nulldrv_dev_create(gpu, pCreateInfo, (struct nulldrv_dev**)pDevice);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDevice(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     VkDevice                                  device,
     const VkAllocationCallbacks*                     pAllocator)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkGetDeviceQueue(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice                                  device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
@@ -1255,14 +1255,14 @@ ICD_EXPORT void VKAPI vkGetDeviceQueue(
     *pQueue = (VkQueue) dev->queues[0];
 }
 
-ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(
     VkDevice                                  device)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
     VkDevice                                  device,
     const VkEventCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1272,7 +1272,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyEvent(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(
     VkDevice                                  device,
     VkEvent                                   event,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1280,7 +1280,7 @@ ICD_EXPORT void VKAPI vkDestroyEvent(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetEventStatus(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetEventStatus(
     VkDevice                                  device,
     VkEvent                                   event_)
 {
@@ -1288,7 +1288,7 @@ ICD_EXPORT VkResult VKAPI vkGetEventStatus(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkSetEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(
     VkDevice                                  device,
     VkEvent                                   event_)
 {
@@ -1296,7 +1296,7 @@ ICD_EXPORT VkResult VKAPI vkSetEvent(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkResetEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetEvent(
     VkDevice                                  device,
     VkEvent                                   event_)
 {
@@ -1304,7 +1304,7 @@ ICD_EXPORT VkResult VKAPI vkResetEvent(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateFence(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
     VkDevice                                  device,
     const VkFenceCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1317,7 +1317,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFence(
             (struct nulldrv_fence **) pFence);
 }
 
-ICD_EXPORT void VKAPI vkDestroyFence(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(
     VkDevice                                  device,
     VkFence                                  fence,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1325,7 +1325,7 @@ ICD_EXPORT void VKAPI vkDestroyFence(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     VkDevice                                  device,
     VkFence                                   fence_)
 {
@@ -1333,7 +1333,7 @@ ICD_EXPORT VkResult VKAPI vkGetFenceStatus(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkResetFences(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     VkDevice                    device,
     uint32_t                    fenceCount,
     const VkFence*              pFences)
@@ -1342,7 +1342,7 @@ ICD_EXPORT VkResult VKAPI vkResetFences(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkWaitForFences(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
     VkDevice                                  device,
     uint32_t                                    fenceCount,
     const VkFence*                            pFences,
@@ -1353,7 +1353,7 @@ ICD_EXPORT VkResult VKAPI vkWaitForFences(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                             gpu_,
     VkPhysicalDeviceProperties*                  pProperties)
 {
@@ -1371,7 +1371,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
     memset(&pProperties->sparseProperties, 0, sizeof(VkPhysicalDeviceSparseProperties));
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice                          physicalDevice,
     VkPhysicalDeviceFeatures*                 pFeatures)
 {
@@ -1381,7 +1381,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
     memset(pFeatures, 0, sizeof(*pFeatures));
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)
@@ -1393,7 +1393,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     pFormatInfo->bufferFeatures = 0;
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                             gpu_,
     uint32_t*                                    pQueueFamilyPropertyCount,
     VkQueueFamilyProperties*                     pProperties)
@@ -1407,14 +1407,14 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     pProperties->timestampValidBits = 0;
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice gpu_,
     VkPhysicalDeviceMemoryProperties* pProperties)
 {
     // TODO: Fill in with real data
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
@@ -1423,7 +1423,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
@@ -1443,7 +1443,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     }
     return VK_SUCCESS;
 }
-ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
@@ -1451,7 +1451,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
-VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
@@ -1463,7 +1463,7 @@ VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateImage(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1476,7 +1476,7 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
             (struct nulldrv_img **) pImage);
 }
 
-ICD_EXPORT void VKAPI vkDestroyImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     VkDevice                                  device,
     VkImage                                   image,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1484,7 +1484,7 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
@@ -1498,7 +1498,7 @@ ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
     pLayout->depthPitch = 4;
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
     VkDevice                                  device,
     const VkMemoryAllocateInfo*                pAllocateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1510,7 +1510,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateMemory(
     return nulldrv_mem_alloc(dev, pAllocateInfo, (struct nulldrv_mem **) pMemory);
 }
 
-ICD_EXPORT void VKAPI vkFreeMemory(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1518,7 +1518,7 @@ ICD_EXPORT void VKAPI vkFreeMemory(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkMapMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_,
     VkDeviceSize                                offset,
@@ -1535,14 +1535,14 @@ ICD_EXPORT VkResult VKAPI vkMapMemory(
     return (ptr) ? VK_SUCCESS : VK_ERROR_MEMORY_MAP_FAILED;
 }
 
-ICD_EXPORT void VKAPI vkUnmapMemory(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem_)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFlushMappedMemoryRanges(
     VkDevice                                  device,
     uint32_t                                  memoryRangeCount,
     const VkMappedMemoryRange*                pMemoryRanges)
@@ -1551,7 +1551,7 @@ ICD_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(
     VkDevice                                  device,
     uint32_t                                  memoryRangeCount,
     const VkMappedMemoryRange*                pMemoryRanges)
@@ -1560,14 +1560,14 @@ ICD_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetDeviceMemoryCommitment(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceMemoryCommitment(
     VkDevice                                  device,
     VkDeviceMemory                            memory,
     VkDeviceSize*                             pCommittedMemoryInBytes)
 {
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateInstance(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
     VkInstance*                               pInstance)
@@ -1587,14 +1587,14 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyInstance(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     VkInstance                                pInstance,
     const VkAllocationCallbacks*                     pAllocator)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     VkInstance                                instance,
     uint32_t*                                   pGpuCount,
     VkPhysicalDevice*                           pGpus)
@@ -1609,7 +1609,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateLayers(
     VkPhysicalDevice                            gpu,
     size_t                                      maxStringSize,
     size_t*                                     pLayerCount,
@@ -1620,7 +1620,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateLayers(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1631,7 +1631,7 @@ ICD_EXPORT void VKAPI vkGetBufferMemoryRequirements(
     base->get_memory_requirements(base, pMemoryRequirements);
 }
 
-ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1642,7 +1642,7 @@ ICD_EXPORT void VKAPI vkGetImageMemoryRequirements(
     base->get_memory_requirements(base, pMemoryRequirements);
 }
 
-ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkDeviceMemory                              mem_,
@@ -1652,7 +1652,7 @@ ICD_EXPORT VkResult VKAPI vkBindBufferMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkBindImageMemory(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDevice                                    device,
     VkImage                                     image,
     VkDeviceMemory                              mem_,
@@ -1662,7 +1662,7 @@ ICD_EXPORT VkResult VKAPI vkBindImageMemory(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pSparseMemoryRequirementCount,
@@ -1671,7 +1671,7 @@ ICD_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -1684,7 +1684,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueBindSparse(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     VkQueue                                     queue,
     uint32_t                                    bindInfoCount,
     const VkBindSparseInfo*                     pBindInfo,
@@ -1694,7 +1694,7 @@ ICD_EXPORT VkResult VKAPI vkQueueBindSparse(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1705,7 +1705,7 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineCache(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyPipeline(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(
     VkDevice                                  device,
     VkPipeline                                pipeline,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1713,7 +1713,7 @@ ICD_EXPORT void VKAPI vkDestroyPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-void VKAPI vkDestroyPipelineCache(
+VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1721,7 +1721,7 @@ void VKAPI vkDestroyPipelineCache(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     size_t*                                     pDataSize,
@@ -1731,7 +1731,7 @@ ICD_EXPORT VkResult VKAPI vkGetPipelineCacheData(
     return VK_ERROR_INITIALIZATION_FAILED;
 }
 
-ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     VkDevice                                    device,
     VkPipelineCache                             dstCache,
     uint32_t                                    srcCacheCount,
@@ -1740,7 +1740,7 @@ ICD_EXPORT VkResult VKAPI vkMergePipelineCaches(
     NULLDRV_LOG_FUNC;
     return VK_ERROR_INITIALIZATION_FAILED;
 }
-ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
@@ -1757,7 +1757,7 @@ ICD_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(
 
 
 
-ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     VkDevice                                  device,
     VkPipelineCache                           pipelineCache,
     uint32_t                                  createInfoCount,
@@ -1773,7 +1773,7 @@ ICD_EXPORT VkResult VKAPI vkCreateComputePipelines(
 
 
 
-ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
     VkDevice                                  device,
     const VkQueryPoolCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1783,7 +1783,7 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyQueryPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(
     VkDevice                                  device,
     VkQueryPool                               queryPoool,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1791,7 +1791,7 @@ ICD_EXPORT void VKAPI vkDestroyQueryPool(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -1805,14 +1805,14 @@ ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueWaitIdle(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(
     VkQueue                                   queue_)
 {
     NULLDRV_LOG_FUNC;
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkQueueSubmit(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkQueue                                   queue_,
     uint32_t                                  submitCount,
     const VkSubmitInfo*                       pSubmits,
@@ -1822,7 +1822,7 @@ ICD_EXPORT VkResult VKAPI vkQueueSubmit(
    return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice                                  device,
     const VkSemaphoreCreateInfo*            pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1832,7 +1832,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSemaphore(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroySemaphore(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
     VkDevice                                  device,
     VkSemaphore                               semaphore,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1840,7 +1840,7 @@ ICD_EXPORT void VKAPI vkDestroySemaphore(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateSampler(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(
     VkDevice                                  device,
     const VkSamplerCreateInfo*              pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1853,7 +1853,7 @@ ICD_EXPORT VkResult VKAPI vkCreateSampler(
             (struct nulldrv_sampler **) pSampler);
 }
 
-ICD_EXPORT void VKAPI vkDestroySampler(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySampler(
     VkDevice                                  device,
     VkSampler                                 sampler,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1861,7 +1861,7 @@ ICD_EXPORT void VKAPI vkDestroySampler(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     VkDevice                                    device,
     const VkShaderModuleCreateInfo*             pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1872,7 +1872,7 @@ ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkDestroyShaderModule(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyShaderModule(
     VkDevice                                    device,
     VkShaderModule                              shaderModule,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1881,7 +1881,7 @@ ICD_EXPORT void VKAPI vkDestroyShaderModule(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateBufferView(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     VkDevice                                  device,
     const VkBufferViewCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1894,7 +1894,7 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
             (struct nulldrv_buf_view **) pView);
 }
 
-ICD_EXPORT void VKAPI vkDestroyBufferView(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBufferView(
     VkDevice                                  device,
     VkBufferView                              bufferView,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1902,7 +1902,7 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateImageView(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     VkDevice                                  device,
     const VkImageViewCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1915,7 +1915,7 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct nulldrv_img_view **) pView);
 }
 
-ICD_EXPORT void VKAPI vkDestroyImageView(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImageView(
     VkDevice                                  device,
     VkImageView                               imageView,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1923,7 +1923,7 @@ ICD_EXPORT void VKAPI vkDestroyImageView(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(
     VkDevice                                   device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1936,7 +1936,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct nulldrv_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorSetLayout(
     VkDevice                                  device,
     VkDescriptorSetLayout                     descriptorSetLayout,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1944,7 +1944,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI  vkCreatePipelineLayout(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL  vkCreatePipelineLayout(
     VkDevice                                device,
     const VkPipelineLayoutCreateInfo*       pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1958,7 +1958,7 @@ ICD_EXPORT VkResult VKAPI  vkCreatePipelineLayout(
             (struct nulldrv_pipeline_layout **) pPipelineLayout);
 }
 
-ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineLayout(
     VkDevice                                  device,
     VkPipelineLayout                          pipelineLayout,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1966,7 +1966,7 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(
     VkDevice                                    device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1979,7 +1979,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
             (struct nulldrv_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(
     VkDevice                                  device,
     VkDescriptorPool                          descriptorPool,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1987,7 +1987,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(
     VkDevice                                device,
     VkDescriptorPool                        descriptorPool,
     VkDescriptorPoolResetFlags              flags)
@@ -1996,7 +1996,7 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkDevice                                device,
     const VkDescriptorSetAllocateInfo*         pAllocateInfo,
     VkDescriptorSet*                        pDescriptorSets)
@@ -2020,7 +2020,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool,
     uint32_t                                    descriptorSetCount,
@@ -2030,7 +2030,7 @@ ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
@@ -2040,7 +2040,7 @@ ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
     VkDevice                                  device,
     const VkFramebufferCreateInfo*          info,
     const VkAllocationCallbacks*                     pAllocator,
@@ -2052,7 +2052,7 @@ ICD_EXPORT VkResult VKAPI vkCreateFramebuffer(
     return nulldrv_fb_create(dev, info, (struct nulldrv_framebuffer **) fb_ret);
 }
 
-ICD_EXPORT void VKAPI vkDestroyFramebuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(
     VkDevice                                  device,
     VkFramebuffer                             framebuffer,
     const VkAllocationCallbacks*                     pAllocator)
@@ -2060,7 +2060,7 @@ ICD_EXPORT void VKAPI vkDestroyFramebuffer(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     VkDevice                                  device,
     const VkRenderPassCreateInfo*          info,
     const VkAllocationCallbacks*                     pAllocator,
@@ -2072,7 +2072,7 @@ ICD_EXPORT VkResult VKAPI vkCreateRenderPass(
     return nulldrv_render_pass_create(dev, info, (struct nulldrv_render_pass **) rp_ret);
 }
 
-ICD_EXPORT void VKAPI vkDestroyRenderPass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(
     VkDevice                                  device,
     VkRenderPass                              renderPass,
     const VkAllocationCallbacks*                     pAllocator)
@@ -2080,7 +2080,7 @@ ICD_EXPORT void VKAPI vkDestroyRenderPass(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdPushConstants(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(
     VkCommandBuffer                                 commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
@@ -2091,7 +2091,7 @@ ICD_EXPORT void VKAPI vkCmdPushConstants(
     /* TODO: Implement */
 }
 
-ICD_EXPORT void VKAPI vkGetRenderAreaGranularity(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
@@ -2100,7 +2100,7 @@ ICD_EXPORT void VKAPI vkGetRenderAreaGranularity(
     pGranularity->width = 1;
 }
 
-ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
     VkCommandBuffer                                 commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
     VkSubpassContents                        contents)
@@ -2108,20 +2108,20 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdNextSubpass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(
     VkCommandBuffer                                 commandBuffer,
     VkSubpassContents                        contents)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdEndRenderPass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
     VkCommandBuffer                              commandBuffer)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT void VKAPI vkCmdExecuteCommands(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    commandBuffersCount,
     const VkCommandBuffer*                          pCommandBuffers)
@@ -2155,7 +2155,7 @@ ICD_EXPORT VkResult xcbQueuePresent(void *queue, void *image, void* fence)
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,

@@ -91,7 +91,7 @@ static void InitImage(layer_data *data)
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
         VkInstance instance,
         VkFlags msgFlags,
         const PFN_vkDbgMsgCallback pfnMsgCallback,
@@ -106,7 +106,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
@@ -116,7 +116,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -131,7 +131,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
@@ -152,7 +152,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAlloca
 
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     layer_data *instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
@@ -166,7 +166,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
@@ -184,7 +184,7 @@ static const VkLayerProperties pc_global_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -193,7 +193,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -202,7 +202,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -223,7 +223,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -255,7 +255,7 @@ bool is_depth_format(VkFormat format)
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -282,14 +282,14 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreat
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
 {
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     device_data->imageMap.erase(image);
     device_data->device_dispatch_table->DestroyImage(device, image, pAllocator);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -367,7 +367,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRende
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -474,7 +474,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageV
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkCommandBuffer                commandBuffer,
     VkImage                        image,
     VkImageLayout                  imageLayout,
@@ -499,7 +499,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     VkCommandBuffer                 commandBuffer,
     VkImage                         image,
     VkImageLayout                   imageLayout,
@@ -527,7 +527,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer    commandBuffer,
     VkImage            srcImage,
     VkImageLayout      srcImageLayout,
@@ -611,7 +611,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     }
 }
 
-void VKAPI vkCmdClearAttachments(
+VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                             commandBuffer,
     uint32_t                                    attachmentCount,
     const VkClearAttachment*                    pAttachments,
@@ -648,7 +648,7 @@ void VKAPI vkCmdClearAttachments(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer          commandBuffer,
     VkImage                  srcImage,
     VkImageLayout            srcImageLayout,
@@ -684,7 +684,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer          commandBuffer,
     VkBuffer                 srcBuffer,
     VkImage                  dstImage,
@@ -720,7 +720,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer    commandBuffer,
     VkImage            srcImage,
     VkImageLayout      srcImageLayout,
@@ -841,7 +841,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
         srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer       commandBuffer,
     VkImage               srcImage,
     VkImageLayout         srcImageLayout,
@@ -910,7 +910,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     VkDevice                  device,
     VkImage                   image,
     const VkImageSubresource *pSubresource,
@@ -949,7 +949,7 @@ VK_LAYER_EXPORT void VKAPI vkGetImageSubresourceLayout(
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     if (device == NULL) {
         return NULL;
@@ -1005,7 +1005,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     if (instance == NULL) {
         return NULL;

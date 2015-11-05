@@ -93,15 +93,19 @@ class Proto(object):
 
     def c_decl(self, name, attr="", typed=False, need_param_names=True):
         """Return a named declaration in C."""
-        format_vals = (self.ret,
-                attr + " " if attr else "",
+        if typed:
+            return "%s (%s*%s)(%s)" % (
+                self.ret,
+                attr + "_PTR " if attr else "",
                 name,
                 self.c_params(need_name=need_param_names))
-
-        if typed:
-            return "%s (%s*%s)(%s)" % format_vals
         else:
-            return "%s %s%s(%s)" % format_vals
+            return "%s%s %s%s(%s)" % (
+                attr + "_ATTR " if attr else "",
+                self.ret,
+                attr + "_CALL " if attr else "",
+                name,
+                self.c_params(need_name=need_param_names))
 
     def c_pretty_decl(self, name, attr=""):
         """Return a named declaration in C, with vulkan.h formatting."""
@@ -118,8 +122,10 @@ class Proto(object):
             plist.append("    %s%s%s%s" % (param.ty[:idx],
                 " " * pad, param.name, param.ty[idx:]))
 
-        return "%s %s%s(\n%s)" % (self.ret,
-                attr + " " if attr else "",
+        return "%s%s %s%s(\n%s)" % (
+                attr + "_ATTR " if attr else "",
+                self.ret,
+                attr + "_CALL " if attr else "",
                 name,
                 ",\n".join(plist))
 
@@ -1181,7 +1187,7 @@ def parse_vk_h(filename):
     # parse proto_lines to protos
     protos = []
     for line in proto_lines:
-        first, rest = line.split(" (VKAPI *PFN_vk")
+        first, rest = line.split(" (VKAPI_PTR *PFN_vk")
         second, third = rest.split(")(")
 
         # get the return type, no space before "*"

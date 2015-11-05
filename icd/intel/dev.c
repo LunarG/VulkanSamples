@@ -209,7 +209,7 @@ void intel_dev_log(struct intel_dev *dev,
     va_end(ap);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDevice(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice                    gpu_,
     const VkDeviceCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -220,7 +220,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDevice(
     return intel_dev_create(gpu, pCreateInfo, (struct intel_dev **) pDevice);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDevice(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     VkDevice                                  device,
     const VkAllocationCallbacks*                     pAllocator)
 {
@@ -229,7 +229,7 @@ ICD_EXPORT void VKAPI vkDestroyDevice(
     intel_dev_destroy(dev);
 }
 
-ICD_EXPORT void VKAPI vkGetDeviceQueue(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice                                  device,
     uint32_t                                  queueFamilyIndex,
     uint32_t                                  queueIndex,
@@ -240,7 +240,7 @@ ICD_EXPORT void VKAPI vkGetDeviceQueue(
     *pQueue = (VkQueue) dev->queues[queueFamilyIndex];
 }
 
-ICD_EXPORT VkResult VKAPI vkDeviceWaitIdle(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(
     VkDevice                                  device)
 {
     struct intel_dev *dev = intel_dev(device);

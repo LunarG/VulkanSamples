@@ -929,7 +929,7 @@ static void init_mem_tracker(
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
@@ -954,7 +954,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAlloca
     }
 }
 
-VkResult VKAPI vkCreateInstance(
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
     VkInstance*                                 pInstance)
@@ -995,7 +995,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1012,7 +1012,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
     VkDevice device,
     const VkAllocationCallbacks* pAllocator)
 {
@@ -1055,7 +1055,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice                  physicalDevice,
     VkPhysicalDeviceMemoryProperties *pMemoryProperties)
 {
@@ -1074,7 +1074,7 @@ static const VkLayerProperties mtGlobalLayers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -1083,7 +1083,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -1092,7 +1092,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -1112,7 +1112,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -1122,7 +1122,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice  device,
     uint32_t  queueNodeIndex,
     uint32_t  queueIndex,
@@ -1135,7 +1135,7 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkQueue             queue,
     uint32_t            submitCount,
     const VkSubmitInfo *pSubmits,
@@ -1209,7 +1209,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueSubmit(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
     VkDevice                 device,
     const VkMemoryAllocateInfo *pAllocateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1225,7 +1225,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocateMemory(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkFreeMemory(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     VkDevice       device,
     VkDeviceMemory mem,
     const VkAllocationCallbacks* pAllocator)
@@ -1319,7 +1319,7 @@ void initializeAndTrackMemory(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkDevice         device,
     VkDeviceMemory   mem,
     VkDeviceSize     offset,
@@ -1347,7 +1347,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkMapMemory(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkUnmapMemory(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
     VkDevice       device,
     VkDeviceMemory mem)
 {
@@ -1438,7 +1438,7 @@ VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1451,7 +1451,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const 
     my_data->device_dispatch_table->DestroyFence(device, fence, pAllocator);
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1467,7 +1467,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, con
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1483,7 +1483,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const 
     }
 }
 
-VkResult VKAPI vkBindBufferMemory(
+VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkDeviceMemory                              mem,
@@ -1503,7 +1503,7 @@ VkResult VKAPI vkBindBufferMemory(
     return result;
 }
 
-VkResult VKAPI vkBindImageMemory(
+VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDevice                                    device,
     VkImage                                     image,
     VkDeviceMemory                              mem,
@@ -1523,7 +1523,7 @@ VkResult VKAPI vkBindImageMemory(
     return result;
 }
 
-void VKAPI vkGetBufferMemoryRequirements(
+VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1534,7 +1534,7 @@ void VKAPI vkGetBufferMemoryRequirements(
     my_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-void VKAPI vkGetImageMemoryRequirements(
+VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1545,7 +1545,7 @@ void VKAPI vkGetImageMemoryRequirements(
     my_data->device_dispatch_table->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     VkQueue                                     queue,
     uint32_t                                    bindInfoCount,
     const VkBindSparseInfo*                     pBindInfo,
@@ -1596,7 +1596,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueBindSparse(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
     VkDevice                 device,
     const VkFenceCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1614,7 +1614,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateFence(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetFences(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     VkDevice  device,
     uint32_t  fenceCount,
     const VkFence  *pFences)
@@ -1664,7 +1664,7 @@ static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const c
     return skipCall;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     VkDevice device,
     VkFence  fence)
 {
@@ -1681,7 +1681,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetFenceStatus(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
     VkDevice       device,
     uint32_t       fenceCount,
     const VkFence *pFences,
@@ -1710,7 +1710,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkWaitForFences(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(
     VkQueue queue)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
@@ -1723,7 +1723,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueueWaitIdle(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(
     VkDevice device)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1736,7 +1736,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDeviceWaitIdle(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
     VkDevice                  device,
     const VkBufferCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1752,7 +1752,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBuffer(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice                 device,
     const VkImageCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1768,7 +1768,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImage(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     VkDevice                     device,
     const VkImageViewCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1787,7 +1787,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateImageView(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     VkDevice                      device,
     const VkBufferViewCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -1807,7 +1807,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateBufferView(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkDevice                     device,
     const VkCommandBufferAllocateInfo *pCreateInfo,
     VkCommandBuffer                 *pCommandBuffer)
@@ -1823,7 +1823,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkCommandBuffer                 commandBuffer,
     const VkCommandBufferBeginInfo *pBeginInfo)
 {
@@ -1850,7 +1850,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(
     VkCommandBuffer commandBuffer)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -1859,7 +1859,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEndCommandBuffer(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkCommandBuffer commandBuffer,
     VkCommandBufferResetFlags flags)
 {
@@ -1885,7 +1885,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkResetCommandBuffer(
 }
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
 //    need to account for that mem now having binding to given commandBuffer
-VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     VkCommandBuffer     commandBuffer,
     VkPipelineBindPoint pipelineBindPoint,
     VkPipeline          pipeline)
@@ -1910,7 +1910,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindPipeline(
     my_data->device_dispatch_table->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                     commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
@@ -1929,7 +1929,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetViewport(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                     commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
@@ -1948,7 +1948,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetScissor(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1964,7 +1964,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, floa
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(
     VkCommandBuffer                     commandBuffer,
     float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
@@ -1984,7 +1984,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBias(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(
      VkCommandBuffer                        commandBuffer,
      const float                            blendConstants[4])
 {
@@ -2002,7 +2002,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetBlendConstants(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
     VkCommandBuffer                     commandBuffer,
     float                               minDepthBounds,
     float                               maxDepthBounds)
@@ -2021,7 +2021,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetDepthBounds(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(
     VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            compareMask)
@@ -2040,7 +2040,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(
     VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            writeMask)
@@ -2059,7 +2059,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(
     VkCommandBuffer                     commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            reference)
@@ -2078,7 +2078,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdSetStencilReference(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     VkCommandBuffer        commandBuffer,
     VkPipelineBindPoint    pipelineBindPoint,
     VkPipelineLayout       layout,
@@ -2094,7 +2094,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindDescriptorSets(
         commandBuffer, pipelineBindPoint, layout, firstSet, setCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer     commandBuffer,
     uint32_t            startBinding,
     uint32_t            bindingCount,
@@ -2106,7 +2106,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindVertexBuffers(
     my_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
     VkCommandBuffer  commandBuffer,
     VkBuffer     buffer,
     VkDeviceSize offset,
@@ -2117,7 +2117,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBindIndexBuffer(
     my_data->device_dispatch_table->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     VkCommandBuffer   commandBuffer,
      VkBuffer     buffer,
      VkDeviceSize offset,
@@ -2135,7 +2135,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndirect(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
     VkCommandBuffer  commandBuffer,
     VkBuffer     buffer,
     VkDeviceSize offset,
@@ -2153,7 +2153,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
     VkCommandBuffer  commandBuffer,
     VkBuffer     buffer,
     VkDeviceSize offset)
@@ -2169,7 +2169,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdDispatchIndirect(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     VkCommandBuffer     commandBuffer,
     VkBuffer            srcBuffer,
     VkBuffer            dstBuffer,
@@ -2193,7 +2193,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBuffer(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -2217,7 +2217,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer    commandBuffer,
     VkImage            srcImage,
     VkImageLayout      srcImageLayout,
@@ -2244,7 +2244,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer        commandBuffer,
     VkImage            srcImage,
     VkImageLayout      srcImageLayout,
@@ -2272,7 +2272,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBlitImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer              commandBuffer,
     VkBuffer                 srcBuffer,
     VkImage                  dstImage,
@@ -2298,7 +2298,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyBufferToImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer              commandBuffer,
     VkImage                  srcImage,
     VkImageLayout            srcImageLayout,
@@ -2324,7 +2324,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdCopyImageToBuffer(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer     commandBuffer,
     VkBuffer        dstBuffer,
     VkDeviceSize    dstOffset,
@@ -2345,7 +2345,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdUpdateBuffer(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer  commandBuffer,
     VkBuffer     dstBuffer,
     VkDeviceSize dstOffset,
@@ -2366,7 +2366,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdFillBuffer(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     VkCommandBuffer                    commandBuffer,
     VkImage                        image,
     VkImageLayout                  imageLayout,
@@ -2387,7 +2387,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearColorImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     VkCommandBuffer                         commandBuffer,
     VkImage                             image,
     VkImageLayout                       imageLayout,
@@ -2409,7 +2409,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdClearDepthStencilImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer           commandBuffer,
     VkImage               srcImage,
     VkImageLayout         srcImageLayout,
@@ -2433,7 +2433,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResolveImage(
     }
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t    slot,
@@ -2443,7 +2443,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdBeginQuery(
     my_data->device_dispatch_table->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t    slot)
@@ -2452,7 +2452,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdEndQuery(
     my_data->device_dispatch_table->CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
     uint32_t    startQuery,
@@ -2462,7 +2462,7 @@ VK_LAYER_EXPORT void VKAPI vkCmdResetQueryPool(
     my_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
         VkInstance instance,
         VkFlags msgFlags,
         const PFN_vkDbgMsgCallback pfnMsgCallback,
@@ -2478,7 +2478,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
@@ -2490,7 +2490,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
     return res;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
     VkSwapchainKHR                 *pSwapchain)
@@ -2507,7 +2507,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                        device,
     VkSwapchainKHR swapchain)
 {
@@ -2536,7 +2536,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                device,
     VkSwapchainKHR          swapchain,
     uint32_t*               pCount,
@@ -2575,7 +2575,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkDevice        device,
     VkSwapchainKHR  swapchain,
     uint64_t        timeout,
@@ -2603,7 +2603,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice                     device,
     const VkSemaphoreCreateInfo *pCreateInfo,
     const VkAllocationCallbacks*      pAllocator,
@@ -2619,7 +2619,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSemaphore(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
     VkDevice    device,
     VkSemaphore semaphore,
     const VkAllocationCallbacks* pAllocator)
@@ -2634,7 +2634,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroySemaphore(
     my_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
     VkDevice         dev,
     const char      *funcName)
 {
@@ -2796,7 +2796,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
     return pDisp->GetDeviceProcAddr(dev, funcName);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(
     VkInstance       instance,
     const char       *funcName)
 {

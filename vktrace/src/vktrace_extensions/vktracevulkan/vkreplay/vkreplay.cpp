@@ -37,7 +37,7 @@ VKTRACE_CRITICAL_SECTION g_handlerLock;
 PFN_vkDbgMsgCallback g_fpDbgMsgCallback;
 vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
-static VkBool32 VKAPI vkErrorHandler(
+static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
                                 VkFlags             msgFlags,
                                 VkDbgObjectType     objType,
                                 uint64_t            srcObjectHandle,

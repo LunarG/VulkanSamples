@@ -114,7 +114,7 @@ static layer_device_data *initDeviceData(std::unordered_map<void *, layer_device
     return pTable;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocateMemory(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkAllocateMemory(
     VkDevice device,
     const VkMemoryAllocateInfo* pAllocateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -143,7 +143,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocateMemory(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkMapMemory(
     VkDevice device,
     VkDeviceMemory memory,
     VkDeviceSize offset,
@@ -174,7 +174,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkMapMemory(
     return result;
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkUnmapMemory(
     VkDevice device,
     VkDeviceMemory memory)
 {
@@ -212,7 +212,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUnmapMemory(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkFreeMemory(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkFreeMemory(
     VkDevice device,
     VkDeviceMemory memory,
     const VkAllocationCallbacks* pAllocator)
@@ -233,7 +233,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkFreeMemory(
     // end custom code
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkFlushMappedMemoryRanges(
     VkDevice device,
     uint32_t memoryRangeCount,
     const VkMappedMemoryRange* pMemoryRanges)
@@ -301,7 +301,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFlushMappedMemoryRanges(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDescriptorPool(
     VkDevice device,
     const VkDescriptorPoolCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -330,7 +330,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDescriptorPool(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateDevice(
     VkPhysicalDevice physicalDevice,
     const VkDeviceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -358,7 +358,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateDevice(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateFramebuffer(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateFramebuffer(
     VkDevice device,
     const VkFramebufferCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -388,7 +388,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateFramebuffer(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     const VkInstanceCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
     VkInstance* pInstance)
@@ -422,7 +422,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateInstance(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -473,7 +473,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateRenderPass(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceExtensionProperties(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice physicalDevice,
     const char* pLayerName,
     uint32_t* pPropertyCount,
@@ -512,7 +512,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceExtensionProperties(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceLayerProperties(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pPropertyCount,
     VkLayerProperties* pProperties)
@@ -542,7 +542,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumerateDeviceLayerProperties(
 }
 // TODO : This should be pretty easy to fit into codegen. Don't need to make the call prior to creating packet
 //  Just need to account for "count" number of queue properties
-VKTRACER_EXPORT void VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t* pQueueFamilyPropertyCount,
     VkQueueFamilyProperties* pQueueFamilyProperties)
@@ -568,7 +568,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkGetPhysicalDeviceQueueFamilyProperties(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkEnumeratePhysicalDevices(
     VkInstance instance,
     uint32_t* pPhysicalDeviceCount,
     VkPhysicalDevice* pPhysicalDevices)
@@ -599,7 +599,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkEnumeratePhysicalDevices(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
     uint32_t startQuery,
@@ -637,7 +637,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetQueryPoolResults(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocateDescriptorSets(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkAllocateDescriptorSets(
     VkDevice device,
     const VkDescriptorSetAllocateInfo* pAllocateInfo,
     VkDescriptorSet* pDescriptorSets)
@@ -669,7 +669,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkAllocateDescriptorSets(
     return result;
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkUpdateDescriptorSets(
 VkDevice device,
         uint32_t descriptorWriteCount,
         const VkWriteDescriptorSet* pDescriptorWrites,
@@ -677,7 +677,7 @@ VkDevice device,
         const VkCopyDescriptorSet* pDescriptorCopies);
 // Manually written because it needs to use get_struct_chain_size and allocate some extra pointers (why?)
 // Also since it needs to app the array of pointers and sub-buffers (see comments in function)
-VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkUpdateDescriptorSets(
     VkDevice device,
     uint32_t descriptorWriteCount,
     const VkWriteDescriptorSet* pDescriptorWrites,
@@ -757,7 +757,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkUpdateDescriptorSets(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueueSubmit(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkQueueSubmit(
     VkQueue queue,
     uint32_t submitCount,
     const VkSubmitInfo* pSubmits,
@@ -793,7 +793,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueueSubmit(
     return result;
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkCmdWaitEvents(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
@@ -843,7 +843,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdWaitEvents(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkCmdPipelineBarrier(
     VkCommandBuffer                                 commandBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        dstStageMask,
@@ -890,7 +890,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdPipelineBarrier(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateGraphicsPipelines(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateGraphicsPipelines(
     VkDevice device,
     VkPipelineCache pipelineCache,
     uint32_t createInfoCount,
@@ -925,7 +925,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateGraphicsPipelines(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateComputePipelines(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateComputePipelines(
     VkDevice device,
     VkPipelineCache pipelineCache,
     uint32_t createInfoCount,
@@ -955,7 +955,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateComputePipelines(
     return result;
 }
 
-VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
+VKTRACER_EXPORT VKAPI_ATTR void VKAPI_CALL __HOOKED_vkCmdBeginRenderPass(
     VkCommandBuffer commandBuffer,
     const VkRenderPassBeginInfo* pRenderPassBegin,
     VkSubpassContents contents)
@@ -976,7 +976,7 @@ VKTRACER_EXPORT void VKAPI __HOOKED_vkCmdBeginRenderPass(
     FINISH_TRACE_PACKET();
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeDescriptorSets(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkFreeDescriptorSets(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     uint32_t descriptorSetCount,
@@ -999,7 +999,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkFreeDescriptorSets(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfacePropertiesKHR(
     VkDevice device,
     const VkSurfaceDescriptionKHR* pSurfaceDescription,
     VkSurfacePropertiesKHR* pSurfaceProperties)
@@ -1020,7 +1020,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePropertiesKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfaceFormatsKHR(
     VkDevice device,
     const VkSurfaceDescriptionKHR* pSurfaceDescription,
     uint32_t* pCount,
@@ -1054,7 +1054,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfaceFormatsKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfacePresentModesKHR(
     VkDevice device,
     const VkSurfaceDescriptionKHR* pSurfaceDescription,
     uint32_t* pCount,
@@ -1088,7 +1088,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSurfacePresentModesKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapchainKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateSwapchainKHR(
     VkDevice device,
     const VkSwapchainCreateInfoKHR* pCreateInfo,
     VkSwapchainKHR* pSwapchain)
@@ -1113,7 +1113,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkCreateSwapchainKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapchainImagesKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSwapchainImagesKHR(
     VkDevice device,
     VkSwapchainKHR swapchain,
     uint32_t* pCount,
@@ -1146,7 +1146,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetSwapchainImagesKHR(
     return result;
 }
 
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkQueuePresentKHR(
     VkQueue queue,
     VkPresentInfoKHR* pPresentInfo)
 {
@@ -1172,7 +1172,7 @@ VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkQueuePresentKHR(
 }
 
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
-VKTRACER_EXPORT VkResult VKAPI __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice physicalDevice,
     uint32_t queueFamilyIndex,
     const VkSurfaceDescriptionKHR* pSurfaceDescription,
@@ -1490,7 +1490,7 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
  * Want trace packets created for GetDeviceProcAddr that is app initiated
  * but not for loader initiated calls to GDPA. Thus need two versions of GDPA.
  */
-VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetDeviceProcAddr(VkDevice device, const char* funcName)
+VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vktraceGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     vktrace_trace_packet_header *pHeader;
     PFN_vkVoidFunction addr;
@@ -1508,7 +1508,7 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetDeviceProcAddr(VkDevice devic
 }
 
 /* GDPA with no trace packet creation */
-VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     PFN_vkVoidFunction addr;
     if (device == VK_NULL_HANDLE) {
@@ -1574,7 +1574,7 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetDeviceProcAddr(VkDevice d
  * Want trace packets created for GetInstanceProcAddr that is app initiated
  * but not for loader initiated calls to GIPA. Thus need two versions of GIPA.
  */
-VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vktraceGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     vktrace_trace_packet_header* pHeader;
     PFN_vkVoidFunction addr;
@@ -1593,7 +1593,7 @@ VKTRACER_EXPORT PFN_vkVoidFunction VKAPI vktraceGetInstanceProcAddr(VkInstance i
 }
 
 /* GIPA with no trace packet creation */
-VKTRACER_EXPORT PFN_vkVoidFunction VKAPI __HOOKED_vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction addr;
     if (instance == VK_NULL_HANDLE) {

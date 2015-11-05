@@ -138,7 +138,7 @@ VkResult intel_event_get_status(struct intel_event *event)
     return (val) ? VK_EVENT_SET : VK_EVENT_RESET;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
     VkDevice                                  device,
     const VkEventCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -150,7 +150,7 @@ ICD_EXPORT VkResult VKAPI vkCreateEvent(
             (struct intel_event **) pEvent);
 }
 
-ICD_EXPORT void VKAPI vkDestroyEvent(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(
     VkDevice                                device,
     VkEvent                                 event,
     const VkAllocationCallbacks*                     pAllocator)
@@ -162,7 +162,7 @@ ICD_EXPORT void VKAPI vkDestroyEvent(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VkResult VKAPI vkGetEventStatus(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetEventStatus(
     VkDevice                                  device,
     VkEvent                                   event_)
 {
@@ -171,7 +171,7 @@ ICD_EXPORT VkResult VKAPI vkGetEventStatus(
     return intel_event_get_status(event);
 }
 
-ICD_EXPORT VkResult VKAPI vkSetEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(
     VkDevice                                  device,
     VkEvent                                   event_)
 {
@@ -180,7 +180,7 @@ ICD_EXPORT VkResult VKAPI vkSetEvent(
     return intel_event_set(event);
 }
 
-ICD_EXPORT VkResult VKAPI vkResetEvent(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetEvent(
     VkDevice                                  device,
     VkEvent                                   event_)
 {

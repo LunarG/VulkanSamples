@@ -754,7 +754,7 @@ void intel_pipeline_layout_destroy(struct intel_pipeline_layout *pipeline_layout
     intel_base_destroy(&pipeline_layout->obj.base);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(
     VkDevice                                   device,
     const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -766,7 +766,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(
             (struct intel_desc_layout **) pSetLayout);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorSetLayout(
     VkDevice                                device,
     VkDescriptorSetLayout                   descriptorSetLayout,
     const VkAllocationCallbacks*                     pAllocator)
@@ -777,7 +777,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorSetLayout(
     obj->destroy(obj);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(
     VkDevice                                device,
     const VkPipelineLayoutCreateInfo*       pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -790,7 +790,7 @@ ICD_EXPORT VkResult VKAPI vkCreatePipelineLayout(
                                         (struct intel_pipeline_layout **) pPipelineLayout);
 }
 
-ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineLayout(
     VkDevice                                device,
     VkPipelineLayout                        pipelineLayout,
     const VkAllocationCallbacks*                     pAllocator)
@@ -801,7 +801,7 @@ ICD_EXPORT void VKAPI vkDestroyPipelineLayout(
     obj->destroy(obj);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(
     VkDevice                                    device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -813,7 +813,7 @@ ICD_EXPORT VkResult VKAPI vkCreateDescriptorPool(
             (struct intel_desc_pool **) pDescriptorPool);
 }
 
-ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(
     VkDevice                                device,
     VkDescriptorPool                        descriptorPool,
     const VkAllocationCallbacks*                     pAllocator)
@@ -824,7 +824,7 @@ ICD_EXPORT void VKAPI vkDestroyDescriptorPool(
     obj->destroy(obj);
 }
 
-ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(
     VkDevice                                  device,
     VkDescriptorPool                          descriptorPool,
     VkDescriptorPoolResetFlags                flags)
@@ -836,7 +836,7 @@ ICD_EXPORT VkResult VKAPI vkResetDescriptorPool(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(
     VkDevice                                    device,
     const VkDescriptorSetAllocateInfo*             pAllocateInfo,
     VkDescriptorSet*                            pDescriptorSets)
@@ -859,7 +859,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateDescriptorSets(
     return ret;
 }
 
-ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool,
     uint32_t                                    descriptorSetCount,
@@ -874,7 +874,7 @@ ICD_EXPORT VkResult VKAPI vkFreeDescriptorSets(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkUpdateDescriptorSets(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,

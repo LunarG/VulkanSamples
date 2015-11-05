@@ -1353,7 +1353,7 @@ void intel_att_view_init(struct intel_dev *dev,
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateBufferView(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     VkDevice                            device,
     const VkBufferViewCreateInfo*       pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1365,7 +1365,7 @@ ICD_EXPORT VkResult VKAPI vkCreateBufferView(
             (struct intel_buf_view **) pView);
 }
 
-ICD_EXPORT void VKAPI vkDestroyBufferView(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBufferView(
     VkDevice                            device,
     VkBufferView                        bufferView,
     const VkAllocationCallbacks*                     pAllocator)
@@ -1376,7 +1376,7 @@ ICD_EXPORT void VKAPI vkDestroyBufferView(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VkResult VKAPI vkCreateImageView(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     VkDevice                            device,
     const VkImageViewCreateInfo*        pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -1388,7 +1388,7 @@ ICD_EXPORT VkResult VKAPI vkCreateImageView(
             (struct intel_img_view **) pView);
 }
 
-ICD_EXPORT void VKAPI vkDestroyImageView(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImageView(
     VkDevice                            device,
     VkImageView                         imageView,
     const VkAllocationCallbacks*                     pAllocator)

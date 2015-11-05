@@ -39,7 +39,7 @@ void wsi_swapchain_create_instance(
         const VkInstanceCreateInfo *pCreateInfo);
 
 
-VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
         const VkSurfaceDescriptionKHR*          pSurfaceDescription,

@@ -272,30 +272,30 @@ VkResult loader_validate_instance_extensions(
         const VkInstanceCreateInfo*             pCreateInfo);
 
 /* instance layer chain termination entrypoint definitions */
-VkResult VKAPI loader_CreateInstance(
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
         const VkInstanceCreateInfo*             pCreateInfo,
         const VkAllocationCallbacks*                 pAllocator,
         VkInstance*                             pInstance);
 
-void VKAPI loader_DestroyInstance(
+VKAPI_ATTR void VKAPI_CALL loader_DestroyInstance(
         VkInstance                              instance,
         const VkAllocationCallbacks*                 pAllocator);
 
-VkResult VKAPI loader_EnumeratePhysicalDevices(
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumeratePhysicalDevices(
         VkInstance                              instance,
         uint32_t*                               pPhysicalDeviceCount,
         VkPhysicalDevice*                       pPhysicalDevices);
 
-void VKAPI loader_GetPhysicalDeviceFeatures(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFeatures(
         VkPhysicalDevice                        physicalDevice,
         VkPhysicalDeviceFeatures*               pFeatures);
 
-void VKAPI loader_GetPhysicalDeviceFormatProperties(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkFormatProperties*                     pFormatInfo);
 
-VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -304,7 +304,7 @@ VkResult VKAPI loader_GetPhysicalDeviceImageFormatProperties(
         VkImageCreateFlags                      flags,
         VkImageFormatProperties*                pImageFormatProperties);
 
-void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceSparseImageFormatProperties(
         VkPhysicalDevice                        physicalDevice,
         VkFormat                                format,
         VkImageType                             type,
@@ -314,28 +314,28 @@ void VKAPI loader_GetPhysicalDeviceSparseImageFormatProperties(
         uint32_t*                               pNumProperties,
         VkSparseImageFormatProperties*          pProperties);
 
-void VKAPI loader_GetPhysicalDeviceProperties (
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceProperties* pProperties);
 
-VkResult VKAPI loader_EnumerateDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties (VkPhysicalDevice physicalDevice,
         const char *pLayerName, uint32_t *pCount,
         VkExtensionProperties* pProperties);
 
-VkResult VKAPI loader_EnumerateDeviceLayerProperties (VkPhysicalDevice physicalDevice,
+VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceLayerProperties (VkPhysicalDevice physicalDevice,
         uint32_t *pCount,
         VkLayerProperties* pProperties);
 
-void VKAPI loader_GetPhysicalDeviceQueueFamilyProperties (
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceQueueFamilyProperties (
         VkPhysicalDevice                        physicalDevice,
         uint32_t*                               pCount,
         VkQueueFamilyProperties*                pProperties);
 
-void VKAPI loader_GetPhysicalDeviceMemoryProperties (
+VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceMemoryProperties (
         VkPhysicalDevice physicalDevice,
         VkPhysicalDeviceMemoryProperties * pProperties);
 
-VkResult VKAPI loader_CreateDevice(
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         VkPhysicalDevice                        gpu,
         const VkDeviceCreateInfo*               pCreateInfo,
         const VkAllocationCallbacks*                 pAllocator,

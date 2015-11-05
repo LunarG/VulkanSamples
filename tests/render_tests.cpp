@@ -86,7 +86,7 @@ using namespace std;
 
 #include "vkrenderframework.h"
 #ifdef DEBUG_CALLBACK
-void VKAPI myDbgFunc(
+VKAPI_ATTR void VKAPI_CALL myDbgFunc(
     VK_DBG_MSG_TYPE     msgType,
     VkValidationLevel validationLevel,
     VkObject             srcObject,

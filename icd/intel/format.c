@@ -681,7 +681,7 @@ static void intel_format_get_props(const struct intel_gpu *gpu,
     }
 }
 
-ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                          physicalDevice,
     VkFormat                                  format,
     VkFormatProperties*                       pFormatInfo)
@@ -698,7 +698,7 @@ ICD_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
 //      maximum is 2 GB for all products and all surface types."
 static const size_t intel_max_resource_size = 1u << 31;
 
-ICD_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,

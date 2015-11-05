@@ -3639,7 +3639,7 @@ static void cmd_exec(struct intel_cmd *cmd, struct intel_bo *bo)
    cmd_batch_reloc(cmd, pos + 1, bo, 0, 0);
 }
 
-ICD_EXPORT void VKAPI vkCmdBindPipeline(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     VkCommandBuffer                              commandBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipeline                                pipeline)
@@ -3660,7 +3660,7 @@ ICD_EXPORT void VKAPI vkCmdBindPipeline(
 }
 
 
-ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                     pipelineBindPoint,
     VkPipelineLayout                        layout,
@@ -3703,7 +3703,7 @@ ICD_EXPORT void VKAPI vkCmdBindDescriptorSets(
 }
 
 
-ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
@@ -3718,7 +3718,7 @@ ICD_EXPORT void VKAPI vkCmdBindVertexBuffers(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -3730,7 +3730,7 @@ ICD_EXPORT void VKAPI vkCmdBindIndexBuffer(
     cmd_bind_index_data(cmd, buf, offset, indexType);
 }
 
-ICD_EXPORT void VKAPI vkCmdDraw(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
@@ -3743,7 +3743,7 @@ ICD_EXPORT void VKAPI vkCmdDraw(
             firstInstance, instanceCount, false, 0);
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndexed(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
@@ -3757,7 +3757,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexed(
             firstInstance, instanceCount, true, vertexOffset);
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -3767,7 +3767,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndirect(
     assert(0 && "vkCmdDrawIndirect not implemented");
 }
 
-ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset,
@@ -3777,7 +3777,7 @@ ICD_EXPORT void VKAPI vkCmdDrawIndexedIndirect(
     assert(0 && "vkCmdDrawIndexedIndirect not implemented");
 }
 
-ICD_EXPORT void VKAPI vkCmdDispatch(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(
     VkCommandBuffer                              commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
@@ -3786,7 +3786,7 @@ ICD_EXPORT void VKAPI vkCmdDispatch(
     assert(0 && "vkCmdDispatch not implemented");
 }
 
-ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
     VkCommandBuffer                              commandBuffer,
     VkBuffer                                  buffer,
     VkDeviceSize                                offset)
@@ -3794,7 +3794,7 @@ ICD_EXPORT void VKAPI vkCmdDispatchIndirect(
     assert(0 && "vkCmdDisatchIndirect not implemented");
 }
 
-void VKAPI vkCmdPushConstants(
+VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(
     VkCommandBuffer                                 commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
@@ -3805,7 +3805,7 @@ void VKAPI vkCmdPushConstants(
     /* TODO: Implement */
 }
 
-void VKAPI vkGetRenderAreaGranularity(
+VKAPI_ATTR void VKAPI_CALL vkGetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
@@ -3814,7 +3814,7 @@ void VKAPI vkGetRenderAreaGranularity(
     pGranularity->width = 1;
 }
 
-ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
     VkCommandBuffer                                 commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
     VkSubpassContents                        contents)
@@ -3872,7 +3872,7 @@ ICD_EXPORT void VKAPI vkCmdBeginRenderPass(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdNextSubpass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(
     VkCommandBuffer                                 commandBuffer,
     VkSubpassContents                        contents)
 {
@@ -3888,7 +3888,7 @@ ICD_EXPORT void VKAPI vkCmdNextSubpass(
    cmd->bind.render_pass_contents = contents;
 }
 
-ICD_EXPORT void VKAPI vkCmdEndRenderPass(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
     VkCommandBuffer                              commandBuffer)
 {
    struct intel_cmd *cmd = intel_cmd(commandBuffer);
@@ -3896,7 +3896,7 @@ ICD_EXPORT void VKAPI vkCmdEndRenderPass(
    cmd_end_render_pass(cmd);
 }
 
-ICD_EXPORT void VKAPI vkCmdExecuteCommands(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
     VkCommandBuffer                                 commandBuffer,
     uint32_t                                    commandBuffersCount,
     const VkCommandBuffer*                          pCommandBuffers)

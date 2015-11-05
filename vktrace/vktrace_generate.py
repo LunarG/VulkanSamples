@@ -403,7 +403,7 @@ class Subcommand(object):
                         packet_size = []
                         in_data_size = False # flag when we need to capture local input size variable for in/out size
                         func_body.append('%s' % self.lineinfo.get())
-                        func_body.append('VKTRACER_EXPORT %s VKAPI __HOOKED_vk%s(' % (proto.ret, proto.name))
+                        func_body.append('VKTRACER_EXPORT VKAPI_ATTR %s VKAPI_CALL __HOOKED_vk%s(' % (proto.ret, proto.name))
                         for p in proto.params: # TODO : For all of the ptr types, check them for NULL and return 0 if NULL
                             func_body.append('    %s,' % p.c())
                             if '*' in p.ty and p.name not in ['pSysMem', 'pReserved']:
@@ -1004,7 +1004,7 @@ class Subcommand(object):
         xf_body.append('    void init_funcs(void * libHandle);')
         xf_body.append('    void *m_libHandle;\n')
         for proto in self.protos:
-            xf_body.append('    typedef %s( VKAPI * type_vk%s)(' % (proto.ret, proto.name))
+            xf_body.append('    typedef %s( VKAPI_PTR * type_vk%s)(' % (proto.ret, proto.name))
             for p in proto.params:
                 xf_body.append('        %s,' % p.c())
             xf_body[-1] = xf_body[-1].replace(',', ');')

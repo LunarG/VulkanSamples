@@ -115,7 +115,7 @@ static VkResult shader_module_create(struct intel_dev *dev,
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     VkDevice                                    device,
     const VkShaderModuleCreateInfo*             pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -126,7 +126,7 @@ ICD_EXPORT VkResult VKAPI vkCreateShaderModule(
     return shader_module_create(dev, pCreateInfo, (struct intel_shader_module **) pShaderModule);
 }
 
-ICD_EXPORT void VKAPI vkDestroyShaderModule(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyShaderModule(
     VkDevice                                device,
     VkShaderModule                          shaderModule,
     const VkAllocationCallbacks*                     pAllocator)

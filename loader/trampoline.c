@@ -36,7 +36,7 @@
 
 
 /* Trampoline entrypoints */
-LOADER_EXPORT VkResult VKAPI vkCreateInstance(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         const VkInstanceCreateInfo* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
         VkInstance* pInstance)
@@ -174,7 +174,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateInstance(
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkDestroyInstance(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
                                             VkInstance instance,
                                             const VkAllocationCallbacks* pAllocator)
 {
@@ -193,7 +193,7 @@ LOADER_EXPORT void VKAPI vkDestroyInstance(
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
@@ -209,7 +209,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceFeatures *pFeatures)
 {
@@ -219,7 +219,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFeatures(
     disp->GetPhysicalDeviceFeatures(gpu, pFeatures);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
                                             VkPhysicalDevice gpu,
                                             VkFormat format,
                                             VkFormatProperties *pFormatInfo)
@@ -230,7 +230,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceFormatProperties(
     disp->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
@@ -238,7 +238,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(VkPhysical
     return disp->GetPhysicalDeviceImageFormatProperties(physicalDevice, format, type, tiling, usage, flags, pImageFormatProperties);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceProperties* pProperties)
 {
@@ -248,7 +248,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceProperties(
     disp->GetPhysicalDeviceProperties(gpu, pProperties);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyProperties(
                                             VkPhysicalDevice gpu,
                                             uint32_t* pQueueFamilyPropertyCount,
                                             VkQueueFamilyProperties* pQueueProperties)
@@ -259,7 +259,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceQueueFamilyProperties(
     disp->GetPhysicalDeviceQueueFamilyProperties(gpu, pQueueFamilyPropertyCount, pQueueProperties);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceMemoryProperties(
                                             VkPhysicalDevice gpu,
                                             VkPhysicalDeviceMemoryProperties* pMemoryProperties)
 {
@@ -269,7 +269,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceMemoryProperties(
     disp->GetPhysicalDeviceMemoryProperties(gpu, pMemoryProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDevice(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         VkPhysicalDevice gpu,
         const VkDeviceCreateInfo* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
@@ -285,7 +285,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateDevice(
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
     struct loader_device *dev;
@@ -299,7 +299,7 @@ LOADER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCall
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
@@ -326,7 +326,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     return res;
 }
 
-LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
@@ -342,7 +342,7 @@ LOADER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue)
 {
     const VkLayerDispatchTable *disp;
 
@@ -352,7 +352,7 @@ LOADER_EXPORT void VKAPI vkGetDeviceQueue(VkDevice device, uint32_t queueNodeInd
     loader_set_dispatch(*pQueue, disp);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
@@ -361,7 +361,7 @@ LOADER_EXPORT VkResult VKAPI vkQueueSubmit(VkQueue queue, uint32_t submitCount, 
     return disp->QueueSubmit(queue, submitCount, pSubmits, fence);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(VkQueue queue)
 {
     const VkLayerDispatchTable *disp;
 
@@ -370,7 +370,7 @@ LOADER_EXPORT VkResult VKAPI vkQueueWaitIdle(VkQueue queue)
     return disp->QueueWaitIdle(queue);
 }
 
-LOADER_EXPORT VkResult VKAPI vkDeviceWaitIdle(VkDevice device)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(VkDevice device)
 {
     const VkLayerDispatchTable *disp;
 
@@ -379,7 +379,7 @@ LOADER_EXPORT VkResult VKAPI vkDeviceWaitIdle(VkDevice device)
     return disp->DeviceWaitIdle(device);
 }
 
-LOADER_EXPORT VkResult VKAPI vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
 {
     const VkLayerDispatchTable *disp;
 
@@ -388,7 +388,7 @@ LOADER_EXPORT VkResult VKAPI vkAllocateMemory(VkDevice device, const VkMemoryAll
     return disp->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
 }
 
-LOADER_EXPORT void VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(VkDevice device, VkDeviceMemory mem, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -397,7 +397,7 @@ LOADER_EXPORT void VKAPI vkFreeMemory(VkDevice device, VkDeviceMemory mem, const
     disp->FreeMemory(device, mem, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkFlags flags, void** ppData)
 {
     const VkLayerDispatchTable *disp;
 
@@ -406,7 +406,7 @@ LOADER_EXPORT VkResult VKAPI vkMapMemory(VkDevice device, VkDeviceMemory mem, Vk
     return disp->MapMemory(device, mem, offset, size, flags, ppData);
 }
 
-LOADER_EXPORT void VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
 {
     const VkLayerDispatchTable *disp;
 
@@ -415,7 +415,7 @@ LOADER_EXPORT void VKAPI vkUnmapMemory(VkDevice device, VkDeviceMemory mem)
     disp->UnmapMemory(device, mem);
 }
 
-LOADER_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)
 {
     const VkLayerDispatchTable *disp;
 
@@ -424,7 +424,7 @@ LOADER_EXPORT VkResult VKAPI vkFlushMappedMemoryRanges(VkDevice device, uint32_t
     return disp->FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 }
 
-LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkInvalidateMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)
 {
     const VkLayerDispatchTable *disp;
 
@@ -433,7 +433,7 @@ LOADER_EXPORT VkResult VKAPI vkInvalidateMappedMemoryRanges(VkDevice device, uin
     return disp->InvalidateMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 }
 
-LOADER_EXPORT void VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes)
 {
     const VkLayerDispatchTable *disp;
 
@@ -442,7 +442,7 @@ LOADER_EXPORT void VKAPI vkGetDeviceMemoryCommitment(VkDevice device, VkDeviceMe
     disp->GetDeviceMemoryCommitment(device, memory, pCommittedMemoryInBytes);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize offset)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
 
@@ -451,7 +451,7 @@ LOADER_EXPORT VkResult VKAPI vkBindBufferMemory(VkDevice device, VkBuffer buffer
     return disp->BindBufferMemory(device, buffer, mem, offset);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize offset)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
 
@@ -460,7 +460,7 @@ LOADER_EXPORT VkResult VKAPI vkBindImageMemory(VkDevice device, VkImage image, V
     return disp->BindImageMemory(device, image, mem, offset);
 }
 
-LOADER_EXPORT void VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
@@ -469,7 +469,7 @@ LOADER_EXPORT void VKAPI vkGetBufferMemoryRequirements(VkDevice device, VkBuffer
     disp->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-LOADER_EXPORT void VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
@@ -478,7 +478,7 @@ LOADER_EXPORT void VKAPI vkGetImageMemoryRequirements(VkDevice device, VkImage i
     disp->GetImageMemoryRequirements(device, image, pMemoryRequirements);
 }
 
-LOADER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pSparseMemoryRequirementCount, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSparseMemoryRequirements(VkDevice device, VkImage image, uint32_t* pSparseMemoryRequirementCount, VkSparseImageMemoryRequirements* pSparseMemoryRequirements)
 {
     const VkLayerDispatchTable *disp;
 
@@ -487,7 +487,7 @@ LOADER_EXPORT void VKAPI vkGetImageSparseMemoryRequirements(VkDevice device, VkI
     disp->GetImageSparseMemoryRequirements(device, image, pSparseMemoryRequirementCount, pSparseMemoryRequirements);
 }
 
-LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties)
 {
     const VkLayerInstanceDispatchTable *disp;
 
@@ -496,7 +496,7 @@ LOADER_EXPORT void VKAPI vkGetPhysicalDeviceSparseImageFormatProperties(VkPhysic
     disp->GetPhysicalDeviceSparseImageFormatProperties(physicalDevice, format, type, samples, usage, tiling, pPropertyCount, pProperties);
 }
 
-LOADER_EXPORT VkResult VKAPI vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
@@ -505,7 +505,7 @@ LOADER_EXPORT VkResult VKAPI vkQueueBindSparse(VkQueue queue, uint32_t bindInfoC
     return disp->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFence* pFence)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(VkDevice device, const VkFenceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFence* pFence)
 {
     const VkLayerDispatchTable *disp;
 
@@ -514,7 +514,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateFence(VkDevice device, const VkFenceCreateI
     return disp->CreateFence(device, pCreateInfo, pAllocator, pFence);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -523,7 +523,7 @@ LOADER_EXPORT void VKAPI vkDestroyFence(VkDevice device, VkFence fence, const Vk
     disp->DestroyFence(device, fence, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences)
 {
     const VkLayerDispatchTable *disp;
 
@@ -532,7 +532,7 @@ LOADER_EXPORT VkResult VKAPI vkResetFences(VkDevice device, uint32_t fenceCount,
     return disp->ResetFences(device, fenceCount, pFences);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetFenceStatus(VkDevice device, VkFence fence)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(VkDevice device, VkFence fence)
 {
     const VkLayerDispatchTable *disp;
 
@@ -541,7 +541,7 @@ LOADER_EXPORT VkResult VKAPI vkGetFenceStatus(VkDevice device, VkFence fence)
     return disp->GetFenceStatus(device, fence);
 }
 
-LOADER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout)
 {
     const VkLayerDispatchTable *disp;
 
@@ -550,7 +550,7 @@ LOADER_EXPORT VkResult VKAPI vkWaitForFences(VkDevice device, uint32_t fenceCoun
     return disp->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSemaphore* pSemaphore)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSemaphore* pSemaphore)
 {
     const VkLayerDispatchTable *disp;
 
@@ -559,7 +559,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateSemaphore(VkDevice device, const VkSemaphor
     return disp->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
 }
 
-LOADER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -568,7 +568,7 @@ LOADER_EXPORT void VKAPI vkDestroySemaphore(VkDevice device, VkSemaphore semapho
     disp->DestroySemaphore(device, semaphore, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkEvent* pEvent)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(VkDevice device, const VkEventCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkEvent* pEvent)
 {
     const VkLayerDispatchTable *disp;
 
@@ -577,7 +577,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateEvent(VkDevice device, const VkEventCreateI
     return disp->CreateEvent(device, pCreateInfo, pAllocator, pEvent);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyEvent(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -586,7 +586,7 @@ LOADER_EXPORT void VKAPI vkDestroyEvent(VkDevice device, VkEvent event, const Vk
     disp->DestroyEvent(device, event, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetEventStatus(VkDevice device, VkEvent event)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetEventStatus(VkDevice device, VkEvent event)
 {
     const VkLayerDispatchTable *disp;
 
@@ -595,7 +595,7 @@ LOADER_EXPORT VkResult VKAPI vkGetEventStatus(VkDevice device, VkEvent event)
     return disp->GetEventStatus(device, event);
 }
 
-LOADER_EXPORT VkResult VKAPI vkSetEvent(VkDevice device, VkEvent event)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event)
 {
     const VkLayerDispatchTable *disp;
 
@@ -604,7 +604,7 @@ LOADER_EXPORT VkResult VKAPI vkSetEvent(VkDevice device, VkEvent event)
     return disp->SetEvent(device, event);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetEvent(VkDevice device, VkEvent event)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetEvent(VkDevice device, VkEvent event)
 {
     const VkLayerDispatchTable *disp;
 
@@ -613,7 +613,7 @@ LOADER_EXPORT VkResult VKAPI vkResetEvent(VkDevice device, VkEvent event)
     return disp->ResetEvent(device, event);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool)
 {
     const VkLayerDispatchTable *disp;
 
@@ -622,7 +622,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateQueryPool(VkDevice device, const VkQueryPoo
     return disp->CreateQueryPool(device, pCreateInfo, pAllocator, pQueryPool);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -631,7 +631,7 @@ LOADER_EXPORT void VKAPI vkDestroyQueryPool(VkDevice device, VkQueryPool queryPo
     disp->DestroyQueryPool(device, queryPool, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -640,7 +640,7 @@ LOADER_EXPORT VkResult VKAPI vkGetQueryPoolResults(VkDevice device, VkQueryPool 
     return disp->GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer)
 {
     const VkLayerDispatchTable *disp;
 
@@ -649,7 +649,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateBuffer(VkDevice device, const VkBufferCreat
     return disp->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -658,7 +658,7 @@ LOADER_EXPORT void VKAPI vkDestroyBuffer(VkDevice device, VkBuffer buffer, const
     disp->DestroyBuffer(device, buffer, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBufferView* pView)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBufferView* pView)
 {
     const VkLayerDispatchTable *disp;
 
@@ -667,7 +667,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateBufferView(VkDevice device, const VkBufferV
     return disp->CreateBufferView(device, pCreateInfo, pAllocator, pView);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBufferView(VkDevice device, VkBufferView bufferView, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -676,7 +676,7 @@ LOADER_EXPORT void VKAPI vkDestroyBufferView(VkDevice device, VkBufferView buffe
     disp->DestroyBufferView(device, bufferView, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
     const VkLayerDispatchTable *disp;
 
@@ -685,7 +685,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateImage(VkDevice device, const VkImageCreateI
     return disp->CreateImage(device, pCreateInfo, pAllocator, pImage);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -694,7 +694,7 @@ LOADER_EXPORT void VKAPI vkDestroyImage(VkDevice device, VkImage image, const Vk
     disp->DestroyImage(device, image, pAllocator);
 }
 
-LOADER_EXPORT void VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout)
 {
     const VkLayerDispatchTable *disp;
 
@@ -703,7 +703,7 @@ LOADER_EXPORT void VKAPI vkGetImageSubresourceLayout(VkDevice device, VkImage im
     disp->GetImageSubresourceLayout(device, image, pSubresource, pLayout);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImageView* pView)
 {
     const VkLayerDispatchTable *disp;
 
@@ -712,7 +712,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateImageView(VkDevice device, const VkImageVie
     return disp->CreateImageView(device, pCreateInfo, pAllocator, pView);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImageView(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -721,7 +721,7 @@ LOADER_EXPORT void VKAPI vkDestroyImageView(VkDevice device, VkImageView imageVi
     disp->DestroyImageView(device, imageView, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShader)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShader)
 {
     const VkLayerDispatchTable *disp;
 
@@ -730,7 +730,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateShaderModule(VkDevice device, const VkShade
     return disp->CreateShaderModule(device, pCreateInfo, pAllocator, pShader);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyShaderModule(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -739,7 +739,7 @@ LOADER_EXPORT void VKAPI vkDestroyShaderModule(VkDevice device, VkShaderModule s
     disp->DestroyShaderModule(device, shaderModule, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache)
 {
     const VkLayerDispatchTable *disp;
 
@@ -748,7 +748,7 @@ LOADER_EXPORT VkResult VKAPI vkCreatePipelineCache(VkDevice device, const VkPipe
     return disp->CreatePipelineCache(device, pCreateInfo, pAllocator, pPipelineCache);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -757,7 +757,7 @@ LOADER_EXPORT void VKAPI vkDestroyPipelineCache(VkDevice device, VkPipelineCache
     disp->DestroyPipelineCache(device, pipelineCache, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t* pDataSize, void* pData)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(VkDevice device, VkPipelineCache pipelineCache, size_t* pDataSize, void* pData)
 {
     const VkLayerDispatchTable *disp;
 
@@ -766,7 +766,7 @@ LOADER_EXPORT VkResult VKAPI vkGetPipelineCacheData(VkDevice device, VkPipelineC
     return disp->GetPipelineCacheData(device, pipelineCache, pDataSize, pData);
 }
 
-LOADER_EXPORT VkResult VKAPI vkMergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(VkDevice device, VkPipelineCache dstCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches)
 {
     const VkLayerDispatchTable *disp;
 
@@ -775,7 +775,7 @@ LOADER_EXPORT VkResult VKAPI vkMergePipelineCaches(VkDevice device, VkPipelineCa
     return disp->MergePipelineCaches(device, dstCache, srcCacheCount, pSrcCaches);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
 {
     const VkLayerDispatchTable *disp;
 
@@ -784,7 +784,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateGraphicsPipelines(VkDevice device, VkPipeli
     return disp->CreateGraphicsPipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkComputePipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkComputePipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
 {
     const VkLayerDispatchTable *disp;
 
@@ -793,7 +793,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateComputePipelines(VkDevice device, VkPipelin
     return disp->CreateComputePipelines(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(VkDevice device, VkPipeline pipeline, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -802,7 +802,7 @@ LOADER_EXPORT void VKAPI vkDestroyPipeline(VkDevice device, VkPipeline pipeline,
     disp->DestroyPipeline(device, pipeline, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineLayout* pPipelineLayout)
 {
     const VkLayerDispatchTable *disp;
 
@@ -811,7 +811,7 @@ LOADER_EXPORT VkResult VKAPI vkCreatePipelineLayout(VkDevice device, const VkPip
     return disp->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineLayout(VkDevice device, VkPipelineLayout pipelineLayout, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -820,7 +820,7 @@ LOADER_EXPORT void VKAPI vkDestroyPipelineLayout(VkDevice device, VkPipelineLayo
     disp->DestroyPipelineLayout(device, pipelineLayout, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
 {
     const VkLayerDispatchTable *disp;
 
@@ -829,7 +829,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateSampler(VkDevice device, const VkSamplerCre
     return disp->CreateSampler(device, pCreateInfo, pAllocator, pSampler);
 }
 
-LOADER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySampler(VkDevice device, VkSampler sampler, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -839,7 +839,7 @@ LOADER_EXPORT void VKAPI vkDestroySampler(VkDevice device, VkSampler sampler, co
 }
 
 
-LOADER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pSetLayout)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorSetLayout* pSetLayout)
 {
     const VkLayerDispatchTable *disp;
 
@@ -848,7 +848,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateDescriptorSetLayout(VkDevice device, const 
     return disp->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -857,7 +857,7 @@ LOADER_EXPORT void VKAPI vkDestroyDescriptorSetLayout(VkDevice device, VkDescrip
     disp->DestroyDescriptorSetLayout(device, descriptorSetLayout, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorPool* pDescriptorPool)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDescriptorPool* pDescriptorPool)
 {
     const VkLayerDispatchTable *disp;
 
@@ -866,7 +866,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateDescriptorPool(VkDevice device, const VkDes
     return disp->CreateDescriptorPool(device, pCreateInfo, pAllocator, pDescriptorPool);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -876,7 +876,7 @@ LOADER_EXPORT void VKAPI vkDestroyDescriptorPool(VkDevice device, VkDescriptorPo
 }
 
 
-LOADER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetDescriptorPool(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorPoolResetFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -885,7 +885,7 @@ LOADER_EXPORT VkResult VKAPI vkResetDescriptorPool(VkDevice device, VkDescriptor
     return disp->ResetDescriptorPool(device, descriptorPool, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo* pAllocateInfo, VkDescriptorSet* pDescriptorSets)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice device, const VkDescriptorSetAllocateInfo* pAllocateInfo, VkDescriptorSet* pDescriptorSets)
 {
     const VkLayerDispatchTable *disp;
 
@@ -894,7 +894,7 @@ LOADER_EXPORT VkResult VKAPI vkAllocateDescriptorSets(VkDevice device, const VkD
     return disp->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
 }
 
-LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets)
 {
     const VkLayerDispatchTable *disp;
 
@@ -903,7 +903,7 @@ LOADER_EXPORT VkResult VKAPI vkFreeDescriptorSets(VkDevice device, VkDescriptorP
     return disp->FreeDescriptorSets(device, descriptorPool, descriptorSetCount, pDescriptorSets);
 }
 
-LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
 {
     const VkLayerDispatchTable *disp;
 
@@ -912,7 +912,7 @@ LOADER_EXPORT void VKAPI vkUpdateDescriptorSets(VkDevice device, uint32_t descri
     disp->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFramebuffer* pFramebuffer)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkFramebuffer* pFramebuffer)
 {
     const VkLayerDispatchTable *disp;
 
@@ -921,7 +921,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateFramebuffer(VkDevice device, const VkFrameb
     return disp->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -930,7 +930,7 @@ LOADER_EXPORT void VKAPI vkDestroyFramebuffer(VkDevice device, VkFramebuffer fra
     disp->DestroyFramebuffer(device, framebuffer, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
     const VkLayerDispatchTable *disp;
 
@@ -939,7 +939,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateRenderPass(VkDevice device, const VkRenderP
     return disp->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyRenderPass(VkDevice device, VkRenderPass renderPass, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -948,7 +948,7 @@ LOADER_EXPORT void VKAPI vkDestroyRenderPass(VkDevice device, VkRenderPass rende
     disp->DestroyRenderPass(device, renderPass, pAllocator);
 }
 
-LOADER_EXPORT void VKAPI vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetRenderAreaGranularity(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity)
 {
     const VkLayerDispatchTable *disp;
 
@@ -957,7 +957,7 @@ LOADER_EXPORT void VKAPI vkGetRenderAreaGranularity(VkDevice device, VkRenderPas
     disp->GetRenderAreaGranularity(device, renderPass, pGranularity);
 }
 
-LOADER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
 {
     const VkLayerDispatchTable *disp;
 
@@ -966,7 +966,7 @@ LOADER_EXPORT VkResult VKAPI vkCreateCommandPool(VkDevice device, const VkComman
     return disp->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 }
 
-LOADER_EXPORT void VKAPI vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
 {
     const VkLayerDispatchTable *disp;
 
@@ -975,7 +975,7 @@ LOADER_EXPORT void VKAPI vkDestroyCommandPool(VkDevice device, VkCommandPool com
     disp->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -984,7 +984,7 @@ LOADER_EXPORT VkResult VKAPI vkResetCommandPool(VkDevice device, VkCommandPool c
     return disp->ResetCommandPool(device, commandPool, flags);
 }
 
-LOADER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
         VkDevice device,
         const VkCommandBufferAllocateInfo* pAllocateInfo,
         VkCommandBuffer* pCommandBuffers)
@@ -1006,7 +1006,7 @@ LOADER_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
     return res;
 }
 
-LOADER_EXPORT void VKAPI vkFreeCommandBuffers(
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
         VkDevice                                device,
         VkCommandPool                               commandPool,
         uint32_t                                commandBufferCount,
@@ -1019,7 +1019,7 @@ LOADER_EXPORT void VKAPI vkFreeCommandBuffers(
     disp->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
 }
 
-LOADER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1028,7 +1028,7 @@ LOADER_EXPORT VkResult VKAPI vkBeginCommandBuffer(VkCommandBuffer commandBuffer,
     return disp->BeginCommandBuffer(commandBuffer, pBeginInfo);
 }
 
-LOADER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCommandBuffer commandBuffer)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffer commandBuffer)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1037,7 +1037,7 @@ LOADER_EXPORT VkResult VKAPI vkEndCommandBuffer(VkCommandBuffer commandBuffer)
     return disp->EndCommandBuffer(commandBuffer);
 }
 
-LOADER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags)
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1046,7 +1046,7 @@ LOADER_EXPORT VkResult VKAPI vkResetCommandBuffer(VkCommandBuffer commandBuffer,
     return disp->ResetCommandBuffer(commandBuffer, flags);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1055,7 +1055,7 @@ LOADER_EXPORT void VKAPI vkCmdBindPipeline(VkCommandBuffer commandBuffer, VkPipe
     disp->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1064,7 +1064,7 @@ LOADER_EXPORT void VKAPI vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_
     disp->CmdSetViewport(commandBuffer, viewportCount, pViewports);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1073,7 +1073,7 @@ LOADER_EXPORT void VKAPI vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t
     disp->CmdSetScissor(commandBuffer, scissorCount, pScissors);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1082,7 +1082,7 @@ LOADER_EXPORT void VKAPI vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float 
     disp->CmdSetLineWidth(commandBuffer, lineWidth);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1091,7 +1091,7 @@ LOADER_EXPORT void VKAPI vkCmdSetDepthBias(VkCommandBuffer commandBuffer, float 
     disp->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, const float blendConstants[4])
 {
     const VkLayerDispatchTable *disp;
 
@@ -1100,7 +1100,7 @@ LOADER_EXPORT void VKAPI vkCmdSetBlendConstants(VkCommandBuffer commandBuffer, c
     disp->CmdSetBlendConstants(commandBuffer, blendConstants);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1109,7 +1109,7 @@ LOADER_EXPORT void VKAPI vkCmdSetDepthBounds(VkCommandBuffer commandBuffer, floa
     disp->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1118,7 +1118,7 @@ LOADER_EXPORT void VKAPI vkCmdSetStencilCompareMask(VkCommandBuffer commandBuffe
     disp->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1127,7 +1127,7 @@ LOADER_EXPORT void VKAPI vkCmdSetStencilWriteMask(VkCommandBuffer commandBuffer,
     disp->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1136,7 +1136,7 @@ LOADER_EXPORT void VKAPI vkCmdSetStencilReference(VkCommandBuffer commandBuffer,
     disp->CmdSetStencilReference(commandBuffer, faceMask, reference);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t descriptorSetCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1145,7 +1145,7 @@ LOADER_EXPORT void VKAPI vkCmdBindDescriptorSets(VkCommandBuffer commandBuffer, 
     disp->CmdBindDescriptorSets(commandBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1154,7 +1154,7 @@ LOADER_EXPORT void VKAPI vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkB
     disp->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBindVertexBuffers(VkCommandBuffer commandBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(VkCommandBuffer commandBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1163,7 +1163,7 @@ LOADER_EXPORT void VKAPI vkCmdBindVertexBuffers(VkCommandBuffer commandBuffer, u
     disp->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1172,7 +1172,7 @@ LOADER_EXPORT void VKAPI vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t verte
     disp->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1181,7 +1181,7 @@ LOADER_EXPORT void VKAPI vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint32_
     disp->CmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1190,7 +1190,7 @@ LOADER_EXPORT void VKAPI vkCmdDrawIndirect(VkCommandBuffer commandBuffer, VkBuff
     disp->CmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1199,7 +1199,7 @@ LOADER_EXPORT void VKAPI vkCmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
     disp->CmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1208,7 +1208,7 @@ LOADER_EXPORT void VKAPI vkCmdDispatch(VkCommandBuffer commandBuffer, uint32_t x
     disp->CmdDispatch(commandBuffer, x, y, z);
 }
 
-LOADER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1217,7 +1217,7 @@ LOADER_EXPORT void VKAPI vkCmdDispatchIndirect(VkCommandBuffer commandBuffer, Vk
     disp->CmdDispatchIndirect(commandBuffer, buffer, offset);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1226,7 +1226,7 @@ LOADER_EXPORT void VKAPI vkCmdCopyBuffer(VkCommandBuffer commandBuffer, VkBuffer
     disp->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy* pRegions)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy* pRegions)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1235,7 +1235,7 @@ LOADER_EXPORT void VKAPI vkCmdCopyImage(VkCommandBuffer commandBuffer, VkImage s
     disp->CmdCopyImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkFilter filter)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkFilter filter)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1244,7 +1244,7 @@ LOADER_EXPORT void VKAPI vkCmdBlitImage(VkCommandBuffer commandBuffer, VkImage s
     disp->CmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1253,7 +1253,7 @@ LOADER_EXPORT void VKAPI vkCmdCopyBufferToImage(VkCommandBuffer commandBuffer, V
     disp->CmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1262,7 +1262,7 @@ LOADER_EXPORT void VKAPI vkCmdCopyImageToBuffer(VkCommandBuffer commandBuffer, V
     disp->CmdCopyImageToBuffer(commandBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t* pData)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t* pData)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1271,7 +1271,7 @@ LOADER_EXPORT void VKAPI vkCmdUpdateBuffer(VkCommandBuffer commandBuffer, VkBuff
     disp->CmdUpdateBuffer(commandBuffer, dstBuffer, dstOffset, dataSize, pData);
 }
 
-LOADER_EXPORT void VKAPI vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize size, uint32_t data)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1280,7 +1280,7 @@ LOADER_EXPORT void VKAPI vkCmdFillBuffer(VkCommandBuffer commandBuffer, VkBuffer
     disp->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-LOADER_EXPORT void VKAPI vkCmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1289,7 +1289,7 @@ LOADER_EXPORT void VKAPI vkCmdClearColorImage(VkCommandBuffer commandBuffer, VkI
     disp->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
 }
 
-LOADER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1298,7 +1298,7 @@ LOADER_EXPORT void VKAPI vkCmdClearDepthStencilImage(VkCommandBuffer commandBuff
     disp->CmdClearDepthStencilImage(commandBuffer, image, imageLayout, pDepthStencil, rangeCount, pRanges);
 }
 
-LOADER_EXPORT void VKAPI vkCmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkClearRect* pRects)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkClearRect* pRects)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1307,7 +1307,7 @@ LOADER_EXPORT void VKAPI vkCmdClearAttachments(VkCommandBuffer commandBuffer, ui
     disp->CmdClearAttachments(commandBuffer, attachmentCount, pAttachments, rectCount, pRects);
 }
 
-LOADER_EXPORT void VKAPI vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve* pRegions)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve* pRegions)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1316,7 +1316,7 @@ LOADER_EXPORT void VKAPI vkCmdResolveImage(VkCommandBuffer commandBuffer, VkImag
     disp->CmdResolveImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
 }
 
-LOADER_EXPORT void VKAPI vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1325,7 +1325,7 @@ LOADER_EXPORT void VKAPI vkCmdSetEvent(VkCommandBuffer commandBuffer, VkEvent ev
     disp->CmdSetEvent(commandBuffer, event, stageMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1334,7 +1334,7 @@ LOADER_EXPORT void VKAPI vkCmdResetEvent(VkCommandBuffer commandBuffer, VkEvent 
     disp->CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-LOADER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags sourceStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1343,7 +1343,7 @@ LOADER_EXPORT void VKAPI vkCmdWaitEvents(VkCommandBuffer commandBuffer, uint32_t
     disp->CmdWaitEvents(commandBuffer, eventCount, pEvents, sourceStageMask, dstStageMask, memoryBarrierCount, ppMemoryBarriers);
 }
 
-LOADER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1352,7 +1352,7 @@ LOADER_EXPORT void VKAPI vkCmdPipelineBarrier(VkCommandBuffer commandBuffer, VkP
     disp->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags, memoryBarrierCount, ppMemoryBarriers);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1361,7 +1361,7 @@ LOADER_EXPORT void VKAPI vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryP
     disp->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
 }
 
-LOADER_EXPORT void VKAPI vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1370,7 +1370,7 @@ LOADER_EXPORT void VKAPI vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPoo
     disp->CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
-LOADER_EXPORT void VKAPI vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1379,7 +1379,7 @@ LOADER_EXPORT void VKAPI vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQu
     disp->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 }
 
-LOADER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1388,7 +1388,7 @@ LOADER_EXPORT void VKAPI vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPi
     disp->CmdWriteTimestamp(commandBuffer, pipelineStage, queryPool, slot);
 }
 
-LOADER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkFlags flags)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkFlags flags)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1397,7 +1397,7 @@ LOADER_EXPORT void VKAPI vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer
     disp->CmdCopyQueryPoolResults(commandBuffer, queryPool, startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
-LOADER_EXPORT void VKAPI vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* values)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1406,7 +1406,7 @@ LOADER_EXPORT void VKAPI vkCmdPushConstants(VkCommandBuffer commandBuffer, VkPip
     disp->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, values);
 }
 
-LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1415,7 +1415,7 @@ LOADER_EXPORT void VKAPI vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, con
     disp->CmdBeginRenderPass(commandBuffer, pRenderPassBegin, contents);
 }
 
-LOADER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpassContents contents)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1424,7 +1424,7 @@ LOADER_EXPORT void VKAPI vkCmdNextSubpass(VkCommandBuffer commandBuffer, VkSubpa
     disp->CmdNextSubpass(commandBuffer, contents);
 }
 
-LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
 {
     const VkLayerDispatchTable *disp;
 
@@ -1433,7 +1433,7 @@ LOADER_EXPORT void VKAPI vkCmdEndRenderPass(VkCommandBuffer commandBuffer)
     disp->CmdEndRenderPass(commandBuffer);
 }
 
-LOADER_EXPORT void VKAPI vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers)
 {
     const VkLayerDispatchTable *disp;
 

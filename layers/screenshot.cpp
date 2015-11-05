@@ -335,7 +335,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
     VkPhysicalDevice          gpu,
     const VkDeviceCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -359,7 +359,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     VkInstance instance,
     uint32_t* pPhysicalDeviceCount,
     VkPhysicalDevice* pPhysicalDevices)
@@ -395,7 +395,7 @@ static const VkLayerProperties ss_device_layers[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
@@ -404,7 +404,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,
         VkLayerProperties*    pProperties)
 {
@@ -413,7 +413,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
         const char*                                 pLayerName,
         uint32_t*                                   pCount,
@@ -432,7 +432,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -442,7 +442,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice  device,
     uint32_t  queueNodeIndex,
     uint32_t  queueIndex,
@@ -470,7 +470,7 @@ VK_LAYER_EXPORT void VKAPI vkGetDeviceQueue(
     loader_platform_thread_unlock_mutex(&globalLock);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkDevice  device,
     const VkCommandPoolCreateInfo *pCreateInfo,
     const VkAllocationCallbacks* pAllocator,
@@ -497,7 +497,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateCommandPool(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
     VkSwapchainKHR                 *pSwapchain)
@@ -529,7 +529,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                device,
     VkSwapchainKHR          swapchain,
     uint32_t*               pCount,
@@ -580,7 +580,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
 {
     static int frameNumber = 0;
     if (frameNumber == 10) {fflush(stdout); /* *((int*)0)=0; */ }
@@ -672,7 +672,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR
     return result;
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
     VkDevice         dev,
     const char       *funcName)
 {
@@ -711,7 +711,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
 }
 
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     if (instance == VK_NULL_HANDLE) {
         return NULL;

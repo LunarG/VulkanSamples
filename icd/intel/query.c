@@ -216,7 +216,7 @@ VkResult intel_query_get_results(struct intel_query *query,
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
     VkDevice                                    device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -228,7 +228,7 @@ ICD_EXPORT VkResult VKAPI vkCreateQueryPool(
             (struct intel_query **) pQueryPool);
 }
 
-ICD_EXPORT void VKAPI vkDestroyQueryPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
     const VkAllocationCallbacks*                     pAllocator)
@@ -239,7 +239,7 @@ ICD_EXPORT void VKAPI vkDestroyQueryPool(
     obj->destroy(obj);
  }
 
-ICD_EXPORT VkResult VKAPI vkGetQueryPoolResults(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,

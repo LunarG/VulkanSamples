@@ -292,7 +292,7 @@ static inline VkBool32 log_msg(
                 pLayerPrefix, str);
 }
 
-static inline VkBool32 VKAPI log_callback(
+static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -313,7 +313,7 @@ static inline VkBool32 VKAPI log_callback(
     return false;
 }
 
-static inline VkBool32 VKAPI win32_debug_output_msg(
+static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,

@@ -469,7 +469,7 @@ void intel_cmd_pool_destroy(struct intel_cmd_pool *cmd_pool)
     //intel_base_destroy(&cmd->obj.base);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkDevice                                    device,
     const VkCommandPoolCreateInfo*                  pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -481,14 +481,14 @@ ICD_EXPORT VkResult VKAPI vkCreateCommandPool(
             (struct intel_cmd_pool **) pCommandPool);
 }
 
-ICD_EXPORT void VKAPI vkDestroyCommandPool(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
     VkDevice                                    device,
     VkCommandPool                                   commandPool,
     const VkAllocationCallbacks*                     pAllocator)
 {
 }
 
-ICD_EXPORT VkResult VKAPI vkResetCommandPool(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkDevice                                    device,
     VkCommandPool                                   commandPool,
     VkCommandPoolResetFlags                         flags)
@@ -509,7 +509,7 @@ void intel_free_cmd_buffers(
     }
 }
 
-ICD_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkDevice                            device,
     const VkCommandBufferAllocateInfo*         pAllocateInfo,
     VkCommandBuffer*                        pCommandBuffers)
@@ -534,7 +534,7 @@ ICD_EXPORT VkResult VKAPI vkAllocateCommandBuffers(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT void VKAPI vkFreeCommandBuffers(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
     VkDevice                            device,
     VkCommandPool                           commandPool,
     uint32_t                            commandBufferCount,
@@ -543,7 +543,7 @@ ICD_EXPORT void VKAPI vkFreeCommandBuffers(
     intel_free_cmd_buffers(intel_cmd_pool(commandPool), commandBufferCount, pCommandBuffers);
 }
 
-ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkCommandBuffer                              commandBuffer,
     const VkCommandBufferBeginInfo            *info)
 {
@@ -552,7 +552,7 @@ ICD_EXPORT VkResult VKAPI vkBeginCommandBuffer(
     return intel_cmd_begin(cmd, info);
 }
 
-ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(
     VkCommandBuffer                              commandBuffer)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
@@ -560,7 +560,7 @@ ICD_EXPORT VkResult VKAPI vkEndCommandBuffer(
     return intel_cmd_end(cmd);
 }
 
-ICD_EXPORT VkResult VKAPI vkResetCommandBuffer(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkCommandBuffer                              commandBuffer,
     VkCommandBufferResetFlags                    flags)
 {

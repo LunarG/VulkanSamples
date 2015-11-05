@@ -217,7 +217,7 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
     return type;
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateInstance(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
     VkInstance*                             pInstance)
@@ -226,7 +226,7 @@ ICD_EXPORT VkResult VKAPI vkCreateInstance(
             (struct intel_instance **) pInstance);
 }
 
-ICD_EXPORT void VKAPI vkDestroyInstance(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     VkInstance                                pInstance,
     const VkAllocationCallbacks*                     pAllocator)
 {
@@ -235,7 +235,7 @@ ICD_EXPORT void VKAPI vkDestroyInstance(
     intel_instance_destroy(instance);
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char*                                 pLayerName,
         uint32_t*                                   pPropertyCount,
         VkExtensionProperties*                      pProperties)
@@ -257,7 +257,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t*                                   pPropertyCount,
         VkLayerProperties*                          pProperties)
 {
@@ -265,7 +265,7 @@ ICD_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     VkInstance                  instance_,
     uint32_t*                   pPhysicalDeviceCount,
     VkPhysicalDevice*           pPhysicalDevices)
@@ -318,7 +318,7 @@ ICD_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                    msgFlags,
     PFN_vkDbgMsgCallback                pfnMsgCallback,
@@ -330,7 +330,7 @@ ICD_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(
     return icd_instance_create_logger(inst->icd, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
 }
 
-ICD_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback)
 {

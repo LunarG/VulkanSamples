@@ -60,29 +60,29 @@ extern "C"
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef void (VKAPI *PFN_vkCmdDbgMarkerBegin)(VkCommandBuffer commandBuffer, const char* pMarker);
-typedef void (VKAPI *PFN_vkCmdDbgMarkerEnd)(VkCommandBuffer commandBuffer);
-typedef VkResult (VKAPI *PFN_vkDbgSetObjectTag)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t tagSize, const void* pTag);
-typedef VkResult (VKAPI *PFN_vkDbgSetObjectName)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t nameSize, const char* pName);
+typedef void (VKAPI_PTR *PFN_vkCmdDbgMarkerBegin)(VkCommandBuffer commandBuffer, const char* pMarker);
+typedef void (VKAPI_PTR *PFN_vkCmdDbgMarkerEnd)(VkCommandBuffer commandBuffer);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectTag)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t tagSize, const void* pTag);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectName)(VkDevice device, VkDbgObjectType objType, uint64_t object, size_t nameSize, const char* pName);
 
 #ifdef VK_PROTOTYPES
 
 // DebugMarker extension entrypoints
-void VKAPI vkCmdDbgMarkerBegin(
+VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerBegin(
     VkCommandBuffer                         commandBuffer,
     const char*                         pMarker);
 
-void VKAPI vkCmdDbgMarkerEnd(
+VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerEnd(
     VkCommandBuffer                         commandBuffer);
 
-VkResult VKAPI vkDbgSetObjectTag(
+VKAPI_ATTR VkResult VKAPI_CALL vkDbgSetObjectTag(
     VkDevice                            device,
     VkDbgObjectType                     objType,
     uint64_t                            object,
     size_t                              tagSize,
     const void*                         pTag);
 
-VkResult VKAPI vkDbgSetObjectName(
+VKAPI_ATTR VkResult VKAPI_CALL vkDbgSetObjectName(
     VkDevice                            device,
     VkDbgObjectType                     objType,
     uint64_t                            object,

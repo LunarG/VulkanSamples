@@ -176,7 +176,7 @@ class Subcommand(object):
     def _gen_create_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
@@ -200,7 +200,7 @@ class Subcommand(object):
     def _gen_destroy_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
@@ -223,7 +223,7 @@ class Subcommand(object):
         ggep_body.append('%s' % self.lineinfo.get())
 
         ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
+        ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
         ggep_body.append('{')
         ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
         ggep_body.append('}')
@@ -247,7 +247,7 @@ class Subcommand(object):
         ggep_body.append('')
         ggep_body.append('%s' % self.lineinfo.get())
         ggep_body.append('')
-        ggep_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
+        ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)')
         ggep_body.append('{')
         ggep_body.append('    return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);')
         ggep_body.append('}')
@@ -268,7 +268,7 @@ class Subcommand(object):
             gpdlp_body.append('        "layer: %s",' % layer)
             gpdlp_body.append('    }')
             gpdlp_body.append('};')
-        gpdlp_body.append('VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
+        gpdlp_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(VkPhysicalDevice physicalDevice, uint32_t *pCount, VkLayerProperties* pProperties)')
         gpdlp_body.append('{')
         gpdlp_body.append('    return util_GetLayerProperties(ARRAY_SIZE(deviceLayerProps), deviceLayerProps, pCount, pProperties);')
         gpdlp_body.append('}')
@@ -364,7 +364,7 @@ class Subcommand(object):
 # New style of GPA Functions for the new layer_data/layer_logging changes
 #
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
-            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
@@ -395,7 +395,7 @@ class Subcommand(object):
                              "        return NULL;\n"
                              "    return get_dispatch_table(%s_device_table_map, device)->GetDeviceProcAddr(device, funcName);\n"
                              "}\n" % (self.layer_name, self.layer_name))
-            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"
@@ -443,7 +443,7 @@ class Subcommand(object):
             return "\n".join(func_body)
         else:
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (device == VK_NULL_HANDLE) {\n"
@@ -492,7 +492,7 @@ class Subcommand(object):
                              "    }\n"
                              "}\n")
             func_body.append('%s' % self.lineinfo.get())
-            func_body.append("VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
+            func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
                              "    if (instance == VK_NULL_HANDLE) {\n"

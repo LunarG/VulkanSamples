@@ -41,7 +41,7 @@ static device_table_map multi1_device_table_map;
 /******************************** Layer multi1 functions **************************/
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL multi1DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
     dispatch_key key = get_dispatch_key(device);
@@ -52,7 +52,7 @@ VK_LAYER_EXPORT void VKAPI multi1DestroyDevice(VkDevice device, const VkAllocati
     printf("Completed multi1 layer vkDestroyDevice()\n");
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL multi1CreateSampler(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSampler* pSampler)
 {
     VkLayerDispatchTable *pDisp = get_dispatch_table(multi1_device_table_map, device);
 
@@ -62,7 +62,7 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateSampler(VkDevice device, const VkSamp
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipelines(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL multi1CreateGraphicsPipelines(
                                 VkDevice device,
                                 VkPipelineCache pipelineCache,
                                 uint32_t count,
@@ -78,7 +78,7 @@ VK_LAYER_EXPORT VkResult VKAPI multi1CreateGraphicsPipelines(
     return result;
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi1GetDeviceProcAddr(VkDevice device, const char* pName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL multi1GetDeviceProcAddr(VkDevice device, const char* pName)
 {
 
     if (device == NULL)
@@ -107,7 +107,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi1GetDeviceProcAddr(VkDevice device
 
 static instance_table_map multi2_instance_table_map;
 /******************************** Layer multi2 functions **************************/
-VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL multi2EnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
@@ -120,7 +120,7 @@ VK_LAYER_EXPORT VkResult VKAPI multi2EnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceProperties(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL multi2GetPhysicalDeviceProperties(
                                         VkPhysicalDevice physicalDevice,
                                         VkPhysicalDeviceProperties* pProperties)
 {
@@ -130,7 +130,7 @@ VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceProperties(
     printf("Completed multi2 layer vkGetPhysicalDeviceProperties()\n");
 }
 
-VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceFeatures(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL multi2GetPhysicalDeviceFeatures(
                                         VkPhysicalDevice physicalDevice,
                                         VkPhysicalDeviceFeatures* pFeatures)
 {
@@ -141,7 +141,7 @@ VK_LAYER_EXPORT void VKAPI multi2GetPhysicalDeviceFeatures(
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL multi2DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(multi2_instance_table_map, instance);
     dispatch_key key = get_dispatch_key(instance);
@@ -152,7 +152,7 @@ VK_LAYER_EXPORT void VKAPI multi2DestroyInstance(VkInstance instance, const VkAl
     printf("Completed multi2 layer vkDestroyInstance()\n");
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL multi2GetInstanceProcAddr(VkInstance inst, const char* pName)
 {
     if (inst == NULL)
         return NULL;

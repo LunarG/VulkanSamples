@@ -131,14 +131,14 @@ typedef struct {
 // ------------------------------------------------------------------------------------------------
 // Function types
 
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceSurfaceSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkBool32* pSupported);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkBool32* pSupported);
 
 // ------------------------------------------------------------------------------------------------
 // Function prototypes
 
 #ifdef VK_PROTOTYPES
 
-VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
     const VkSurfaceDescriptionKHR*          pSurfaceDescription,

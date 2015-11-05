@@ -239,7 +239,7 @@ TEST_F(VkTest, Query) {
     query_info.queryType = VK_QUERY_TYPE_OCCLUSION;
     query_info.entryCount = MAX_QUERY_SLOTS;
 
-    //        VkResult VKAPI vkCreateQueryPool(
+    //        VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
     //            VkDevice                                  device,
     //            const VkQueryPoolCreateInfo*           pCreateInfo,
     //            VkQueryPool*                             pQueryPool);
@@ -354,7 +354,7 @@ void VkTest::CreateImageTest()
     imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                             VK_IMAGE_USAGE_SAMPLED_BIT;
 
-//    VkResult VKAPI vkCreateImage(
+//    VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
 //        VkDevice                                  device,
 //        const VkImageCreateInfo*                pCreateInfo,
 //        VkImage*                                  pImage);
@@ -362,7 +362,7 @@ void VkTest::CreateImageTest()
     ASSERT_VK_SUCCESS(err);
 
     // Verify image resources
-//    void VKAPI vkGetImageSubresourceLayout(
+//    VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
 //        VkImage                                   image,
 //        const VkImageSubresource*                pSubresource,
 //        VkSubresourceLayout*                     pLayout);
@@ -410,7 +410,7 @@ void VkTest::CreateImageTest()
 
     if (mem_req.size) {
 
-        //        VkResult VKAPI vkAllocateMemory(
+        //        VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
         //            VkDevice                                  device,
         //            const VkMemoryAllocateInfo*                pAllocateInfo,
         //            VkDeviceMemory*                             pMemory);
@@ -460,7 +460,7 @@ void VkTest::CreateImageTest()
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-//    VkResult VKAPI vkCreateImageView(
+//    VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
 //        VkDevice                                  device,
 //        const VkImageViewCreateInfo*           pCreateInfo,
 //        VkImageView*                             pView);

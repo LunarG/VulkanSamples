@@ -1682,7 +1682,7 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
     return 1;
 }
 
-void* VKAPI myalloc(
+VKAPI_ATTR void* VKAPI_CALL myalloc(
     void*                           pUserData,
     size_t                          size,
     size_t                          alignment,
@@ -1690,7 +1690,7 @@ void* VKAPI myalloc(
 {
     return malloc(size);
 }
-void VKAPI myfree(
+VKAPI_ATTR void VKAPI_CALL myfree(
     void*                           pUserData,
     void*                           pMemory)
 {

@@ -140,7 +140,7 @@ void intel_img_destroy(struct intel_img *img)
     intel_base_destroy(&img->obj.base);
 }
 
-ICD_EXPORT VkResult VKAPI vkCreateImage(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
     VkDevice                                  device,
     const VkImageCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                     pAllocator,
@@ -152,7 +152,7 @@ ICD_EXPORT VkResult VKAPI vkCreateImage(
             (struct intel_img **) pImage);
 }
 
-ICD_EXPORT void VKAPI vkDestroyImage(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     VkDevice                                device,
     VkImage                                 image,
     const VkAllocationCallbacks*                     pAllocator)
@@ -163,7 +163,7 @@ ICD_EXPORT void VKAPI vkDestroyImage(
     obj->destroy(obj);
  }
 
-ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
@@ -184,7 +184,7 @@ ICD_EXPORT void VKAPI vkGetImageSubresourceLayout(
                                                        pSubresource->mipLevel);
 }
 
-void VKAPI vkGetImageSparseMemoryRequirements(
+VKAPI_ATTR void VKAPI_CALL vkGetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pSparseMemoryRequirementCount,

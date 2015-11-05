@@ -37,7 +37,7 @@
 #include "debug_report.h"
 #include "vulkan/vk_layer.h"
 
-typedef void (VKAPI *PFN_stringCallback)(char *message);
+typedef void (VKAPI_PTR *PFN_stringCallback)(char *message);
 
 static const VkExtensionProperties debug_report_extension_info = {
         .extensionName = VK_DEBUG_REPORT_EXTENSION_NAME,
@@ -126,7 +126,7 @@ static VkResult VKAPI debug_report_DbgDestroyMsgCallback(
  * for DbgCreateMsgCallback
  */
 
-VkResult VKAPI loader_DbgCreateMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
         VkInstance                          instance,
         VkFlags                             msgFlags,
         const PFN_vkDbgMsgCallback          pfnMsgCallback,
@@ -192,7 +192,7 @@ VkResult VKAPI loader_DbgCreateMsgCallback(
  * This is the instance chain terminator function
  * for DbgDestroyMsgCallback
  */
-VkResult VKAPI loader_DbgDestroyMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msgCallback)
 {
@@ -251,7 +251,7 @@ static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
 }
 
 // DebugReport utility callback functions
-static void VKAPI StringCallback(
+static VKAPI_ATTR void VKAPI_CALL StringCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -283,7 +283,7 @@ static void VKAPI StringCallback(
     callback(buf);
 }
 
-static void VKAPI StdioCallback(
+static VKAPI_ATTR void VKAPI_CALL StdioCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -301,7 +301,7 @@ static void VKAPI StdioCallback(
              pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
 }
 
-static void VKAPI BreakCallback(
+static VKAPI_ATTR void VKAPI_CALL BreakCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,

@@ -42,7 +42,7 @@ static const VkLayerProperties globalLayerProps[] = {
 };
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkLayerExtension1(VkDevice device)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkLayerExtension1(VkDevice device)
 {
     printf("In vkLayerExtension1() call w/ device: %p\n", (void*)device);
     printf("vkLayerExtension1 returning SUCCESS\n");
@@ -59,7 +59,7 @@ static const VkLayerProperties basic_physicaldevice_layers[] = {
 };
 
 /* Must use Vulkan name so that loader finds it */
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceLayerProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
         uint32_t*                                   pCount,
         VkLayerProperties*                          pProperties)
@@ -76,7 +76,7 @@ static const VkExtensionProperties basic_physicaldevice_extensions[] = {
     }
 };
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice        physicalDevice,
         const char             *pLayerName,
         uint32_t               *pCount,
@@ -95,7 +95,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumerateDeviceExtensionProperties(
     }
 }
 
-VK_LAYER_EXPORT VkResult VKAPI basic_EnumeratePhysicalDevices(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_EnumeratePhysicalDevices(
                                             VkInstance instance,
                                             uint32_t* pPhysicalDeviceCount,
                                             VkPhysicalDevice* pPhysicalDevices)
@@ -106,7 +106,7 @@ VK_LAYER_EXPORT VkResult VKAPI basic_EnumeratePhysicalDevices(
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL basic_CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     printf("At start of wrapped vkCreateDevice() call w/ gpu: %p\n", (void*)gpu);
     VkResult result = device_dispatch_table(*pDevice)->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
@@ -115,7 +115,7 @@ VK_LAYER_EXPORT VkResult VKAPI basic_CreateDevice(VkPhysicalDevice gpu, const Vk
 }
 
 /* hook DestroyDevice to remove tableMap entry */
-VK_LAYER_EXPORT void VKAPI basic_DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL basic_DestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     device_dispatch_table(device)->DestroyDevice(device, pAllocator);
@@ -123,21 +123,21 @@ VK_LAYER_EXPORT void VKAPI basic_DestroyDevice(VkDevice device, const VkAllocati
 }
 
 /* hook DestroyInstance to remove tableInstanceMap entry */
-VK_LAYER_EXPORT void VKAPI basic_DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL basic_DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     dispatch_key key = get_dispatch_key(instance);
     instance_dispatch_table(instance)->DestroyInstance(instance, pAllocator);
     destroy_instance_dispatch_table(key);
 }
 
-VK_LAYER_EXPORT void VKAPI basic_GetPhysicalDeviceFormatProperties(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL basic_GetPhysicalDeviceFormatProperties(VkPhysicalDevice gpu, VkFormat format, VkFormatProperties *pFormatInfo)
 {
     printf("At start of wrapped vkGetPhysicalDeviceFormatProperties() call w/ gpu: %p\n", (void*)gpu);
     instance_dispatch_table(gpu)->GetPhysicalDeviceFormatProperties(gpu, format, pFormatInfo);
     printf("Completed wrapped vkGetPhysicalDeviceFormatProperties() call w/ gpu: %p\n", (void*)gpu);
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* pName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* pName)
 {
     if (device == NULL)
         return NULL;
@@ -162,7 +162,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* pName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* pName)
 {
     if (instance == NULL)
         return NULL;
@@ -189,12 +189,12 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instan
     return instance_dispatch_table(instance)->GetInstanceProcAddr(instance, pName);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)
 {
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(uint32_t *pCount,  VkLayerProperties* pProperties)
 {
     return util_GetLayerProperties(ARRAY_SIZE(globalLayerProps), globalLayerProps, pCount, pProperties);
 }

@@ -102,13 +102,13 @@ bool debug_report_instance_gpa(
         const char* name,
         void **addr);
 
-VkResult VKAPI loader_DbgCreateMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
     void*                               pUserData,
     VkDbgMsgCallback*                   pMsgCallback);
 
-VkResult VKAPI loader_DbgDestroyMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback);

@@ -30,7 +30,7 @@
 #include <string.h>
 #include "icd-instance.h"
 
-static void * VKAPI default_alloc(void *user_data, size_t size,
+static VKAPI_ATTR void * VKAPI_CALL default_alloc(void *user_data, size_t size,
                                    size_t alignment,
                                    VkSystemAllocationScope allocationScope)
 {
@@ -55,7 +55,7 @@ static void * VKAPI default_alloc(void *user_data, size_t size,
     }
 }
 
-static void VKAPI default_free(void *user_data, void *ptr)
+static VKAPI_ATTR void VKAPI_CALL default_free(void *user_data, void *ptr)
 {
 #if defined(_WIN32)
     _aligned_free(ptr);

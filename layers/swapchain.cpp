@@ -196,7 +196,7 @@ static const char *presentModeStr(VkPresentModeKHR value)
 }
 
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     // Call down the call chain:
@@ -217,7 +217,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateInstance(const VkInstanceCreateInfo* pCre
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(instance);
@@ -259,7 +259,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyInstance(VkInstance instance, const VkAlloca
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -298,7 +298,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkEnumeratePhysicalDevices(VkInstance instance, u
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -327,7 +327,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     return result;
 }
 
-VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(device);
@@ -377,7 +377,7 @@ VK_LAYER_EXPORT void VKAPI vkDestroyDevice(VkDevice device, const VkAllocationCa
     layer_data_map.erase(key);
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkBool32* pSupported)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkBool32* pSupported)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -419,7 +419,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetPhysicalDeviceSurfaceSupportKHR(VkPhysicalDe
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePropertiesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfacePropertiesKHR* pSurfaceProperties)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfacePropertiesKHR* pSurfaceProperties)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -454,7 +454,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePropertiesKHR(VkDevice device, const 
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSurfaceFormatsKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -498,7 +498,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSurfaceFormatsKHR(VkDevice device, const VkS
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSurfacePresentModesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -788,7 +788,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     return skipCall;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, VkSwapchainKHR* pSwapchain)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, VkSwapchainKHR* pSwapchain)
 {
     VkResult result = VK_SUCCESS;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -816,7 +816,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateSwapchainKHR(VkDevice device, const VkSwa
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(VkDevice device, VkSwapchainKHR swapchain)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -867,7 +867,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDestroySwapchainKHR(VkDevice device, VkSwapchai
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pCount, VkImage* pSwapchainImages)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pCount, VkImage* pSwapchainImages)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -919,7 +919,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkGetSwapchainImagesKHR(VkDevice device, VkSwapch
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, uint32_t* pImageIndex)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, uint32_t* pImageIndex)
 {
 // TODO: Record/update the state of the swapchain, in case an error occurs
 // (e.g. VK_ERROR_OUT_OF_DATE_KHR).
@@ -990,7 +990,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkAcquireNextImageKHR(VkDevice device, VkSwapchai
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
 {
 // TODOs:
 //
@@ -1101,7 +1101,7 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
     return NULL;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult result = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
@@ -1111,7 +1111,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgCreateMsgCallback(VkInstance instance, VkFla
     return result;
 }
 
-VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult result = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);
@@ -1119,7 +1119,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkDbgDestroyMsgCallback(VkInstance instance, VkDb
     return result;
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     PFN_vkVoidFunction addr;
     if (device == VK_NULL_HANDLE) {
@@ -1169,7 +1169,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
     }
 }
 
-VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
+VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance instance, const char* funcName)
 {
     PFN_vkVoidFunction addr;
     if (instance == VK_NULL_HANDLE) {

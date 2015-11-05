@@ -125,25 +125,25 @@ typedef VkBool32 (*PFN_vkDbgMsgCallback)(
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef VkResult (VKAPI *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback);
-typedef VkResult (VKAPI *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
 
 #ifdef VK_PROTOTYPES
 
 // DebugReport extension entrypoints
-VkResult VKAPI vkDbgCreateMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkInstance                          instance,
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
     void*                               pUserData,
     VkDbgMsgCallback*                   pMsgCallback);
 
-VkResult VKAPI vkDbgDestroyMsgCallback(
+VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback);
 
 // DebugReport utility callback functions
-void VKAPI vkDbgStringCallback(
+VKAPI_ATTR void VKAPI_CALL vkDbgStringCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -153,7 +153,7 @@ void VKAPI vkDbgStringCallback(
     const char*                         pMsg,
     void*                               pUserData);
 
-void VKAPI vkDbgStdioCallback(
+VKAPI_ATTR void VKAPI_CALL vkDbgStdioCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,
@@ -163,7 +163,7 @@ void VKAPI vkDbgStdioCallback(
     const char*                         pMsg,
     void*                               pUserData);
 
-void VKAPI vkDbgBreakCallback(
+VKAPI_ATTR void VKAPI_CALL vkDbgBreakCallback(
     VkFlags                             msgFlags,
     VkDbgObjectType                     objType,
     uint64_t                            srcObject,

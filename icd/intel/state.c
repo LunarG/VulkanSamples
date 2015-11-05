@@ -149,7 +149,7 @@ void intel_set_stencil_reference(
     }
 }
 
-ICD_EXPORT void VKAPI vkCmdSetViewport(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
@@ -163,7 +163,7 @@ ICD_EXPORT void VKAPI vkCmdSetViewport(
     intel_set_viewport(cmd, viewportCount, pViewports);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetScissor(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
@@ -177,7 +177,7 @@ ICD_EXPORT void VKAPI vkCmdSetScissor(
     intel_set_scissor(cmd, scissorCount, pScissors);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetLineWidth(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(
     VkCommandBuffer                              commandBuffer,
     float                                    line_width)
 {
@@ -190,7 +190,7 @@ ICD_EXPORT void VKAPI vkCmdSetLineWidth(
     cmd->bind.state.line_width.line_width = line_width;
 }
 
-ICD_EXPORT void VKAPI vkCmdSetDepthBias(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(
     VkCommandBuffer                         commandBuffer,
     float                               depthBiasConstantFactor,
     float                               depthBiasClamp,
@@ -205,7 +205,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBias(
     intel_set_depth_bias(cmd, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(
     VkCommandBuffer                         commandBuffer,
     const float                         blendConstants[4])
 {
@@ -218,7 +218,7 @@ ICD_EXPORT void VKAPI vkCmdSetBlendConstants(
     intel_set_blend_constants(cmd, blendConstants);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
     VkCommandBuffer                         commandBuffer,
     float                               minDepthBounds,
     float                               maxDepthBounds)
@@ -232,7 +232,7 @@ ICD_EXPORT void VKAPI vkCmdSetDepthBounds(
     intel_set_depth_bounds(cmd, minDepthBounds, maxDepthBounds);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            compareMask)
@@ -246,7 +246,7 @@ ICD_EXPORT void VKAPI vkCmdSetStencilCompareMask(
     intel_set_stencil_compare_mask(cmd, faceMask, compareMask);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            writeMask)
@@ -260,7 +260,7 @@ ICD_EXPORT void VKAPI vkCmdSetStencilWriteMask(
     intel_set_stencil_write_mask(cmd, faceMask, writeMask);
 }
 
-ICD_EXPORT void VKAPI vkCmdSetStencilReference(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(
     VkCommandBuffer                         commandBuffer,
     VkStencilFaceFlags                  faceMask,
     uint32_t                            reference)
