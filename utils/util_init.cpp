@@ -1048,12 +1048,12 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     descriptor_layout.bindingCount = use_texture?2:1;
     descriptor_layout.pBinding = layout_bindings;
 
-    VkResult U_ASSERT_ONLY err;
+    VkResult U_ASSERT_ONLY res;
 
     info.desc_layout.resize(NUM_DESCRIPTOR_SETS);
-    err = vkCreateDescriptorSetLayout(info.device,
+    res = vkCreateDescriptorSetLayout(info.device,
             &descriptor_layout, NULL, info.desc_layout.data());
-    assert(!err);
+    assert(res == VK_SUCCESS);
 
     /* Now use the descriptor layout to create a pipeline layout */
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
@@ -1064,10 +1064,10 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     pPipelineLayoutCreateInfo.setLayoutCount         = NUM_DESCRIPTOR_SETS;
     pPipelineLayoutCreateInfo.pSetLayouts            = info.desc_layout.data();
 
-    err = vkCreatePipelineLayout(info.device,
+    res = vkCreatePipelineLayout(info.device,
                                  &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
-    assert(!err);
+    assert(res == VK_SUCCESS);
 }
 
 void init_renderpass(struct sample_info &info, bool include_depth)
