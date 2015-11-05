@@ -221,7 +221,7 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
 {
     LONG rtn_value;
     HKEY hive, key;
-    DWORD access_flags = KEY_QUERY_VALUE;
+    DWORD access_flags;
     char name[2048];
     char *out = NULL;
     char *loc = location;
@@ -236,6 +236,7 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
     {
         next = loader_get_next_path(loc);
         hive = DEFAULT_VK_REGISTRY_HIVE;
+        access_flags = KEY_QUERY_VALUE;
         rtn_value = RegOpenKeyEx(hive, loc, 0, access_flags, &key);
         if (rtn_value != ERROR_SUCCESS) {
             // We didn't find the key.  Try the 32-bit hive (where we've seen the
