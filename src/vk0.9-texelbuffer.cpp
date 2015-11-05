@@ -43,7 +43,7 @@ static const char *vertShaderText =
     "#version 140\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform samplerBuffer texels;\n"
+    "layout (binding = 0) uniform samplerBuffer texels;\n"
     "layout (location = 0) out vec4 outColor;\n"
     "vec2 vertices[3];\n"
     "float r;\n"
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].dstSet = info.desc_set[0];
-    writes[0].dstBinding = 1;
+    writes[0].dstBinding = 0;
     writes[0].descriptorCount = 1;
     writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
     writes[0].pBufferInfo = &texel_buffer_info;
@@ -331,6 +331,9 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroyBufferView(info.device, texel_view, NULL);
+    vkDestroyBuffer(info.device, texelBuf, NULL);
+    vkFreeMemory(info.device, texelMem, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_descriptor_pool(info);
