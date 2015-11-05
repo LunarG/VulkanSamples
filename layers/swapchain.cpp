@@ -308,8 +308,7 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice) {
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
+                                            physicalDevice, "VkPhysicalDevice");
     }
 
     if (VK_TRUE == skipCall)
@@ -321,9 +320,10 @@ VK_LAYER_EXPORT VkResult VKAPI vkCreateDevice(VkPhysicalDevice physicalDevice, c
             physicalDevice, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         // Since it succeeded, do layer-specific work:
-        my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);
-        createDeviceRegisterExtensions(physicalDevice, pCreateInfo,
-                                       *pDevice);
+        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+        createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
+
     }
     return result;
 }
@@ -1163,7 +1163,7 @@ VK_LAYER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, co
     my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp =  my_data->device_dispatch_table;
     if (my_data->deviceMap.size() != 0 &&
-        my_data->deviceMap[pDisp].deviceSwapchainExtensionEnabled)
+        my_data->deviceMap[device].deviceSwapchainExtensionEnabled)
     {
         if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
             return reinterpret_cast<PFN_vkVoidFunction>(vkGetSurfacePropertiesKHR);
