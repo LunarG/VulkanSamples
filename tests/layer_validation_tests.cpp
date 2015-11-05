@@ -1707,7 +1707,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'Invalid VkBufferView Object 0xbaadbeef'";
+        FAIL() << "Did not receive Error 'Attempt to update descriptor with invalid bufferView'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
