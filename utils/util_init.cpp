@@ -1915,9 +1915,8 @@ void init_texture(struct sample_info &info, const char* textureName)
     info.textures.push_back(texObj);
 
     /* track a description of the texture */
-    assert(info.textures.size() == 1);
-    info.texture_data.image_info.imageView = info.textures[0].view;
-    info.texture_data.image_info.sampler = info.textures[0].sampler;
+    info.texture_data.image_info.imageView = info.textures.back().view;
+    info.texture_data.image_info.sampler = info.textures.back().sampler;
     info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
@@ -2088,10 +2087,13 @@ void destroy_instance(struct sample_info &info)
     vkDestroyInstance(info.inst, NULL);
 }
 
-void destroy_texture(struct sample_info &info)
+void destroy_textures(struct sample_info &info)
 {
-    vkDestroySampler(info.device, info.textures[0].sampler, NULL);
-    vkDestroyImageView(info.device, info.textures[0].view, NULL);
-    vkDestroyImage(info.device, info.textures[0].image, NULL);
-    vkFreeMemory(info.device, info.textures[0].mem, NULL);
+    for(size_t i=0; i < info.textures.size(); i++)
+    {
+        vkDestroySampler(info.device, info.textures[i].sampler, NULL);
+        vkDestroyImageView(info.device, info.textures[i].view, NULL);
+        vkDestroyImage(info.device, info.textures[i].image, NULL);
+        vkFreeMemory(info.device, info.textures[i].mem, NULL);
+    }
 }
