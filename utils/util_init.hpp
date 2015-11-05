@@ -90,7 +90,7 @@ void destroy_pipeline(struct sample_info &info);
 void destroy_pipeline_cache(struct sample_info &info);
 void destroy_descriptor_pool(struct sample_info &info);
 void destroy_vertex_buffer(struct sample_info &info);
-void destroy_texture(struct sample_info &info);
+void destroy_textures(struct sample_info &info);
 void destroy_framebuffers(struct sample_info &info);
 void destroy_shaders(struct sample_info &info);
 void destroy_renderpass(struct sample_info &info);

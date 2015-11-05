@@ -343,7 +343,7 @@ int main(int argc, char **argv)
     vkDestroyFence(info.device, drawFence, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
-    destroy_texture(info);
+    destroy_textures(info);
 
     // instead of destroy_descriptor_pool(info);
     vkDestroyDescriptorPool(info.device, descriptor_pool[0], NULL);
