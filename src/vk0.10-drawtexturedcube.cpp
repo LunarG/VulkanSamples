@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
-    destroy_texture(info);
+    destroy_textures(info);
     destroy_descriptor_pool(info);
     destroy_vertex_buffer(info);
     destroy_framebuffers(info);
