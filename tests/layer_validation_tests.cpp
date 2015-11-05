@@ -1849,6 +1849,162 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
+/*  WIP for Tobin's follow-on descriptor set validation efforts
+TEST_F(VkLayerTest, DescriptorSetCompatibility)
+{
+    // Test various desriptorSet errors with bad binding combinations
+    VkResult        err;
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+        "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0. ");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitViewport());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    static const uint32_t NUM_DESCRIPTOR_TYPES = 5;
+    VkDescriptorPoolSize ds_type_count[NUM_DESCRIPTOR_TYPES] = {};
+        ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        ds_type_count[0].descriptorCount = 5;
+        ds_type_count[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        ds_type_count[1].descriptorCount = 2;
+        ds_type_count[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        ds_type_count[2].descriptorCount = 2;
+        ds_type_count[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        ds_type_count[3].descriptorCount = 5;
+        // TODO : LunarG ILO driver currently asserts in desc.c w/ INPUT_ATTACHMENT type
+        //ds_type_count[4].type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        ds_type_count[4].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        ds_type_count[4].descriptorCount = 2;
+
+    VkDescriptorPoolCreateInfo ds_pool_ci = {};
+        ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        ds_pool_ci.pNext = NULL;
+        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.poolSizeCount = NUM_DESCRIPTOR_TYPES;
+        ds_pool_ci.pPoolSizes = ds_type_count;
+
+    VkDescriptorPool ds_pool;
+    err = vkCreateDescriptorPool(m_device->device(), &ds_pool_ci, NULL, &ds_pool);
+    ASSERT_VK_SUCCESS(err);
+
+    static const uint32_t MAX_DS_TYPES_IN_LAYOUT = 2;
+    VkDescriptorSetLayoutBinding dsl_binding[MAX_DS_TYPES_IN_LAYOUT] = {};
+        dsl_binding[0].binding = 0;
+        dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_binding[0].arraySize = 5;
+        dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
+        dsl_binding[0].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
+        ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        ds_layout_ci.pNext = NULL;
+        ds_layout_ci.bindingCount = 1;
+        ds_layout_ci.pBinding = dsl_binding;
+    static const uint32_t NUM_LAYOUTS = 4;
+    VkDescriptorSetLayout ds_layout[NUM_LAYOUTS] = {};
+    // Create 4 unique layouts
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[0]);
+    ASSERT_VK_SUCCESS(err);
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    dsl_binding[0].arraySize = 2;
+    dsl_binding[0].binding = 1;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    dsl_binding[0].arraySize = 2;
+    ds_layout_ci.bindingCount = 2;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[1]);
+    ASSERT_VK_SUCCESS(err);
+    dsl_binding[0].binding = 0;
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    dsl_binding[0].arraySize = 5;
+    ds_layout_ci.bindingCount = 1;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[2]);
+    ASSERT_VK_SUCCESS(err);
+    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+    dsl_binding[0].arraySize = 2;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[3]);
+    ASSERT_VK_SUCCESS(err);
+
+    static const uint32_t NUM_SETS = 4;
+    VkDescriptorSet descriptorSet[NUM_SETS] = {};
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.setLayoutCount = NUM_LAYOUTS;
+    alloc_info.descriptorPool = ds_pool;
+    alloc_info.pSetLayouts = ds_layout;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+
+    VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
+        pipeline_layout_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_ci.pNext = NULL;
+        pipeline_layout_ci.setLayoutCount = NUM_LAYOUTS;
+        pipeline_layout_ci.pSetLayouts = ds_layout;
+
+    VkPipelineLayout pipeline_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+
+    // Create a buffer to update the descriptor with
+    uint32_t qfi = 0;
+    VkBufferCreateInfo buffCI = {};
+        buffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffCI.size = 1024;
+        buffCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        buffCI.queueFamilyIndexCount = 1;
+        buffCI.pQueueFamilyIndices = &qfi;
+
+    VkBuffer dyub;
+    err = vkCreateBuffer(m_device->device(), &buffCI, NULL, &dyub);
+    ASSERT_VK_SUCCESS(err);
+    // Correctly update descriptor to avoid "NOT_UPDATED" error
+    static const uint32_t NUM_BUFFS = 5;
+    VkDescriptorBufferInfo buffInfo[NUM_BUFFS] = {};
+    for (uint32_t i=0; i<NUM_BUFFS; ++i) {
+        buffInfo[i].buffer = dyub;
+        buffInfo[i].offset = 0;
+        buffInfo[i].range = 1024;
+    }
+
+    VkWriteDescriptorSet descriptor_write;
+    memset(&descriptor_write, 0, sizeof(descriptor_write));
+    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write.dstSet = descriptorSet[0];
+    descriptor_write.dstBinding = 0;
+    descriptor_write.descriptorCount = 5;
+    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write.pBufferInfo = buffInfo;
+
+    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+
+    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
+                                                                                       // but add it to be able to run on more devices
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    BeginCommandBuffer();
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // NOTE : I believe LunarG ilo driver has bug (LX#189) that requires binding of PSO
+    //  here before binding DSs. Otherwise we assert in cmd_copy_dset_data() of cmd_pipeline.c
+    //  due to the fact that cmd_alloc_dset_data() has not been called in cmd_bind_graphics_pipeline()
+    // TODO : Want to cause various binding incompatibility issues here to test DrawState
+    //  First cause various verify_layout_compatibility() fails
+    //  Second disturb early and late sets and verify INFO msgs
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet[0], 0, NULL);
+
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+
+    vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
+    vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
+}
+*/
+
 TEST_F(VkLayerTest, NoBeginCommandBuffer)
 {
 

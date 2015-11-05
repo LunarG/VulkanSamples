@@ -41,6 +41,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_LAYOUT,                   // Invalid DS layout
     DRAWSTATE_INVALID_IMAGE_LAYOUT,             // Invalid Image layout
     DRAWSTATE_INVALID_PIPELINE,                 // Invalid Pipeline handle referenced
+    DRAWSTATE_INVALID_PIPELINE_LAYOUT,          // Invalid PipelineLayout
     DRAWSTATE_INVALID_PIPELINE_CREATE_STATE,    // Attempt to create a pipeline with invalid state
     DRAWSTATE_INVALID_COMMAND_BUFFER,           // Invalid CommandBuffer referenced
     DRAWSTATE_INVALID_BARRIER,                  // Invalid Barrier
@@ -68,7 +69,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DEPTH_BOUNDS_NOT_BOUND,           // Draw submitted with no depth bounds state bound when depth enabled
     DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state bound when stencil enabled
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state bound when depth write enabled
-    DRAWSTATE_PIPELINE_LAYOUT_MISMATCH,         // Draw submitted PSO Pipeline layout that doesn't match layout from BindDescriptorSets
+    DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE,    // Draw submitted PSO Pipeline layout that's not compatible with layout from BindDescriptorSets
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
@@ -115,7 +116,7 @@ typedef struct _PIPELINE_NODE {
     VkPipelineInputAssemblyStateCreateInfo  iaStateCI;
     VkPipelineTessellationStateCreateInfo   tessStateCI;
     VkPipelineViewportStateCreateInfo       vpStateCI;
-    VkPipelineRasterizationStateCreateInfo         rsStateCI;
+    VkPipelineRasterizationStateCreateInfo  rsStateCI;
     VkPipelineMultisampleStateCreateInfo    msStateCI;
     VkPipelineColorBlendStateCreateInfo     cbStateCI;
     VkPipelineDepthStencilStateCreateInfo   dsStateCI;
@@ -361,7 +362,7 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
     VkCommandBufferLevel         level;
-    vector<VkDescriptorSet>      boundDescriptorSets;
+    vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
 } GLOBAL_CB_NODE;
 

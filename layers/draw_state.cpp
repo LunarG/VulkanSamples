@@ -127,6 +127,7 @@ static uint32_t getTIDIndex() {
     assert(g_maxTID < MAX_TID);
     return retVal;
 }
+
 // Return a string representation of CMD_TYPE enum
 static string cmdTypeToString(CMD_TYPE cmd)
 {
@@ -251,6 +252,7 @@ static PIPELINE_NODE*  g_lastBoundPipeline = NULL;
 #define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 // prototype
 static GLOBAL_CB_NODE* getCBNode(layer_data*, const VkCommandBuffer);
+
 // Update global ptrs to reflect that specified commandBuffer has been used
 static void updateCBTracking(GLOBAL_CB_NODE* pCB)
 {
@@ -268,6 +270,7 @@ static void updateCBTracking(GLOBAL_CB_NODE* pCB)
     g_lastTouchedCBIndex = g_lastTouchedCBIndex % NUM_COMMAND_BUFFERS_TO_DISPLAY;
     loader_platform_thread_unlock_mutex(&globalLock);
 }
+
 static VkBool32 hasDrawCmd(GLOBAL_CB_NODE* pCB)
 {
     for (uint32_t i=0; i<NUM_DRAW_TYPES; i++) {
@@ -276,6 +279,7 @@ static VkBool32 hasDrawCmd(GLOBAL_CB_NODE* pCB)
     }
     return VK_FALSE;
 }
+
 // Check object status for selected flag state
 static VkBool32 validate_status(layer_data* my_data, GLOBAL_CB_NODE* pNode, CBStatusFlags enable_mask, CBStatusFlags status_mask, CBStatusFlags status_flag, VkFlags msg_flags, DRAW_STATE_ERROR error_code, const char* fail_msg)
 {
@@ -290,6 +294,7 @@ static VkBool32 validate_status(layer_data* my_data, GLOBAL_CB_NODE* pNode, CBSt
     }
     return VK_FALSE;
 }
+
 // Retrieve pipeline node ptr for given pipeline object
 static PIPELINE_NODE* getPipeline(layer_data* my_data, const VkPipeline pipeline)
 {
@@ -301,6 +306,7 @@ static PIPELINE_NODE* getPipeline(layer_data* my_data, const VkPipeline pipeline
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->pipelineMap[pipeline];
 }
+
 // Return VK_TRUE if for a given PSO, the given state enum is dynamic, else return VK_FALSE
 static VkBool32 isDynamic(const PIPELINE_NODE* pPipeline, const VkDynamicState state)
 {
@@ -312,6 +318,7 @@ static VkBool32 isDynamic(const PIPELINE_NODE* pPipeline, const VkDynamicState s
     }
     return VK_FALSE;
 }
+
 // Validate state stored as flags at time of draw call
 static VkBool32 validate_draw_state_flags(layer_data* my_data, GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     VkBool32 result;
@@ -328,6 +335,103 @@ static VkBool32 validate_draw_state_flags(layer_data* my_data, GLOBAL_CB_NODE* p
         result |= validate_status(my_data, pCB, CBSTATUS_NONE, CBSTATUS_INDEX_BUFFER_BOUND, CBSTATUS_INDEX_BUFFER_BOUND, VK_DBG_REPORT_ERROR_BIT, DRAWSTATE_INDEX_BUFFER_NOT_BOUND, "Index buffer object not bound to this command buffer when Indexed Draw attempted");
     return result;
 }
+
+// For give SET_NODE, verify that its Set is compatible w/ the setLayout corresponding to pipelineLayout[layoutIndex]
+static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE* pSet, const VkPipelineLayout layout, const uint32_t layoutIndex, string& errorMsg)
+{
+    if (my_data->pipelineLayoutMap.find(layout) == my_data->pipelineLayoutMap.end()) {
+        cout << errorMsg << "invalid VkPipelineLayout (" << layout << ")";
+        return false;
+    }
+    PIPELINE_LAYOUT_NODE pl = my_data->pipelineLayoutMap[layout];
+    if (layoutIndex >= pl.descriptorSetLayouts.size()) {
+        cout << errorMsg << "VkPipelineLayout (" << layout << ") only contains " << pl.descriptorSetLayouts.size() << " setLayouts corresponding to sets 0-" << pl.descriptorSetLayouts.size()-1 << ", but you're attempting to bind set to index " << layoutIndex;
+        return false;
+    }
+    // Get the specific setLayout from PipelineLayout that overlaps this set
+    LAYOUT_NODE* pLayoutNode = my_data->layoutMap[pl.descriptorSetLayouts[layoutIndex]];
+    if (pLayoutNode->layout == pSet->pLayout->layout) { // trivial pass case
+        return true;
+    }
+    uint32_t descriptorCount = pLayoutNode->descriptorTypes.size();
+    if (descriptorCount != pSet->pLayout->descriptorTypes.size()) {
+        cout << errorMsg << "setLayout " << layoutIndex << " from pipelineLayout " << layout << " has " << descriptorCount << " descriptors, but corresponding set being bound has " << pSet->pLayout->descriptorTypes.size() << " descriptors.";
+        return false; // trivial fail case
+    }
+    // Now need to check set against corresponding pipelineLayout to verify compatibility
+    for (uint32_t i=0; i<descriptorCount; ++i) {
+        // Need to verify that layouts are identically defined
+        //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
+        //    do we also need to check immutable samplers?
+        if (pLayoutNode->descriptorTypes[i] != pSet->pLayout->descriptorTypes[i]) {
+            cout << errorMsg << "descriptor " << i << " for descriptorSet being bound is type '" << string_VkDescriptorType(pSet->pLayout->descriptorTypes[i]) << "' but corresponding descriptor from pipelineLayout is type '" << string_VkDescriptorType(pLayoutNode->descriptorTypes[i]) << "'";
+            return false;
+        }
+        if (pLayoutNode->stageFlags[i] != pSet->pLayout->stageFlags[i]) {
+            cout << errorMsg << "stageFlags " << i << " for descriptorSet being bound is " << pSet->pLayout->stageFlags[i] << "' but corresponding descriptor from pipelineLayout has stageFlags " << pLayoutNode->stageFlags[i];
+            return false;
+        }
+    }
+    return true;
+}
+
+// Check if given pipeline layouts are compatible from set 0 up through descriptorSet numDescriptorSets-1
+//static VkBool32 validate_pipeline_layout_compatibility(layer_data* my_data, const VkPipelineLayout psoLayout, const VkPipelineLayout dsLayout, const uint32_t numDescriptorSets)
+//{
+//    VkBool32 skipCall = VK_FALSE;
+//    // Handle trivial case of same pipeline layouts, which are obviously compatible
+//    if (psoLayout == dsLayout)
+//        return skipCall;
+//    // Check for trivial fail cases
+//    if (my_data->pipelineLayoutMap.find(psoLayout) == my_data->pipelineLayoutMap.end()) {
+//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) psoLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
+//            "PSO bound invalid pipelineLayout object %#" PRIxLEAST64, (uint64_t) psoLayout);
+////        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, psoLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
+////            "Created Descriptor Pool %#" PRIxLEAST64, (uint64_t) psoLayout);
+//            //"PSO bound invalid pipelineLayout object %#" PRIxLEAST64, (uint64_t) psoLayout);
+//    }
+//    if (my_data->pipelineLayoutMap.find(dsLayout) == my_data->pipelineLayoutMap.end()) {
+//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) dsLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
+//            "Invalid pipelineLayout object (%#" PRIxLEAST64 ") bound at last vkCmdBindDescriptorSets() call.", (uint64_t) dsLayout);
+//    }
+//    if (skipCall) // If we hit fail case above, return early to avoid crash
+//        return skipCall;
+//    // Two pipeline layouts are defined to be "compatible for set N" if they were created with matching
+//    //  (the same, or identically defined) descriptor set layouts for sets zero through N.
+//    PIPELINE_LAYOUT_NODE psoPL = my_data->pipelineLayoutMap[psoLayout];
+//    PIPELINE_LAYOUT_NODE dsPL = my_data->pipelineLayoutMap[dsLayout];
+//    // If either pipelineLayout doesn't have enough layouts, they can't be compatible
+//    if (numDescriptorSets > psoPL.descriptorSetLayouts.size()) {
+//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) dsLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
+//            "Invalid pipelineLayout object (%#" PRIxLEAST64 ") bound at last vkCmdBindDescriptorSets() call.", (uint64_t) dsLayout);
+//    }
+//    if (numDescriptorSets > dsPL.descriptorSetLayouts.size()) {
+//        // Not enough layouts, can't be compatible
+//    }
+//    // Now check each matching layout to confirm compatibility
+//    LAYOUT_NODE *pPSOLayout, *pDSLayout;
+//    for (uint32_t i=0; i<numDescriptorSets; ++i) {
+//        pPSOLayout = my_data->layoutMap[psoPL.descriptorSetLayouts[i]];
+//        pDSLayout = my_data->layoutMap[dsPL.descriptorSetLayouts[i]];
+//        if (pPSOLayout == pDSLayout)
+//            continue;
+//        if (pPSOLayout->descriptorTypes.size() != pDSLayout->descriptorTypes.size()) {
+//            // ERROR : different sizes in layouts
+//        }
+//        // Need to verify that layouts are identically defined
+//        //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
+//        for (uint32_t j=0; j<pPSOLayout->descriptorTypes.size(); ++j) {
+//            if (pPSOLayout->descriptorTypes[j] != pDSLayout->descriptorTypes[j]) {
+//                // ERROR : Report type mismatch
+//            }
+//            if (pPSOLayout->stageFlags[j] != pDSLayout->stageFlags[j]) {
+//                // ERROR : Report flags mismatch
+//            }
+//        }
+//    }
+//    return skipCall;
+//}
+
 // Validate overall state at the time of a draw call
 static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     // First check flag states
@@ -337,9 +441,9 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     // TODO : Currently only performing next check if *something* was bound (non-zero last bound)
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
     //  We should have that check separately and then gate this check based on that check
-    if (pPipe && (pCB->lastBoundPipelineLayout) && (pCB->lastBoundPipelineLayout != pPipe->graphicsPipelineCI.layout)) {
-        result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) pCB->lastBoundPipelineLayout, 0, DRAWSTATE_PIPELINE_LAYOUT_MISMATCH, "DS",
-                "Pipeline layout from last vkCmdBindDescriptorSets() (%#" PRIxLEAST64 ") does not match PSO Pipeline layout (%#" PRIxLEAST64 ") ", (uint64_t) pCB->lastBoundPipelineLayout, (uint64_t) pPipe->graphicsPipelineCI.layout);
+    if (pPipe && (pCB->lastBoundPipelineLayout)) {
+        // TODO : For all sets used by the PSO, need to make sure that something is bound AND that PSO pipelineLayout is compatible with each bound set
+        //   first trick is how to get the sets used by PSO. ShaderChecker does this so perhaps move that code to utils
     }
     // Verify Vtx binding
     if (MAX_BINDING != pCB->lastVtxBinding) {
@@ -371,6 +475,7 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     }
     return result;
 }
+
 // Verify that create state for a pipeline is valid
 static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, const PIPELINE_NODE* pPipeline)
 {
@@ -439,6 +544,7 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
     }
     return skipCall;
 }
+
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
 static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
@@ -561,6 +667,7 @@ static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelin
 
     return pPipeline;
 }
+
 // Free the Pipeline nodes
 static void deletePipelines(layer_data* my_data)
 {
@@ -586,6 +693,7 @@ static void deletePipelines(layer_data* my_data)
     }
     my_data->pipelineMap.clear();
 }
+
 // For given pipeline, return number of MSAA samples, or one if MSAA disabled
 static VkSampleCountFlagBits getNumSamples(layer_data* my_data, const VkPipeline pipeline)
 {
@@ -595,6 +703,7 @@ static VkSampleCountFlagBits getNumSamples(layer_data* my_data, const VkPipeline
     }
     return VK_SAMPLE_COUNT_1_BIT;
 }
+
 // Validate state related to the PSO
 static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE* pCB, const VkPipelineBindPoint pipelineBindPoint, const VkPipeline pipeline)
 {
@@ -658,6 +767,7 @@ static DESCRIPTOR_POOL_NODE* getPoolNode(layer_data* my_data, const VkDescriptor
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->descriptorPoolMap[pool];
 }
+
 // Return Set node ptr for specified set or else NULL
 static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
 {
@@ -679,6 +789,7 @@ static LAYOUT_NODE* getLayoutNode(layer_data* my_data, const VkDescriptorSetLayo
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->layoutMap[layout];
 }
+
 // Return VK_FALSE if update struct is of valid type, otherwise flag error and return code from callback
 static VkBool32 validUpdateStruct(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
@@ -692,6 +803,7 @@ static VkBool32 validUpdateStruct(layer_data* my_data, const VkDevice device, co
                     "Unexpected UPDATE struct of type %s (value %u) in vkUpdateDescriptors() struct tree", string_VkStructureType(pUpdateStruct->sType), pUpdateStruct->sType);
     }
 }
+
 // Set count for given update struct in the last parameter
 // Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
 static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
@@ -705,6 +817,7 @@ static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const
             return ((VkCopyDescriptorSet*)pUpdateStruct)->descriptorCount;
     }
 }
+
 // For given Layout Node and binding, return index where that binding begins
 static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
 {
@@ -716,6 +829,7 @@ static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t 
     }
     return offsetIndex;
 }
+
 // For given layout node and binding, return last index that is updated
 static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t binding)
 {
@@ -727,17 +841,20 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
     }
     return offsetIndex-1;
 }
+
 // For given layout and update, return the first overall index of the layout that is updated
 static uint32_t getUpdateStartIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const uint32_t binding, const uint32_t arrayIndex, const GENERIC_HEADER* pUpdateStruct)
 {
     return getBindingStartIndex(pLayout, binding)+arrayIndex;
 }
+
 // For given layout and update, return the last overall index of the layout that is updated
 static uint32_t getUpdateEndIndex(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const uint32_t binding, const uint32_t arrayIndex, const GENERIC_HEADER* pUpdateStruct)
 {
     uint32_t count = getUpdateCount(my_data, device, pUpdateStruct);
     return getBindingStartIndex(pLayout, binding)+arrayIndex+count-1;
 }
+
 // Verify that the descriptor type in the update struct matches what's expected by the layout
 static VkBool32 validateUpdateConsistency(layer_data* my_data, const VkDevice device, const LAYOUT_NODE* pLayout, const GENERIC_HEADER* pUpdateStruct, uint32_t startIndex, uint32_t endIndex)
 {
@@ -776,6 +893,7 @@ static VkBool32 validateUpdateConsistency(layer_data* my_data, const VkDevice de
     }
     return skipCall;
 }
+
 // Determine the update type, allocate a new struct of that type, shadow the given pUpdate
 //   struct into the pNewNode param. Return VK_TRUE if error condition encountered and callback signals early exit.
 // NOTE : Calls to this function should be wrapped in mutex
@@ -843,6 +961,7 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
     (*pNewNode)->pNext = NULL;
     return skipCall;
 }
+
 // Verify that given sampler is valid
 static VkBool32 validateSampler(const layer_data* my_data, const VkSampler* pSampler, const VkBool32 immutable)
 {
@@ -861,6 +980,7 @@ static VkBool32 validateSampler(const layer_data* my_data, const VkSampler* pSam
     }
     return skipCall;
 }
+
 // Verify that given imageView is valid
 static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* pImageView, const VkImageLayout imageLayout)
 {
@@ -927,6 +1047,7 @@ static VkBool32 validateImageView(const layer_data* my_data, const VkImageView* 
     }
     return skipCall;
 }
+
 // Verify that given bufferView is valid
 static VkBool32 validateBufferView(const layer_data* my_data, const VkBufferView* pBufferView)
 {
@@ -940,6 +1061,7 @@ static VkBool32 validateBufferView(const layer_data* my_data, const VkBufferView
     }
     return skipCall;
 }
+
 // Verify that given bufferInfo is valid
 static VkBool32 validateBufferInfo(const layer_data* my_data, const VkDescriptorBufferInfo* pBufferInfo)
 {
@@ -953,6 +1075,7 @@ static VkBool32 validateBufferInfo(const layer_data* my_data, const VkDescriptor
     }
     return skipCall;
 }
+
 static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteDescriptorSet *pWDS, const VkDescriptorSetLayoutBinding* pLayoutBinding)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -1018,6 +1141,7 @@ static VkBool32 validateUpdateContents(const layer_data* my_data, const VkWriteD
     }
     return skipCall;
 }
+
 // update DS mappings based on write and copy update arrays
 static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pWDS, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pCDS)
 {
@@ -1133,6 +1257,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
     loader_platform_thread_unlock_mutex(&globalLock);
     return skipCall;
 }
+
 // Verify that given pool has descriptors that are being requested for allocation
 static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, DESCRIPTOR_POOL_NODE* pPoolNode, uint32_t count, const VkDescriptorSetLayout* pSetLayouts)
 {
@@ -1160,6 +1285,7 @@ static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, D
     }
     return skipCall;
 }
+
 // Free the shadowed update node for this Set
 // NOTE : Calls to this function should be wrapped in mutex
 static void freeShadowUpdateTree(SET_NODE* pSet)
@@ -1216,6 +1342,7 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
         delete pFreeUpdate;
     }
 }
+
 // Free all DS Pools including their Sets & related sub-structs
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools(layer_data* my_data)
@@ -1240,6 +1367,7 @@ static void deletePools(layer_data* my_data)
     }
     my_data->descriptorPoolMap.clear();
 }
+
 // WARN : Once deleteLayouts() called, any layout ptrs in Pool/Set data structure will be invalid
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteLayouts(layer_data* my_data)
@@ -1259,6 +1387,7 @@ static void deleteLayouts(layer_data* my_data)
     }
     my_data->layoutMap.clear();
 }
+
 // Currently clearing a set is removing all previous updates to that set
 //  TODO : Validate if this is correct clearing behavior
 static void clearDescriptorSet(layer_data* my_data, VkDescriptorSet set)
@@ -1292,6 +1421,7 @@ static void clearDescriptorPool(layer_data* my_data, const VkDevice device, cons
         }
     }
 }
+
 // For given CB object, fetch associated CB Node from map
 static GLOBAL_CB_NODE* getCBNode(layer_data* my_data, const VkCommandBuffer cb)
 {
@@ -1306,6 +1436,7 @@ static GLOBAL_CB_NODE* getCBNode(layer_data* my_data, const VkCommandBuffer cb)
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->commandBufferMap[cb];
 }
+
 // Free all CB Nodes
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCommandBuffers(layer_data* my_data)
@@ -1323,6 +1454,7 @@ static void deleteCommandBuffers(layer_data* my_data)
     }
     my_data->commandBufferMap.clear();
 }
+
 static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCommandBuffer cb, const char* caller_name)
 {
     // TODO : How to pass cb as srcObj here?
@@ -1362,6 +1494,7 @@ static VkBool32 addCmd(const layer_data* my_data, GLOBAL_CB_NODE* pCB, const CMD
     }
     return skipCall;
 }
+
 static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
 {
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
@@ -1407,6 +1540,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->lastVtxBinding = MAX_BINDING;
     }
 }
+
 // Set PSO-related status bits for CB, including dynamic state set via PSO
 static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
 {
@@ -1466,6 +1600,7 @@ static void set_cb_pso_status(GLOBAL_CB_NODE* pCB, const PIPELINE_NODE* pPipe)
         pCB->status |= psoDynStateMask;
     }
 }
+
 // Print the last bound Gfx Pipeline
 static VkBool32 printPipeline(layer_data* my_data, const VkCommandBuffer cb)
 {
@@ -1482,6 +1617,7 @@ static VkBool32 printPipeline(layer_data* my_data, const VkCommandBuffer cb)
     }
     return skipCall;
 }
+
 // Print details of DS config to stdout
 static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
 {
@@ -1707,6 +1843,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     }
     return result;
 }
+
 // prototype
 static void deleteRenderPasses(layer_data*);
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
@@ -2225,7 +2362,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkP
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
-        PIPELINE_LAYOUT_NODE plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
+        PIPELINE_LAYOUT_NODE& plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
         uint32_t i = 0;
         for (i=0; i<pCreateInfo->setLayoutCount; ++i) {
@@ -2757,19 +2894,29 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
             } else {
                 // Track total count of dynamic descriptor types to make sure we have an offset for each one
                 uint32_t totalDynamicDescriptors = 0;
+                string errorString = "";
+                uint32_t lastSetIndex = firstSet+setCount;
+                if (lastSetIndex >= pCB->boundDescriptorSets.size())
+                    pCB->boundDescriptorSets.resize(lastSetIndex+1);
+                VkDescriptorSet oldFinalBoundSet = pCB->boundDescriptorSets[lastSetIndex];
                 for (uint32_t i=0; i<setCount; i++) {
                     SET_NODE* pSet = getSetNode(dev_data, pDescriptorSets[i]);
                     if (pSet) {
                         loader_platform_thread_lock_mutex(&globalLock);
                         pCB->lastBoundDescriptorSet = pDescriptorSets[i];
                         pCB->lastBoundPipelineLayout = layout;
-                        pCB->boundDescriptorSets.push_back(pDescriptorSets[i]);
+                        pCB->boundDescriptorSets[i+firstSet] = pDescriptorSets[i];
                         loader_platform_thread_unlock_mutex(&globalLock);
                         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                                 "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
                         if (!pSet->pUpdateStructs) {
                             skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
                                     "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
+                        }
+                        // Verify that set being bound is compatible with overlapping setLayout of pipelineLayout
+                        if (!verify_set_layout_compatibility(dev_data, pSet, layout, i+firstSet, errorString)) {
+                            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                                    "descriptorSet #%u being bound is not compatible with overlapping layout in pipelineLayout due to: %s", i, errorString.c_str());
                         }
                         totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;
                     } else {
@@ -2779,6 +2926,24 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 }
                 updateCBTracking(pCB);
                 skipCall |= addCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS);
+                // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
+                if (firstSet > 0) { // Check set #s below the first bound set
+                    for (uint32_t i=0; i<firstSet; ++i) {
+                        if (!verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
+                            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pCB->boundDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
+                                "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u was disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) pCB->boundDescriptorSets[i], i, (uint64_t) layout);
+                            pCB->boundDescriptorSets[i] = VK_NULL_HANDLE;
+                        }
+                    }
+                }
+                // Check if newly last bound set invalidates any remaining bound sets
+                if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
+                    if (!verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
+                        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
+                            "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u and all subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) layout);
+                        pCB->boundDescriptorSets.resize(lastSetIndex+1);
+                    }
+                }
                 //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
                 if (totalDynamicDescriptors != dynamicOffsetCount) {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t) commandBuffer, 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
