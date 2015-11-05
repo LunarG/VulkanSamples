@@ -276,8 +276,8 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
         qi.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         qi.pNext = NULL;
         qi.queueFamilyIndex = i;
-        qi.queuePriorityCount = queue_props[i].queueCount;
-        std::vector<float> queue_priorities (qi.queuePriorityCount, 0.0);
+        qi.queueCount = queue_props[i].queueCount;
+        std::vector<float> queue_priorities (qi.queueCount, 0.0);
         qi.pQueuePriorities = queue_priorities.data();
         if (queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphics_queue_node_index_ = i;
@@ -288,8 +288,8 @@ void Device::init(std::vector<const char *> &layers, std::vector<const char *> &
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.pNext = NULL;
-    dev_info.requestedQueueCount = queue_info.size();
-    dev_info.pRequestedQueues = queue_info.data();
+    dev_info.queueCreateInfoCount = queue_info.size();
+    dev_info.pQueueCreateInfos = queue_info.data();
     dev_info.enabledLayerNameCount = layers.size();
     dev_info.ppEnabledLayerNames = layers.data();
     dev_info.enabledExtensionNameCount = extensions.size();

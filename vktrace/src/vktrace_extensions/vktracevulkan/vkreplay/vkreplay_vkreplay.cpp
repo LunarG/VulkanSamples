@@ -1003,7 +1003,7 @@ VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDe
                 VkDescriptorSetLayoutBinding *pBinding = (VkDescriptorSetLayoutBinding *) &pInfo->pBinding[i];
                 if (pBinding->pImmutableSamplers != NULL)
                 {
-                    for (unsigned int j = 0; j < pBinding->arraySize; j++)
+                    for (unsigned int j = 0; j < pBinding->descriptorCount; j++)
                     {
                         VkSampler* pSampler = (VkSampler*)&pBinding->pImmutableSamplers[j];
                         *pSampler = m_objMapper.remap_samplers(pBinding->pImmutableSamplers[j]);

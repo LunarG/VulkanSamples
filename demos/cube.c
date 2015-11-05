@@ -1301,14 +1301,14 @@ static void demo_prepare_descriptor_layout(struct demo *demo)
         [0] = {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .arraySize = 1,
+            .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = NULL,
         },
         [1] = {
             .binding = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .arraySize = DEMO_TEXTURE_COUNT,
+            .descriptorCount = DEMO_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL,
         },
@@ -2352,15 +2352,15 @@ static void demo_init_vk(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = gfx_queue_idx,
-        .queuePriorityCount = 1,
+        .queueCount = 1,
         .pQueuePriorities = queue_priorities
     };
 
     VkDeviceCreateInfo device = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
-        .requestedQueueCount = 1,
-        .pRequestedQueues = &queue,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queue,
         .enabledLayerNameCount = enabled_layer_count,
         .ppEnabledLayerNames = (const char *const*) ((demo->validate) ? device_validation_layers : NULL),
         .enabledExtensionNameCount = enabled_extension_count,

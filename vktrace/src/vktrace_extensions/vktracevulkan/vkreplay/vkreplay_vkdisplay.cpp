@@ -117,8 +117,8 @@ VkResult vkDisplay::init_vk(unsigned int gpu_idx)
     // create the device enabling validation level 4
     const char * const * extensionNames = &m_extensions[0];
     VkDeviceCreateInfo info = {};
-    info.requestedQueueCount = 1;
-    info.pRequestedQueues = &dqci;
+    info.queueCreateInfoCount = 1;
+    info.pQueueCreateInfos = &dqci;
     info.enabledExtensionNameCount = static_cast <uint32_t> (m_extensions.size());
     info.ppEnabledExtensionNames = extensionNames;
     info.flags = VK_DEVICE_CREATE_VALIDATION;

@@ -900,7 +900,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1310,7 +1310,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1411,7 +1411,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1473,7 +1473,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1589,7 +1589,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1671,7 +1671,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -1927,7 +1927,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -2027,7 +2027,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -2152,7 +2152,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
@@ -2258,7 +2258,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
@@ -2363,7 +2363,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
@@ -2521,7 +2521,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
@@ -2962,7 +2962,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3059,7 +3059,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3157,7 +3157,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3253,7 +3253,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3350,7 +3350,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3425,7 +3425,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3526,12 +3526,12 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     VkDescriptorSetLayoutBinding dsl_binding[2] = {};
         dsl_binding[0].binding = 0;
         dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding[0].arraySize = 1;
+        dsl_binding[0].descriptorCount = 1;
         dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding[0].pImmutableSamplers = NULL;
         dsl_binding[1].binding = 1;
         dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-        dsl_binding[1].arraySize = 1;
+        dsl_binding[1].descriptorCount = 1;
         dsl_binding[1].stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding[1].pImmutableSamplers = NULL;
 
@@ -3672,7 +3672,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     VkDescriptorSetLayoutBinding dsl_binding = {};
     dsl_binding.binding = 0;
     dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    dsl_binding.arraySize = 1;
+    dsl_binding.descriptorCount = 1;
     dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
     dsl_binding.pImmutableSamplers = NULL;
 
@@ -3764,7 +3764,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -3870,7 +3870,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
@@ -5583,7 +5583,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 

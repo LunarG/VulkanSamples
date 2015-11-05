@@ -391,8 +391,8 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     VkDeviceCreateInfo info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = NULL,
-        .requestedQueueCount = 0,
-        .pRequestedQueues = NULL,
+        .queueCreateInfoCount = 0,
+        .pQueueCreateInfos = NULL,
         .enabledLayerNameCount = 0,
         .ppEnabledLayerNames = NULL,
         .enabledExtensionNameCount = 0,
@@ -475,8 +475,8 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     }
 
     /* request all queues */
-    info.requestedQueueCount = gpu->queue_count;
-    info.pRequestedQueues = gpu->queue_reqs;
+    info.queueCreateInfoCount = gpu->queue_count;
+    info.pQueueCreateInfos = gpu->queue_reqs;
 
     info.enabledLayerNameCount = 0;
     info.ppEnabledLayerNames = NULL;
@@ -662,7 +662,7 @@ static void app_gpu_init(struct app_gpu *gpu, uint32_t id, VkPhysicalDevice obj)
         gpu->queue_reqs[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         gpu->queue_reqs[i].pNext = NULL;
         gpu->queue_reqs[i].queueFamilyIndex = i;
-        gpu->queue_reqs[i].queuePriorityCount = gpu->queue_props[i].queueCount;
+        gpu->queue_reqs[i].queueCount = gpu->queue_props[i].queueCount;
         gpu->queue_reqs[i].pQueuePriorities = queue_priorities;
     }
 

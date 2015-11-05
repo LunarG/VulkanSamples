@@ -2966,7 +2966,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     char **filtered_extension_names = NULL;
     VkResult res;
 
-    assert(pCreateInfo->requestedQueueCount >= 1);
+    assert(pCreateInfo->queueCreateInfoCount >= 1);
 
     if (!icd)
         return VK_ERROR_INITIALIZATION_FAILED;

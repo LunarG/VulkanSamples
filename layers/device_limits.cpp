@@ -403,14 +403,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
             "Invalid call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
     } else {
         // Check that the requested queue properties are valid
-        for (uint32_t i=0; i<pCreateInfo->requestedQueueCount; i++) {
-            uint32_t requestedIndex = pCreateInfo->pRequestedQueues[i].queueFamilyIndex;
+        for (uint32_t i=0; i<pCreateInfo->queueCreateInfoCount; i++) {
+            uint32_t requestedIndex = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
             if (phy_dev_data->queueFamilyProperties.size() <= requestedIndex) { // requested index is out of bounds for this physical device
                 skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                     "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
-            } else if (pCreateInfo->pRequestedQueues[i].queuePriorityCount > phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount) {
+            } else if (pCreateInfo->pQueueCreateInfos[i].queueCount > phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount) {
                 skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-                    "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but requested queuePriorityCount is %u.", requestedIndex, phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount, pCreateInfo->pRequestedQueues[i].queuePriorityCount);
+                    "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but requested queueCount is %u.", requestedIndex, phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount, pCreateInfo->pQueueCreateInfos[i].queueCount);
             }
         }
     }

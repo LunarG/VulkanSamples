@@ -73,11 +73,11 @@ VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo
     {
         uint32_t i;
         vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo, sizeof(VkDeviceCreateInfo), pSrcCreateInfo);
-        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues, pSrcCreateInfo->requestedQueueCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pRequestedQueues);
-        for (i = 0; i < pSrcCreateInfo->requestedQueueCount; i++) {
-            vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pRequestedQueues[i].pQueuePriorities,
-                                       pSrcCreateInfo->pRequestedQueues[i].queueCount*sizeof(float),
-                                       pSrcCreateInfo->pRequestedQueues[i].pQueuePriorities);
+        vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pQueueCreateInfos, pSrcCreateInfo->queueCreateInfoCount*sizeof(VkDeviceQueueCreateInfo), pSrcCreateInfo->pQueueCreateInfos);
+        for (i = 0; i < pSrcCreateInfo->queueCreateInfoCount; i++) {
+            vktrace_vk_malloc_and_copy((void**)&pDestCreateInfo->pQueueCreateInfos[i].pQueuePriorities,
+                                       pSrcCreateInfo->pQueueCreateInfos[i].queueCount*sizeof(float),
+                                       pSrcCreateInfo->pQueueCreateInfos[i].pQueuePriorities);
         }
 
         if (pSrcCreateInfo->enabledExtensionNameCount > 0)
@@ -113,9 +113,9 @@ VkDeviceCreateInfo* vktrace_deepcopy_VkDeviceCreateInfo(const VkDeviceCreateInfo
 void vktrace_deepfree_VkDeviceCreateInfo(VkDeviceCreateInfo* pCreateInfo)
 {
     uint32_t i;
-    if (pCreateInfo->pRequestedQueues != NULL)
+    if (pCreateInfo->pQueueCreateInfos != NULL)
     {
-        free((void*)pCreateInfo->pRequestedQueues);
+        free((void*)pCreateInfo->pQueueCreateInfos);
     }
 
     if (pCreateInfo->ppEnabledExtensionNames != NULL)

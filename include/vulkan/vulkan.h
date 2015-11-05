@@ -1340,7 +1340,7 @@ typedef struct VkDeviceQueueCreateInfo {
     const void*                                 pNext;
     VkDeviceQueueCreateFlags                    flags;
     uint32_t                                    queueFamilyIndex;
-    uint32_t                                    queuePriorityCount;
+    uint32_t                                    queueCount;
     const float*                                pQueuePriorities;
 } VkDeviceQueueCreateInfo;
 
@@ -1348,8 +1348,8 @@ typedef struct VkDeviceCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkDeviceCreateFlags                         flags;
-    uint32_t                                    requestedQueueCount;
-    const VkDeviceQueueCreateInfo*              pRequestedQueues;
+    uint32_t                                    queueCreateInfoCount;
+    const VkDeviceQueueCreateInfo*              pQueueCreateInfos;
     uint32_t                                    enabledLayerNameCount;
     const char*const*                           ppEnabledLayerNames;
     uint32_t                                    enabledExtensionNameCount;
@@ -1841,7 +1841,7 @@ typedef struct VkSamplerCreateInfo {
 typedef struct VkDescriptorSetLayoutBinding {
     uint32_t                                    binding;
     VkDescriptorType                            descriptorType;
-    uint32_t                                    arraySize;
+    uint32_t                                    descriptorCount;
     VkShaderStageFlags                          stageFlags;
     const VkSampler*                            pImmutableSamplers;
 } VkDescriptorSetLayoutBinding;

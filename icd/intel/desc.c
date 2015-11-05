@@ -587,7 +587,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
         switch (lb->descriptorType) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
         case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            layout->dynamic_desc_count += lb->arraySize;
+            layout->dynamic_desc_count += lb->descriptorCount;
             break;
         default:
             break;
@@ -596,7 +596,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
         /* lb->stageFlags does not gain us anything */
         binding->binding = lb->binding;
         binding->type = lb->descriptorType;
-        binding->array_size = lb->arraySize;
+        binding->array_size = lb->descriptorCount;
         binding->offset = offset;
 
         ret = desc_region_get_desc_size(region,
@@ -611,7 +611,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             bool shared = true;
             uint32_t j;
 
-            for (j = 1; j < lb->arraySize; j++) {
+            for (j = 1; j < lb->descriptorCount; j++) {
                 if (lb->pImmutableSamplers[j] != lb->pImmutableSamplers[0]) {
                     shared = false;
                     break;
@@ -626,12 +626,12 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
                         binding->increment.surface, 0);
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
-                        sizeof(binding->immutable_samplers[0]) * lb->arraySize,
+                        sizeof(binding->immutable_samplers[0]) * lb->descriptorCount,
                         0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
                 if (!binding->immutable_samplers)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-                for (j = 0; j < lb->arraySize; j++) {
+                for (j = 0; j < lb->descriptorCount; j++) {
                     binding->immutable_samplers[j] =
                         intel_sampler((VkSampler) lb->pImmutableSamplers[j]);
                 }
@@ -640,7 +640,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
         /* increment offset */
         intel_desc_offset_mad(&size, &binding->increment, &size,
-                lb->arraySize - 1);
+                lb->descriptorCount - 1);
         intel_desc_offset_add(&offset, &offset, &size);
     }
 

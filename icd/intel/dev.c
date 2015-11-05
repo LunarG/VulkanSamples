@@ -76,7 +76,7 @@ static VkResult dev_create_queues(struct intel_dev *dev,
         VkResult ret = VK_SUCCESS;
 
         assert((q->queueFamilyIndex < INTEL_GPU_ENGINE_COUNT &&
-            q->queuePriorityCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
+            q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) && "Invalid Queue request");
         /* Help catch places where we forgot to initialize pQueuePriorities */
         assert(q->pQueuePriorities);
         ret = intel_queue_create(dev, q->queueFamilyIndex,
@@ -156,8 +156,8 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
             (uint8_t *) dev->sample_pattern_8x,
             (uint8_t *) dev->sample_pattern_16x);
 
-    ret = dev_create_queues(dev, info->pRequestedQueues,
-            info->requestedQueueCount);
+    ret = dev_create_queues(dev, info->pQueueCreateInfos,
+            info->queueCreateInfoCount);
     if (ret != VK_SUCCESS) {
         intel_dev_destroy(dev);
         return ret;

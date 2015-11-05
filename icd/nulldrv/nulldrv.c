@@ -139,7 +139,7 @@ static VkResult dev_create_queues(struct nulldrv_dev *dev,
         const VkDeviceQueueCreateInfo *q = &queues[i];
         VkResult ret = VK_SUCCESS;
 
-        if (q->queuePriorityCount == 1 && !dev->queues[q->queueFamilyIndex]) {
+        if (q->queueCount == 1 && !dev->queues[q->queueFamilyIndex]) {
             ret = nulldrv_queue_create(dev, q->queueFamilyIndex,
                     &dev->queues[q->queueFamilyIndex]);
         }
@@ -216,8 +216,8 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
         return ret;
     }
 
-    ret = dev_create_queues(dev, info->pRequestedQueues,
-            info->requestedQueueCount);
+    ret = dev_create_queues(dev, info->pQueueCreateInfos,
+            info->queueCreateInfoCount);
     if (ret != VK_SUCCESS) {
         return ret;
     }

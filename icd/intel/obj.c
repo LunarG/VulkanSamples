@@ -168,10 +168,10 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         size = sizeof(*src);
         dbg->create_info_size = size;
 
-        size += sizeof(src->pRequestedQueues[0]) *
-            src->requestedQueueCount;
-        for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
-            size += src->pRequestedQueues[i].queuePriorityCount * sizeof(float);
+        size += sizeof(src->pQueueCreateInfos[0]) *
+            src->queueCreateInfoCount;
+        for (uint32_t i = 0; i < src->queueCreateInfoCount; i++) {
+            size += src->pQueueCreateInfos[i].queueCount * sizeof(float);
         }
         size += sizeof(src->ppEnabledExtensionNames[0]) *
             src->enabledExtensionNameCount;
@@ -188,15 +188,15 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         d = (uint8_t *) dst;
         d += sizeof(*src);
 
-        size = sizeof(src->pRequestedQueues[0]) * src->requestedQueueCount;
-        memcpy(d, src->pRequestedQueues, size);
-        dst->pRequestedQueues = (const VkDeviceQueueCreateInfo *) d;
+        size = sizeof(src->pQueueCreateInfos[0]) * src->queueCreateInfoCount;
+        memcpy(d, src->pQueueCreateInfos, size);
+        dst->pQueueCreateInfos = (const VkDeviceQueueCreateInfo *) d;
         d += size;
-        for (uint32_t i = 0; i < src->requestedQueueCount; i++) {
+        for (uint32_t i = 0; i < src->queueCreateInfoCount; i++) {
             size = sizeof(float) *
-                dst->pRequestedQueues[i].queuePriorityCount;
-            memcpy(d, src->pRequestedQueues[i].pQueuePriorities, size);
-            *((float **) &dst->pRequestedQueues[i].pQueuePriorities) = (float *) d;
+                dst->pQueueCreateInfos[i].queueCount;
+            memcpy(d, src->pQueueCreateInfos[i].pQueuePriorities, size);
+            *((float **) &dst->pQueueCreateInfos[i].pQueuePriorities) = (float *) d;
             d += size;
         }
 

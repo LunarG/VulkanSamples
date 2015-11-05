@@ -710,7 +710,7 @@ static uint32_t getBindingStartIndex(const LAYOUT_NODE* pLayout, const uint32_t 
     for (uint32_t i = 0; i < pLayout->createInfo.bindingCount; i++) {
         if (pLayout->createInfo.pBinding[i].binding == binding)
             break;
-        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
+        offsetIndex += pLayout->createInfo.pBinding[i].descriptorCount;
     }
     return offsetIndex;
 }
@@ -719,7 +719,7 @@ static uint32_t getBindingEndIndex(const LAYOUT_NODE* pLayout, const uint32_t bi
 {
     uint32_t offsetIndex = 0;
     for (uint32_t i = 0; i <  pLayout->createInfo.bindingCount; i++) {
-        offsetIndex += pLayout->createInfo.pBinding[i].arraySize;
+        offsetIndex += pLayout->createInfo.pBinding[i].descriptorCount;
         if (pLayout->createInfo.pBinding[i].binding == binding)
             break;
     }
@@ -1145,7 +1145,7 @@ static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, P
             uint32_t typeIndex = 0, poolSizeCount = 0;
             for (j=0; j<pLayout->createInfo.bindingCount; ++j) {
                 typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
-                poolSizeCount = pLayout->createInfo.pBinding[j].arraySize;
+                poolSizeCount = pLayout->createInfo.pBinding[j].descriptorCount;
                 if (poolSizeCount > pPoolNode->availableDescriptorTypeCount[typeIndex]) {
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) pLayout->layout, 0, DRAWSTATE_DESCRIPTOR_POOL_EMPTY, "DS",
                         "Unable to allocate %u descriptors of type %s from pool %#" PRIxLEAST64 ". This pool only has %u descriptors of this type remaining.",
@@ -2139,11 +2139,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
                     return VK_ERROR_VALIDATION_FAILED;
             }
 
-            totalCount += pCreateInfo->pBinding[i].arraySize;
+            totalCount += pCreateInfo->pBinding[i].descriptorCount;
             if (pCreateInfo->pBinding[i].pImmutableSamplers) {
                 VkSampler** ppIS = (VkSampler**)&pNewNode->createInfo.pBinding[i].pImmutableSamplers;
-                *ppIS = new VkSampler[pCreateInfo->pBinding[i].arraySize];
-                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].arraySize*sizeof(VkSampler));
+                *ppIS = new VkSampler[pCreateInfo->pBinding[i].descriptorCount];
+                memcpy(*ppIS, pCreateInfo->pBinding[i].pImmutableSamplers, pCreateInfo->pBinding[i].descriptorCount*sizeof(VkSampler));
             }
         }
         if (totalCount > 0) {
@@ -2154,7 +2154,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
             VkDescriptorType dType;
             for (uint32_t i=0; i<pCreateInfo->bindingCount; i++) {
                 dType = pCreateInfo->pBinding[i].descriptorType;
-                for (j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
+                for (j = 0; j < pCreateInfo->pBinding[i].descriptorCount; j++) {
                     pNewNode->descriptorTypes[offset + j] = dType;
                     pNewNode->stageFlags[offset + j] = pCreateInfo->pBinding[i].stageFlags;
                     if ((dType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
@@ -2314,7 +2314,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
             uint32_t typeIndex = 0, poolSizeCount = 0;
             for (uint32_t j=0; j<pLayout->createInfo.bindingCount; ++j) {
                 typeIndex = static_cast<uint32_t>(pLayout->createInfo.pBinding[j].descriptorType);
-                poolSizeCount = pLayout->createInfo.pBinding[j].arraySize;
+                poolSizeCount = pLayout->createInfo.pBinding[j].descriptorCount;
                 pPoolNode->availableDescriptorTypeCount[typeIndex] += poolSizeCount;
             }
         }
