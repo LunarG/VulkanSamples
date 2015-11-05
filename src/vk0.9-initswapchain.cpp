@@ -49,6 +49,8 @@ int main(int argc, char **argv)
      */
 
     init_global_layer_properties(info);
+    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
