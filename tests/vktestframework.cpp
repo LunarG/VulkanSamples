@@ -421,7 +421,6 @@ void VkTestFramework::Compare(const char *basename, VkImageObj *image )
 
 void VkTestFramework::Show(const char *comment, VkImageObj *image)
 {
-    VkResult err;
     VkSubresourceLayout sr_layout;
     char *ptr;
     VkTestImageRecord record;
@@ -439,8 +438,6 @@ void VkTestFramework::Show(const char *comment, VkImageObj *image)
     vkGetImageSubresourceLayout(displayImage.device()->device(), displayImage.image(), &sr, &sr_layout);
 
     ptr = (char *) displayImage.MapMemory();
-    ASSERT_VK_SUCCESS( err );
-
     ptr += sr_layout.offset;
 
     record.m_title.append(comment);
@@ -547,7 +544,7 @@ void  TestFrameworkVkPresent::Display()
     VkImageMemoryBarrier memoryBarrier = {};
     memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memoryBarrier.pNext = NULL;
-    memoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     memoryBarrier.dstAccessMask = 0;
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -564,6 +561,10 @@ void  TestFrameworkVkPresent::Display()
                          0, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferImageCopy region = {};
+    region.bufferRowLength = m_display_image->m_width;
+    region.bufferImageHeight = m_display_image->m_height;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1;
     region.imageExtent.height = m_display_image->m_height;
     region.imageExtent.width = m_display_image->m_width;
     region.imageExtent.depth = 1;
@@ -957,13 +958,18 @@ void TestFrameworkVkPresent::CreateSwapchain()
         VkImageViewCreateInfo color_image_view = {};
         color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         color_image_view.pNext = NULL;
-        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
         color_image_view.format = m_format;
+        color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
+        color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
+        color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
+        color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
         color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         color_image_view.subresourceRange.baseMipLevel = 0;
         color_image_view.subresourceRange.levelCount = 1;
         color_image_view.subresourceRange.baseArrayLayer = 0;
         color_image_view.subresourceRange.layerCount = 1;
+        color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view.flags = 0;
 
         m_buffers[i].image = swapchainImages[i];
 
