@@ -57,6 +57,7 @@ int main(int argc, char **argv)
     init_swapchain_extension(info);
     init_command_pool(info);
     init_command_buffer(info);
+    execute_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
     init_uniform_buffer(info); 
@@ -137,9 +138,6 @@ int main(int argc, char **argv)
 
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
             0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
-
-    execute_begin_command_buffer(info);
-
 
     // Do a image copy to part of the dst image
     VkImageCopy cregion;
