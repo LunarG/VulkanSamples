@@ -28,7 +28,7 @@
  */
 #include <stdbool.h>
 #include <unordered_map>
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 #include "vktrace_platform.h"
 #include "vk_dispatch_table_helper.h"
 #include "vktrace_common.h"

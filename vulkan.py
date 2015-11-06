@@ -186,7 +186,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan.h", "vk_debug_report_lunarg.h"],
+    headers=["vulkan/vulkan.h", "vulkan/vk_debug_report_lunarg.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -1006,7 +1006,7 @@ core = Extension(
 
 ext_khr_swapchain = Extension(
     name="VK_EXT_KHR_swapchain",
-    headers=["vk_ext_khr_swapchain.h"],
+    headers=["vulkan/vk_ext_khr_swapchain.h"],
     objects=[],
     protos=[
         Proto("VkResult", "GetPhysicalDeviceSurfaceSupportKHR",
@@ -1087,7 +1087,7 @@ debug_report_lunarg = Extension(
 )
 debug_marker_lunarg = Extension(
     name="VK_DEBUG_MARKER_LunarG",
-    headers=["vk_debug_marker_lunarg.h"],
+    headers=["vulkan/vk_debug_marker_lunarg.h"],
     objects=[],
     protos=[
         Proto("void", "CmdDbgMarkerBegin",
@@ -1210,7 +1210,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan.h", "vk_debug_report_lunarg.h"],
+            headers=["vulkan/vulkan.h", "vk_debug_report_lunarg.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))
@@ -1223,4 +1223,4 @@ def parse_vk_h(filename):
     print("} VkLayerDispatchTable;")
 
 if __name__ == "__main__":
-    parse_vk_h("include/vulkan.h")
+    parse_vk_h("include/vulkan/vulkan.h")

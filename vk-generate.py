@@ -107,8 +107,8 @@ class DispatchTableOpsSubcommand(Subcommand):
         super(DispatchTableOpsSubcommand, self).run()
 
     def generate_header(self):
-        return "\n".join(["#include <vulkan.h>",
-                          "#include <vk_layer.h>",
+        return "\n".join(["#include <vulkan/vulkan.h>",
+                          "#include <vulkan/vk_layer.h>",
                           "#include <string.h>"])
 
     def _generate_init_dispatch(self, type):

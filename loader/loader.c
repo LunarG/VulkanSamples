@@ -44,7 +44,7 @@
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "debug_report.h"
-#include "vk_icd.h"
+#include "vulkan/vk_icd.h"
 #include "cJSON.h"
 
 static loader_platform_dl_handle loader_add_layer_lib(

@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <unordered_map>
 #include "vk_dispatch_table_helper.h"
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 #include "vk_layer_table.h"
 static device_table_map tableMap;
 static instance_table_map tableInstanceMap;

@@ -26,7 +26,7 @@
 
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_swapchain.h"
 
 void wsi_swapchain_add_instance_extensions(
         const struct loader_instance *inst,

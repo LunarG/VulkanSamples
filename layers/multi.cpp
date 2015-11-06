@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <unordered_map>
 #include "vk_loader_platform.h"
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 #include "vk_layer_table.h"
 
 #ifdef __cplusplus

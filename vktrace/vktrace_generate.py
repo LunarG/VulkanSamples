@@ -1828,7 +1828,7 @@ class VktraceCoreTracePackets(Subcommand):
     def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
-        header_txt.append('#include "vulkan.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vktrace_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
 
@@ -1842,7 +1842,7 @@ class VktraceExtTraceHeader(Subcommand):
     def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
-        header_txt.append('#include "vulkan.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "%s.h"' % extensionName.lower())
         return "\n".join(header_txt)
 
@@ -1857,7 +1857,7 @@ class VktraceExtTraceC(Subcommand):
         header_txt.append('#include "vktrace_platform.h"')
         header_txt.append('#include "vktrace_common.h"')
         if extensionName == "vk_ext_khr_device_swapchain":
-            header_txt.append('#include "vk_ext_khr_swapchain.h"')
+            header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
         header_txt.append('#include "vktrace_vk_%s.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_%s_packets.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_packet_id.h"')
@@ -1894,11 +1894,11 @@ class VktraceReplayVkFuncPtrs(Subcommand):
         header_txt.append('#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)')
         header_txt.append('#include <xcb/xcb.h>\n')
         header_txt.append('#endif')
-        header_txt.append('#include "vulkan.h"')
-        header_txt.append('#include "vk_debug_report_lunarg.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
+        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
         header_txt.append('#include "vk_debug_marker_lunarg.h"')
-        header_txt.append('#include "vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vk_ext_khr_device_swapchain.h"')
+        header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
+        header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
 
     def generate_body(self):
         body = [self._generate_replay_func_ptrs()]
@@ -1912,11 +1912,11 @@ class VktraceReplayObjMapperHeader(Subcommand):
         header_txt.append('#include <map>')
         header_txt.append('#include <vector>')
         header_txt.append('#include <string>')
-        header_txt.append('#include "vulkan.h"')
-        header_txt.append('#include "vk_debug_report_lunarg.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
+        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
         header_txt.append('#include "vk_debug_marker_lunarg.h"')
-        header_txt.append('#include "vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vk_ext_khr_device_swapchain.h"')
+        header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
+        header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):

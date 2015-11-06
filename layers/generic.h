@@ -27,7 +27,7 @@
 
 #ifndef GENERIC_H
 #define GENERIC_H
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 
 /*
  * This file contains static functions for the generated layer Generic

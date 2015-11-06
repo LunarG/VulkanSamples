@@ -28,7 +28,7 @@
  * Author: Tobin Ehlis <tobin@lunarg.com>
  */
 
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 #include "vkreplay_vkreplay.h"
 #include "vkreplay.h"
 #include "vkreplay_settings.h"

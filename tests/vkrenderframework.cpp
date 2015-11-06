@@ -26,8 +26,8 @@
  */
 
 #include "vkrenderframework.h"
-#include <vk_ext_khr_swapchain.h>
-#include <vk_ext_khr_device_swapchain.h>
+#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/vk_ext_khr_device_swapchain.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \

@@ -25,7 +25,7 @@
  */
 
 #include <string.h>
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 #include "vk_layer_utils.h"
 
 typedef struct _VULKAN_FORMAT_INFO {

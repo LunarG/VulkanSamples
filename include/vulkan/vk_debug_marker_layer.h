@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 #include "vk_debug_marker_lunarg.h"
 #include "vk_layer.h"
 

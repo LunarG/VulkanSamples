@@ -31,8 +31,8 @@
 #ifndef __VK_DEBUG_MARKER_H__
 #define __VK_DEBUG_MARKER_H__
 
-#include "vulkan.h"
-#include "vk_debug_report_lunarg.h"
+#include "vulkan/vulkan.h"
+#include "vulkan/vk_debug_report_lunarg.h"
 
 #define VK_DEBUG_MARKER_EXTENSION_NUMBER 6
 #define VK_DEBUG_MARKER_EXTENSION_REVISION 1

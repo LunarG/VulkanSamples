@@ -222,7 +222,7 @@ class DispatchTableOpsSubcommand(Subcommand):
         super().run()
 
     def generate_header(self):
-        return "\n".join(["#include <vulkan.h>",
+        return "\n".join(["#include <vulkan/vulkan.h>",
                           "#include <vkLayer.h>",
                           "#include <string.h>",
                           "#include \"loader_platform.h\""])

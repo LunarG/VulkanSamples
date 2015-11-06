@@ -25,8 +25,8 @@
  */
 #pragma once
 #include <vector>
-#include "vk_layer.h"
-#include "vk_debug_report_lunarg.h"
+#include "vulkan/vk_layer.h"
+#include "vulkan/vk_debug_report_lunarg.h"
 
 #ifdef __cplusplus
 extern "C" {

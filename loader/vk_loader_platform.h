@@ -29,8 +29,8 @@
  */
 #pragma once
 
-#include "vk_platform.h"
-#include "vk_sdk_platform.h"
+#include "vulkan/vk_platform.h"
+#include "vulkan/vk_sdk_platform.h"
 
 #if defined(__linux__)
 /* Linux-specific common code: */

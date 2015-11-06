@@ -34,7 +34,7 @@
 #include <unordered_map>
 #include <inttypes.h>
 #include "vk_loader_platform.h"
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 #include "vk_layer_data.h"
 #include "vk_layer_table.h"
 

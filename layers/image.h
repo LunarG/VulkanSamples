@@ -26,7 +26,7 @@
  */
 #ifndef IMAGE_H
 #define IMAGE_H
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 
