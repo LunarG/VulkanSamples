@@ -30,10 +30,10 @@
 #include <string>
 #include <map>
 #include <string.h>
-#include <vk_layer.h>
+#include <vulkan/vk_layer.h>
 #include <iostream>
 #include "vk_layer_config.h"
-#include "vk_sdk_platform.h"
+#include "vulkan/vk_sdk_platform.h"
 
 #define MAX_CHARS_PER_LINE 4096
 

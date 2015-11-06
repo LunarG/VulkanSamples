@@ -28,7 +28,7 @@
 #include <vector>
 #include <assert.h>
 
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 
 namespace vk_testing {
 

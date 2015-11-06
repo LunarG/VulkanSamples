@@ -26,7 +26,7 @@
  */
 
 #include "vkLayer.h"
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 // VkTrace Snapshot ERROR codes
 typedef enum _VKTRACE_SNAPSHOT_ERROR
 {

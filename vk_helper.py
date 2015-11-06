@@ -1363,8 +1363,8 @@ class StructWrapperGen:
     def _generateSizeHelperHeaderC(self):
         header = []
         header.append('#include "vk_struct_size_helper.h"')
-        header.append('#include "vk_ext_khr_swapchain.h"')
-        header.append('#include "vk_ext_khr_device_swapchain.h"')
+        header.append('#include "vulkan/vk_ext_khr_swapchain.h"')
+        header.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')
@@ -1489,7 +1489,7 @@ class EnumCodeGen:
         header.append('#ifdef _WIN32\n')
         header.append('#pragma warning( disable : 4065 )\n')
         header.append('#endif\n')
-        header.append('#include <%s>\n\n\n' % self.in_file)
+        header.append('#include <vulkan/%s>\n\n\n' % self.in_file)
         return "\n".join(header)
 
 
@@ -1850,12 +1850,12 @@ def main(argv=None):
         sw.generateStringHelperCpp()
         sw.set_no_addr(False)
         sw.generateStringHelperCpp()
-        sw.set_include_headers(["stdio.h", "stdlib.h", "vulkan.h"])
+        sw.set_include_headers(["stdio.h", "stdlib.h", "vulkan/vulkan.h"])
         sw.generateSizeHelper()
         sw.generateSizeHelperC()
     if opts.gen_struct_sizes:
         st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        st.set_include_headers(["stdio.h", "stdlib.h", "vulkan.h"])
+        st.set_include_headers(["stdio.h", "stdlib.h", "vulkan/vulkan.h"])
         st.generateSizeHelper()
         st.generateSizeHelperC()
     if opts.gen_cmake:

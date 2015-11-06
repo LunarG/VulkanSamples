@@ -60,7 +60,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include "vktestbinding.h"
 #include "test_common.h"

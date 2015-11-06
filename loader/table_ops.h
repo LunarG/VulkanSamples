@@ -25,8 +25,8 @@
  * Author: Tony Barbour <tony@LunarG.com>
  */
 
-#include <vulkan.h>
-#include <vk_layer.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_layer.h>
 #include <string.h>
 #include "loader.h"
 #include "vk_loader_platform.h"

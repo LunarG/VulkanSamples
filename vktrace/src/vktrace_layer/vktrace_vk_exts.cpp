@@ -23,11 +23,11 @@
  *
  * Author: Jon Ashburn <jon@lunarg.com>
  */
-#include "vk_debug_marker_lunarg.h"
-#include "vk_debug_report_lunarg.h"
-#include "vk_ext_khr_swapchain.h"
-#include "vk_ext_khr_device_swapchain.h"
-#include "vk_layer.h"
+#include "vulkan/vk_debug_marker_lunarg.h"
+#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_device_swapchain.h"
+#include "vulkan/vk_layer.h"
 #include "vktrace_lib_helpers.h"
 
 void ext_init_create_instance(

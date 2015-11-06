@@ -25,7 +25,7 @@
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
  **************************************************************************/
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 
 #include "vkreplay_settings.h"
 // declared as extern in header

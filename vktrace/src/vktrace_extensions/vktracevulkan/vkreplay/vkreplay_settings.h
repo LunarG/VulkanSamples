@@ -33,7 +33,7 @@ extern "C"
 #include "vktrace_settings.h"
 }
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 
 typedef struct vkreplay_settings
 {

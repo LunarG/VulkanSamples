@@ -18,11 +18,11 @@ rm -rf generated
 mkdir -p generated
 python ../vk-generate.py dispatch-table-ops layer > generated/vk_dispatch_table_helper.h
 
-python ../vk_helper.py --gen_enum_string_helper ../include/vulkan.h --abs_out_dir generated
-python ../vk_helper.py --gen_struct_wrappers ../include/vulkan.h --abs_out_dir generated
+python ../vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs_out_dir generated
+python ../vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated
 
-python ../vk-layer-generate.py Generic ../include/vulkan.h > generated/generic_layer.cpp
-python ../vk-layer-generate.py APIDump ../include/vulkan.h > generated/api_dump.cpp
-python ../vk-layer-generate.py ObjectTracker ../include/vulkan.h > generated/object_track.cpp
-python ../vk-layer-generate.py Threading ../include/vulkan.h > generated/threading.cpp
+python ../vk-layer-generate.py Generic ../include/vulkan/vulkan.h > generated/generic_layer.cpp
+python ../vk-layer-generate.py APIDump ../include/vulkan/vulkan.h > generated/api_dump.cpp
+python ../vk-layer-generate.py ObjectTracker ../include/vulkan/vulkan.h > generated/object_track.cpp
+python ../vk-layer-generate.py Threading ../include/vulkan/vulkan.h > generated/threading.cpp
 

@@ -22,9 +22,9 @@
  *
  * Author: Tobin Ehlis <tobin@lunarg.com>
  */
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 #include <vector>
-#include "vk_debug_report_lunarg.h"
+#include "vulkan/vk_debug_report_lunarg.h"
 
 using namespace std;
 

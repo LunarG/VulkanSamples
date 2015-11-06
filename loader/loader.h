@@ -32,12 +32,12 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 #include <vk_loader_platform.h>
-#include <vk_debug_report_lunarg.h>
-#include <vk_ext_khr_swapchain.h>
-#include <vk_layer.h>
-#include <vk_icd.h>
+#include <vulkan/vk_debug_report_lunarg.h>
+#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/vk_layer.h>
+#include <vulkan/vk_icd.h>
 #include <assert.h>
 
 #if defined(__GNUC__) && __GNUC__ >= 4

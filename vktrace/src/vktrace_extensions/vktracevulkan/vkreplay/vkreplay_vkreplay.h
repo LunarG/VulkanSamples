@@ -49,10 +49,10 @@ extern "C" {
 // TODO138 : Need to add packets files for new wsi headers
 }
 
-#include "vulkan.h"
-#include "vk_debug_report_lunarg.h"
-#include "vk_ext_khr_swapchain.h"
-#include "vk_ext_khr_device_swapchain.h"
+#include "vulkan/vulkan.h"
+#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_device_swapchain.h"
 #include "vkreplay_vkdisplay.h"
 #include "vkreplay_vk_func_ptrs.h"
 #include "vkreplay_vk_objmapper.h"

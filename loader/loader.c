@@ -45,7 +45,7 @@
 #include "table_ops.h"
 #include "debug_report.h"
 #include "wsi_swapchain.h"
-#include "vk_icd.h"
+#include "vulkan/vk_icd.h"
 #include "cJSON.h"
 
 static loader_platform_dl_handle loader_add_layer_lib(

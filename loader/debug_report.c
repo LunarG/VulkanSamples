@@ -35,7 +35,7 @@
 #endif
 #include "vk_loader_platform.h"
 #include "debug_report.h"
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 
 typedef void (VKAPI *PFN_stringCallback)(char *message);
 

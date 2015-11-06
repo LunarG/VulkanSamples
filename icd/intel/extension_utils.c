@@ -26,7 +26,7 @@
  */
 
 #include "extension_info.h"
-#include "vk_debug_marker_layer.h"
+#include "vulkan/vk_debug_marker_layer.h"
 
 const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {

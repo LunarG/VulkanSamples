@@ -66,7 +66,7 @@
 #include <fstream>
 using namespace std;
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 #ifdef DUMP_STATE_DOT
 #include "../layers/draw_state.h"
 #endif
@@ -74,7 +74,7 @@ using namespace std;
 #include "../layers/object_track.h"
 #endif
 #ifdef DEBUG_CALLBACK
-#include <vk_debug_report_lunarg.h>
+#include <vulkan/vk_debug_report_lunarg.h>
 #endif
 #include "test_common.h"
 

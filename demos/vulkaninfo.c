@@ -37,10 +37,10 @@
 #include <io.h>
 #endif
 
-#include "vk_ext_khr_swapchain.h"
-#include "vk_ext_khr_device_swapchain.h"
+#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_device_swapchain.h"
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
     __FILE__, __LINE__, vk_result_string(err));

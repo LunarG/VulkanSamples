@@ -1,8 +1,8 @@
 #include "test_common.h"
 #include "vktestbinding.h"
 #include "test_environment.h"
-#include "vk_ext_khr_swapchain.h"
-#include "vk_ext_khr_device_swapchain.h"
+#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_device_swapchain.h"
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))

@@ -32,11 +32,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include <vulkan.h>
-#include <vk_debug_report_lunarg.h>
-#include <vk_icd.h>
-#include "vk_ext_khr_swapchain.h"
-#include "vk_ext_khr_device_swapchain.h"
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_debug_report_lunarg.h>
+#include <vulkan/vk_icd.h>
+#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/vk_ext_khr_device_swapchain.h"
 
 #include "icd.h"
 

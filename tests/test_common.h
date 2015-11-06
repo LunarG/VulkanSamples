@@ -7,8 +7,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include <vulkan.h>
-#include <vk_sdk_platform.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_sdk_platform.h>
 
 #ifdef WIN32
 #pragma warning( push )

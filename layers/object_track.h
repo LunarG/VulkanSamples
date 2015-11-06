@@ -25,7 +25,7 @@
  * Author: Tobin Ehlis <tobin@lunarg.com>
  */
 
-#include "vk_layer.h"
+#include "vulkan/vk_layer.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
 

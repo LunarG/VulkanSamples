@@ -27,7 +27,7 @@
 #ifndef __VK_EXT_KHR_SWAPCHAIN_H__
 #define __VK_EXT_KHR_SWAPCHAIN_H__
 
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 
 #define VK_EXT_KHR_SWAPCHAIN_REVISION         17
 #define VK_EXT_KHR_SWAPCHAIN_EXTENSION_NUMBER 1

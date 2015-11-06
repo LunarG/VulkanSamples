@@ -32,7 +32,7 @@
 #ifndef __VK_DEBUG_REPORT_LUNARG_H__
 #define __VK_DEBUG_REPORT_LUNARG_H__
 
-#include "vulkan.h"
+#include "vulkan/vulkan.h"
 
 #define VK_DEBUG_REPORT_EXTENSION_NUMBER 5
 #define VK_DEBUG_REPORT_EXTENSION_REVISION 1

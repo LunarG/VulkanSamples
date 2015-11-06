@@ -624,7 +624,7 @@ class Subcommand(object):
 
 class LayerFuncsSubcommand(Subcommand):
     def generate_header(self):
-        return '#include <vk_layer.h>\n#include "loader.h"'
+        return '#include <vulkan/vk_layer.h>\n#include "loader.h"'
 
     def generate_body(self):
         return self._generate_dispatch_entrypoints("static")
@@ -638,7 +638,7 @@ class GenericLayerSubcommand(Subcommand):
         gen_header.append('#include <string.h>')
         gen_header.append('#include <unordered_map>')
         gen_header.append('#include "vk_loader_platform.h"')
-        gen_header.append('#include "vk_layer.h"')
+        gen_header.append('#include "vulkan/vk_layer.h"')
         gen_header.append('#include "vk_layer_config.h"')
         gen_header.append('#include "vk_layer_logging.h"')
         gen_header.append('#include "vk_layer_table.h"')
@@ -782,7 +782,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('#include <string.h>')
         header_txt.append('')
         header_txt.append('#include "vk_loader_platform.h"')
-        header_txt.append('#include "vk_layer.h"')
+        header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_struct_string_helper_cpp.h"')
         header_txt.append('#include "vk_layer_table.h"')
         header_txt.append('#include "vk_layer_extension_utils.h"')
@@ -1189,14 +1189,14 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <string.h>')
         header_txt.append('#include <inttypes.h>')
         header_txt.append('')
-        header_txt.append('#include "vulkan.h"')
+        header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vk_loader_platform.h"')
         header_txt.append('')
         header_txt.append('#include <unordered_map>')
         header_txt.append('using namespace std;')
-        header_txt.append('#include "vk_layer.h"')
+        header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_layer_config.h"')
-        header_txt.append('#include "vk_debug_report_lunarg.h"')
+        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
         header_txt.append('#include "vk_layer_table.h"')
         header_txt.append('#include "vk_layer_data.h"')
         header_txt.append('#include "vk_layer_logging.h"')
@@ -1809,7 +1809,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('#include <string.h>')
         header_txt.append('#include <unordered_map>')
         header_txt.append('#include "vk_loader_platform.h"')
-        header_txt.append('#include "vk_layer.h"')
+        header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "threading.h"')
         header_txt.append('#include "vk_layer_config.h"')
         header_txt.append('#include "vk_layer_extension_utils.h"')

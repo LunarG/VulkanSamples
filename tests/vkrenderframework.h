@@ -28,8 +28,8 @@
 #define VKRENDERFRAMEWORK_H
 
 #include "vktestframework.h"
-#include "vk_debug_report_lunarg.h"
-#include "vk_debug_marker_lunarg.h"
+#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_debug_marker_lunarg.h"
 
 
 class VkDeviceObj : public vk_testing::Device
