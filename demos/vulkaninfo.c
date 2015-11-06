@@ -883,7 +883,7 @@ static void app_dump_limits(const VkPhysicalDeviceLimits *limits)
     printf("\t\tsubTexelPrecisionBits                   = 0x%" PRIxLEAST32 "\n", limits->subTexelPrecisionBits                  );
     printf("\t\tmipmapPrecisionBits                     = 0x%" PRIxLEAST32 "\n", limits->mipmapPrecisionBits                    );
     printf("\t\tmaxDrawIndexedIndexValue                = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndexedIndexValue               );
-    printf("\t\tmaxDrawIndirectInstanceCount            = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndirectInstanceCount           );
+    printf("\t\tmaxDrawIndirectCount                    = 0x%" PRIxLEAST32 "\n", limits->maxDrawIndirectCount                   );
     printf("\t\tmaxSamplerLodBias                       = %f\n",                 limits->maxSamplerLodBias                      );
     printf("\t\tmaxSamplerAnisotropy                    = %f\n",                 limits->maxSamplerAnisotropy                   );
     printf("\t\tmaxViewports                            = 0x%" PRIxLEAST32 "\n", limits->maxViewports                           );

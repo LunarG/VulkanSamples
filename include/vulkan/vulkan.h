@@ -1243,7 +1243,7 @@ typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    subTexelPrecisionBits;
     uint32_t                                    mipmapPrecisionBits;
     uint32_t                                    maxDrawIndexedIndexValue;
-    uint32_t                                    maxDrawIndirectInstanceCount;
+    uint32_t                                    maxDrawIndirectCount;
     float                                       maxSamplerLodBias;
     float                                       maxSamplerAnisotropy;
     uint32_t                                    maxViewports;
