@@ -62,7 +62,7 @@ void wsi_swapchain_create_instance(
  * This is the trampoline entrypoint
  * for GetPhysicalDeviceSurfaceSupportKHR
  */
-VkResult VKAPI wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
+VKAPI_ATTR VkResult VKAPI_CALL wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
         VkPhysicalDevice                        physicalDevice,
         uint32_t                                queueNodeIndex,
         const VkSurfaceDescriptionKHR*          pSurfaceDescription,

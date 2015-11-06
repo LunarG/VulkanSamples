@@ -65,7 +65,7 @@ void debug_report_create_instance(
     }
 }
 
-static VkResult VKAPI debug_report_DbgCreateMsgCallback(
+static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
         VkInstance instance,
         VkFlags msgFlags,
         const PFN_vkDbgMsgCallback pfnMsgCallback,
@@ -93,7 +93,7 @@ static VkResult VKAPI debug_report_DbgCreateMsgCallback(
     return result;
 }
 
-static VkResult VKAPI debug_report_DbgDestroyMsgCallback(
+static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgDestroyMsgCallback(
         VkInstance instance,
         VkDbgMsgCallback msg_callback)
 {

@@ -1743,7 +1743,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
     VkDescriptorSetLayoutBinding dsl_binding = {};
         dsl_binding.binding = 0;
         dsl_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        dsl_binding.arraySize = 1;
+        dsl_binding.descriptorCount = 1;
         dsl_binding.stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding.pImmutableSamplers = NULL;
 
