@@ -323,9 +323,9 @@ bool debug_report_instance_gpa(
         const char* name,
         void **addr)
 {
+    // debug_report is currently advertised to be supported by the loader,
+    // so always return the entry points if name matches and it's enabled
     *addr = NULL;
-    if (ptr_instance == VK_NULL_HANDLE)
-        return false;
 
     if (!strcmp("vkDbgCreateMsgCallback", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgCreateMsgCallback : NULL;

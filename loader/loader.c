@@ -44,6 +44,7 @@
 #include "gpa_helper.h"
 #include "table_ops.h"
 #include "debug_report.h"
+#include "wsi_swapchain.h"
 #include "vk_icd.h"
 #include "cJSON.h"
 
@@ -3075,52 +3076,35 @@ VkResult VKAPI loader_CreateDevice(
  * @param instance
  * @param pName
  * @return
- *    If instance == NULL returns a global level entrypoint for all core entry points
- *    If instance is valid returns a instance relative entry point for instance level
- *    entry points both core and extensions.
- *    Instance relative means call down the instance chain. Global means trampoline entry points.
+ *    If instance == NULL returns a global level functions only
+ *    If instance is valid returns a trampoline entry point for all dispatchable Vulkan
+ *    functions both core and extensions.
  */
 LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance, const char * pName)
 {
 
     void *addr;
 
+    addr = globalGetProcAddr(pName);
     if (instance == VK_NULL_HANDLE) {
-        /* get entrypoint addresses that are global (in the loader),
-           doesn't include any instance extensions since they may not be enabled yet*/
-
-        addr = globalGetProcAddr(pName);
+        // get entrypoint addresses that are global (no dispatchable object)
 
         return addr;
+    } else {
+        // if a global entrypoint return NULL
+        if (addr)
+            return NULL;
     }
 
-
-    /* return any instance entrypoints that must resolve to loader code */
-    addr = loader_non_passthrough_gipa(pName);
-    if (addr) {
-        return addr;
-    }
-
-    /* debug_report is a special case; need to return loader trampoline entrypoints
-     * unless the extension is not enabled; also need to handle debug_report
-     * utility functions */
     struct loader_instance *ptr_instance = loader_get_instance(instance);
-    if (debug_report_instance_gpa(ptr_instance, pName, &addr)) {
-        return addr;
-    }
-
-    /* return the instance dispatch table entrypoint for core and extensions */
-    const VkLayerInstanceDispatchTable *disp_table = * (VkLayerInstanceDispatchTable **) instance;
-    if (disp_table == NULL)
+    if (ptr_instance == NULL)
         return NULL;
+    // Return trampoline code for non-global entrypoints including any extensions.
+    // Device extensions are returned if a layer or ICD supports the extension.
+    // Instance extensions are returned if the extension is enabled and the loader
+    // or someone else supports the extension
+    return trampolineGetProcAddr(ptr_instance, pName);
 
-    addr = loader_lookup_instance_dispatch_table(disp_table, pName);
-    if (addr)
-        return addr;
-
-    // NOTE: any instance extensions must be known to loader and resolved
-    // in the above call to loader_lookup_instance_dispatch_table())
-    return NULL;
 }
 
 /**
@@ -3128,21 +3112,13 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(VkInstance instance
  * @param device
  * @param pName
  * @return
- *    If device == NULL, returns a global level entrypoint for all core entry points
  *    If device is valid, returns a device relative entry point for device level
  *    entry points both core and extensions.
- *    Device relative means call down the device chain. Global means trampoline entry points.
+ *    Device relative means call down the device chain.
  */
 LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, const char * pName)
 {
     void *addr;
-
-    if (device == VK_NULL_HANDLE) {
-        /* get entrypoint addresses that are global (in the loader)*/
-        addr = globalGetProcAddr(pName);
-        return addr;
-    }
-
 
     /* for entrypoints that loader must handle (ie non-dispatchable or create object)
        make sure the loader entrypoint is returned */
@@ -3150,6 +3126,12 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, cons
     if (addr) {
         return addr;
     }
+
+    /* Although CreateDevice is on device chain it's dispatchable object isn't
+     * a VkDevice or child of VkDevice so return NULL.
+     */
+    if (!strcmp(pName, "CreateDevice"))
+        return NULL;
 
     /* return the dispatch table entrypoint for the fastest case */
     const VkLayerDispatchTable *disp_table = * (VkLayerDispatchTable **) device;
@@ -3159,11 +3141,10 @@ LOADER_EXPORT PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(VkDevice device, cons
     addr = loader_lookup_device_dispatch_table(disp_table, pName);
     if (addr)
         return addr;
-    else  {
-        if (disp_table->GetDeviceProcAddr == NULL)
-            return NULL;
-        return disp_table->GetDeviceProcAddr(device, pName);
-    }
+
+    if (disp_table->GetDeviceProcAddr == NULL)
+        return NULL;
+    return disp_table->GetDeviceProcAddr(device, pName);
 }
 
 LOADER_EXPORT VkResult VKAPI vkEnumerateInstanceExtensionProperties(

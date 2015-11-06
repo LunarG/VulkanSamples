@@ -105,5 +105,14 @@ VkResult VKAPI loader_GetPhysicalDeviceSurfaceSupportKHR(
                                                   pSupported);
 }
 
+bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
+                                 const char* name, void **addr)
+{
+    *addr = NULL;
 
-
+    if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", name)) {
+        *addr = ptr_instance->wsi_swapchain_enabled ? (void *) wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR : NULL;
+        return true;
+    }
+    return false;
+}

@@ -28,6 +28,8 @@
 #include "loader.h"
 #include "vk_ext_khr_swapchain.h"
 
+bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
+                                 const char* name, void **addr);
 void wsi_swapchain_add_instance_extensions(
         const struct loader_instance *inst,
         struct loader_extension_list *ext_list);

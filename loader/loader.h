@@ -33,6 +33,7 @@
 #define LOADER_H
 
 #include <vulkan.h>
+#include <vk_loader_platform.h>
 #include <vk_debug_report_lunarg.h>
 #include <vk_ext_khr_swapchain.h>
 #include <vk_layer.h>
