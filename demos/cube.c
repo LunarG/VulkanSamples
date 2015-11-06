@@ -1400,7 +1400,6 @@ static void demo_prepare_render_pass(struct demo *demo)
 }
 
 static VkShaderModule demo_prepare_shader_module(struct demo* demo,
-                                                 VkShaderStageFlagBits stage,
                                                  const void* code,
                                                  size_t size)
 {
@@ -1451,8 +1450,7 @@ static VkShaderModule demo_prepare_vs(struct demo *demo)
 
     vertShaderCode = demo_read_spv("cube-vert.spv", &size);
 
-    demo->vert_shader_module = demo_prepare_shader_module(demo,
-                VK_SHADER_STAGE_VERTEX_BIT, vertShaderCode, size);
+    demo->vert_shader_module = demo_prepare_shader_module(demo, vertShaderCode, size);
 
     free(vertShaderCode);
 
@@ -1466,8 +1464,7 @@ static VkShaderModule demo_prepare_fs(struct demo *demo)
 
     fragShaderCode = demo_read_spv("cube-frag.spv", &size);
 
-    demo->frag_shader_module = demo_prepare_shader_module(demo,
-                VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderCode, size);
+    demo->frag_shader_module = demo_prepare_shader_module(demo, fragShaderCode, size);
 
     free(fragShaderCode);
 
