@@ -1288,6 +1288,7 @@ typedef struct VkPhysicalDeviceLimits {
     VkBool32                                    standardSampleLocations;
     VkDeviceSize                                optimalBufferCopyOffsetAlignment;
     VkDeviceSize                                optimalBufferCopyRowPitchAlignment;
+    VkDeviceSize                                nonCoherentAtomSize;
 } VkPhysicalDeviceLimits;
 
 typedef struct VkPhysicalDeviceSparseProperties {
