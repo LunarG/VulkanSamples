@@ -117,7 +117,7 @@ void VkRenderFramework::InitFramework(
         ASSERT_NE(m_dbgCreateMsgCallback, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
         if (m_dbgCreateMsgCallback) {
             err = m_dbgCreateMsgCallback(this->inst,
-                                         VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                                         VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_PERF_WARN_BIT,
                                          dbgFunction,
                                          userData,
                                          &m_globalMsgCallback);

@@ -182,7 +182,7 @@ static VkBool32 myDbgFunc(
     const char*                pMsg,
     void*                      pUserData)
 {
-    if (msgFlags & (VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_ERROR_BIT)) {
+    if (msgFlags & (VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_PERF_WARN_BIT | VK_DBG_REPORT_ERROR_BIT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
         return errMonitor->CheckForDesiredMsg(msgFlags, pMsg);
     }
@@ -4105,7 +4105,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion)
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT,
         "not consumed by fragment shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4249,7 +4249,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT,
         "location 0 not consumed by VS");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
