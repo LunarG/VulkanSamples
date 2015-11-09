@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutBinding layout_bindings[2];
     layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    layout_bindings[0].arraySize = 1;
+    layout_bindings[0].descriptorCount = 1;
     layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layout_bindings[0].pImmutableSamplers = NULL;
 

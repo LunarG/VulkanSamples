@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutBinding uniform_binding[1] = {};
     uniform_binding[0].binding = 0;
     uniform_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniform_binding[0].arraySize = 1;
+    uniform_binding[0].descriptorCount = 1;
     uniform_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uniform_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo uniform_layout_info[1] = {};
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutBinding sampler2D_binding[1] = {};
     sampler2D_binding[0].binding = 0;
     sampler2D_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler2D_binding[0].arraySize = 1;
+    sampler2D_binding[0].descriptorCount = 1;
     sampler2D_binding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     sampler2D_binding[0].pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo sampler2D_layout_info[1] = {};
