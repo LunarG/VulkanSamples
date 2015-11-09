@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_binding.arraySize = 1;
+    layout_binding.descriptorCount = 1;
     layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layout_binding.pImmutableSamplers = NULL;
 

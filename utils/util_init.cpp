@@ -268,14 +268,14 @@ VkResult init_device(struct sample_info &info)
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
     queue_info.queueFamilyIndex = 0;
-    queue_info.queuePriorityCount = 1;
+    queue_info.queueCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
 
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.pNext = NULL;
-    device_info.requestedQueueCount = 1;
-    device_info.pRequestedQueues = &queue_info;
+    device_info.queueCreateInfoCount = 1;
+    device_info.pQueueCreateInfos = &queue_info;
     device_info.enabledLayerNameCount = info.device_layer_names.size();
     device_info.ppEnabledLayerNames =
             device_info.enabledLayerNameCount ? info.device_layer_names.data() : NULL;
@@ -1028,7 +1028,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     VkDescriptorSetLayoutBinding layout_bindings[2];
     layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_bindings[0].arraySize = 1;
+    layout_bindings[0].descriptorCount = 1;
     layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layout_bindings[0].pImmutableSamplers = NULL;
 
@@ -1036,7 +1036,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     {
         layout_bindings[1].binding = 1;
         layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        layout_bindings[1].arraySize = 1;
+        layout_bindings[1].descriptorCount = 1;
         layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         layout_bindings[1].pImmutableSamplers = NULL;
     }
