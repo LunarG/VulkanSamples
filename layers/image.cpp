@@ -255,6 +255,12 @@ bool is_depth_format(VkFormat format)
     return result;
 }
 
+static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value)
+{
+    return ((validate_VkImageLayout(input_value) == 1) ||
+            (input_value == VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR));
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -312,8 +318,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
 
     for(uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i)
     {
-        if(!validate_VkImageLayout(pCreateInfo->pAttachments[i].initialLayout) ||
-           !validate_VkImageLayout(pCreateInfo->pAttachments[i].finalLayout))
+        if(!validate_VkImageLayoutKHR(pCreateInfo->pAttachments[i].initialLayout) ||
+           !validate_VkImageLayoutKHR(pCreateInfo->pAttachments[i].finalLayout))
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
