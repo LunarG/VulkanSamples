@@ -60,12 +60,6 @@ int main(int argc, char **argv)
     execute_begin_command_buffer(info);
     init_device_queue(info);
     init_swap_chain(info);
-    init_uniform_buffer(info); 
-    init_descriptor_and_pipeline_layouts(info, false);
-    init_renderpass(info, false);
-    init_framebuffers(info, false);
-    init_descriptor_pool(info, false);
-    init_descriptor_set(info, false);
 
     /* VULKAN_KEY_START */
 
@@ -136,9 +130,6 @@ int main(int argc, char **argv)
     vkUnmapMemory(info.device, dmem);
 
     bltDstImage = info.buffers[info.current_buffer].image;
-
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
 
     // Do a image copy to part of the dst image
     VkImageCopy cregion;
@@ -240,10 +231,6 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
-    destroy_descriptor_pool(info);
-    destroy_framebuffers(info);
-    destroy_descriptor_and_pipeline_layouts(info);
-    destroy_uniform_buffer(info);
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
