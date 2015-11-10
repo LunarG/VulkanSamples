@@ -37,16 +37,11 @@ static const struct icd_format_info {
 } icd_format_table[VK_FORMAT_RANGE_SIZE] = {
     [VK_FORMAT_UNDEFINED]            = { 0,  0 },
     [VK_FORMAT_R4G4_UNORM_PACK8]           = { 1,  2 },
-    [VK_FORMAT_R4G4_USCALED]         = { 1,  2 },
     [VK_FORMAT_R4G4B4A4_UNORM_PACK16]       = { 2,  4 },
-    [VK_FORMAT_R4G4B4A4_USCALED]     = { 2,  4 },
     [VK_FORMAT_B4G4R4A4_UNORM_PACK16]       = { 2,  4 },
     [VK_FORMAT_R5G6B5_UNORM_PACK16]         = { 2,  3 },
-    [VK_FORMAT_R5G6B5_USCALED]       = { 2,  3 },
     [VK_FORMAT_B5G6R5_UNORM_PACK16]         = { 2, 3 },
-    [VK_FORMAT_B5G6R5_USCALED]       = { 2, 3 },
     [VK_FORMAT_R5G5B5A1_UNORM_PACK16]       = { 2,  4 },
-    [VK_FORMAT_R5G5B5A1_USCALED]     = { 2,  4 },
     [VK_FORMAT_B5G5R5A1_UNORM_PACK16]       = { 2,  4 },
     [VK_FORMAT_R8_UNORM]             = { 1,  1 },
     [VK_FORMAT_R8_SNORM]             = { 1,  1 },
@@ -497,19 +492,16 @@ void icd_format_get_raw_value(VkFormat format,
     case VK_FORMAT_UNDEFINED:
         break;
     case VK_FORMAT_R4G4_UNORM_PACK8:
-    case VK_FORMAT_R4G4_USCALED:
         ((uint8_t *) value)[0]  = (color[0] & 0xf) << 0   |
                                   (color[1] & 0xf) << 4;
         break;
     case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-    case VK_FORMAT_R4G4B4A4_USCALED:
         ((uint16_t *) value)[0] = (color[0] & 0xf) << 0   |
                                   (color[1] & 0xf) << 4   |
                                   (color[2] & 0xf) << 8   |
                                   (color[3] & 0xf) << 12;
         break;
     case VK_FORMAT_R5G6B5_UNORM_PACK16:
-    case VK_FORMAT_R5G6B5_USCALED:
         ((uint16_t *) value)[0] = (color[0] & 0x1f) << 0  |
                                   (color[1] & 0x3f) << 5  |
                                   (color[2] & 0x1f) << 11;
@@ -520,7 +512,6 @@ void icd_format_get_raw_value(VkFormat format,
                                   (color[0] & 0x1f) << 11;
         break;
     case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-    case VK_FORMAT_R5G5B5A1_USCALED:
         ((uint16_t *) value)[0] = (color[0] & 0x1f) << 0  |
                                   (color[1] & 0x1f) << 5  |
                                   (color[2] & 0x1f) << 10 |
