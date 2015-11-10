@@ -38,13 +38,13 @@ typedef struct _VULKAN_FORMAT_INFO {
 // for each Vulkan format.
 static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 0,  0 }, //    [VK_FORMAT_UNDEFINED]
-    { 1,  2 }, //    [VK_FORMAT_R4G4_UNORM]
+    { 1,  2 }, //    [VK_FORMAT_R4G4_UNORM_PACK8]
     { 1,  2 }, //    [VK_FORMAT_R4G4_USCALED]
-    { 2,  4 }, //    [VK_FORMAT_R4G4B4A4_UNORM]
+    { 2,  4 }, //    [VK_FORMAT_R4G4B4A4_UNORM_PACK16]
     { 2,  4 }, //    [VK_FORMAT_R4G4B4A4_USCALED]
-    { 2,  3 }, //    [VK_FORMAT_R5G6B5_UNORM]
+    { 2,  3 }, //    [VK_FORMAT_R5G6B5_UNORM_PACK16]
     { 2,  3 }, //    [VK_FORMAT_R5G6B5_USCALED]
-    { 2,  4 }, //    [VK_FORMAT_R5G5B5A1_UNORM]
+    { 2,  4 }, //    [VK_FORMAT_R5G5B5A1_UNORM_PACK16]
     { 2,  4 }, //    [VK_FORMAT_R5G5B5A1_USCALED]
     { 1,  1 }, //    [VK_FORMAT_R8_UNORM]
     { 1,  1 }, //    [VK_FORMAT_R8_SNORM]
@@ -187,7 +187,7 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 16, 4 }, //    [VK_FORMAT_ASTC_12x10_SRGB_BLOCK]
     { 16, 4 }, //    [VK_FORMAT_ASTC_12x12_UNORM_BLOCK]
     { 16, 4 }, //    [VK_FORMAT_ASTC_12x12_SRGB_BLOCK]
-    { 2, 3 },  //    [VK_FORMAT_B5G6R5_UNORM]
+    { 2, 3 },  //    [VK_FORMAT_B5G6R5_UNORM_PACK16]
     { 2, 3 },  //    [VK_FORMAT_B5G6R5_USCALED]
     { 3, 3 },  //    [VK_FORMAT_B8G8R8_UNORM]
     { 3, 3 },  //    [VK_FORMAT_B8G8R8_SNORM]
@@ -266,10 +266,10 @@ bool vk_format_is_norm(VkFormat format)
     bool is_norm = false;
 
     switch (format) {
-    case VK_FORMAT_R4G4_UNORM:
-    case VK_FORMAT_R4G4B4A4_UNORM:
-    case VK_FORMAT_R5G6B5_UNORM:
-    case VK_FORMAT_R5G5B5A1_UNORM:
+    case VK_FORMAT_R4G4_UNORM_PACK8:
+    case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+    case VK_FORMAT_R5G6B5_UNORM_PACK16:
+    case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
     case VK_FORMAT_R8_UNORM:
     case VK_FORMAT_R8_SNORM:
     case VK_FORMAT_R8G8_UNORM:
@@ -317,7 +317,7 @@ bool vk_format_is_norm(VkFormat format)
     case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
     case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
     case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
-    case VK_FORMAT_B5G6R5_UNORM:
+    case VK_FORMAT_B5G6R5_UNORM_PACK16:
     case VK_FORMAT_B8G8R8_UNORM:
     case VK_FORMAT_B8G8R8_SNORM:
     case VK_FORMAT_B8G8R8A8_UNORM:

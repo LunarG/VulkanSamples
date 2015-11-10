@@ -379,13 +379,13 @@ static const struct intel_dp_cap intel_dp_caps[] = {
 };
 
 static const int intel_color_mapping[VK_FORMAT_RANGE_SIZE] = {
-    [VK_FORMAT_R4G4_UNORM]           = 0,
+    [VK_FORMAT_R4G4_UNORM_PACK8]           = 0,
     [VK_FORMAT_R4G4_USCALED]         = 0,
-    [VK_FORMAT_R4G4B4A4_UNORM]       = 0,
+    [VK_FORMAT_R4G4B4A4_UNORM_PACK16]       = 0,
     [VK_FORMAT_R4G4B4A4_USCALED]     = 0,
-    [VK_FORMAT_R5G6B5_UNORM]         = 0,
+    [VK_FORMAT_R5G6B5_UNORM_PACK16]         = 0,
     [VK_FORMAT_R5G6B5_USCALED]       = 0,
-    [VK_FORMAT_R5G5B5A1_UNORM]       = 0,
+    [VK_FORMAT_R5G5B5A1_UNORM_PACK16]       = 0,
     [VK_FORMAT_R5G5B5A1_USCALED]     = 0,
     [VK_FORMAT_R8_UNORM]             = GEN6_FORMAT_R8_UNORM,
     [VK_FORMAT_R8_SNORM]             = GEN6_FORMAT_R8_SNORM,
@@ -519,7 +519,7 @@ static const int intel_color_mapping[VK_FORMAT_RANGE_SIZE] = {
     [VK_FORMAT_ASTC_12x10_SRGB_BLOCK]      = 0,
     [VK_FORMAT_ASTC_12x12_UNORM_BLOCK]     = 0,
     [VK_FORMAT_ASTC_12x12_SRGB_BLOCK]      = 0,
-    [VK_FORMAT_B5G6R5_UNORM]         = GEN6_FORMAT_B5G6R5_UNORM,
+    [VK_FORMAT_B5G6R5_UNORM_PACK16]         = GEN6_FORMAT_B5G6R5_UNORM,
     [VK_FORMAT_B5G6R5_USCALED]       = 0,
     [VK_FORMAT_B8G8R8_UNORM]         = 0,
     [VK_FORMAT_B8G8R8_SNORM]         = 0,

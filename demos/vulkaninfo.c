@@ -170,13 +170,13 @@ static const char *vk_format_string(VkFormat fmt)
     switch (fmt) {
 #define STR(r) case VK_FORMAT_ ##r: return #r
     STR(UNDEFINED);
-    STR(R4G4_UNORM);
+    STR(R4G4_UNORM_PACK8);
     STR(R4G4_USCALED);
-    STR(R4G4B4A4_UNORM);
+    STR(R4G4B4A4_UNORM_PACK16);
     STR(R4G4B4A4_USCALED);
-    STR(R5G6B5_UNORM);
+    STR(R5G6B5_UNORM_PACK16);
     STR(R5G6B5_USCALED);
-    STR(R5G5B5A1_UNORM);
+    STR(R5G5B5A1_UNORM_PACK16);
     STR(R5G5B5A1_USCALED);
     STR(R8_UNORM);
     STR(R8_SNORM);
@@ -314,7 +314,7 @@ static const char *vk_format_string(VkFormat fmt)
     STR(ASTC_12x10_SRGB_BLOCK);
     STR(ASTC_12x12_UNORM_BLOCK);
     STR(ASTC_12x12_SRGB_BLOCK);
-    STR(B5G6R5_UNORM);
+    STR(B5G6R5_UNORM_PACK16);
     STR(B5G6R5_USCALED);
     STR(B8G8R8_UNORM);
     STR(B8G8R8_SNORM);
