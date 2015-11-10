@@ -3690,6 +3690,8 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
         break;
     }
 
+    cmd_alloc_dset_data(cmd, data, pipeline_layout);
+
     for (i = 0; i < descriptorSetCount; i++) {
         struct intel_desc_set *dset = intel_desc_set(pDescriptorSets[i]);
 
