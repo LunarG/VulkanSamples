@@ -464,13 +464,15 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     if (dynViewport) {
         if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
             result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+                "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.",
+                 pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
         }
     }
     if (dynScissor) {
         if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
             result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+                "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.",
+                pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
         }
     }
     return result;
@@ -532,13 +534,15 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
         if (!dynViewport) {
             if (pPipeline->graphicsPipelineCI.pViewportState->viewportCount && !pPipeline->graphicsPipelineCI.pViewportState->pViewports) {
                 skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
+                    "Gfx Pipeline viewportCount is %u, but pViewports is NULL. For non-zero viewportCount, you must either include pViewports data, or "
+                    "include viewport in pDynamicState and set it with vkCmdSetViewport().", pPipeline->graphicsPipelineCI.pViewportState->viewportCount);
             }
         }
         if (!dynScissor) {
             if (pPipeline->graphicsPipelineCI.pViewportState->scissorCount && !pPipeline->graphicsPipelineCI.pViewportState->pScissors) {
                 skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                    "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
+                    "Gfx Pipeline scissorCount is %u, but pScissors is NULL. For non-zero scissorCount, you must either include pScissors data, or include "
+                    "scissor in pDynamicState and set it with vkCmdSetScissor().", pPipeline->graphicsPipelineCI.pViewportState->scissorCount);
             }
         }
     }
@@ -547,7 +551,7 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
-static PIPELINE_NODE* initPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
+static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
 {
     PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
     if (pBasePipeline) {
@@ -2247,7 +2251,13 @@ VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
+    VkDevice                            device,
+    VkPipelineCache                     pipelineCache,
+    uint32_t                            count,
+    const VkGraphicsPipelineCreateInfo *pCreateInfos,
+    const VkAllocationCallbacks        *pAllocator,
+    VkPipeline                         *pPipelines)
 {
     VkResult result = VK_SUCCESS;
     //TODO What to do with pipelineCache?
@@ -2259,15 +2269,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevic
     // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
     vector<PIPELINE_NODE*> pPipeNode(count);
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
     uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
+
     for (i=0; i<count; i++) {
-        pPipeNode[i] = initPipeline(dev_data, &pCreateInfos[i], NULL);
+        pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i], NULL);
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
+
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+        result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device,
+            pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         loader_platform_thread_lock_mutex(&globalLock);
         for (i=0; i<count; i++) {
             pPipeNode[i]->pipeline = pPipelines[i];
@@ -2281,6 +2295,56 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(VkDevic
                 delete[] pPipeNode[i]->pVertexBindingDescriptions;
                 delete[] pPipeNode[i]->pVertexAttributeDescriptions;
                 delete[] pPipeNode[i]->pAttachments;
+                delete pPipeNode[i];
+            }
+        }
+        return VK_ERROR_VALIDATION_FAILED;
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
+    VkDevice                            device,
+    VkPipelineCache                     pipelineCache,
+    uint32_t                            count,
+    const VkComputePipelineCreateInfo  *pCreateInfos,
+    const VkAllocationCallbacks        *pAllocator,
+    VkPipeline                         *pPipelines)
+{
+    VkResult result   = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+
+    // TODO : Improve this data struct w/ unique_ptrs so cleanup below is automatic
+    vector<PIPELINE_NODE*> pPipeNode(count);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    uint32_t i=0;
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (i=0; i<count; i++) {
+        // TODO: Verify compute stage bits
+
+        // Create and initialize internal tracking data structure
+        pPipeNode[i] = new PIPELINE_NODE;
+        memset((void*)pPipeNode[i], 0, sizeof(PIPELINE_NODE));
+        memcpy(&pPipeNode[i]->computePipelineCI, (const void*)&pCreateInfos[i], sizeof(VkComputePipelineCreateInfo));
+
+        // TODO: Add Compute Pipeline Verification
+        // skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
+    if (VK_FALSE == skipCall) {
+        result = dev_data->device_dispatch_table->CreateComputePipelines(device, pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
+        loader_platform_thread_lock_mutex(&globalLock);
+        for (i=0; i<count; i++) {
+            pPipeNode[i]->pipeline = pPipelines[i];
+            dev_data->pipelineMap[pPipeNode[i]->pipeline] = pPipeNode[i];
+        }
+        loader_platform_thread_unlock_mutex(&globalLock);
+    } else {
+        for (i=0; i<count; i++) {
+            if (pPipeNode[i]) {
+                // Clean up any locally allocated data structures
                 delete pPipeNode[i];
             }
         }
@@ -4599,6 +4663,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkMergePipelineCaches;
     if (!strcmp(funcName, "vkCreateGraphicsPipelines"))
         return (PFN_vkVoidFunction) vkCreateGraphicsPipelines;
+    if (!strcmp(funcName, "vkCreateComputePipelines"))
+        return (PFN_vkVoidFunction) vkCreateComputePipelines;
     if (!strcmp(funcName, "vkCreateSampler"))
         return (PFN_vkVoidFunction) vkCreateSampler;
     if (!strcmp(funcName, "vkCreateDescriptorSetLayout"))
