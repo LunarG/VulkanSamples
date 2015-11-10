@@ -43,6 +43,7 @@ static const struct icd_format_info {
     [VK_FORMAT_B5G6R5_UNORM_PACK16]         = { 2, 3 },
     [VK_FORMAT_R5G5B5A1_UNORM_PACK16]       = { 2,  4 },
     [VK_FORMAT_B5G5R5A1_UNORM_PACK16]       = { 2,  4 },
+    [VK_FORMAT_A1R5G5B5_UNORM_PACK16]       = { 2,  4 },
     [VK_FORMAT_R8_UNORM]             = { 1,  1 },
     [VK_FORMAT_R8_SNORM]             = { 1,  1 },
     [VK_FORMAT_R8_USCALED]           = { 1,  1 },
@@ -85,6 +86,13 @@ static const struct icd_format_info {
     [VK_FORMAT_B8G8R8A8_UINT]        = { 4, 4 },
     [VK_FORMAT_B8G8R8A8_SINT]        = { 4, 4 },
     [VK_FORMAT_B8G8R8A8_SRGB]        = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_UNORM_PACK32]       = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_SNORM_PACK32]       = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_USCALED_PACK32]     = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_SSCALED_PACK32]     = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_UINT_PACK32]        = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_SINT_PACK32]        = { 4, 4 },
+    [VK_FORMAT_A8B8G8R8_SRGB_PACK32]        = { 4, 4 },
     [VK_FORMAT_A2R10G10B10_UNORM_PACK32]    = { 4, 4 },
     [VK_FORMAT_A2R10G10B10_SNORM_PACK32]    = { 4, 4 },
     [VK_FORMAT_A2R10G10B10_USCALED_PACK32]  = { 4, 4 },
@@ -137,9 +145,17 @@ static const struct icd_format_info {
     [VK_FORMAT_R32G32B32A32_UINT]    = { 16, 4 },
     [VK_FORMAT_R32G32B32A32_SINT]    = { 16, 4 },
     [VK_FORMAT_R32G32B32A32_SFLOAT]  = { 16, 4 },
+    [VK_FORMAT_R64_UINT]             = { 8,  1 },
+    [VK_FORMAT_R64_SINT]             = { 8,  1 },
     [VK_FORMAT_R64_SFLOAT]           = { 8,  1 },
+    [VK_FORMAT_R64G64_UINT]          = { 16, 2 },
+    [VK_FORMAT_R64G64_SINT]          = { 16, 2 },
     [VK_FORMAT_R64G64_SFLOAT]        = { 16, 2 },
+    [VK_FORMAT_R64G64B64_UINT]       = { 24, 3 },
+    [VK_FORMAT_R64G64B64_SINT]       = { 24, 3 },
     [VK_FORMAT_R64G64B64_SFLOAT]     = { 24, 3 },
+    [VK_FORMAT_R64G64B64A64_UINT]    = { 32, 4 },
+    [VK_FORMAT_R64G64B64A64_SINT]    = { 32, 4 },
     [VK_FORMAT_R64G64B64A64_SFLOAT]  = { 32, 4 },
     [VK_FORMAT_B10G11R11_UFLOAT_PACK32]     = { 4,  3 },
     [VK_FORMAT_E5B9G9R9_UFLOAT_PACK32]      = { 4,  3 },
@@ -234,6 +250,7 @@ bool icd_format_is_norm(VkFormat format)
     case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
     case VK_FORMAT_R5G6B5_UNORM_PACK16:
     case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+    case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
     case VK_FORMAT_R8_UNORM:
     case VK_FORMAT_R8_SNORM:
     case VK_FORMAT_R8G8_UNORM:
@@ -242,6 +259,8 @@ bool icd_format_is_norm(VkFormat format)
     case VK_FORMAT_R8G8B8_SNORM:
     case VK_FORMAT_R8G8B8A8_UNORM:
     case VK_FORMAT_R8G8B8A8_SNORM:
+    case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+    case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
     case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
     case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
     case VK_FORMAT_R16_UNORM:
@@ -310,6 +329,8 @@ bool icd_format_is_int(VkFormat format)
     case VK_FORMAT_R8G8B8_SINT:
     case VK_FORMAT_R8G8B8A8_UINT:
     case VK_FORMAT_R8G8B8A8_SINT:
+    case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+    case VK_FORMAT_A8B8G8R8_SINT_PACK32:
     case VK_FORMAT_A2B10G10R10_UINT_PACK32:
     case VK_FORMAT_A2B10G10R10_SINT_PACK32:
     case VK_FORMAT_R16_UINT:
@@ -328,6 +349,14 @@ bool icd_format_is_int(VkFormat format)
     case VK_FORMAT_R32G32B32_SINT:
     case VK_FORMAT_R32G32B32A32_UINT:
     case VK_FORMAT_R32G32B32A32_SINT:
+    case VK_FORMAT_R64_UINT:
+    case VK_FORMAT_R64_SINT:
+    case VK_FORMAT_R64G64_UINT:
+    case VK_FORMAT_R64G64_SINT:
+    case VK_FORMAT_R64G64B64_UINT:
+    case VK_FORMAT_R64G64B64_SINT:
+    case VK_FORMAT_R64G64B64A64_UINT:
+    case VK_FORMAT_R64G64B64A64_SINT:
     case VK_FORMAT_B8G8R8_UINT:
     case VK_FORMAT_B8G8R8_SINT:
     case VK_FORMAT_B8G8R8A8_UINT:
@@ -382,6 +411,7 @@ bool icd_format_is_srgb(VkFormat format)
     case VK_FORMAT_R8G8_SRGB:
     case VK_FORMAT_R8G8B8_SRGB:
     case VK_FORMAT_R8G8B8A8_SRGB:
+    case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
     case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
     case VK_FORMAT_BC2_SRGB_BLOCK:
     case VK_FORMAT_BC3_SRGB_BLOCK:
