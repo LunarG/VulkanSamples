@@ -102,6 +102,7 @@ int main(int argc, char **argv)
     image_info.usage = VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT;
     image_info.flags = 0;
     image_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL;
     res = vkCreateImage(info.device, &image_info, &bltSrcImage);
 
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -129,6 +130,9 @@ int main(int argc, char **argv)
     vkUnmapMemory(info.device, dmem);
 
     bltDstImage = info.buffers[info.current_buffer].image;
+    set_image_layout(info, bltDstImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                     VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL);
 
     // Do a image copy to part of the dst image
     VkImageCopy cregion;
@@ -210,6 +214,9 @@ int main(int argc, char **argv)
     res = vkQueueSubmit(info.queue, 1, cmd_bufs, nullFence);
     assert(res == VK_SUCCESS);
 
+    res = vkQueueWaitIdle(info.queue);
+    assert(res == VK_SUCCESS);
+
     /* Now present the image in the window */
 
     VkPresentInfoKHR present;
@@ -226,6 +233,8 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore);
+    vkDestroyImage(info.device, bltSrcImage);
+    vkFreeMemory(info.device, dmem);
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);

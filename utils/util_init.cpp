@@ -899,7 +899,7 @@ void init_swap_chain(struct sample_info &info)
     swap_chain.oldSwapchain.handle = 0;
     swap_chain.clipped = true;
     swap_chain.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swap_chain.imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT;
     swap_chain.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swap_chain.queueFamilyCount = 0;
     swap_chain.pQueueFamilyIndices = NULL;
