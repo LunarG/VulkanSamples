@@ -472,7 +472,7 @@ static void demo_set_image_layout(
 
     if (demo->cmd == VK_NULL_HANDLE) {
         const VkCommandBufferAllocateInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .pNext = NULL,
             .commandPool = demo->cmd_pool,
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -936,7 +936,7 @@ static void demo_prepare_depth(struct demo *demo)
                     demo->depth.image, &mem_reqs);
     assert(!err);
 
-    demo->depth.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    demo->depth.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     demo->depth.mem_alloc.pNext = NULL;
     demo->depth.mem_alloc.allocationSize = mem_reqs.size;
     demo->depth.mem_alloc.memoryTypeIndex = 0;
@@ -1064,7 +1064,7 @@ static void demo_prepare_texture_image(struct demo *demo,
 
     vkGetImageMemoryRequirements(demo->device, tex_obj->image, &mem_reqs);
 
-    tex_obj->mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    tex_obj->mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     tex_obj->mem_alloc.pNext = NULL;
     tex_obj->mem_alloc.allocationSize = mem_reqs.size;
     tex_obj->mem_alloc.memoryTypeIndex = 0;
@@ -1263,7 +1263,7 @@ void demo_prepare_cube_data_buffer(struct demo *demo)
 
     vkGetBufferMemoryRequirements(demo->device, demo->uniform_data.buf, &mem_reqs);
 
-    demo->uniform_data.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    demo->uniform_data.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     demo->uniform_data.mem_alloc.pNext = NULL;
     demo->uniform_data.mem_alloc.allocationSize = mem_reqs.size;
     demo->uniform_data.mem_alloc.memoryTypeIndex = 0;
@@ -1620,7 +1620,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     uint32_t i;
 
     VkDescriptorSetAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .pNext = NULL,
         .descriptorPool = demo->desc_pool,
         .setLayoutCount = 1,
@@ -1696,7 +1696,7 @@ static void demo_prepare(struct demo *demo)
     assert(!err);
 
     const VkCommandBufferAllocateInfo cmd = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = NULL,
         .commandPool = demo->cmd_pool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,

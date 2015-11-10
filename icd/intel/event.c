@@ -98,7 +98,7 @@ VkResult intel_event_create(struct intel_dev *dev,
     if (!event)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_reqs.allocationSize = 4; // We know allocation is page alignned
     mem_reqs.pNext = NULL;
     mem_reqs.memoryTypeIndex = 0;

@@ -601,7 +601,7 @@ private:
 inline VkMemoryAllocateInfo DeviceMemory::alloc_info(VkDeviceSize size, uint32_t memory_type_index)
 {
     VkMemoryAllocateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     info.allocationSize = size;
     info.memoryTypeIndex = memory_type_index;
     return info;
@@ -868,7 +868,7 @@ inline VkCopyDescriptorSet Device::copy_descriptor_set(const DescriptorSet &src_
 inline VkCommandBufferAllocateInfo CommandBuffer::create_info(VkCommandPool const &pool)
 {
     VkCommandBufferAllocateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     info.commandPool = pool;
     info.bufferCount = 1;
     return info;

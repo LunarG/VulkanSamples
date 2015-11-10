@@ -567,7 +567,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
         image_create_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
         // Introduce failure, do NOT set memProps to VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -642,7 +642,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 //        .flags           = 0,
 //    };
 //    VkMemoryAllocateInfo mem_alloc = {
-//        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+//        .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 //        .pNext           = NULL,
 //        .allocationSize  = 0,
 //        .memoryTypeIndex = 0,
@@ -714,7 +714,7 @@ TEST_F(VkLayerTest, RebindMemory)
         image_create_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
         mem_alloc.memoryTypeIndex = 0;
@@ -916,7 +916,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -983,7 +983,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
         image_create_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
         mem_alloc.memoryTypeIndex = 0;
@@ -1054,7 +1054,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
         image_create_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_alloc.pNext = NULL;
         mem_alloc.allocationSize = 0;
         mem_alloc.memoryTypeIndex = 0;
@@ -1326,7 +1326,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1427,7 +1427,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1489,7 +1489,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1604,7 +1604,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1686,7 +1686,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1758,7 +1758,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -1873,7 +1873,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
     ASSERT_NO_FATAL_FAILURE(InitState());
 
     VkCommandBufferAllocateInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd.pNext = NULL;
     cmd.commandPool = m_commandPool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
@@ -1943,7 +1943,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -2166,7 +2166,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -2272,7 +2272,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -2377,7 +2377,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -2535,7 +2535,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -2978,7 +2978,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3075,7 +3075,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3172,7 +3172,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3269,7 +3269,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3365,7 +3365,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3440,7 +3440,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3547,7 +3547,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3688,7 +3688,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3780,7 +3780,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -3886,7 +3886,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;
@@ -4969,7 +4969,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5074,7 +5074,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5174,7 +5174,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5279,7 +5279,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5386,7 +5386,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5492,7 +5492,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
 
     // Allocate memory
     VkMemoryAllocateInfo memAlloc = {};
-        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memAlloc.pNext = NULL;
         memAlloc.allocationSize = 0;
         memAlloc.memoryTypeIndex = 0;
@@ -5598,7 +5598,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = 1;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = &ds_layout;

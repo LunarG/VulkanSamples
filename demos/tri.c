@@ -316,7 +316,7 @@ static void demo_set_image_layout(
 
     if (demo->setup_cmd == VK_NULL_HANDLE) {
         const VkCommandBufferAllocateInfo cmd = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .pNext = NULL,
             .commandPool = demo->cmd_pool,
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -709,7 +709,7 @@ static void demo_prepare_depth(struct demo *demo)
         .flags = 0,
     };
     VkMemoryAllocateInfo mem_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = NULL,
         .allocationSize = 0,
         .memoryTypeIndex = 0,
@@ -803,7 +803,7 @@ static void demo_prepare_texture_image(struct demo *demo,
         .flags = 0,
     };
     VkMemoryAllocateInfo mem_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = NULL,
         .allocationSize = 0,
         .memoryTypeIndex = 0,
@@ -994,7 +994,7 @@ static void demo_prepare_vertices(struct demo *demo)
         .flags = 0,
     };
     VkMemoryAllocateInfo mem_alloc = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .pNext = NULL,
         .allocationSize = 0,
         .memoryTypeIndex = 0,
@@ -1366,7 +1366,7 @@ static void demo_prepare_descriptor_set(struct demo *demo)
     uint32_t i;
 
     VkDescriptorSetAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .pNext = NULL,
         .descriptorPool = demo->desc_pool,
         .setLayoutCount = 1,
@@ -1434,7 +1434,7 @@ static void demo_prepare(struct demo *demo)
     assert(!err);
 
     const VkCommandBufferAllocateInfo cmd = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = NULL,
         .commandPool = demo->cmd_pool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,

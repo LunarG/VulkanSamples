@@ -147,7 +147,7 @@ TEST_F(VkTest, AllocateMemory) {
     VkDeviceMemory gpu_mem;
     uint8_t *pData;
 
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = 1024 * 1024; // 1MB
     alloc_info.memoryTypeIndex = 0;
 
@@ -416,7 +416,7 @@ void VkTest::CreateImageTest()
         //            VkDeviceMemory*                             pMemory);
         VkMemoryAllocateInfo mem_info = {};
 
-        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+        mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         mem_info.pNext = NULL;
         mem_info.allocationSize = mem_req.size;
         mem_info.memoryTypeIndex = 0;
@@ -492,7 +492,7 @@ void VkTest::CreateCommandBufferTest()
 
 //    typedef struct VkCommandBufferCreateInfo_
 //    {
-//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO
+//        VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO
 //        const void*                             pNext;
 //        VK_QUEUE_TYPE                          queueType;
 //        VkFlags                               flags;
@@ -506,7 +506,7 @@ void VkTest::CreateCommandBufferTest()
     err = vkCreateCommandPool(device(), &cmd_pool_info, NULL, &commandPool);
     ASSERT_VK_SUCCESS(err) << "vkCreateCommandPool failed";
 
-    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     info.commandPool = commandPool;
     info.bufferCount = 1;
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

@@ -113,7 +113,7 @@ VkResult intel_query_create(struct intel_dev *dev,
     }
 
     VkMemoryAllocateInfo mem_reqs;
-    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_reqs.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_reqs.allocationSize = query->slot_stride * query->slot_count;
     mem_reqs.pNext = NULL;
     mem_reqs.memoryTypeIndex = 0;

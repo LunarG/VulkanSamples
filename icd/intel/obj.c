@@ -61,7 +61,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
         break;
     case VK_OBJECT_TYPE_DEVICE_MEMORY:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
         break;
     case VK_OBJECT_TYPE_EVENT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
@@ -103,7 +103,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         shallow_copy = sizeof(VkCommandPoolCreateInfo);
         break;
     case VK_OBJECT_TYPE_COMMAND_BUFFER:
-        assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO);
+        assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO);
         shallow_copy = sizeof(VkCommandBufferAllocateInfo);
         break;
     case VK_OBJECT_TYPE_PIPELINE:
@@ -141,7 +141,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         memcpy(dbg->create_info, create_info, shallow_copy);
         dbg->create_info_size = shallow_copy;
     } else if (info.header->struct_type ==
-            VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO) {
+            VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO) {
         size_t size;
         const VkMemoryAllocateInfo *src = info.ptr;
         VkMemoryAllocateInfo *dst;

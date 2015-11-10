@@ -165,13 +165,13 @@ static void writePPM( const char *filename, VkImage image1)
         (VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_STORAGE_BIT),
     };
     VkMemoryAllocateInfo memAllocInfo = {
-        VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         NULL,
         0,     // allocationSize, queried later
         0      // memoryTypeIndex, queried later
     };
     const VkCommandBufferAllocateInfo allocCommandBufferInfo = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO,
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         NULL,
         deviceMap[device]->commandPool,
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,

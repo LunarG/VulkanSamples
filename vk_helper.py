@@ -371,11 +371,6 @@ def get_struct_name_from_struct_type(struct_type):
             struct_name += caps_struct_name[char_idx].lower()
         char_idx += 1
 
-    if struct_name.endswith("AllocInfo"):
-        struct_name = struct_name[:-9] + "AllocateInfo"
-    if struct_name.endswith("RasterStateCreateInfo"):
-        struct_name = struct_name[:-21] + "RasterizationStateCreateInfo"
-
     return struct_name
 
 # class for writing common file elements

@@ -220,7 +220,7 @@ void VkImageTest::CreateImage(uint32_t w, uint32_t h)
     VkMemoryRequirements mem_req;
 
     VkMemoryAllocateInfo mem_info = {};
-    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_info.pNext = NULL;
 
     vkGetImageMemoryRequirements(device(), m_image, &mem_req);

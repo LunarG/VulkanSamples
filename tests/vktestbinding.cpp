@@ -734,7 +734,7 @@ std::vector<DescriptorSet *> DescriptorPool::alloc_sets(const Device &dev, const
     set_handles.resize(layout_handles.size());
 
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = layout_handles.size();
     alloc_info.descriptorPool = handle();
     alloc_info.pSetLayouts = layout_handles.data();

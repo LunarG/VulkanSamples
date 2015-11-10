@@ -2179,7 +2179,7 @@ bool PreAllocateMemory(
 {
     if(pAllocateInfo != nullptr)
     {
-    if(pAllocateInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO)
+    if(pAllocateInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkAllocateMemory parameter, VkStructureType pAllocateInfo->sType, is an invalid enumerator");
@@ -4854,7 +4854,7 @@ bool PreCreateCommandBuffer(
 {
     if(pCreateInfo != nullptr)
     {
-    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO)
+    if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
     {
         log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
         "vkAllocateCommandBuffers parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
