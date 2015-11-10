@@ -122,6 +122,10 @@ void set_image_layout(
     image_memory_barrier.subresourceRange.levelCount = 1;
     image_memory_barrier.subresourceRange.layerCount = 0;
 
+    if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+        image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    }
+
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         /* Make sure anything that was copying from this image has completed */
         image_memory_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;

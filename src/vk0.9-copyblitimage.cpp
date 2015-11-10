@@ -102,6 +102,7 @@ int main(int argc, char **argv)
     image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     image_info.flags = 0;
     image_info.tiling = VK_IMAGE_TILING_LINEAR;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     res = vkCreateImage(info.device, &image_info, NULL, &bltSrcImage);
 
     memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
@@ -116,10 +117,10 @@ int main(int argc, char **argv)
     memAllocInfo.allocationSize = memReq.size;
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
-    res = vkMapMemory(info.device, dmem, 0,0,0,(void **)&pImgMem);
+    res = vkMapMemory(info.device, dmem, 0,memReq.size,0,(void **)&pImgMem);
     for (int k = 0; k < memReq.size/4; k++) *pImgMem++ = 0xff0000ff;
 
-    // Flush the mapped memory and then unmap it
+    // Flush the mapped memory and then unmap it  Assume it isn't coherent since we didn't really confirm
     VkMappedMemoryRange memRange;
     memRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     memRange.pNext = NULL;
@@ -127,9 +128,15 @@ int main(int argc, char **argv)
     memRange.offset = 0;
     memRange.size = memReq.size;
     res = vkFlushMappedMemoryRanges(info.device, 1, &memRange);
+
     vkUnmapMemory(info.device, dmem);
 
     bltDstImage = info.buffers[info.current_buffer].image;
+    // init_swap_chain will create the images as color attachment optimal
+    // but we want transfer dst optimal
+    set_image_layout(info, bltDstImage, VK_IMAGE_ASPECT_COLOR_BIT,
+                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // Do a image copy to part of the dst image
     VkImageCopy cregion;
@@ -183,9 +190,9 @@ int main(int argc, char **argv)
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     prePresentBarrier.pNext = NULL;
-    prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    prePresentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     prePresentBarrier.dstAccessMask = 0;
-    prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -215,6 +222,9 @@ int main(int argc, char **argv)
     res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
     assert(res == VK_SUCCESS);
 
+    res = vkQueueWaitIdle(info.queue);
+    assert(res == VK_SUCCESS);
+
     /* Now present the image in the window */
 
     VkPresentInfoKHR present;
@@ -231,6 +241,8 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
+    vkDestroyImage(info.device, bltSrcImage, NULL);
+    vkFreeMemory(info.device, dmem, NULL);
     destroy_swap_chain(info);
     destroy_command_buffer(info);
     destroy_command_pool(info);
