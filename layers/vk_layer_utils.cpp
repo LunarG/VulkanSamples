@@ -74,12 +74,12 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 4,  4 }, //    [VK_FORMAT_R8G8B8A8_UINT]
     { 4,  4 }, //    [VK_FORMAT_R8G8B8A8_SINT]
     { 4,  4 }, //    [VK_FORMAT_R8G8B8A8_SRGB]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_UNORM]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_SNORM]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_USCALED]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_SSCALED]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_UINT]
-    { 4,  4 }, //    [VK_FORMAT_R10G10B10A2_SINT]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_UNORM_PACK32]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_SNORM_PACK32]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_USCALED_PACK32]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_SSCALED_PACK32]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_UINT_PACK32]
+    { 4,  4 }, //    [VK_FORMAT_A2B10G10R10_SINT_PACK32]
     { 2,  1 }, //    [VK_FORMAT_R16_UNORM]
     { 2,  1 }, //    [VK_FORMAT_R16_SNORM]
     { 2,  1 }, //    [VK_FORMAT_R16_USCALED]
@@ -124,10 +124,10 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 16, 2 }, //    [VK_FORMAT_R64G64_SFLOAT]
     { 24, 3 }, //    [VK_FORMAT_R64G64B64_SFLOAT]
     { 32, 4 }, //    [VK_FORMAT_R64G64B64A64_SFLOAT]
-    { 4,  3 }, //    [VK_FORMAT_R11G11B10_UFLOAT]
-    { 4,  3 }, //    [VK_FORMAT_R9G9B9E5_UFLOAT]
+    { 4,  3 }, //    [VK_FORMAT_B10G11R11_UFLOAT_PACK32]
+    { 4,  3 }, //    [VK_FORMAT_E5B9G9R9_UFLOAT_PACK32]
     { 2,  1 }, //    [VK_FORMAT_D16_UNORM]
-    { 3,  1 }, //    [VK_FORMAT_D24_UNORM_X8]
+    { 3,  1 }, //    [VK_FORMAT_X8_D24_UNORM_PACK32]
     { 4,  1 }, //    [VK_FORMAT_D32_SFLOAT]
     { 1,  1 }, //    [VK_FORMAT_S8_UINT]
     { 3,  2 }, //    [VK_FORMAT_D16_UNORM_S8_UINT]
@@ -203,12 +203,12 @@ static const VULKAN_FORMAT_INFO vk_format_table[VK_FORMAT_RANGE_SIZE] = {
     { 4, 4 },  //    [VK_FORMAT_B8G8R8A8_UINT]
     { 4, 4 },  //    [VK_FORMAT_B8G8R8A8_SINT]
     { 4, 4 },  //    [VK_FORMAT_B8G8R8A8_SRGB]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_UNORM]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_SNORM]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_USCALED]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_SSCALED]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_UINT]
-    { 4, 4 },  //    [VK_FORMAT_B10G10R10A2_SINT]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_UNORM_PACK32]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_SNORM_PACK32]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_USCALED_PACK32]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_SSCALED_PACK32]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_UINT_PACK32]
+    { 4, 4 },  //    [VK_FORMAT_A2R10G10B10_SINT_PACK32]
 };
 
 // Return true if format is a depth or stencil format
@@ -249,7 +249,7 @@ bool vk_format_is_depth_only(VkFormat format)
 
     switch (format) {
     case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM_X8:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
     case VK_FORMAT_D32_SFLOAT:
         is_depth = true;
         break;
@@ -278,8 +278,8 @@ bool vk_format_is_norm(VkFormat format)
     case VK_FORMAT_R8G8B8_SNORM:
     case VK_FORMAT_R8G8B8A8_UNORM:
     case VK_FORMAT_R8G8B8A8_SNORM:
-    case VK_FORMAT_R10G10B10A2_UNORM:
-    case VK_FORMAT_R10G10B10A2_SNORM:
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
     case VK_FORMAT_R16_UNORM:
     case VK_FORMAT_R16_SNORM:
     case VK_FORMAT_R16G16_UNORM:
@@ -322,8 +322,8 @@ bool vk_format_is_norm(VkFormat format)
     case VK_FORMAT_B8G8R8_SNORM:
     case VK_FORMAT_B8G8R8A8_UNORM:
     case VK_FORMAT_B8G8R8A8_SNORM:
-    case VK_FORMAT_B10G10R10A2_UNORM:
-    case VK_FORMAT_B10G10R10A2_SNORM:
+    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
         is_norm = true;
         break;
     default:
@@ -350,7 +350,7 @@ bool vk_format_is_uint(VkFormat format)
     case VK_FORMAT_R8G8_UINT:
     case VK_FORMAT_R8G8B8_UINT:
     case VK_FORMAT_R8G8B8A8_UINT:
-    case VK_FORMAT_R10G10B10A2_UINT:
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
     case VK_FORMAT_R16_UINT:
     case VK_FORMAT_R16G16_UINT:
     case VK_FORMAT_R16G16B16_UINT:
@@ -361,7 +361,7 @@ bool vk_format_is_uint(VkFormat format)
     case VK_FORMAT_R32G32B32A32_UINT:
     case VK_FORMAT_B8G8R8_UINT:
     case VK_FORMAT_B8G8R8A8_UINT:
-    case VK_FORMAT_B10G10R10A2_UINT:
+    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
         is_uint = true;
         break;
     default:
@@ -381,7 +381,7 @@ bool vk_format_is_sint(VkFormat format)
     case VK_FORMAT_R8G8_SINT:
     case VK_FORMAT_R8G8B8_SINT:
     case VK_FORMAT_R8G8B8A8_SINT:
-    case VK_FORMAT_R10G10B10A2_SINT:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
     case VK_FORMAT_R16_SINT:
     case VK_FORMAT_R16G16_SINT:
     case VK_FORMAT_R16G16B16_SINT:
@@ -392,7 +392,7 @@ bool vk_format_is_sint(VkFormat format)
     case VK_FORMAT_R32G32B32A32_SINT:
     case VK_FORMAT_B8G8R8_SINT:
     case VK_FORMAT_B8G8R8A8_SINT:
-    case VK_FORMAT_B10G10R10A2_SINT:
+    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
         is_sint = true;
         break;
     default:
@@ -420,8 +420,8 @@ bool vk_format_is_float(VkFormat format)
     case VK_FORMAT_R64G64_SFLOAT:
     case VK_FORMAT_R64G64B64_SFLOAT:
     case VK_FORMAT_R64G64B64A64_SFLOAT:
-    case VK_FORMAT_R11G11B10_UFLOAT:
-    case VK_FORMAT_R9G9B9E5_UFLOAT:
+    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
     case VK_FORMAT_BC6H_UFLOAT_BLOCK:
     case VK_FORMAT_BC6H_SFLOAT_BLOCK:
         is_float = true;

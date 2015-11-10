@@ -72,12 +72,12 @@ static const struct icd_format_info {
     [VK_FORMAT_R8G8B8A8_UINT]        = { 4,  4 },
     [VK_FORMAT_R8G8B8A8_SINT]        = { 4,  4 },
     [VK_FORMAT_R8G8B8A8_SRGB]        = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_UNORM]    = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_SNORM]    = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_USCALED]  = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_SSCALED]  = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_UINT]     = { 4,  4 },
-    [VK_FORMAT_R10G10B10A2_SINT]     = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_UNORM_PACK32]    = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_SNORM_PACK32]    = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_USCALED_PACK32]  = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_SSCALED_PACK32]  = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_UINT_PACK32]     = { 4,  4 },
+    [VK_FORMAT_A2B10G10R10_SINT_PACK32]     = { 4,  4 },
     [VK_FORMAT_R16_UNORM]            = { 2,  1 },
     [VK_FORMAT_R16_SNORM]            = { 2,  1 },
     [VK_FORMAT_R16_USCALED]          = { 2,  1 },
@@ -122,10 +122,10 @@ static const struct icd_format_info {
     [VK_FORMAT_R64G64_SFLOAT]        = { 16, 2 },
     [VK_FORMAT_R64G64B64_SFLOAT]     = { 24, 3 },
     [VK_FORMAT_R64G64B64A64_SFLOAT]  = { 32, 4 },
-    [VK_FORMAT_R11G11B10_UFLOAT]     = { 4,  3 },
-    [VK_FORMAT_R9G9B9E5_UFLOAT]      = { 4,  3 },
+    [VK_FORMAT_B10G11R11_UFLOAT_PACK32]     = { 4,  3 },
+    [VK_FORMAT_E5B9G9R9_UFLOAT_PACK32]      = { 4,  3 },
     [VK_FORMAT_D16_UNORM]            = { 2,  1 },
-    [VK_FORMAT_D24_UNORM_X8]         = { 3,  1 },
+    [VK_FORMAT_X8_D24_UNORM_PACK32]         = { 3,  1 },
     [VK_FORMAT_D32_SFLOAT]           = { 4,  1 },
     [VK_FORMAT_S8_UINT]              = { 1,  1 },
     [VK_FORMAT_D16_UNORM_S8_UINT]    = { 3,  2 },
@@ -199,12 +199,12 @@ static const struct icd_format_info {
     [VK_FORMAT_B8G8R8A8_UINT]        = { 4, 4 },
     [VK_FORMAT_B8G8R8A8_SINT]        = { 4, 4 },
     [VK_FORMAT_B8G8R8A8_SRGB]        = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_UNORM]    = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_SNORM]    = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_USCALED]  = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_SSCALED]  = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_UINT]     = { 4, 4 },
-    [VK_FORMAT_B10G10R10A2_SINT]     = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_UNORM_PACK32]    = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_SNORM_PACK32]    = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_USCALED_PACK32]  = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_SSCALED_PACK32]  = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_UINT_PACK32]     = { 4, 4 },
+    [VK_FORMAT_A2R10G10B10_SINT_PACK32]     = { 4, 4 },
 };
 
 bool icd_format_is_ds(VkFormat format)
@@ -213,7 +213,7 @@ bool icd_format_is_ds(VkFormat format)
 
     switch (format) {
     case VK_FORMAT_D16_UNORM:
-    case VK_FORMAT_D24_UNORM_X8:
+    case VK_FORMAT_X8_D24_UNORM_PACK32:
     case VK_FORMAT_D32_SFLOAT:
     case VK_FORMAT_S8_UINT:
     case VK_FORMAT_D16_UNORM_S8_UINT:
@@ -245,8 +245,8 @@ bool icd_format_is_norm(VkFormat format)
     case VK_FORMAT_R8G8B8_SNORM:
     case VK_FORMAT_R8G8B8A8_UNORM:
     case VK_FORMAT_R8G8B8A8_SNORM:
-    case VK_FORMAT_R10G10B10A2_UNORM:
-    case VK_FORMAT_R10G10B10A2_SNORM:
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
     case VK_FORMAT_R16_UNORM:
     case VK_FORMAT_R16_SNORM:
     case VK_FORMAT_R16G16_UNORM:
@@ -289,8 +289,8 @@ bool icd_format_is_norm(VkFormat format)
     case VK_FORMAT_B8G8R8_SNORM:
     case VK_FORMAT_B8G8R8A8_UNORM:
     case VK_FORMAT_B8G8R8A8_SNORM:
-    case VK_FORMAT_B10G10R10A2_UNORM:
-    case VK_FORMAT_B10G10R10A2_SNORM:
+    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
         is_norm = true;
         break;
     default:
@@ -313,8 +313,8 @@ bool icd_format_is_int(VkFormat format)
     case VK_FORMAT_R8G8B8_SINT:
     case VK_FORMAT_R8G8B8A8_UINT:
     case VK_FORMAT_R8G8B8A8_SINT:
-    case VK_FORMAT_R10G10B10A2_UINT:
-    case VK_FORMAT_R10G10B10A2_SINT:
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
     case VK_FORMAT_R16_UINT:
     case VK_FORMAT_R16_SINT:
     case VK_FORMAT_R16G16_UINT:
@@ -335,8 +335,8 @@ bool icd_format_is_int(VkFormat format)
     case VK_FORMAT_B8G8R8_SINT:
     case VK_FORMAT_B8G8R8A8_UINT:
     case VK_FORMAT_B8G8R8A8_SINT:
-    case VK_FORMAT_B10G10R10A2_UINT:
-    case VK_FORMAT_B10G10R10A2_SINT:
+    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
         is_int = true;
         break;
     default:
@@ -363,8 +363,8 @@ bool icd_format_is_float(VkFormat format)
     case VK_FORMAT_R64G64_SFLOAT:
     case VK_FORMAT_R64G64B64_SFLOAT:
     case VK_FORMAT_R64G64B64A64_SFLOAT:
-    case VK_FORMAT_R11G11B10_UFLOAT:
-    case VK_FORMAT_R9G9B9E5_UFLOAT:
+    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
     case VK_FORMAT_BC6H_UFLOAT_BLOCK:
     case VK_FORMAT_BC6H_SFLOAT_BLOCK:
         is_float = true;
@@ -562,17 +562,17 @@ void icd_format_get_raw_value(VkFormat format,
         ((uint8_t *) value)[2]  = (uint8_t) color[0];
         ((uint8_t *) value)[3]  = (uint8_t) color[3];
         break;
-    case VK_FORMAT_R11G11B10_UFLOAT:
+    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
         ((uint32_t *) value)[0] = (color[0] & 0x7ff) << 0  |
                                   (color[1] & 0x7ff) << 11 |
                                   (color[2] & 0x3ff) << 22;
         break;
-    case VK_FORMAT_R10G10B10A2_UNORM:
-    case VK_FORMAT_R10G10B10A2_SNORM:
-    case VK_FORMAT_R10G10B10A2_USCALED:
-    case VK_FORMAT_R10G10B10A2_SSCALED:
-    case VK_FORMAT_R10G10B10A2_UINT:
-    case VK_FORMAT_R10G10B10A2_SINT:
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
         ((uint32_t *) value)[0] = (color[0] & 0x3ff) << 0  |
                                   (color[1] & 0x3ff) << 10 |
                                   (color[2] & 0x3ff) << 20 |
@@ -643,7 +643,7 @@ void icd_format_get_raw_value(VkFormat format,
         ((uint32_t *) value)[0] = (uint32_t) color[0];
         ((char *) value)[4] = (uint8_t) color[1];
         break;
-    case VK_FORMAT_R9G9B9E5_UFLOAT:
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
         ((uint32_t *) value)[0] = (color[0] & 0x1ff) << 0  |
                                   (color[1] & 0x1ff) << 9  |
                                   (color[2] & 0x1ff) << 18 |
@@ -691,12 +691,12 @@ void icd_format_get_raw_value(VkFormat format,
         ((uint16_t *) value)[1] = (uint16_t) color[1];
         ((uint16_t *) value)[2] = (uint16_t) color[2];
         break;
-    case VK_FORMAT_B10G10R10A2_UNORM:
-    case VK_FORMAT_B10G10R10A2_SNORM:
-    case VK_FORMAT_B10G10R10A2_USCALED:
-    case VK_FORMAT_B10G10R10A2_SSCALED:
-    case VK_FORMAT_B10G10R10A2_UINT:
-    case VK_FORMAT_B10G10R10A2_SINT:
+    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
         ((uint32_t *) value)[0] = (color[2] & 0x3ff) << 0  |
                                   (color[1] & 0x3ff) << 10 |
                                   (color[0] & 0x3ff) << 20 |

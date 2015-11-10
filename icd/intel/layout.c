@@ -699,7 +699,7 @@ layout_init_size_and_format(struct intel_layout *layout,
    switch (format) {
    case VK_FORMAT_D24_UNORM_S8_UINT:
       if (require_separate_stencil) {
-         format = VK_FORMAT_D24_UNORM_X8;
+         format = VK_FORMAT_X8_D24_UNORM_PACK32;
          layout->separate_stencil = true;
       }
       break;
