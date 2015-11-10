@@ -1104,9 +1104,9 @@ typedef struct VkInstanceCreateInfo {
     VkInstanceCreateFlags                       flags;
     const VkApplicationInfo*                    pApplicationInfo;
     uint32_t                                    enabledLayerNameCount;
-    const char*const*                           ppEnabledLayerNames;
+    const char* const*                          ppEnabledLayerNames;
     uint32_t                                    enabledExtensionNameCount;
-    const char*const*                           ppEnabledExtensionNames;
+    const char* const*                          ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
 typedef struct VkAllocationCallbacks {
@@ -1362,9 +1362,9 @@ typedef struct VkDeviceCreateInfo {
     uint32_t                                    queueCreateInfoCount;
     const VkDeviceQueueCreateInfo*              pQueueCreateInfos;
     uint32_t                                    enabledLayerNameCount;
-    const char*const*                           ppEnabledLayerNames;
+    const char* const*                          ppEnabledLayerNames;
     uint32_t                                    enabledExtensionNameCount;
-    const char*const*                           ppEnabledExtensionNames;
+    const char* const*                          ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
 } VkDeviceCreateInfo;
 
