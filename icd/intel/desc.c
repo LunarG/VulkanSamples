@@ -194,6 +194,7 @@ static VkResult desc_region_get_desc_size(const struct intel_desc_region *region
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
     case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
     case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
         surface_size = region->surface_desc_size;
         break;
     default:
