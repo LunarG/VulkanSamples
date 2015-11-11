@@ -184,7 +184,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo alloc_info[1];
-    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = descriptor_pool[0];
     alloc_info[0].setLayoutCount = descriptor_set_count;

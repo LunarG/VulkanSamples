@@ -552,7 +552,7 @@ void init_depth_buffer(struct sample_info &info)
     image_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
@@ -991,7 +991,7 @@ void init_uniform_buffer(struct sample_info &info)
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
 
@@ -1183,7 +1183,7 @@ void init_command_buffer(struct sample_info &info)
     VkResult U_ASSERT_ONLY res;
 
     VkCommandBufferAllocateInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -1263,7 +1263,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     vkGetBufferMemoryRequirements(info.device, info.vertex_buffer.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
 
@@ -1337,7 +1337,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
     VkResult U_ASSERT_ONLY res;
 
     VkDescriptorSetAllocateInfo alloc_info[1];
-    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info[0].pNext = NULL;
     alloc_info[0].descriptorPool = info.desc_pool;
     alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
@@ -1599,7 +1599,7 @@ void init_texture(struct sample_info &info, const char* textureName)
 
 
     VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;

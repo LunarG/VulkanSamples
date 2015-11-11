@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
 

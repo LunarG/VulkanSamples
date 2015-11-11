@@ -137,7 +137,7 @@ int main(int argc, char **argv)
     vkGetBufferMemoryRequirements(info.device, info.uniform_data.buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.pNext = NULL;
     alloc_info.memoryTypeIndex = 0;
 
@@ -223,7 +223,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     VkDescriptorSetAllocateInfo desc_alloc_info[1];
-    desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    desc_alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     desc_alloc_info[0].pNext = NULL;
     desc_alloc_info[0].descriptorPool = info.desc_pool;
     desc_alloc_info[0].setLayoutCount = NUM_DESCRIPTOR_SETS;
