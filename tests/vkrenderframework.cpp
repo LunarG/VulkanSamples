@@ -969,6 +969,9 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     cmd_buf_info.renderPass = VK_NULL_HANDLE;
     cmd_buf_info.subpass = 0;
     cmd_buf_info.framebuffer = VK_NULL_HANDLE;
+    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_info.queryFlags = 0;
+    cmd_buf_info.pipelineStatistics = 0;
 
     err = m_commandBuffer->BeginCommandBuffer(&cmd_buf_info);
     ASSERT_VK_SUCCESS(err);

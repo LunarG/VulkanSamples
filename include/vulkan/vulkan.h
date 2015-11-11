@@ -1039,6 +1039,11 @@ typedef enum VkCommandBufferUsageFlagBits {
 } VkCommandBufferUsageFlagBits;
 typedef VkFlags VkCommandBufferUsageFlags;
 
+typedef enum VkQueryControlFlagBits {
+    VK_QUERY_CONTROL_PRECISE_BIT = 0x00000001,
+} VkQueryControlFlagBits;
+typedef VkFlags VkQueryControlFlags;
+
 typedef enum VkCommandBufferResetFlagBits {
     VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
 } VkCommandBufferResetFlagBits;
@@ -1051,11 +1056,6 @@ typedef enum VkStencilFaceFlagBits {
     VK_STENCIL_FRONT_AND_BACK = 0x3,
 } VkStencilFaceFlagBits;
 typedef VkFlags VkStencilFaceFlags;
-
-typedef enum VkQueryControlFlagBits {
-    VK_QUERY_CONTROL_PRECISE_BIT = 0x00000001,
-} VkQueryControlFlagBits;
-typedef VkFlags VkQueryControlFlags;
 
 typedef void* (VKAPI_PTR *PFN_vkAllocationFunction)(
     void*                                       pUserData,
@@ -2010,6 +2010,9 @@ typedef struct VkCommandBufferBeginInfo {
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
+    VkBool32                                    occlusionQueryEnable;
+    VkQueryControlFlags                         queryFlags;
+    VkQueryPipelineStatisticFlags               pipelineStatistics;
 } VkCommandBufferBeginInfo;
 
 typedef struct VkBufferCopy {

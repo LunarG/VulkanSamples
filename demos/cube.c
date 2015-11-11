@@ -489,6 +489,9 @@ static void demo_set_image_layout(
             .renderPass = VK_NULL_HANDLE,
             .subpass = 0,
             .framebuffer = VK_NULL_HANDLE,
+            .occlusionQueryEnable = VK_FALSE,
+            .queryFlags = 0,
+            .pipelineStatistics = 0,
         };
         err = vkBeginCommandBuffer(demo->cmd, &cmd_buf_info);
         assert(!err);
@@ -540,6 +543,9 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
         .renderPass = VK_NULL_HANDLE,
         .subpass = 0,
         .framebuffer = VK_NULL_HANDLE,
+        .occlusionQueryEnable = VK_FALSE,
+        .queryFlags = 0,
+        .pipelineStatistics = 0,
     };
     const VkClearValue clear_values[2] = {
         [0] = { .color.float32 = { 0.2f, 0.2f, 0.2f, 0.2f } },

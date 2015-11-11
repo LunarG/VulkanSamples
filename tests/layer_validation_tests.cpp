@@ -521,6 +521,9 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     info.renderPass  = VK_NULL_HANDLE;
     info.subpass     = 0;
     info.framebuffer = VK_NULL_HANDLE;
+    info.occlusionQueryEnable = VK_FALSE;
+    info.queryFlags = 0;
+    info.pipelineStatistics = 0;
 
     // Introduce failure by calling BCB again before checking fence
     vkBeginCommandBuffer(m_commandBuffer->handle(), &info);

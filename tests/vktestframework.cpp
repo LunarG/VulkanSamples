@@ -997,6 +997,9 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     cmd_buf_info.renderPass = { VK_NULL_HANDLE };
     cmd_buf_info.subpass = 0;
     cmd_buf_info.framebuffer = { VK_NULL_HANDLE };
+    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_info.queryFlags = 0;
+    cmd_buf_info.pipelineStatistics = 0;
 
     err = vkBeginCommandBuffer(m_cmdbuf.handle(), &cmd_buf_info);
     assert(!err);
