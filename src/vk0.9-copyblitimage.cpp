@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     VkMemoryRequirements memReq;
     VkMemoryAllocateInfo memAllocInfo;
     VkDeviceMemory dmem;
-    unsigned int *pImgMem;
+    unsigned char *pImgMem;
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    info.width = info.height = 500;
+    info.width = info.height = 640;
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
@@ -62,6 +62,10 @@ int main(int argc, char **argv)
     init_swap_chain(info);
 
     /* VULKAN_KEY_START */
+
+    VkFormatProperties formatProps;
+    vkGetPhysicalDeviceFormatProperties(info.gpus[0], info.format, &formatProps);
+    assert((formatProps.linearTilingFeatures & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) && "Format cannot be used as transfer source");
 
     VkSemaphore presentCompleteSemaphore;
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
@@ -118,7 +122,17 @@ int main(int argc, char **argv)
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
     res = vkMapMemory(info.device, dmem, 0,memReq.size,0,(void **)&pImgMem);
-    for (int k = 0; k < memReq.size/4; k++) *pImgMem++ = 0xff0000ff;
+    // Checkerboard of 8x8 pixel squares
+    for (int row = 0; row < info.height; row++) {
+       for (int col = 0; col < info.width; col++) {
+          unsigned char rgb = (((row & 0x8) == 0) ^ ((col & 0x8) == 0)) * 255;
+          pImgMem[0] = rgb;
+          pImgMem[1] = rgb;
+          pImgMem[2] = rgb;
+          pImgMem[3] = 255;
+          pImgMem += 4;
+       }
+    }
 
     // Flush the mapped memory and then unmap it  Assume it isn't coherent since we didn't really confirm
     VkMappedMemoryRange memRange;
@@ -138,31 +152,8 @@ int main(int argc, char **argv)
                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    // Do a image copy to part of the dst image
-    VkImageCopy cregion;
-    cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    cregion.srcSubresource.mipLevel = 0;
-    cregion.srcSubresource.baseArrayLayer = 0;
-    cregion.srcSubresource.layerCount = 1;
-    cregion.srcOffset.x = 0;
-    cregion.srcOffset.y = 0;
-    cregion.srcOffset.z = 0;
-    cregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    cregion.dstSubresource.mipLevel = 0;
-    cregion.dstSubresource.baseArrayLayer = 0;
-    cregion.dstSubresource.layerCount = 1;
-    cregion.dstOffset.x = 0;
-    cregion.dstOffset.y = 0;
-    cregion.dstOffset.z = 0;
-    cregion.extent.width = info.width/2;
-    cregion.extent.height = info.height/2;
-    cregion.extent.depth = 1;
-
-        vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
-          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
-
-    // Do a blit to all of the dst image
-	VkImageBlit region;
+    // Do a 32x32 blit to all of the dst image - should get big squares
+    VkImageBlit region;
     region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.srcSubresource.mipLevel = 0;
     region.srcSubresource.baseArrayLayer = 0;
@@ -170,8 +161,8 @@ int main(int argc, char **argv)
     region.srcOffset.x = 0;
     region.srcOffset.y = 0;
     region.srcOffset.z = 0;
-    region.srcExtent.width = info.width;
-    region.srcExtent.height = info.height;
+    region.srcExtent.width = 32;
+    region.srcExtent.height = 32;
     region.srcExtent.depth = 1;
     region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.dstSubresource.mipLevel = 0;
@@ -184,8 +175,31 @@ int main(int argc, char **argv)
     region.dstExtent.height = info.height;
     region.dstExtent.depth = 1;
 
-        vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
+    vkCmdBlitImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+
+    // Do a image copy to part of the dst image - checks should stay small
+    VkImageCopy cregion;
+    cregion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    cregion.srcSubresource.mipLevel = 0;
+    cregion.srcSubresource.baseArrayLayer = 0;
+    cregion.srcSubresource.layerCount = 1;
+    cregion.srcOffset.x = 0;
+    cregion.srcOffset.y = 0;
+    cregion.srcOffset.z = 0;
+    cregion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    cregion.dstSubresource.mipLevel = 0;
+    cregion.dstSubresource.baseArrayLayer = 0;
+    cregion.dstSubresource.layerCount = 1;
+    cregion.dstOffset.x = 256;
+    cregion.dstOffset.y = 256;
+    cregion.dstOffset.z = 0;
+    cregion.extent.width = 128;
+    cregion.extent.height = 128;
+    cregion.extent.depth = 1;
+
+    vkCmdCopyImage(info.cmd, bltSrcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, bltDstImage,
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cregion);
 
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
