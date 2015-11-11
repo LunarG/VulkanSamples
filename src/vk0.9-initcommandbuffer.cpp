@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
     /* Create the command buffer from the command pool */
     VkCommandBufferAllocateInfo cmd = {};
-    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOC_INFO;
+    cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

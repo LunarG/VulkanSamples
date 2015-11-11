@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     image_info.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     res = vkCreateImage(info.device, &image_info, NULL, &bltSrcImage);
 
-    memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memAllocInfo.pNext = NULL;
 
     vkGetImageMemoryRequirements(info.device, bltSrcImage, &memReq);
