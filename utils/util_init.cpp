@@ -1199,9 +1199,13 @@ void execute_begin_command_buffer(struct sample_info &info)
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.renderPass = 0;  /* May only set renderPass and framebuffer */
-    cmd_buf_info.framebuffer = 0; /* for secondary command buffers           */
+    cmd_buf_info.renderPass = VK_NULL_HANDLE;  /* May only set renderPass and framebuffer */
+    cmd_buf_info.framebuffer = VK_NULL_HANDLE; /* for secondary command buffers           */
     cmd_buf_info.flags = 0;
+    cmd_buf_info.subpass = 0;
+    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_info.queryFlags = 0;
+    cmd_buf_info.pipelineStatistics = 0;
     res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
     assert(res == VK_SUCCESS);
 }
@@ -1728,6 +1732,13 @@ void init_texture(struct sample_info &info, const char* textureName)
         cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         cmd_buf_info.pNext = NULL;
         cmd_buf_info.flags = 0;
+        cmd_buf_info.renderPass = VK_NULL_HANDLE;
+        cmd_buf_info.framebuffer = VK_NULL_HANDLE;
+        cmd_buf_info.subpass = 0;
+        cmd_buf_info.occlusionQueryEnable = VK_FALSE;
+        cmd_buf_info.queryFlags = 0;
+        cmd_buf_info.pipelineStatistics = 0;
+        res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
 
         res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
         assert(res == VK_SUCCESS);
