@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     image_create_info.flags = 0;
 
     VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO;
+    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     mem_alloc.pNext = NULL;
     mem_alloc.allocationSize = 0;
     mem_alloc.memoryTypeIndex = 0;
