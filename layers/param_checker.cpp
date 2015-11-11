@@ -6197,9 +6197,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
 
 bool PreCmdPushConstants(
     VkCommandBuffer commandBuffer,
-    const void* values)
+    const void* pValues)
 {
-    if(values != nullptr)
+    if(pValues != nullptr)
     {
     }
 
@@ -6227,11 +6227,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(
     VkShaderStageFlags stageFlags,
     uint32_t offset,
     uint32_t size,
-    const void* values)
+    const void* pValues)
 {
-    PreCmdPushConstants(commandBuffer, values);
+    PreCmdPushConstants(commandBuffer, pValues);
 
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, values);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdPushConstants(commandBuffer, layout, stageFlags, offset, size, pValues);
 
     PostCmdPushConstants(commandBuffer, layout, stageFlags, offset, size);
 }

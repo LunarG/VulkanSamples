@@ -192,7 +192,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan/vulkan.h", "vulkan/vk_debug_report_lunarg.h"],
+    headers=["vulkan/vulkan.h", "vk_debug_report_lunarg.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -989,7 +989,7 @@ core = Extension(
              Param("VkShaderStageFlags", "stageFlags"),
              Param("uint32_t", "offset"),
              Param("uint32_t", "size"),
-             Param("const void*", "values")]),
+             Param("const void*", "pValues")]),
 
         Proto("void", "CmdBeginRenderPass",
             [Param("VkCommandBuffer", "commandBuffer"),
