@@ -729,6 +729,9 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperti
     pImageFormatProperties->maxExtent.height = 8192;
     pImageFormatProperties->maxExtent.depth  = 8192;
     pImageFormatProperties->maxArrayLayers   = 2048;
+    pImageFormatProperties->maxMipLevels	 = 14;
+    pImageFormatProperties->maxArrayLayers   = 2048;
+    pImageFormatProperties->sampleCounts	 = VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT | VK_SAMPLE_COUNT_8_BIT;
     pImageFormatProperties->maxResourceSize  = intel_max_resource_size;
 
     return VK_SUCCESS;
