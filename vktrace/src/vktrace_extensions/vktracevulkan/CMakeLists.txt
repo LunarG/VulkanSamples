@@ -33,7 +33,7 @@ endif()
 
     if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         set(VKTRACE_VULKAN_LIB
-            ${CMAKE_BINARY_DIR}/loader/${CMAKE_CFG_INTDIR}/vulkan-0.lib
+            ${CMAKE_BINARY_DIR}/loader/${CMAKE_CFG_INTDIR}/vulkan-1.lib
         )
     endif()
 

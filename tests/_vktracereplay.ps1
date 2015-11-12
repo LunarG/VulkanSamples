@@ -25,7 +25,7 @@ cp ..\..\vktrace\$dPath\vktrace.exe .
 cp ..\..\demos\$dPath\cube.exe .
 cp ..\..\demos\*.ppm .
 cp ..\..\demos\*.spv .
-cp ..\..\loader\$dPath\vulkan-0.dll .
+cp ..\..\loader\$dPath\vulkan-1.dll .
 cp ..\..\layers\$dPath\VKLayerScreenShot.dll .
 cp ..\..\layers\$dPath\screenshot.json .
 cp ..\..\layers\$dPath\vktrace_layer.dll .
