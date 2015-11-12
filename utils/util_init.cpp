@@ -1453,6 +1453,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     VkPipelineVertexInputStateCreateInfo vi;
     vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vi.pNext = NULL;
+    vi.flags = 0;
     vi.vertexBindingDescriptionCount = 1;
     vi.pVertexBindingDescriptions = &info.vi_binding;
     vi.vertexAttributeDescriptionCount = 2;
@@ -1461,12 +1462,14 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     VkPipelineInputAssemblyStateCreateInfo ia;
     ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     ia.pNext = NULL;
+    ia.flags = 0;
     ia.primitiveRestartEnable = VK_FALSE;
     ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineRasterizationStateCreateInfo rs;
     rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rs.pNext = NULL;
+    rs.flags = 0;
     rs.polygonMode = VK_POLYGON_MODE_FILL;
     rs.cullMode = VK_CULL_MODE_BACK_BIT;
     rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -1480,6 +1483,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
 
     VkPipelineColorBlendStateCreateInfo cb;
     cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    cb.flags = 0;
     cb.pNext = NULL;
     VkPipelineColorBlendAttachmentState att_state[1];
     att_state[0].colorWriteMask = 0xf;
@@ -1502,14 +1506,18 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     VkPipelineViewportStateCreateInfo vp = {};
     vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vp.pNext = NULL;
+    vp.flags = 0;
     vp.viewportCount = NUM_VIEWPORTS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
     vp.scissorCount = NUM_SCISSORS;
     dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    vp.pScissors = NULL;
+    vp.pViewports = NULL;
 
     VkPipelineDepthStencilStateCreateInfo ds;
     ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     ds.pNext = NULL;
+    ds.flags = 0;
     ds.depthTestEnable = include_depth;
     ds.depthWriteEnable = include_depth;
     ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -1526,6 +1534,7 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     VkPipelineMultisampleStateCreateInfo   ms;
     ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms.pNext = NULL;
+    ms.flags = 0;
     ms.pSampleMask = NULL;
     ms.rasterizationSamples = NUM_SAMPLES;
     ms.sampleShadingEnable = VK_FALSE;
