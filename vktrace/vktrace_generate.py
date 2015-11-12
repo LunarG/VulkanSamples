@@ -260,7 +260,7 @@ class Subcommand(object):
                     # TODO : This is custom hack to account for 2 pData items with dataSize param for sizing
                     if 'pData' == p.name and 'dataSize' == params[params.index(p)-1].name:
                         pp_dict['add_txt'] = pp_dict['add_txt'].replace('_dataSize', 'dataSize')
-                elif 'void' in p.ty and (p.name == 'pData' or p.name == 'values'):
+                elif 'void' in p.ty and (p.name == 'pData' or p.name == 'pValues'):
                     pp_dict['add_txt'] = '//TODO FIXME vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->%s), sizeof(%s), %s)' % (p.name, p.ty.strip('*').replace('const ', ''), p.name)
                     pp_dict['finalize_txt'] = '//TODO FIXME vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->%s))' % (p.name)
                 else:
