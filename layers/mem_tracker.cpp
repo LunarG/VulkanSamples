@@ -1653,7 +1653,9 @@ static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const c
     auto pFenceInfo = my_data->fenceMap.find(fence);
     if (pFenceInfo != my_data->fenceMap.end()) {
         if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+            // TODO: Possibly move this to a lower-level warning if we ever add, say, a VERBOSE warning option. There are too many
+            //       cases where ISVs want to be able to do this to make it a normal warning or perf-warning.
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_FENCE, (uint64_t) fence, 0, MEMTRACK_INVALID_FENCE_STATE, "MEM",
                 "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
         }
         if (!pFenceInfo->second.queue) { // Checking status of unsubmitted fence
