@@ -2380,9 +2380,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
         return VK_ERROR_VALIDATION_FAILED;
     }
     VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
-    if (VK_SUCCESS == result) {
-        if (CB_NEW != pCB->state)
+    if ((VK_SUCCESS == result) && (pCB != NULL)) {
+        if (CB_NEW != pCB->state) {
             resetCB(dev_data, commandBuffer);
+        }
         pCB->state = CB_UPDATE_ACTIVE;
         updateCBTracking(pCB);
     }
