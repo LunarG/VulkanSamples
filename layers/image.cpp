@@ -52,18 +52,21 @@ using namespace std;
 using namespace std;
 
 struct layer_data {
-    debug_report_data *report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
-    VkLayerDispatchTable* device_dispatch_table;
-    VkLayerInstanceDispatchTable* instance_dispatch_table;
-    VkPhysicalDevice physicalDevice;
+    debug_report_data            *report_data;
+    vector<VkDbgMsgCallback>      logging_callback;
+    VkLayerDispatchTable*         device_dispatch_table;
+    VkLayerInstanceDispatchTable *instance_dispatch_table;
+    VkPhysicalDevice              physicalDevice;
+    VkPhysicalDeviceProperties    physicalDeviceProperties;
+
     unordered_map<VkImage, IMAGE_STATE> imageMap;
 
     layer_data() :
         report_data(nullptr),
         device_dispatch_table(nullptr),
         instance_dispatch_table(nullptr),
-        physicalDevice(0)
+        physicalDevice(0),
+        physicalDeviceProperties()
     {};
 };
 
@@ -162,6 +165,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
         device_data->report_data = layer_debug_report_create_device(instance_data->report_data, *pDevice);
         device_data->physicalDevice = physicalDevice;
     }
+
+    instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, &(device_data->physicalDeviceProperties));
 
     return result;
 }
@@ -263,26 +268,89 @@ static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value)
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
-    VkBool32 skipCall = VK_FALSE;
-    layer_data *device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    if(pCreateInfo->format != VK_FORMAT_UNDEFINED)
+    VkBool32                skipCall              = VK_FALSE;
+    VkResult                result                = VK_ERROR_VALIDATION_FAILED;
+    VkImageFormatProperties ImageFormatProperties = {0};
+
+    layer_data       *device_data    = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkPhysicalDevice  physicalDevice = device_data->physicalDevice;
+    layer_data       *phy_dev_data   = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+
+    if (pCreateInfo->format != VK_FORMAT_UNDEFINED)
     {
         VkFormatProperties properties;
-        get_my_data_ptr(get_dispatch_key(device_data->physicalDevice), layer_data_map)->instance_dispatch_table->GetPhysicalDeviceFormatProperties(
+        phy_dev_data->instance_dispatch_table->GetPhysicalDeviceFormatProperties(
                 device_data->physicalDevice, pCreateInfo->format, &properties);
 
-        if((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
+        if ((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains unsupported format";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
     }
-    if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
 
-    VkResult result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
+    // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
+    phy_dev_data->instance_dispatch_table->GetPhysicalDeviceImageFormatProperties(
+                       physicalDevice, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling,
+                       pCreateInfo->usage, pCreateInfo->flags, &ImageFormatProperties);
 
-    if(result == VK_SUCCESS) {
+    VkDeviceSize imageGranularity = device_data->physicalDeviceProperties.limits.bufferImageGranularity;
+    imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
+
+    if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
+        (pCreateInfo->extent.width  > ImageFormatProperties.maxExtent.width)  ||
+        (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage extents exceed allowable limits for format: "
+                        "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
+                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
+                        ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height, ImageFormatProperties.maxExtent.depth,
+                        string_VkFormat(pCreateInfo->format));
+
+    }
+
+    uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width               *
+                          (uint64_t)pCreateInfo->extent.height              *
+                          (uint64_t)pCreateInfo->extent.depth               *
+                          (uint64_t)pCreateInfo->arrayLayers                *
+                          (uint64_t)pCreateInfo->samples                    *
+                          (uint64_t)vk_format_get_size(pCreateInfo->format) +
+                          (uint64_t)imageGranularity ) & ~(uint64_t)imageGranularity;
+
+    if (totalSize > ImageFormatProperties.maxResourceSize) {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage resource size exceeds allowable maximum "
+                        "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
+                        totalSize, ImageFormatProperties.maxResourceSize);
+    }
+
+    if (pCreateInfo->mipLevels > ImageFormatProperties.maxMipLevels) {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage mipLevels=%d exceeds allowable maximum supported by format of %d",
+                        pCreateInfo->mipLevels, ImageFormatProperties.maxMipLevels);
+    }
+
+    if (pCreateInfo->arrayLayers > ImageFormatProperties.maxArrayLayers) {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage arrayLayers=%d exceeds allowable maximum supported by format of %d",
+                        pCreateInfo->arrayLayers, ImageFormatProperties.maxArrayLayers);
+    }
+
+    if ((pCreateInfo->samples & ImageFormatProperties.sampleCounts) == 0) {
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
+                        IMAGE_INVALID_FORMAT_LIMITS_VIOLATION, "Image",
+                        "CreateImage samples %s is not supported by format 0x%.8X",
+                        string_VkSampleCountFlagBits(pCreateInfo->samples), ImageFormatProperties.sampleCounts);
+    }
+
+    if (VK_FALSE == skipCall) {
+        result = device_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
+    }
+    if (result == VK_SUCCESS) {
         device_data->imageMap[*pImage] = IMAGE_STATE(pCreateInfo);
     }
     return result;
@@ -988,6 +1056,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     }
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties)
+{
+    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+    phy_dev_data->instance_dispatch_table->GetPhysicalDeviceProperties(physicalDevice, pProperties);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     if (device == NULL) {
@@ -1075,6 +1149,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         return (PFN_vkVoidFunction) vkEnumerateDeviceLayerProperties;
     if (!strcmp(funcName, "vkEnumerateDeviceExtensionProperties"))
         return (PFN_vkVoidFunction) vkEnumerateDeviceExtensionProperties;
+    if (!strcmp(funcName, "vkGetPhysicalDeviceProperties"))
+        return (PFN_vkVoidFunction) vkGetPhysicalDeviceProperties;
 
     PFN_vkVoidFunction fptr = debug_report_get_instance_proc_addr(my_data->report_data, funcName);
     if(fptr)

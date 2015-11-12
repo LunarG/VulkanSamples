@@ -490,61 +490,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
     dev_data->device_dispatch_table->GetDeviceQueue(device, queueFamilyIndex, queueIndex, pQueue);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
-    VkDevice                 device,
-    const VkImageCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkImage                 *pImage)
-{
-    VkBool32                skipCall       = VK_FALSE;
-    VkResult                result         = VK_ERROR_VALIDATION_FAILED;
-    VkImageFormatProperties ImageFormatProperties = {0};
-
-    layer_data *dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkPhysicalDevice physicalDevice = dev_data->physicalDevice;
-    layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-    // Internal call to get format info.  Still goes through layers, could potentially go directly to ICD.
-    phy_dev_data->instance_dispatch_table->GetPhysicalDeviceImageFormatProperties(
-                       physicalDevice, pCreateInfo->format, pCreateInfo->imageType, pCreateInfo->tiling,
-                       pCreateInfo->usage, pCreateInfo->flags, &ImageFormatProperties);
-
-    VkDeviceSize imageGranularity = phy_dev_data->physicalDeviceProperties.limits.bufferImageGranularity;
-    imageGranularity = imageGranularity == 1 ? 0 : imageGranularity;
-
-    if ((pCreateInfo->extent.depth  > ImageFormatProperties.maxExtent.depth)  ||
-        (pCreateInfo->extent.width  > ImageFormatProperties.maxExtent.width)  ||
-        (pCreateInfo->extent.height > ImageFormatProperties.maxExtent.height)) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                        DEVLIMITS_LIMITS_VIOLATION, "DL",
-                        "CreateImage extents exceed allowable limits for format: "
-                        "Width = %d Height = %d Depth = %d:  Limits for Width = %d Height = %d Depth = %d for format %s.",
-                        pCreateInfo->extent.width, pCreateInfo->extent.height, pCreateInfo->extent.depth,
-                        ImageFormatProperties.maxExtent.width, ImageFormatProperties.maxExtent.height, ImageFormatProperties.maxExtent.depth,
-                        string_VkFormat(pCreateInfo->format));
-
-    }
-
-    uint64_t totalSize = ((uint64_t)pCreateInfo->extent.width               *
-                          (uint64_t)pCreateInfo->extent.height              *
-                          (uint64_t)pCreateInfo->extent.depth               *
-                          (uint64_t)pCreateInfo->arrayLayers                *
-                          (uint64_t)pCreateInfo->samples                    *
-                          (uint64_t)vk_format_get_size(pCreateInfo->format) +
-                          (uint64_t)imageGranularity ) & ~(uint64_t)imageGranularity;
-
-    if (totalSize > ImageFormatProperties.maxResourceSize) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_IMAGE, (uint64_t)pImage, 0,
-                        DEVLIMITS_LIMITS_VIOLATION, "DL",
-                        "CreateImage resource size exceeds allowable maximum "
-                        "Image resource size = %#" PRIxLEAST64 ", maximum resource size = %#" PRIxLEAST64 " ",
-                        totalSize, ImageFormatProperties.maxResourceSize);
-    }
-    if (VK_FALSE == skipCall) {
-        result = dev_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
-    }
-    return result;
-}
-
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer commandBuffer,
     VkBuffer dstBuffer,
@@ -651,8 +596,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkDestroyDevice;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
-    if (!strcmp(funcName, "vkCreateImage"))
-        return (PFN_vkVoidFunction) vkCreateImage;
     if (!strcmp(funcName, "CreateCommandPool"))
         return (PFN_vkVoidFunction) vkCreateCommandPool;
     if (!strcmp(funcName, "DestroyCommandPool"))
