@@ -1440,17 +1440,15 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('    destroy_device(device, device);')
         gedd_txt.append('    // Report any remaining objects in LL')
         for o in vulkan.core.objects:
-            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue', 'VkDevice']:
+            # DescriptorSets and Command Buffers are destroyed through their pools, not explicitly
+            if o in ['VkInstance', 'VkPhysicalDevice', 'VkQueue', 'VkDevice', 'VkDescriptorSet', 'VkCommandBuffer']:
                 continue
-            if o != 'VkDescriptorSet':
-                gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
-                gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-                gedd_txt.append('        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
-                gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
-                gedd_txt.append('                pNode->vkObj);')
-                gedd_txt.append('    }')
-            else:
-                gedd_txt.append('    // DescriptorSets are implicitly cleared via DestroyDescriptorPool, ignore remaining objects')
+            gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
+            gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
+            gedd_txt.append('        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
+            gedd_txt.append('                pNode->vkObj);')
+            gedd_txt.append('    }')
             gedd_txt.append('    %sMap.clear();' % (o))
             gedd_txt.append('')
         gedd_txt.append("    // Clean up Queue's MemRef Linked Lists")
@@ -1510,6 +1508,10 @@ class ObjectTrackerSubcommand(Subcommand):
             "QueueBindSparse",
             "AllocateDescriptorSets",
             "FreeDescriptorSets",
+            "AllocateCommandBuffers",
+            "FreeCommandBuffers",
+            "DestroyDescriptorPool",
+            "DestroyCommandPool",
             "MapMemory",
             "UnmapMemory",
             "FreeMemory",
