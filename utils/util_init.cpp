@@ -1116,7 +1116,7 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_reference;
     subpass.pResolveAttachments = NULL;
-    subpass.pDepthStencilAttachment = &depth_reference;
+    subpass.pDepthStencilAttachment = include_depth?&depth_reference:NULL;
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = NULL;
 
@@ -1255,7 +1255,7 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = sizeof(g_vb_solid_face_colors_Data);
+    buf_info.size = dataSize;
     buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
