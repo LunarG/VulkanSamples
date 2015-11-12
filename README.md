@@ -28,11 +28,11 @@
     directory hierarchy:
       - data/ - static data files used in the samples, ie images, shaders, etc; 
         Vulkan-version-specific files will reside in directories named by the
-        version (i.e. vk0.9)
+        version (i.e. vk1.0)
       - ext/ - external third party components outside of the Vulkan SDK and
         samples framework (glm)
       - src/ - samples source code, where sample file name is prefixed by Vulkan
-        version (i.e. vk0.9-instance.cpp)
+        version (i.e. vk1.0-instance.cpp)
       - utils/ - source code for common utilities used by the sample programs
 
 ## Sample progression

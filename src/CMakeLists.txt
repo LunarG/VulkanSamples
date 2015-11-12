@@ -4,7 +4,7 @@ set(SHADER_FILES ${SHADER_FILES} "")
 include_directories( ${SAMPLES_DATA_DIR} ${GLSLANG_PREFIX} ${GLMINC_PREFIX})
 
 # function to build a single-source-file sample that uses glsl shaders;
-#   - assumes VULKAN_VERSION set (i.e. vk0.9)
+#   - assumes VULKAN_VERSION set (i.e. vk1.0)
 #   - assumes SAMPLE_GLSL_VERT_SHADERS and SAMPLE_GLSL_FRAG_SHADERS is set to
 #     the list of shader files of that type, with .vert and .frag omitted
 #   - uses glslangValidator to convert glsl to spirv
@@ -32,7 +32,7 @@ function(sampleExtGLSLShaders SNAME)
 endfunction(sampleExtGLSLShaders)
 
 # function to build a single-source-file sample that uses spirv shaders
-#   - assumes VULKAN_VERSION set (i.e. vk0.9)
+#   - assumes VULKAN_VERSION set (i.e. vk1.0)
 #   - assumes SAMPLE_SPIRV_SHADERS is set to list to list of spirv shsders
 #     used by the sample, with the .spv omitted
 function(sampleExtSPIRVShaders SNAME)
@@ -46,7 +46,7 @@ function(sampleExtSPIRVShaders SNAME)
 endfunction(sampleExtSPIRVShaders)
 
 # function to build a simple single-source-file sample
-#   - assumes VULKAN_VERSION set (i.e. vk0.9)
+#   - assumes VULKAN_VERSION set (i.e. vk1.0)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleWithSingleFile)
     foreach(TARG ${S_TARGETS})
@@ -63,7 +63,7 @@ endfunction(sampleWithSingleFile)
 
 # function to build a simple single-source-file sample
 #   - assumes that code is standalone and doesn't depend on utilitites
-#   - assumes VULKAN_VERSION set (i.e. vk0.9)
+#   - assumes VULKAN_VERSION set (i.e. vk1.0)
 #   - assumes S_TARGETS set to list of build targets
 function(sampleInlineGLSLShaders)
     foreach(TARG ${S_TARGETS})
@@ -82,7 +82,7 @@ if(NOT WIN32)
     find_package(XCB REQUIRED)
 endif()
 
-find_library(VULKAN_LOADER NAMES vulkan-0 vulkan
+find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Release"
                    "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
@@ -176,7 +176,7 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(LOADER_DLIB NAMES vulkan-0
+    find_library(LOADER_DLIB NAMES vulkan-1
                  HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
                        "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
 
@@ -205,8 +205,8 @@ endif()
 # START BUILDING SAMPLES HERE
 #
 
-# TARGETS FOR VULKAN VERSION 0.9
-set(VULKAN_VERSION vk0.9)
+# TARGETS FOR VULKAN VERSION 1.0
+set(VULKAN_VERSION vk1.0)
 
 # simple one file sample targets, no additional files
 set (S_TARGETS instance device enumerate enumerate-adv
