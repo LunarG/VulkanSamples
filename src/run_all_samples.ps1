@@ -9,56 +9,56 @@ if ($Debug) {
 }
 
 echo "Instance"
-& $dPath\vk0.9-instance
+& $dPath\vk1.0-instance
 echo "Instance Layer Properties"
-& $dPath\vk0.9-instance_layer_properties
+& $dPath\vk1.0-instance_layer_properties
 echo "Instance Layer Properties"
-& $dPath\vk0.9-instance_layer_properties
+& $dPath\vk1.0-instance_layer_properties
 echo "Instance Extension Properties"
-& $dPath\vk0.9-instance_extension_properties
+& $dPath\vk1.0-instance_extension_properties
 echo "Instance Layer ExtensionProperties"
-& $dPath\vk0.9-instance_layer_extension_properties
+& $dPath\vk1.0-instance_layer_extension_properties
 echo "Enumerate"
-& $dPath\vk0.9-enumerate
+& $dPath\vk1.0-enumerate
 echo "Device"
-& $dPath\vk0.9-device
+& $dPath\vk1.0-device
 echo "Enable Validation and Debug Message Callback"
-& $dPath\vk0.9-enable_validation_with_callback
+& $dPath\vk1.0-enable_validation_with_callback
 echo "Init Swapchain"
-& $dPath\vk0.9-initswapchain
+& $dPath\vk1.0-initswapchain
 echo "Init Command Buffer"
-& $dPath\vk0.9-initcommandbuffer
+& $dPath\vk1.0-initcommandbuffer
 echo "Depth Buffer"
-& $dPath\vk0.9-depthbuffer
+& $dPath\vk1.0-depthbuffer
 echo "Init Texture"
-& $dPath\vk0.9-inittexture
+& $dPath\vk1.0-inittexture
 echo "Uniform Buffer"
-& $dPath\vk0.9-uniformbuffer
+& $dPath\vk1.0-uniformbuffer
 echo "Init RenderPass"
-& $dPath\vk0.9-initrenderpass
+& $dPath\vk1.0-initrenderpass
 echo "Init Framebuffer"
-& $dPath\vk0.9-initframebuffers
+& $dPath\vk1.0-initframebuffers
 echo "Descriptor and Pipeline Layouts"
-& $dPath\vk0.9-descriptor_pipeline_layouts
+& $dPath\vk1.0-descriptor_pipeline_layouts
 echo "Vertex Buffer"
-& $dPath\vk0.9-vertexbuffer
+& $dPath\vk1.0-vertexbuffer
 echo "Alloc Descriptor Sets"
-& $dPath\vk0.9-allocdescriptorsets
+& $dPath\vk1.0-allocdescriptorsets
 echo "Initialize Shaders"
-& $dPath\vk0.9-initshaders
+& $dPath\vk1.0-initshaders
 echo "Initialize Pipeline"
-& $dPath\vk0.9-initpipeline
+& $dPath\vk1.0-initpipeline
 echo "Draw Cube"
-& $dPath\vk0.9-drawcube
+& $dPath\vk1.0-drawcube
 echo "Draw Textured Cube"
-& $dPath\vk0.9-copyblitimage
+& $dPath\vk1.0-copyblitimage
 echo "Copy/Blit Image"
-& $dPath\vk0.9-drawtexturedcube
+& $dPath\vk1.0-drawtexturedcube
 echo "Draw Cubes with Dynamic Uniform Buffer"
-& $dPath\vk0.9-dynamicuniform
+& $dPath\vk1.0-dynamicuniform
 echo "Texel Buffer"
-& $dPath\vk0.9-texelbuffer
+& $dPath\vk1.0-texelbuffer
 echo "Use GLSL Shader"
-& $dPath\vk0.9-useglslshader
+& $dPath\vk1.0-useglslshader
 echo "Use SPIR-V Shader"
-& $dPath\vk0.9-usespirvshader
+& $dPath\vk1.0-usespirvshader
