@@ -213,7 +213,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     depthbuffer initswapchain inittexture uniformbuffer
     descriptor_pipeline_layouts initcommandbuffer
     initrenderpass initframebuffers vertexbuffer
-    allocdescriptorsets initshaders initpipeline
+    allocdescriptorsets initshaders initpipeline multithreadcmdbuf
     drawcube drawtexturedcube dynamicuniform texelbuffer
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
