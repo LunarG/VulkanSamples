@@ -1070,7 +1070,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     assert(res == VK_SUCCESS);
 }
 
-void init_renderpass(struct sample_info &info, bool include_depth)
+void init_renderpass(struct sample_info &info, bool include_depth, bool clear)
 {
     /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
@@ -1079,7 +1079,7 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     VkAttachmentDescription attachments[2];
     attachments[0].format = info.format;
     attachments[0].samples = NUM_SAMPLES;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].loadOp = clear?VK_ATTACHMENT_LOAD_OP_CLEAR:VK_ATTACHMENT_LOAD_OP_LOAD;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1091,7 +1091,7 @@ void init_renderpass(struct sample_info &info, bool include_depth)
     {
         attachments[1].format = info.depth.format;
         attachments[1].samples = NUM_SAMPLES;
-        attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachments[1].loadOp = clear?VK_ATTACHMENT_LOAD_OP_CLEAR:VK_ATTACHMENT_LOAD_OP_LOAD;
         attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
