@@ -53,22 +53,23 @@ static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-1);
 
 struct layer_data {
-    debug_report_data *report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
-    VkLayerDispatchTable* device_dispatch_table;
-    VkLayerInstanceDispatchTable* instance_dispatch_table;
-    VkBool32 wsi_enabled;
-    uint64_t currentFenceId;
+    debug_report_data                 *report_data;
+    std::vector<VkDbgMsgCallback>      logging_callback;
+    VkLayerDispatchTable              *device_dispatch_table;
+    VkLayerInstanceDispatchTable      *instance_dispatch_table;
+    VkBool32                           wsi_enabled;
+    uint64_t                           currentFenceId;
     // Maps for tracking key structs related to MemTracker state
-    unordered_map<VkCommandBuffer,    MT_CB_INFO>           cbMap;
-    unordered_map<VkDeviceMemory, MT_MEM_OBJ_INFO>      memObjMap;
-    unordered_map<VkFence,        MT_FENCE_INFO>        fenceMap;    // Map fence to fence info
-    unordered_map<VkQueue,        MT_QUEUE_INFO>        queueMap;
-    unordered_map<VkSwapchainKHR, MT_SWAP_CHAIN_INFO*>  swapchainMap;
-    unordered_map<VkSemaphore,    MtSemaphoreState>     semaphoreMap;
+    unordered_map<VkCommandBuffer,     MT_CB_INFO>               cbMap;
+    unordered_map<VkCommandPool,       MT_CMD_POOL_INFO>         commandPoolMap;
+    unordered_map<VkDeviceMemory,      MT_MEM_OBJ_INFO>          memObjMap;
+    unordered_map<VkFence,             MT_FENCE_INFO>            fenceMap;
+    unordered_map<VkQueue,             MT_QUEUE_INFO>            queueMap;
+    unordered_map<VkSwapchainKHR,      MT_SWAP_CHAIN_INFO*>      swapchainMap;
+    unordered_map<VkSemaphore,         MtSemaphoreState>         semaphoreMap;
     // Images and Buffers are 2 objects that can have memory bound to them so they get special treatment
-    unordered_map<uint64_t, MT_OBJ_BINDING_INFO>        imageMap;
-    unordered_map<uint64_t, MT_OBJ_BINDING_INFO>        bufferMap;
+    unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      imageMap;
+    unordered_map<uint64_t,            MT_OBJ_BINDING_INFO>      bufferMap;
 
     layer_data() :
         report_data(nullptr),
@@ -82,6 +83,8 @@ struct layer_data {
 static unordered_map<void *, layer_data *> layer_data_map;
 
 static VkPhysicalDeviceMemoryProperties memProps;
+
+static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data, const VkCommandBuffer cb);
 
 // TODO : This can be much smarter, using separate locks for separate global data
 static int globalLockInitialized = 0;
@@ -140,9 +143,23 @@ static void add_swap_chain_info(layer_data* my_data,
 
 // Add new CBInfo for this cb to map container
 static void add_cmd_buf_info(layer_data* my_data,
-    const VkCommandBuffer cb)
+    VkCommandPool commandPool, const VkCommandBuffer cb)
 {
     my_data->cbMap[cb].commandBuffer = cb;
+    my_data->commandPoolMap[commandPool].pCommandBuffers.push_front(cb);
+}
+
+// Delete CBInfo from container and clear mem references to CB
+static VkBool32 delete_cmd_buf_info(layer_data *my_data, VkCommandPool commandPool, const VkCommandBuffer cb)
+{
+    VkBool32 result = VK_TRUE;
+    result = clear_cmd_buf_and_mem_references(my_data, cb);
+    // Delete the CBInfo info
+    if (result == VK_TRUE) {
+        my_data->commandPoolMap[commandPool].pCommandBuffers.remove(cb);
+        my_data->cbMap.erase(cb);
+    }
+    return result;
 }
 
 // Return ptr to Info in CB map, or NULL if not found
@@ -1810,19 +1827,117 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
-    VkDevice                     device,
+    VkDevice                           device,
     const VkCommandBufferAllocateInfo *pCreateInfo,
-    VkCommandBuffer                 *pCommandBuffer)
+    VkCommandBuffer                   *pCommandBuffer)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
-    // At time of cmd buffer creation, create global cmd buffer info for the returned cmd buffer
+    VkResult    result  = my_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
+
     loader_platform_thread_lock_mutex(&globalLock);
-    if (*pCommandBuffer)
-        add_cmd_buf_info(my_data, *pCommandBuffer);
+    if (VK_SUCCESS == result) { for (uint32_t i = 0; i < pCreateInfo->bufferCount; i++) { add_cmd_buf_info(my_data, pCreateInfo->commandPool, pCommandBuffer[i]);
+        }
+    }
     printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
+    VkDevice               device,
+    VkCommandPool          commandPool,
+    uint32_t               commandBufferCount,
+    const VkCommandBuffer *pCommandBuffers)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    for (uint32_t i = 0; i < commandBufferCount; i++) {
+        skipCall |= delete_cmd_buf_info(my_data, commandPool, pCommandBuffers[i]);
+    }
+    printCBList(my_data, device);
+    loader_platform_thread_unlock_mutex(&globalLock);
+
+    if (VK_FALSE == skipCall) {
+        my_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, commandBufferCount, pCommandBuffers);
+    }
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCommandPoolCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkCommandPool*                              pCommandPool)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
+
+    loader_platform_thread_lock_mutex(&globalLock);
+    // Add cmd pool to map
+    my_data->commandPoolMap[*pCommandPool].createFlags = pCreateInfo->flags;
+    loader_platform_thread_unlock_mutex(&globalLock);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
+    VkDevice                                    device,
+    VkCommandPool                               commandPool,
+    const VkAllocationCallbacks*                pAllocator)
+{
+    VkBool32 commandBufferComplete = VK_FALSE;
+    VkBool32 skipCall              = VK_FALSE;
+    // Verify that command buffers in pool are complete (not in-flight)
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    for (auto it = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
+              it != my_data->commandPoolMap[commandPool].pCommandBuffers.end(); it++) {
+        commandBufferComplete = VK_FALSE;
+        skipCall = checkCBCompleted(my_data, *it, &commandBufferComplete);
+        if (VK_FALSE == commandBufferComplete) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)(*it), 0,
+                                MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Destroying Command Pool 0x%" PRIxLEAST64 " before "
+                                "its command buffer (0x%" PRIxLEAST64 ") has completed.", reinterpret_cast<uint64_t>(commandPool),
+                                reinterpret_cast<uint64_t>(*it));
+        }
+    }
+
+    if (VK_FALSE == skipCall) {
+        my_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
+    }
+
+    auto item = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
+    // Remove command buffers from command buffer map
+    while (item != my_data->commandPoolMap[commandPool].pCommandBuffers.end()) {
+        auto del_item = item++;
+        delete_cmd_buf_info(my_data, commandPool, *del_item);
+    }
+    my_data->commandPoolMap.erase(commandPool);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
+    VkDevice                                    device,
+    VkCommandPool                               commandPool,
+    VkCommandPoolResetFlags                     flags)
+{
+    layer_data *my_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkBool32    commandBufferComplete = VK_FALSE;
+    VkBool32    skipCall              = VK_FALSE;
+
+    // TODO: Check the commandPool's flags to see if reset is available for this pool.
+
+    auto it = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
+    // Verify that CB's in pool are complete (not in-flight)
+    while (it != my_data->commandPoolMap[commandPool].pCommandBuffers.end()) {
+        skipCall = checkCBCompleted(my_data, (*it), &commandBufferComplete);
+        if (VK_FALSE == commandBufferComplete) {
+            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)(*it), 0,
+                                MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Resetting CB %p before it has completed. You must check CB "
+                                "flag before calling vkResetCommandBuffer().", (*it));
+        } else {
+            // Clear memory references at this point.
+            skipCall |= clear_cmd_buf_and_mem_references(my_data, (*it));
+        }
+    }
+
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
@@ -1834,6 +1949,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 commandBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
+
     // This implicitly resets the Cmd Buffer so make sure any fence is done and then clear memory references
     skipCall = checkCBCompleted(my_data, commandBuffer, &commandBufferComplete);
 
@@ -1870,6 +1986,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 commandBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
+
+    // TODO:  Validate that this cmdBuffer's command pool allows reset
+
     // Verify that CB is complete (not in-flight)
     skipCall = checkCBCompleted(my_data, commandBuffer, &commandBufferComplete);
     if (VK_FALSE == commandBufferComplete) {
@@ -1885,6 +2004,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     }
     return result;
 }
+
 // TODO : For any vkCmdBind* calls that include an object which has mem bound to it,
 //    need to account for that mem now having binding to given commandBuffer
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
@@ -2712,6 +2832,14 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkCreateBufferView;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
+    if (!strcmp(funcName, "vkFreeCommandBuffers"))
+        return (PFN_vkVoidFunction) vkFreeCommandBuffers;
+    if (!strcmp(funcName, "vkCreateCommandPool"))
+        return (PFN_vkVoidFunction) vkCreateCommandPool;
+    if (!strcmp(funcName, "vkDestroyCommandPool"))
+        return (PFN_vkVoidFunction) vkDestroyCommandPool;
+    if (!strcmp(funcName, "vkResetCommandPool"))
+        return (PFN_vkVoidFunction) vkResetCommandPool;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))
