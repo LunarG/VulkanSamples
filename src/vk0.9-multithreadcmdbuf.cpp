@@ -44,20 +44,23 @@ static const Vertex triData[] =
    { XYZ1( -0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
    { XYZ1(  0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
    { XYZ1(  0,  0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1( -0.75, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1( -0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1(  -0.5,  0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1(  0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1(  0.75, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1(  0.5,  0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
+   { XYZ1( -0.75, -0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
+   { XYZ1( -0.25, -0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
+   { XYZ1(  -0.5,  0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
+   { XYZ1(  0.25, -0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
+   { XYZ1(  0.75, -0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
+   { XYZ1(  0.5,  0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
 };
 
 struct {
         VkBuffer buf;
         VkDeviceMemory mem;
         VkDescriptorBufferInfo buffer_info;
-    } vertex_buffer[3];
+} vertex_buffer[3];
 
+VkCommandBuffer threadCmdBufs[4];
+
+static void per_thread_code(sample_info &info, int threadIndex);
 
 /* For this sample, we'll start with GLSL so the shader function is plain */
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
@@ -120,7 +123,7 @@ int main(int argc, char **argv)
                                  &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
-    init_renderpass(info, DEPTH_PRESENT);
+    init_renderpass(info, DEPTH_PRESENT, false); // Can't clear in renderpass load because we re-use pipeline
     init_shaders(info, vertShaderText, fragShaderText);
     init_framebuffers(info, DEPTH_PRESENT);
 
@@ -140,6 +143,25 @@ int main(int argc, char **argv)
 
     init_pipeline_cache(info);
     init_pipeline(info, DEPTH_PRESENT);
+
+    VkImageSubresourceRange srRange = {};
+    srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    srRange.baseMipLevel = 0;
+    srRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    srRange.baseArrayLayer = 0;
+    srRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    VkClearColorValue clear_color[1];
+    clear_color[0].float32[0] = 0.2f;
+    clear_color[0].float32[1] = 0.2f;
+    clear_color[0].float32[2] = 0.2f;
+    clear_color[0].float32[3] = 0.2f;
+
+    vkCmdClearColorImage(info.cmd,
+           info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+           clear_color, 1, &srRange );
+
+
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
 
@@ -182,60 +204,19 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_START */
 
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = 3*sizeof(triData[0]);
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, NULL, &vertex_buffer[0].buf);
-    assert(res == VK_SUCCESS);
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, vertex_buffer[0].buf, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    alloc_info.allocationSize = mem_reqs.size;
-    bool pass;
-    pass = memory_type_from_properties(info,
-                                      mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-                                      &alloc_info.memoryTypeIndex);
-    assert(pass);
-
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(vertex_buffer[0].mem));
-    assert(res == VK_SUCCESS);
-
-    uint8_t *pData;
-    res = vkMapMemory(info.device, vertex_buffer[0].mem, 0, 0, 0, (void **) &pData);
-    assert(res == VK_SUCCESS);
-
-    memcpy(pData, triData, 3*sizeof(triData[0]));
-
-    vkUnmapMemory(info.device, vertex_buffer[0].mem);
-
-    res = vkBindBufferMemory(info.device,
-            vertex_buffer[0].buf,
-            vertex_buffer[0].mem, 0);
-    assert(res == VK_SUCCESS);
-
-    VkCommandBuffer threadCmdBufs[3];
     VkCommandBufferAllocateInfo cmd = {};
     cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmd.pNext = NULL;
     cmd.commandPool = info.cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd.bufferCount = 3;
+    cmd.bufferCount = 4;
 
     res = vkAllocateCommandBuffers(info.device, &cmd, threadCmdBufs);
     assert(res == VK_SUCCESS);
+
+    per_thread_code(info, 0);
+    per_thread_code(info, 1);
+    per_thread_code(info, 2);
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -247,54 +228,8 @@ int main(int argc, char **argv)
     cmd_buf_info.occlusionQueryEnable = VK_FALSE;
     cmd_buf_info.queryFlags = 0;
     cmd_buf_info.pipelineStatistics = 0;
-    res = vkBeginCommandBuffer(threadCmdBufs[0], &cmd_buf_info);
+    res = vkBeginCommandBuffer(threadCmdBufs[3], &cmd_buf_info);
     assert(res == VK_SUCCESS);
-
-    VkClearValue clear_values[2];
-    clear_values[0].color.float32[0] = 0.2f;
-    clear_values[0].color.float32[1] = 0.2f;
-    clear_values[0].color.float32[2] = 0.2f;
-    clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth     = 1.0f;
-    clear_values[1].depthStencil.stencil   = 0;
-
-    VkRenderPassBeginInfo rp_begin;
-    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rp_begin.pNext = NULL;
-    rp_begin.renderPass = info.render_pass;
-    rp_begin.framebuffer = info.framebuffers[info.current_buffer];
-    rp_begin.renderArea.offset.x = 0;
-    rp_begin.renderArea.offset.y = 0;
-    rp_begin.renderArea.extent.width = info.width;
-    rp_begin.renderArea.extent.height = info.height;
-    rp_begin.clearValueCount = 2;
-    rp_begin.pClearValues = clear_values;
-
-    vkCmdBeginRenderPass(threadCmdBufs[0], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-
-    vkCmdBindPipeline(threadCmdBufs[0], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    const VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(threadCmdBufs[0], 0, 1, &vertex_buffer[0].buf, offsets);
-
-    VkViewport viewport;
-    viewport.height = (float) info.height;
-    viewport.width = (float) info.width;
-    viewport.minDepth = (float) 0.0f;
-    viewport.maxDepth = (float) 1.0f;
-    viewport.x = 0;
-    viewport.y = 0;
-    vkCmdSetViewport(threadCmdBufs[0], NUM_VIEWPORTS, &viewport);
-
-    VkRect2D scissor;
-    scissor.extent.width = info.width;
-    scissor.extent.height = info.height;
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    vkCmdSetScissor(threadCmdBufs[0], NUM_SCISSORS, &scissor);
-
-    vkCmdDraw(threadCmdBufs[0], 3, 1, 0, 0);
-    vkCmdEndRenderPass(threadCmdBufs[0]);
 
     VkImageMemoryBarrier prePresentBarrier = {};
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -312,13 +247,23 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-    vkCmdPipelineBarrier(threadCmdBufs[0], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 
-    res = vkEndCommandBuffer(threadCmdBufs[0]);
-    const VkCommandBuffer thread_cmd_bufs[] = { threadCmdBufs[0] };
+    res = vkEndCommandBuffer(threadCmdBufs[3]);
+    assert(res == VK_SUCCESS);
 
-    execute_queue_cmdbuf(info, thread_cmd_bufs);
+    submit_info[0].waitSemaphoreCount = 1;
+    submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].commandBufferCount = 4;
+    submit_info[0].pCommandBuffers = threadCmdBufs;
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+    assert(!res);
+
     execute_present_image(info);
 
     wait_seconds(1);
@@ -340,4 +285,108 @@ int main(int argc, char **argv)
     destroy_window(info);
     destroy_device(info);
     destroy_instance(info);
+}
+
+static void per_thread_code(sample_info &info, int threadIndex)
+{
+    VkResult U_ASSERT_ONLY res;
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buf_info.size = 3*sizeof(triData[0]);
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &vertex_buffer[threadIndex].buf);
+    assert(res == VK_SUCCESS);
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(info.device, vertex_buffer[threadIndex].buf, &mem_reqs);
+
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    alloc_info.allocationSize = mem_reqs.size;
+    bool pass;
+    pass = memory_type_from_properties(info,
+                                      mem_reqs.memoryTypeBits,
+                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                      &alloc_info.memoryTypeIndex);
+    assert(pass);
+
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(vertex_buffer[threadIndex].mem));
+    assert(res == VK_SUCCESS);
+
+    uint8_t *pData;
+    res = vkMapMemory(info.device, vertex_buffer[threadIndex].mem, 0, 0, 0, (void **) &pData);
+    assert(res == VK_SUCCESS);
+
+    memcpy(pData, &triData[threadIndex*3], 3*sizeof(triData[0]));
+
+    vkUnmapMemory(info.device, vertex_buffer[threadIndex].mem);
+
+    res = vkBindBufferMemory(info.device,
+            vertex_buffer[threadIndex].buf,
+            vertex_buffer[threadIndex].mem, 0);
+    assert(res == VK_SUCCESS);
+
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.renderPass = VK_NULL_HANDLE;  /* May only set renderPass and framebuffer */
+    cmd_buf_info.framebuffer = VK_NULL_HANDLE; /* for secondary command buffers           */
+    cmd_buf_info.flags = 0;
+    cmd_buf_info.subpass = 0;
+    cmd_buf_info.occlusionQueryEnable = VK_FALSE;
+    cmd_buf_info.queryFlags = 0;
+    cmd_buf_info.pipelineStatistics = 0;
+    res = vkBeginCommandBuffer(threadCmdBufs[threadIndex], &cmd_buf_info);
+    assert(res == VK_SUCCESS);
+
+    VkRenderPassBeginInfo rp_begin;
+    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rp_begin.pNext = NULL;
+    rp_begin.renderPass = info.render_pass;
+    rp_begin.framebuffer = info.framebuffers[info.current_buffer];
+    rp_begin.renderArea.offset.x = 0;
+    rp_begin.renderArea.offset.y = 0;
+    rp_begin.renderArea.extent.width = info.width;
+    rp_begin.renderArea.extent.height = info.height;
+    rp_begin.clearValueCount = 0;
+    rp_begin.pClearValues = NULL;
+
+    vkCmdBeginRenderPass(threadCmdBufs[threadIndex], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(threadCmdBufs[threadIndex], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                  info.pipeline);
+    const VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(threadCmdBufs[threadIndex], 0, 1, &vertex_buffer[threadIndex].buf, offsets);
+
+    VkViewport viewport;
+    viewport.height = (float) info.height;
+    viewport.width = (float) info.width;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
+    viewport.x = 0;
+    viewport.y = 0;
+    vkCmdSetViewport(threadCmdBufs[threadIndex], NUM_VIEWPORTS, &viewport);
+
+    VkRect2D scissor;
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    vkCmdSetScissor(threadCmdBufs[threadIndex], NUM_SCISSORS, &scissor);
+
+    vkCmdDraw(threadCmdBufs[threadIndex], 3, 1, 0, 0);
+    vkCmdEndRenderPass(threadCmdBufs[threadIndex]);
+
+    res = vkEndCommandBuffer(threadCmdBufs[threadIndex]);
+    assert(res == VK_SUCCESS);
+
 }
