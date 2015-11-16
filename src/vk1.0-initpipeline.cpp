@@ -198,6 +198,10 @@ int main(int argc, char **argv)
     ds.back.failOp = VK_STENCIL_OP_KEEP;
     ds.back.passOp = VK_STENCIL_OP_KEEP;
     ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
+    ds.back.compareMask = 0;
+    ds.back.reference = 0;
+    ds.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    ds.back.writeMask = 0;
     ds.front = ds.back;
 
     VkPipelineMultisampleStateCreateInfo   ms;
