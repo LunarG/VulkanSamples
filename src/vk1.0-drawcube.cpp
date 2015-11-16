@@ -199,6 +199,8 @@ int main(int argc, char **argv)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = &presentCompleteSemaphore;
     submit_info[0].commandBufferCount = 1;
