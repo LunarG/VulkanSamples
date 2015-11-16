@@ -27,10 +27,14 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Use per-thread command buffers to draw 3 triangles
 */
 
+/* Set up Vulkan pipeline and use three threads to create 3       */
+/* command buffers, each using a vertex buffer to draw a triangle */
+
 #include <util_init.hpp>
 #include <assert.h>
 #include <string.h>
 #include <cstdlib>
+#include <samples_platform.h>
 
 #define DEPTH_PRESENT false
 struct Vertex
@@ -43,24 +47,23 @@ static const Vertex triData[] =
 {
    { XYZ1( -0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
    { XYZ1(  0.25, -0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
-   { XYZ1(  0,  0.25, 0 ), XYZ1( 1.f, 0.f, 0.f ) },
+   { XYZ1(  0,  0.25, 0 ),    XYZ1( 1.f, 0.f, 0.f ) },
    { XYZ1( -0.75, -0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
    { XYZ1( -0.25, -0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
    { XYZ1(  -0.5,  0.25, 0 ), XYZ1( 0.f, 1.f, 0.f ) },
    { XYZ1(  0.25, -0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
    { XYZ1(  0.75, -0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
-   { XYZ1(  0.5,  0.25, 0 ), XYZ1( 0.f, 0.f, 1.f ) },
+   { XYZ1(  0.5,  0.25, 0 ),  XYZ1( 0.f, 0.f, 1.f ) },
 };
 
 struct {
         VkBuffer buf;
         VkDeviceMemory mem;
-        VkDescriptorBufferInfo buffer_info;
 } vertex_buffer[3];
 
 VkCommandBuffer threadCmdBufs[4];
 
-static void per_thread_code(sample_info &info, int threadIndex);
+static void * per_thread_code(void *arg);
 
 /* For this sample, we'll start with GLSL so the shader function is plain */
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
@@ -89,10 +92,11 @@ static const char *fragShaderText=
     "   outColor = color;\n"
     "}\n";
 
+static struct sample_info info = {};
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
-    struct sample_info info = {};
+
     char sample_title[] = "MT Cmd Buffer Sample";
 
     init_global_layer_properties(info);
@@ -157,6 +161,8 @@ int main(int argc, char **argv)
     clear_color[0].float32[2] = 0.2f;
     clear_color[0].float32[3] = 0.2f;
 
+    /* We need to do the clear here instead of as a load op since all 3 threads share the */
+    /* same pipeline / renderpass                                                         */
     vkCmdClearColorImage(info.cmd,
            info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
            clear_color, 1, &srRange );
@@ -216,9 +222,11 @@ int main(int argc, char **argv)
     res = vkAllocateCommandBuffers(info.device, &cmd, threadCmdBufs);
     assert(res == VK_SUCCESS);
 
-    per_thread_code(info, 0);
-    per_thread_code(info, 1);
-    per_thread_code(info, 2);
+    sample_platform_thread vk_threads[3];
+
+    for (long i = 0; i < 3; i++) {
+        sample_platform_thread_create(&vk_threads[i], &per_thread_code, (void *) i);
+    }
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -255,12 +263,19 @@ int main(int argc, char **argv)
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
 
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
-    submit_info[0].commandBufferCount = 4;
+    submit_info[0].commandBufferCount = 4; /* 3 from threads + prePresentBarrier */
     submit_info[0].pCommandBuffers = threadCmdBufs;
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
+
+    /* Wait for all of the threads to finish */
+    for (int i = 0; i < 3; i++) {
+        sample_platform_thread_join(vk_threads[i], NULL);
+    }
 
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
@@ -273,7 +288,11 @@ int main(int argc, char **argv)
 
     vkFreeCommandBuffers(info.device, info.cmd_pool, 3, threadCmdBufs);
     vkDestroyBuffer(info.device, vertex_buffer[0].buf, NULL);
+    vkDestroyBuffer(info.device, vertex_buffer[1].buf, NULL);
+    vkDestroyBuffer(info.device, vertex_buffer[2].buf, NULL);
     vkFreeMemory(info.device, vertex_buffer[0].mem, NULL);
+    vkFreeMemory(info.device, vertex_buffer[1].mem, NULL);
+    vkFreeMemory(info.device, vertex_buffer[2].mem, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
@@ -289,9 +308,15 @@ int main(int argc, char **argv)
     destroy_instance(info);
 }
 
-static void per_thread_code(sample_info &info, int threadIndex)
+static void * per_thread_code(void *arg)
 {
+    /* This code should be executed by each of the three threads.  It will  */
+    /* create a vertex buffer with position and color per vertex, then load */
+    /* commands into the thread's designated command buffer to draw the     */
+    /* triangle                                                             */
     VkResult U_ASSERT_ONLY res;
+    // int threadNum = *((int*)(&arg));
+    long threadNum = (long) arg;
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -302,11 +327,11 @@ static void per_thread_code(sample_info &info, int threadIndex)
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     buf_info.flags = 0;
-    res = vkCreateBuffer(info.device, &buf_info, NULL, &vertex_buffer[threadIndex].buf);
+    res = vkCreateBuffer(info.device, &buf_info, NULL, &vertex_buffer[threadNum].buf);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, vertex_buffer[threadIndex].buf, &mem_reqs);
+    vkGetBufferMemoryRequirements(info.device, vertex_buffer[threadNum].buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -321,20 +346,20 @@ static void per_thread_code(sample_info &info, int threadIndex)
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(vertex_buffer[threadIndex].mem));
+    res = vkAllocateMemory(info.device, &alloc_info, NULL, &(vertex_buffer[threadNum].mem));
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, vertex_buffer[threadIndex].mem, 0, 0, 0, (void **) &pData);
+    res = vkMapMemory(info.device, vertex_buffer[threadNum].mem, 0, 0, 0, (void **) &pData);
     assert(res == VK_SUCCESS);
 
-    memcpy(pData, &triData[threadIndex*3], 3*sizeof(triData[0]));
+    memcpy(pData, &triData[threadNum*3], 3*sizeof(triData[0]));
 
-    vkUnmapMemory(info.device, vertex_buffer[threadIndex].mem);
+    vkUnmapMemory(info.device, vertex_buffer[threadNum].mem);
 
     res = vkBindBufferMemory(info.device,
-            vertex_buffer[threadIndex].buf,
-            vertex_buffer[threadIndex].mem, 0);
+            vertex_buffer[threadNum].buf,
+            vertex_buffer[threadNum].mem, 0);
     assert(res == VK_SUCCESS);
 
     VkCommandBufferBeginInfo cmd_buf_info = {};
@@ -347,7 +372,7 @@ static void per_thread_code(sample_info &info, int threadIndex)
     cmd_buf_info.occlusionQueryEnable = VK_FALSE;
     cmd_buf_info.queryFlags = 0;
     cmd_buf_info.pipelineStatistics = 0;
-    res = vkBeginCommandBuffer(threadCmdBufs[threadIndex], &cmd_buf_info);
+    res = vkBeginCommandBuffer(threadCmdBufs[threadNum], &cmd_buf_info);
     assert(res == VK_SUCCESS);
 
     VkRenderPassBeginInfo rp_begin;
@@ -362,12 +387,12 @@ static void per_thread_code(sample_info &info, int threadIndex)
     rp_begin.clearValueCount = 0;
     rp_begin.pClearValues = NULL;
 
-    vkCmdBeginRenderPass(threadCmdBufs[threadIndex], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(threadCmdBufs[threadNum], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(threadCmdBufs[threadIndex], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindPipeline(threadCmdBufs[threadNum], VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
     const VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(threadCmdBufs[threadIndex], 0, 1, &vertex_buffer[threadIndex].buf, offsets);
+    vkCmdBindVertexBuffers(threadCmdBufs[threadNum], 0, 1, &vertex_buffer[threadNum].buf, offsets);
 
     VkViewport viewport;
     viewport.height = (float) info.height;
@@ -376,19 +401,20 @@ static void per_thread_code(sample_info &info, int threadIndex)
     viewport.maxDepth = (float) 1.0f;
     viewport.x = 0;
     viewport.y = 0;
-    vkCmdSetViewport(threadCmdBufs[threadIndex], NUM_VIEWPORTS, &viewport);
+    vkCmdSetViewport(threadCmdBufs[threadNum], NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(threadCmdBufs[threadIndex], NUM_SCISSORS, &scissor);
+    vkCmdSetScissor(threadCmdBufs[threadNum], NUM_SCISSORS, &scissor);
 
-    vkCmdDraw(threadCmdBufs[threadIndex], 3, 1, 0, 0);
-    vkCmdEndRenderPass(threadCmdBufs[threadIndex]);
+    vkCmdDraw(threadCmdBufs[threadNum], 3, 1, 0, 0);
+    vkCmdEndRenderPass(threadCmdBufs[threadNum]);
 
-    res = vkEndCommandBuffer(threadCmdBufs[threadIndex]);
+    res = vkEndCommandBuffer(threadCmdBufs[threadNum]);
     assert(res == VK_SUCCESS);
 
+    return NULL;
 }
