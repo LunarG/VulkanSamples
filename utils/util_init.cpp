@@ -756,6 +756,8 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_b
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
     submit_info[0].commandBufferCount = 1;
@@ -1227,6 +1229,8 @@ void execute_queue_command_buffer(struct sample_info &info)
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
     submit_info[0].commandBufferCount = 1;
@@ -1764,6 +1768,8 @@ void init_texture(struct sample_info &info, const char* textureName)
         VkFence nullFence = VK_NULL_HANDLE;
 
         VkSubmitInfo submit_info[1] = {};
+        submit_info[0].pNext = NULL;
+        submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info[0].waitSemaphoreCount = 0;
         submit_info[0].pWaitSemaphores = NULL;
         submit_info[0].commandBufferCount = 1;
