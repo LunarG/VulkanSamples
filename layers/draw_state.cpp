@@ -2124,7 +2124,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
                     "Out of memory while attempting to allocate LAYOUT_NODE in vkCreateDescriptorSetLayout()"))
                 return VK_ERROR_VALIDATION_FAILED;
         }
-        memset(pNewNode, 0, sizeof(LAYOUT_NODE));
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
         pNewNode->createInfo.pBinding = new VkDescriptorSetLayoutBinding[pCreateInfo->bindingCount];
         memcpy((void*)pNewNode->createInfo.pBinding, pCreateInfo->pBinding, sizeof(VkDescriptorSetLayoutBinding)*pCreateInfo->bindingCount);

@@ -170,7 +170,10 @@ typedef struct _LAYOUT_NODE {
     vector<VkDescriptorType>        descriptorTypes; // Type per descriptor in this layout to verify correct updates
     vector<VkShaderStageFlags>      stageFlags; // stageFlags per descriptor in this layout to verify correct updates
     unordered_set<uint32_t>         bindings;
+    // Default constructor
+    _LAYOUT_NODE():layout{},createInfo{},startIndex(0),endIndex(0),dynamicDescriptorCount(0) {};
 } LAYOUT_NODE;
+
 // Store layouts and pushconstants for PipelineLayout
 struct PIPELINE_LAYOUT_NODE {
     vector<VkDescriptorSetLayout>  descriptorSetLayouts;
