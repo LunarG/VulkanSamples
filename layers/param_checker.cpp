@@ -4156,12 +4156,15 @@ bool PreCreateSampler(
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
         return false;
     }
-    if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
-        pCreateInfo->compareOp > VK_COMPARE_OP_END_RANGE)
+    if(pCreateInfo->compareEnable)
     {
-        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
-        "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is an unrecognized enumerator");
-        return false;
+        if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
+            pCreateInfo->compareOp > VK_COMPARE_OP_END_RANGE)
+        {
+            log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+            "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is an unrecognized enumerator");
+            return false;
+        }
     }
     if(pCreateInfo->borderColor < VK_BORDER_COLOR_BEGIN_RANGE ||
         pCreateInfo->borderColor > VK_BORDER_COLOR_END_RANGE)
