@@ -16,7 +16,7 @@ Ubuntu 14.10 and 15.04 have been used with the sample driver.
 
 These packages are used for building and running the samples.
 ```
-sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev
+sudo apt-get install git subversion cmake libgl1-mesa-dev freeglut3-dev libglm-dev libmagickwand-dev qt5-default libpciaccess-dev libpthread-stubs0-dev libudev-dev bison
 sudo apt-get build-dep mesa
 ```
 
