@@ -91,6 +91,7 @@ class Subcommand(object):
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -111,6 +112,8 @@ class Subcommand(object):
  * DEALINGS IN THE SOFTWARE.
  *
  * Author: Jon Ashburn <jon@lunarg.com>
+ * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Courtney Goeltzenleuchter <courtney@lunarg.com>
  */"""
 
     def generate_header(self):
@@ -121,6 +124,37 @@ class Subcommand(object):
 
     def generate_footer(self):
         pass
+
+class DevExtTrampolineSubcommand(Subcommand):
+    def generate_header(self):
+        lines = []
+        lines.append("#include \"vk_loader_platform.h\"")
+        lines.append("#include \"loader.h\"")
+        lines.append("#if defined(__linux__)")
+        lines.append("#pragma GCC optimize(3)  // force gcc to use tail-calls")
+        lines.append("#endif")
+        return "\n".join(lines)
+
+    def generate_body(self):
+        lines = []
+        for i in range(250):
+            lines.append('\nVKAPI_ATTR void VKAPI_CALL vkDevExt%s(VkDevice device)' % i)
+            lines.append('{')
+            lines.append('    const struct loader_dev_dispatch_table *disp;')
+            lines.append('    disp = loader_get_dev_dispatch(device);')
+            lines.append('    disp->ext_dispatch.DevExt[%s](device);' % i)
+            lines.append('}')
+        lines.append('')
+        lines.append('void *loader_get_dev_ext_trampoline(uint32_t index)')
+        lines.append('{')
+        lines.append('    switch (index) {')
+        for i in range(250):
+            lines.append('        case %s:' % i)
+            lines.append('            return vkDevExt%s;' % i)
+        lines.append('    }')
+        lines.append('    return NULL;')
+        lines.append('}')
+        return "\n".join(lines)
 
 class LoaderEntrypointsSubcommand(Subcommand):
     def generate_header(self):
@@ -412,6 +446,7 @@ class LoaderGetProcAddrSubcommand(Subcommand):
 
 def main():
     subcommands = {
+            "dev-ext-trampoline": DevExtTrampolineSubcommand,
             "loader-entrypoints": LoaderEntrypointsSubcommand,
             "dispatch-table-ops": DispatchTableOpsSubcommand,
             "win-def-file": WinDefFileSubcommand,

@@ -31,11 +31,19 @@
 #include "loader.h"
 #include "vk_loader_platform.h"
 
-static inline void loader_init_device_dispatch_table(VkLayerDispatchTable *table,
+static VkResult vkDevExtError(VkDevice dev)
+{
+    return VK_ERROR_INITIALIZATION_FAILED;
+}
+
+static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_table *dev_table,
                                                     PFN_vkGetDeviceProcAddr gpa,
                                                     VkDevice dev_next,
                                                     VkDevice dev)
 {
+    VkLayerDispatchTable *table = &dev_table->core_dispatch;
+    for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++)
+        dev_table->ext_dispatch.DevExt[i] = (PFN_vkDevExt) vkDevExtError;
     // If layer is next, this will trigger layers to initialize their dispatch tables
     //then use the gpa in their dispatch for subsequent layers in the chain
     table->GetDeviceProcAddr = (PFN_vkGetDeviceProcAddr) gpa(dev_next, "vkGetDeviceProcAddr");

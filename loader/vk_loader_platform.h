@@ -43,6 +43,7 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <assert.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <libgen.h>
@@ -207,6 +208,7 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 #endif
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <io.h>
 #include <stdbool.h>
 #include <shlwapi.h>

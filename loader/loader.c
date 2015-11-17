@@ -47,6 +47,7 @@
 #include "wsi_swapchain.h"
 #include "vulkan/vk_icd.h"
 #include "cJSON.h"
+#include "murmurhash.h"
 
 static loader_platform_dl_handle loader_add_layer_lib(
         const struct loader_instance *inst,
@@ -2048,6 +2049,221 @@ static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_instance_internal(VkI
     return disp_table->GetInstanceProcAddr(inst, pName);
 }
 
+/**
+ * Initialize device_ext dispatch table entry as follows:
+ * If dev == NULL find all logical devices created within this instance and
+ *  init the entry (given by idx) in the ext dispatch table.
+ * If dev != NULL only initialize the entry in the given dev's dispatch table.
+ * The initialization value is gotten by calling down the device chain with GDPA.
+ * If GDPA returns NULL then don't initialize the dispatch table entry.
+ */
+static void loader_init_dispatch_dev_ext_entry(struct loader_instance *inst,
+                                         struct loader_device *dev,
+                                         uint32_t idx,
+                                         const char *funcName)
+
+ {
+    void *gdpa_value;
+    if (dev != NULL) {
+        gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
+                                                    dev->device, funcName);
+        if (gdpa_value != NULL)
+            dev->loader_dispatch.ext_dispatch.DevExt[idx] = (PFN_vkDevExt) gdpa_value;
+    } else {
+        for (uint32_t i = 0; i < inst->total_icd_count; i++) {
+            struct loader_icd *icd = &inst->icds[i];
+            struct loader_device *dev = icd->logical_device_list;
+            while (dev) {
+                gdpa_value = dev->loader_dispatch.core_dispatch.GetDeviceProcAddr(
+                                                    dev->device, funcName);
+                if (gdpa_value != NULL)
+                    dev->loader_dispatch.ext_dispatch.DevExt[idx] =
+                                                    (PFN_vkDevExt) gdpa_value;
+                dev = dev->next;
+            }
+        }
+    }
+
+}
+
+/**
+ * Find all dev extension in the hash table  and initialize the dispatch table
+ * for dev  for each of those extension entrypoints found in hash table.
+
+ */
+static void loader_init_dispatch_dev_ext(struct loader_instance *inst,
+                                         struct loader_device *dev)
+{
+    for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
+        if (inst->disp_hash[i].func_name != NULL)
+            loader_init_dispatch_dev_ext_entry(inst, dev, i,
+                                               inst->disp_hash[i].func_name);
+    }
+}
+
+static bool loader_check_icds_for_address(struct loader_instance *inst,
+                                          const char *funcName)
+{
+    struct loader_icd *icd;
+    icd = inst->icds;
+    while (icd) {
+        if (icd->this_icd_lib->GetInstanceProcAddr(icd->instance, funcName))
+            // this icd supports funcName
+            return true;
+        icd = icd->next;
+    }
+
+    return false;
+}
+
+static void loader_free_dev_ext_table(struct loader_instance *inst)
+{
+    for (uint32_t i = 0; i < MAX_NUM_DEV_EXTS; i++) {
+        loader_heap_free(inst, inst->disp_hash[i].func_name);
+        loader_heap_free(inst, inst->disp_hash[i].list.index);
+
+    }
+    memset(inst->disp_hash, 0, sizeof(inst->disp_hash));
+}
+
+static bool loader_add_dev_ext_table(struct loader_instance *inst,
+                                     uint32_t *ptr_idx,
+                                     const char *funcName)
+{
+    uint32_t i;
+    uint32_t idx = *ptr_idx;
+    struct loader_dispatch_hash_list *list = &inst->disp_hash[idx].list;
+
+    if (!inst->disp_hash[idx].func_name) {
+        // no entry here at this idx, so use it
+        assert(list->capacity == 0);
+        inst->disp_hash[idx].func_name = (char *) loader_heap_alloc(inst,
+                                         strlen(funcName) + 1,
+                                         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (inst->disp_hash[idx].func_name == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                       "loader_add_dev_ext_table() can't allocate memory for func_name");
+            return false;
+        }
+        strncpy(inst->disp_hash[idx].func_name, funcName, strlen(funcName) + 1);
+        return true;
+    }
+
+    // check for enough capacity
+    if (list->capacity == 0) {
+        list->index = loader_heap_alloc(inst, 8 * sizeof(*(list->index)),
+                                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                       "loader_add_dev_ext_table() can't allocate list memory");
+            return false;
+        }
+        list->capacity = 8 * sizeof(*(list->index));
+    } else if (list->capacity < (list->count + 1) * sizeof(*(list->index))) {
+        list->index = loader_heap_realloc(inst, list->index, list->capacity,
+                            list->capacity * 2,
+                            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (list->index == NULL) {
+            loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                       "loader_add_dev_ext_table() can't reallocate list memory");
+            return false;
+        }
+        list->capacity *= 2;
+    }
+
+    //find an unused index in the hash table and use it
+    i = (idx + 1) % MAX_NUM_DEV_EXTS;
+    do {
+        if (!inst->disp_hash[i].func_name) {
+            assert(inst->disp_hash[i].list.capacity == 0);
+            inst->disp_hash[i].func_name = (char *) loader_heap_alloc(inst,
+                                            strlen(funcName) + 1,
+                                            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            if (inst->disp_hash[i].func_name == NULL) {
+                loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+                       "loader_add_dev_ext_table() can't rallocate func_name memory");
+                return false;
+            }
+            strncpy(inst->disp_hash[i].func_name, funcName, strlen(funcName) + 1);
+            list->index[list->count] = i;
+            list->count++;
+            *ptr_idx = i;
+            return true;
+        }
+        i = (i + 1) % MAX_NUM_DEV_EXTS;
+    } while (i != idx);
+
+    loader_log(VK_DBG_REPORT_ERROR_BIT, 0,
+               "loader_add_dev_ext_table() couldn't insert into hash table; is it full?");
+    return false;
+}
+
+static bool loader_name_in_dev_ext_table(struct loader_instance *inst,
+                                         uint32_t *idx,
+                                         const char *funcName)
+{
+    uint32_t alt_idx;
+    if (inst->disp_hash[*idx].func_name && !strcmp(
+                                                inst->disp_hash[*idx].func_name,
+                                                funcName))
+        return true;
+
+    // funcName wasn't at the primary spot in the hash table
+    // search the list of secondary locations (shallow search, not deep search)
+    for (uint32_t i = 0; i < inst->disp_hash[*idx].list.count; i++) {
+        alt_idx = inst->disp_hash[*idx].list.index[i];
+        if (!strcmp(inst->disp_hash[*idx].func_name, funcName)) {
+            *idx = alt_idx;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * This function returns generic trampoline code address for unknown entry points.
+ * Presumably, these unknown entry points (as given by funcName) are device
+ * extension entrypoints.  A hash table is used to keep a list of unknown entry
+ * points and their mapping to the device extension dispatch table
+ * (struct loader_dev_ext_dispatch_table).
+ * \returns
+ * For a given entry point string (funcName), if an existing mapping is found the
+ * trampoline address for that mapping is returned. Otherwise, this unknown entry point
+ * has not been seen yet. Next check if a layer or ICD supports it.  If so then a
+ * new entry in the hash table is initialized and that trampoline address for
+ * the new entry is returned. Null is returned if the hash table is full or
+ * if no discovered layer or ICD returns a non-NULL GetProcAddr for it.
+ */
+void *loader_dev_ext_gpa(struct loader_instance *inst,
+                         const char *funcName)
+{
+    uint32_t idx;
+    uint32_t seed = 0;
+
+    idx = murmurhash(funcName, strlen(funcName), seed) % MAX_NUM_DEV_EXTS;
+
+    if (loader_name_in_dev_ext_table(inst, &idx, funcName))
+        // found funcName already in hash
+        return loader_get_dev_ext_trampoline(idx);
+
+    // Check if funcName is supported in either ICDs or a layer library
+    if (!loader_check_icds_for_address(inst, funcName)) {
+        // TODO Add check in layer libraries for support of address
+        // if support found in layers continue on
+        return NULL;
+    }
+
+    if (loader_add_dev_ext_table(inst, &idx, funcName)) {
+        // successfully added new table entry
+        // init any dev dispatch table entrys as needed
+        loader_init_dispatch_dev_ext_entry(inst, NULL, idx, funcName);
+        return loader_get_dev_ext_trampoline(idx);
+    }
+
+    return NULL;
+}
+
 struct loader_instance *loader_get_instance(const VkInstance instance)
 {
     /* look up the loader_instance in our list by comparing dispatch tables, as
@@ -2759,6 +2975,7 @@ VKAPI_ATTR void VKAPI_CALL loader_DestroyInstance(
     for (uint32_t i = 0; i < ptr_instance->total_gpu_count; i++)
         loader_destroy_ext_list(ptr_instance, &ptr_instance->phys_devs[i].device_extension_cache);
     loader_heap_free(ptr_instance, ptr_instance->phys_devs);
+    loader_free_dev_ext_table(ptr_instance);
 }
 
 VkResult loader_init_physical_device_info(struct loader_instance *ptr_instance)
@@ -2962,7 +3179,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
     struct loader_icd *icd = phys_dev->this_icd;
     struct loader_device *dev;
-    const struct loader_instance *inst;
+    struct loader_instance *inst;
     VkDeviceCreateInfo device_create_info;
     char **filtered_extension_names = NULL;
     VkResult res;
@@ -3050,11 +3267,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     if (dev == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
-    PFN_vkGetDeviceProcAddr get_proc_addr = icd->GetDeviceProcAddr;
-    loader_init_device_dispatch_table(&dev->loader_dispatch, get_proc_addr,
-                                      *pDevice, *pDevice);
 
-    dev->loader_dispatch.CreateDevice = scratch_vkCreateDevice;
     loader_init_dispatch(*pDevice, &dev->loader_dispatch);
 
     /* activate any layers on device chain which terminates with device*/
@@ -3065,9 +3278,13 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     }
     loader_activate_device_layers(inst, dev, *pDevice);
 
-    res = dev->loader_dispatch.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+    /* initialize any device extension dispatch entry's from the instance list*/
+    loader_init_dispatch_dev_ext(inst, dev);
 
-    dev->loader_dispatch.CreateDevice = icd->CreateDevice;
+    /* finally can call down the chain */
+    res = dev->loader_dispatch.core_dispatch.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+
+    dev->loader_dispatch.core_dispatch.CreateDevice = icd->CreateDevice;
 
     return res;
 }

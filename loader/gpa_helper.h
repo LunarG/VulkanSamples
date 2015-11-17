@@ -310,8 +310,8 @@ static inline void* trampolineGetProcAddr(struct loader_instance *inst,
     if (wsi_swapchain_instance_gpa(inst, funcName, &addr))
         return addr;
 
-    //TODO device extensions
-    return NULL;
+    addr = loader_dev_ext_gpa(inst, funcName);
+    return addr;
 }
 
 static inline void* globalGetProcAddr(const char *name)

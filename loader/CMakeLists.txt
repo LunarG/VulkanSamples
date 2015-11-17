@@ -26,6 +26,9 @@ set(LOADER_SRCS
     gpa_helper.h
     cJSON.c
     cJSON.h
+    dev_ext_trampoline.c
+    murmurhash.c
+    murmurhash.h
 )
 
 

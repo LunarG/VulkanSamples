@@ -17,8 +17,7 @@
 #  define VK_LAYER_EXPORT
 #endif
 
-typedef void * (*PFN_vkGPA)(void* obj, const char * pName);
-
+typedef void * (VKAPI_PTR *PFN_vkGPA)(void* obj, const char * pName);
 typedef struct VkBaseLayerObject_
 {
     PFN_vkGPA pGPA;

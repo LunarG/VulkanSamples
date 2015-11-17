@@ -109,9 +109,34 @@ struct loader_layer_library_list {
     struct loader_lib_info *list;
 };
 
+struct loader_dispatch_hash_list {
+    size_t capacity;
+    uint32_t count;
+    uint32_t *index;       // index into the dev_ext dispatch table
+};
+
+#define MAX_NUM_DEV_EXTS 250
+// loader_dispatch_hash_entry and loader_dev_ext_dispatch_table.DevExt have one to one
+// correspondence; one loader_dispatch_hash_entry for one DevExt dispatch entry.
+// Also have a one to one correspondence with functions in dev_ext_trampoline.c
+struct loader_dispatch_hash_entry {
+    char *func_name;
+    struct loader_dispatch_hash_list list;   // to handle hashing collisions
+};
+
+typedef void (VKAPI_PTR *PFN_vkDevExt)(VkDevice device);
+struct loader_dev_ext_dispatch_table {
+    PFN_vkDevExt DevExt[MAX_NUM_DEV_EXTS];
+};
+
+struct loader_dev_dispatch_table {
+    VkLayerDispatchTable core_dispatch;
+    struct loader_dev_ext_dispatch_table ext_dispatch;
+};
+
 /* per CreateDevice structure */
 struct loader_device {
-    VkLayerDispatchTable loader_dispatch;
+    struct loader_dev_dispatch_table loader_dispatch;
     VkDevice device;       // device object from the icd
 
     uint32_t  app_extension_count;
@@ -169,6 +194,7 @@ struct loader_instance {
     struct loader_icd_libs icd_libs;
     struct loader_layer_list instance_layer_list;
     struct loader_layer_list device_layer_list;
+    struct loader_dispatch_hash_entry disp_hash[MAX_NUM_DEV_EXTS];
 
     struct loader_msg_callback_map_entry *icd_msg_callback_map;
 
@@ -227,6 +253,11 @@ static inline void loader_set_dispatch(void* obj, const void *data)
 static inline VkLayerDispatchTable *loader_get_dispatch(const void* obj)
 {
     return *((VkLayerDispatchTable **) obj);
+}
+
+static inline struct loader_dev_dispatch_table *loader_get_dev_dispatch(const void* obj)
+{
+    return *((struct loader_dev_dispatch_table **) obj);
 }
 
 static inline VkLayerInstanceDispatchTable *loader_get_instance_dispatch(const void* obj)
@@ -384,6 +415,11 @@ void loader_get_icd_loader_instance_extensions(
 struct loader_icd *loader_get_icd_and_device(
         const VkDevice device,
         struct loader_device **found_dev);
+void *loader_dev_ext_gpa(
+        struct loader_instance *inst,
+        const char *funcName);
+void *loader_get_dev_ext_trampoline(
+        uint32_t index);
 struct loader_instance *loader_get_instance(
         const VkInstance instance);
 void loader_remove_logical_device(
