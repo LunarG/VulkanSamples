@@ -1,6 +1,6 @@
 # - FindXCB
 #
-# Copyright 2015 LunarG, Inc.
+# Copyright 2015 Valve Coporation
 
 find_package(PkgConfig)
 
