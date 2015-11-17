@@ -1933,20 +1933,22 @@ static void demo_init_vk(struct demo *demo)
         }
     }
 
+    // Having these GIPA queries of device extension entry points both
+    // BEFORE and AFTER vkCreateDevice is a good test for the loader
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetSurfacePropertiesKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetSurfaceFormatsKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetSurfacePresentModesKHR);
 
     err = vkCreateDevice(demo->gpu, &device, NULL, &demo->device);
     assert(!err);
 
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePropertiesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfaceFormatsKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
+
+    GET_INSTANCE_PROC_ADDR(demo->inst, CreateSwapchainKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, DestroySwapchainKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetSwapchainImagesKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, AcquireNextImageKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, QueuePresentKHR);
 
     vkGetPhysicalDeviceProperties(demo->gpu, &demo->gpu_props);
 
