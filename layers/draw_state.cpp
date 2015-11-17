@@ -3186,14 +3186,16 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
                             attachment->colorAttachment, pCB->activeSubpass);
                 }
             } else if (attachment->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-                /* TODO: Is this a good test for depth/stencil? */
-                if (!pSD->pDepthStencilAttachment || pSD->pDepthStencilAttachment->attachment != attachment->colorAttachment) {
+                if (!pSD->pDepthStencilAttachment                                      ||  // Says no DS will be used in active subpass
+                    (pSD->pDepthStencilAttachment->attachment == VK_ATTACHMENT_UNUSED) ||  // Says no DS will be used in active subpass
+                    (pSD->pDepthStencilAttachment->attachment != attachment_idx )) {       // AttachmentIndex doesn't match subpass index
+
                     skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER,
-                            (uint64_t)commandBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
-                            "vkCmdClearAttachments() attachment index %d does not match depthStencilAttachment.attachment (%d) found in active subpass %d",
-                            attachment->colorAttachment,
-                            (pSD->pDepthStencilAttachment) ? pSD->pDepthStencilAttachment->attachment : VK_ATTACHMENT_UNUSED,
-                            pCB->activeSubpass);
+                        (uint64_t)commandBuffer, 0, DRAWSTATE_MISSING_ATTACHMENT_REFERENCE, "DS",
+                        "vkCmdClearAttachments() attachment index %d does not match depthStencilAttachment.attachment (%d) found in active subpass %d",
+                        attachment->colorAttachment,
+                        (pSD->pDepthStencilAttachment) ? pSD->pDepthStencilAttachment->attachment : VK_ATTACHMENT_UNUSED,
+                        pCB->activeSubpass);
                 }
             }
         }
