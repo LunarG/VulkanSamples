@@ -200,6 +200,7 @@ int main(int argc, char **argv)
     memset(descriptor_writes, 0, sizeof(descriptor_writes));
 
     // Populate with info about our uniform buffer
+    descriptor_writes[0] = {};
     descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[0].pNext = NULL;
     descriptor_writes[0].dstSet = descriptor_sets[uniform_set_index];
@@ -210,6 +211,7 @@ int main(int argc, char **argv)
     descriptor_writes[0].dstBinding = 0;
 
     // Populate with info about our sampled image
+    descriptor_writes[1] = {};
     descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptor_writes[1].pNext = NULL;
     descriptor_writes[1].dstSet = descriptor_sets[sampler_set_index];

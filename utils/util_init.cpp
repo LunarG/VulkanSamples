@@ -1357,6 +1357,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     VkWriteDescriptorSet writes[2];
 
+    writes[0] = {};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
     writes[0].dstSet = info.desc_set[0];
@@ -1368,6 +1369,7 @@ void init_descriptor_set(struct sample_info &info, bool use_texture)
 
     if (use_texture)
     {
+        writes[1] = {};
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[1].dstSet = info.desc_set[0];
         writes[1].dstBinding = 1;
