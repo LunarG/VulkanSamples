@@ -63,21 +63,18 @@ void wsi_swapchain_create_instance(
  * for GetPhysicalDeviceSurfaceSupportKHR
  */
 VKAPI_ATTR VkResult VKAPI_CALL wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
-        VkPhysicalDevice                        physicalDevice,
-        uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
-        VkBool32*                               pSupported)
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    VkSurfaceKHR                                surface,
+    VkBool32*                                   pSupported)
 {
     const VkLayerInstanceDispatchTable *disp;
-// TBD/TODO: DO WE NEED TO DO LOCKING FOR THIS FUNCTION?
     disp = loader_get_instance_dispatch(physicalDevice);
-//    loader_platform_thread_lock_mutex(&loader_lock);
     VkResult res = disp->GetPhysicalDeviceSurfaceSupportKHR(
                                                       physicalDevice,
-                                                      queueNodeIndex,
-                                                      pSurfaceDescription,
+                                                      queueFamilyIndex,
+                                                      surface,
                                                       pSupported);
-//    loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
 
@@ -86,10 +83,10 @@ VKAPI_ATTR VkResult VKAPI_CALL wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
  * for GetPhysicalDeviceSurfaceSupportKHR
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
-        VkPhysicalDevice                        physicalDevice,
-        uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
-        VkBool32*                               pSupported)
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    VkSurfaceKHR                                surface,
+    VkBool32*                                   pSupported)
 {
     struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
     struct loader_icd *icd = phys_dev->this_icd;
@@ -100,9 +97,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
     assert(icd->GetPhysicalDeviceSurfaceSupportKHR && "loader: null GetPhysicalDeviceSurfaceSupportKHR ICD pointer");
 
     return icd->GetPhysicalDeviceSurfaceSupportKHR(phys_dev->phys_dev,
-                                                  queueNodeIndex,
-                                                  pSurfaceDescription,
-                                                  pSupported);
+                                                   queueFamilyIndex,
+                                                   surface,
+                                                   pSupported);
 }
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,

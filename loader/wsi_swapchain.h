@@ -31,16 +31,16 @@
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                  const char* name, void **addr);
 void wsi_swapchain_add_instance_extensions(
-        const struct loader_instance *inst,
-        struct loader_extension_list *ext_list);
+    const struct loader_instance *inst,
+    struct loader_extension_list *ext_list);
 
 void wsi_swapchain_create_instance(
-        struct loader_instance *ptr_instance,
-        const VkInstanceCreateInfo *pCreateInfo);
+    struct loader_instance *ptr_instance,
+    const VkInstanceCreateInfo *pCreateInfo);
 
 
 VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
-        VkPhysicalDevice                        physicalDevice,
-        uint32_t                                queueNodeIndex,
-        const VkSurfaceDescriptionKHR*          pSurfaceDescription,
-        VkBool32*                               pSupported);
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    VkSurfaceKHR                                surface,
+    VkBool32*                                   pSupported);
