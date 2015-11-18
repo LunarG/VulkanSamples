@@ -63,16 +63,6 @@ struct intel_x11_display {
     uint32_t mode_count;
 };
 
-// This struct corresponds to the VkSurfaceKHR object:
-struct intel_xcb_surface {
-    struct intel_handle handle;
-
-    struct intel_instance *instance;
-
-    xcb_connection_t *c;
-    xcb_window_t window;
-};
-
 typedef enum intel_x11_swap_chain_image_state_
 {
     INTEL_SC_STATE_UNUSED = 0,
@@ -134,33 +124,39 @@ static const VkFormat x11_presentable_formats[] = {
     VK_FORMAT_B5G6R5_UNORM_PACK16,
 };
 
+// Note: The following function is only needed if an application uses this ICD
+// directly, without the common Vulkan loader:
+//
 // Create a VkSurfaceKHR object for XCB window connections:
 static VkResult x11_surface_create(struct intel_instance *instance,
                                    xcb_connection_t* connection,
                                    xcb_window_t window,
-                                   struct intel_xcb_surface **surface_ret)
+                                   VkIcdSurfaceXcb **pSurface)
 {
-    struct intel_xcb_surface *surface;
+    VkIcdSurfaceXcb *surface;
 
-    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!surface)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(surface, 0, sizeof(*surface));
-    intel_handle_init(&surface->handle, VK_OBJECT_TYPE_SURFACE_KHR, instance);
+// TBD: Do we need to do this (it doesn't fit with what we want for the API)?
+//    intel_handle_init(&surface, VK_OBJECT_TYPE_SURFACE_KHR, instance);
 
-    surface->instance = instance;
-    surface->c = connection;
+    surface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
+    surface->connection = connection;
     surface->window = window;
 
-    *surface_ret = surface;
+    *pSurface = surface;
 
     return VK_SUCCESS;
 }
 
-static inline struct intel_xcb_surface *xcb_surface(VkSurfaceKHR surface)
+static inline VkIcdSurfaceXcb *xcb_surface(VkSurfaceKHR surface)
 {
-    return (struct intel_xcb_surface *) surface.handle;
+    VkIcdSurfaceXcb *pSurface = (VkIcdSurfaceXcb *) surface;
+    assert(pSurface->base.platform == VK_ICD_WSI_PLATFORM_XCB);
+    return pSurface;
 }
 
 static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapchainKHR sc)
@@ -263,8 +259,8 @@ static VkResult x11_get_surface_capabilities(
     VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceProperties)
 {
-    const struct intel_xcb_surface *s = xcb_surface(surface);
-    xcb_connection_t *c = s->c;
+    const VkIcdSurfaceXcb *s = xcb_surface(surface);
+    xcb_connection_t *c = s->connection;
     xcb_window_t window = s->window;
     xcb_get_geometry_cookie_t cookie;
     xcb_get_geometry_reply_t *reply;
@@ -788,8 +784,8 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 {
     const xcb_randr_provider_t provider = 0;
 
-    const struct intel_xcb_surface *s = xcb_surface(info->surface);
-    xcb_connection_t *c = s->c;
+    const VkIcdSurfaceXcb *s = xcb_surface(info->surface);
+    xcb_connection_t *c = s->connection;
     xcb_window_t window = s->window;
     struct intel_x11_swap_chain *sc;
     int fd;
@@ -948,15 +944,20 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 }
 
 
-ICD_EXPORT VkResult VKAPI vkCreateXcbSurfaceKHR(
+// Note: The following function is only needed if an application uses this ICD
+// directly, without the common Vulkan loader:
+//
+// Create a VkSurfaceKHR object for XCB window connections:
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                              instance,
     xcb_connection_t*                       connection,
     xcb_window_t                            window,
+    const VkAllocationCallbacks*            pAllocator,
     VkSurfaceKHR*                           pSurface)
 {
     return x11_surface_create((struct intel_instance *) instance,
                               connection, window,
-                              (struct intel_xcb_surface **) pSurface);
+                              (VkIcdSurfaceXcb **) pSurface);
 }
 
 
@@ -966,10 +967,10 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkSurfaceKHR                            surface,
     VkBool32*                               pSupported)
 {
-    const struct intel_xcb_surface *s = xcb_surface(surface);
+    const VkIcdSurfaceXcb *s = xcb_surface(surface);
 
     // Just make sure we have a non-zero connection:
-    if (s->c) {
+    if (s->connection) {
         *pSupported = true;
     } else {
         *pSupported = false;
