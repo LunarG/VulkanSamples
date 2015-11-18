@@ -125,6 +125,11 @@ typedef enum VkResult {
     VK_ERROR_INCOMPATIBLE_DRIVER = -9,
     VK_ERROR_TOO_MANY_OBJECTS = -10,
     VK_ERROR_FORMAT_NOT_SUPPORTED = -11,
+    VK_ERROR_SURFACE_LOST_KHR = 0xC0000400,
+    VK_SUBOPTIMAL_KHR = 0x40000403,
+    VK_ERROR_OUT_OF_DATE_KHR = 0xC0000804,
+    VK_ERROR_INCOMPATIBLE_DISPLAY_KHR = 0xC0001001,
+    VK_ERROR_NATIVE_WINDOW_IN_USE_KHR = 0xC0002400,
     VK_RESULT_BEGIN_RANGE = VK_ERROR_FORMAT_NOT_SUPPORTED,
     VK_RESULT_END_RANGE = VK_INCOMPLETE,
     VK_RESULT_RANGE_SIZE = (VK_INCOMPLETE - VK_ERROR_FORMAT_NOT_SUPPORTED + 1),
@@ -180,6 +185,11 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_MEMORY_BARRIER = 45,
     VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO = 46,
     VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO = 47,
+    VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR = 0xC0000800,
+    VK_STRUCTURE_TYPE_PRESENT_INFO_KHR = 0xC0000801,
+    VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR = 0xC0000C00,
+    VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR = 0xC0000C01,
+    VK_STRUCTURE_TYPE_DISPLAY_PRESENT_INFO_KHR = 0xC0001000,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO,
     VK_STRUCTURE_TYPE_RANGE_SIZE = (VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
@@ -458,6 +468,7 @@ typedef enum VkImageLayout {
     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL = 6,
     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL = 7,
     VK_IMAGE_LAYOUT_PREINITIALIZED = 8,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR = 0xC0000802,
     VK_IMAGE_LAYOUT_BEGIN_RANGE = VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_END_RANGE = VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_LAYOUT_RANGE_SIZE = (VK_IMAGE_LAYOUT_PREINITIALIZED - VK_IMAGE_LAYOUT_UNDEFINED + 1),
@@ -3080,6 +3091,491 @@ VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
     uint32_t                                    commandBuffersCount,
     const VkCommandBuffer*                      pCommandBuffers);
 #endif
+
+#define VK_KHR_surface 1
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
+
+#define VK_KHR_SURFACE_REVISION           24
+#define VK_KHR_SURFACE_EXTENSION_NUMBER   1
+#define VK_KHR_SURFACE_EXTENSION_NAME     "VK_KHR_surface"
+
+
+typedef enum VkColorSpaceKHR {
+    VK_COLORSPACE_SRGB_NONLINEAR_KHR = 0,
+    VK_COLORSPACE_BEGIN_RANGE = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+    VK_COLORSPACE_END_RANGE = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+    VK_COLORSPACE_RANGE_SIZE = (VK_COLORSPACE_SRGB_NONLINEAR_KHR - VK_COLORSPACE_SRGB_NONLINEAR_KHR + 1),
+    VK_COLORSPACE_MAX_ENUM = 0x7FFFFFFF
+} VkColorSpaceKHR;
+
+typedef enum VkPresentModeKHR {
+    VK_PRESENT_MODE_IMMEDIATE_KHR = 0,
+    VK_PRESENT_MODE_MAILBOX_KHR = 1,
+    VK_PRESENT_MODE_FIFO_KHR = 2,
+    VK_PRESENT_MODE_FIFO_RELAXED_KHR = 3,
+    VK_PRESENT_MODE_BEGIN_RANGE = VK_PRESENT_MODE_IMMEDIATE_KHR,
+    VK_PRESENT_MODE_END_RANGE = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+    VK_PRESENT_MODE_RANGE_SIZE = (VK_PRESENT_MODE_FIFO_RELAXED_KHR - VK_PRESENT_MODE_IMMEDIATE_KHR + 1),
+    VK_PRESENT_MODE_MAX_ENUM = 0x7FFFFFFF
+} VkPresentModeKHR;
+
+
+typedef enum VkSurfaceTransformFlagBitsKHR {
+    VK_SURFACE_TRANSFORM_NONE_BIT_KHR = 0x00000001,
+    VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR = 0x00000002,
+    VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR = 0x00000004,
+    VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR = 0x00000008,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR = 0x00000010,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR = 0x00000020,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR = 0x00000040,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR = 0x00000080,
+    VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR = 0x00000100,
+} VkSurfaceTransformFlagBitsKHR;
+typedef VkFlags VkSurfaceTransformFlagsKHR;
+
+typedef enum VkCompositeAlphaFlagBitsKHR {
+    VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR = 0x00000001,
+    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR = 0x00000002,
+    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR = 0x00000004,
+    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR = 0x00000008,
+} VkCompositeAlphaFlagBitsKHR;
+typedef VkFlags VkCompositeAlphaFlagsKHR;
+
+typedef struct VkSurfaceCapabilitiesKHR {
+    uint32_t                                    minImageCount;
+    uint32_t                                    maxImageCount;
+    VkExtent2D                                  currentExtent;
+    VkExtent2D                                  minImageExtent;
+    VkExtent2D                                  maxImageExtent;
+    uint32_t                                    maxImageArrayLayers;
+    VkSurfaceTransformFlagsKHR                  supportedTransforms;
+    VkSurfaceTransformFlagBitsKHR               currentTransform;
+    VkCompositeAlphaFlagsKHR                    supportedCompositeAlpha;
+    VkImageUsageFlags                           supportedUsageFlags;
+} VkSurfaceCapabilitiesKHR;
+
+typedef struct VkSurfaceFormatKHR {
+    VkFormat                                    format;
+    VkColorSpaceKHR                             colorSpace;
+} VkSurfaceFormatKHR;
+
+
+typedef void (VKAPI_PTR *PFN_vkDestroySurfaceKHR)(VkInstance  instance, VkSurfaceKHR  surface, const VkAllocationCallbacks* pAllocator);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, VkSurfaceKHR surface, VkBool32* pSupported);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t* pSurfaceFormatCount, VkSurfaceFormatKHR* pSurfaceFormats);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t* pPresentModeCount, VkPresentModeKHR* pPresentModes);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
+    VkInstance                                   instance,
+    VkSurfaceKHR                                 surface,
+    const VkAllocationCallbacks*                pAllocator);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    VkSurfaceKHR                                surface,
+    VkBool32*                                   pSupported);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pSurfaceFormatCount,
+    VkSurfaceFormatKHR*                         pSurfaceFormats);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pPresentModeCount,
+    VkPresentModeKHR*                           pPresentModes);
+#endif
+
+#define VK_KHR_swapchain 1
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR)
+
+#define VK_KHR_SWAPCHAIN_REVISION         67
+#define VK_KHR_SWAPCHAIN_EXTENSION_NUMBER 2
+#define VK_KHR_SWAPCHAIN_EXTENSION_NAME   "VK_KHR_swapchain"
+
+typedef VkFlags VkSwapchainCreateFlagsKHR;
+
+typedef struct VkSwapchainCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkSwapchainCreateFlagsKHR                   flags;
+    VkSurfaceKHR                                surface;
+    uint32_t                                    minImageCount;
+    VkFormat                                    imageFormat;
+    VkColorSpaceKHR                             imageColorSpace;
+    VkExtent2D                                  imageExtent;
+    uint32_t                                    imageArrayLayers;
+    VkImageUsageFlags                           imageUsage;
+    VkSharingMode                               imageSharingMode;
+    uint32_t                                    queueFamilyIndexCount;
+    const uint32_t*                             pQueueFamilyIndices;
+    VkSurfaceTransformFlagBitsKHR               preTransform;
+    VkCompositeAlphaFlagBitsKHR                 compositeAlpha;
+    VkPresentModeKHR                            presentMode;
+    VkBool32                                    clipped;
+    VkSwapchainKHR                              oldSwapchain;
+} VkSwapchainCreateInfoKHR;
+
+typedef struct VkPresentInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    waitSemaphoreCount;
+    const VkSemaphore*                          pWaitSemaphores;
+    uint32_t                                    swapchainCount;
+    const VkSwapchainKHR*                       pSwapchains;
+    const uint32_t*                             pImageIndices;
+    VkResult*                                   pResults;
+} VkPresentInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateSwapchainKHR)(VkDevice  device, const VkSwapchainCreateInfoKHR*  pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR*  pSwapchain);
+typedef void (VKAPI_PTR *PFN_vkDestroySwapchainKHR)(VkDevice  device, VkSwapchainKHR  swapchain, const VkAllocationCallbacks* pAllocator);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSwapchainImagesKHR)(VkDevice  device, VkSwapchainKHR  swapchain, uint32_t*  pSwapchainImageCount, VkImage*  pSwapchainImages);
+typedef VkResult (VKAPI_PTR *PFN_vkAcquireNextImageKHR)(VkDevice  device, VkSwapchainKHR  swapchain, uint64_t  timeout, VkSemaphore  semaphore, VkFence  fence, uint32_t*  pImageIndex);
+typedef VkResult (VKAPI_PTR *PFN_vkQueuePresentKHR)(VkQueue  queue, const VkPresentInfoKHR*  pPresentInfo);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
+    VkDevice                                     device,
+    const VkSwapchainCreateInfoKHR*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSwapchainKHR*                              pSwapchain);
+
+VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    const VkAllocationCallbacks*                pAllocator);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    uint32_t*                                    pSwapchainImageCount,
+    VkImage*                                     pSwapchainImages);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    uint64_t                                     timeout,
+    VkSemaphore                                  semaphore,
+    VkFence                                      fence,
+    uint32_t*                                    pImageIndex);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
+    VkQueue                                      queue,
+    const VkPresentInfoKHR*                      pPresentInfo);
+#endif
+
+#define VK_KHR_display 1
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayKHR)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
+
+#define VK_KHR_DISPLAY_REVISION           21
+#define VK_KHR_DISPLAY_EXTENSION_NUMBER   3
+#define VK_KHR_DISPLAY_EXTENSION_NAME     "VK_KHR_display"
+
+
+typedef enum VkDisplayPlaneAlphaFlagBitsKHR {
+    VK_DISPLAY_PLANE_ALPHA_OPAQUE_BIT_KHR = 0x00000001,
+    VK_DISPLAY_PLANE_ALPHA_GLOBAL_BIT_KHR = 0x00000002,
+    VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_BIT_KHR = 0x00000004,
+    VK_DISPLAY_PLANE_ALPHA_PER_PIXEL_PREMULTIPLIED_BIT_KHR = 0x00000008,
+} VkDisplayPlaneAlphaFlagBitsKHR;
+typedef VkFlags VkDisplayModeCreateFlagsKHR;
+typedef VkFlags VkDisplayPlaneAlphaFlagsKHR;
+typedef VkFlags VkDisplaySurfaceCreateFlagsKHR;
+
+typedef struct VkDisplayPropertiesKHR {
+    VkDisplayKHR                                display;
+    const char*                                 displayName;
+    VkExtent2D                                  physicalDimensions;
+    VkExtent2D                                  physicalResolution;
+    VkSurfaceTransformFlagsKHR                  supportedTransforms;
+    VkBool32                                    planeReorderPossible;
+    VkBool32                                    persistentContent;
+} VkDisplayPropertiesKHR;
+
+typedef struct VkDisplayModeParametersKHR {
+    VkExtent2D                                  visibleRegion;
+    uint32_t                                    refreshRate;
+} VkDisplayModeParametersKHR;
+
+typedef struct VkDisplayModePropertiesKHR {
+    VkDisplayModeKHR                            displayMode;
+    VkDisplayModeParametersKHR                  parameters;
+} VkDisplayModePropertiesKHR;
+
+typedef struct VkDisplayModeCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkDisplayModeCreateFlagsKHR                 flags;
+    VkDisplayModeParametersKHR                  parameters;
+} VkDisplayModeCreateInfoKHR;
+
+typedef struct VkDisplayPlaneCapabilitiesKHR {
+    VkDisplayPlaneAlphaFlagsKHR                 supportedAlpha;
+    VkOffset2D                                  minSrcPosition;
+    VkOffset2D                                  maxSrcPosition;
+    VkExtent2D                                  minSrcExtent;
+    VkExtent2D                                  maxSrcExtent;
+    VkOffset2D                                  minDstPosition;
+    VkOffset2D                                  maxDstPosition;
+    VkExtent2D                                  minDstExtent;
+    VkExtent2D                                  maxDstExtent;
+} VkDisplayPlaneCapabilitiesKHR;
+
+typedef struct VkDisplayPlanePropertiesKHR {
+    VkDisplayKHR                                currentDisplay;
+    uint32_t                                    currentStackIndex;
+} VkDisplayPlanePropertiesKHR;
+
+typedef struct VkDisplaySurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkDisplaySurfaceCreateFlagsKHR              flags;
+    VkDisplayModeKHR                            displayMode;
+    uint32_t                                    planeIndex;
+    uint32_t                                    planeStackIndex;
+    VkSurfaceTransformFlagBitsKHR               transform;
+    float                                       globalAlpha;
+    VkDisplayPlaneAlphaFlagBitsKHR              alphaMode;
+    VkExtent2D                                  imageExtent;
+} VkDisplaySurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceDisplayPropertiesKHR)(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkDisplayPropertiesKHR* pProperties);
+typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceDisplayPlanePropertiesKHR)(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkDisplayPlanePropertiesKHR* pProperties);
+typedef VkResult (VKAPI_PTR *PFN_vkGetDisplayPlaneSupportedDisplaysKHR)(VkPhysicalDevice physicalDevice, uint32_t* pDisplayCount, VkDisplayKHR* pDisplays);
+typedef VkResult (VKAPI_PTR *PFN_vkGetDisplayModePropertiesKHR)(VkPhysicalDevice physicalDevice, VkDisplayKHR display, uint32_t* pPropertyCount, VkDisplayModePropertiesKHR* pProperties);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateDisplayModeKHR)(VkPhysicalDevice physicalDevice, VkDisplayKHR display, const VkDisplayModeCreateInfoKHR*pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDisplayModeKHR* pMode);
+typedef VkResult (VKAPI_PTR *PFN_vkGetDisplayPlaneCapabilitiesKHR)(VkPhysicalDevice physicalDevice, VkDisplayModeKHR mode, uint32_t planeIndex, VkDisplayPlaneCapabilitiesKHR* pCapabilities);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateDisplayPlaneSurfaceKHR)(VkInstance instance, const VkDisplaySurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceDisplayPropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPropertiesKHR*                     pProperties);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceDisplayPlanePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPlanePropertiesKHR*                pProperties);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayPlaneSupportedDisplaysKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pDisplayCount,
+    VkDisplayKHR*                               pDisplays);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayModePropertiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayModePropertiesKHR*                 pProperties);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayModeKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    const VkDisplayModeCreateInfoKHR*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDisplayModeKHR*                           pMode);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayPlaneCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayModeKHR                            mode,
+    uint32_t                                    planeIndex,
+    VkDisplayPlaneCapabilitiesKHR*              pCapabilities);
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayPlaneSurfaceKHR(
+    VkInstance                                  instance,
+    const VkDisplaySurfaceCreateInfoKHR*        pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+#endif
+
+#define VK_KHR_display_swapchain 1
+#define VK_KHR_DISPLAY_SWAPCHAIN_REVISION 9
+#define VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NUMBER 4
+#define VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME "VK_KHR_display_swapchain"
+
+typedef struct VkDisplayPresentInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkRect2D                                    srcRect;
+    VkRect2D                                    dstRect;
+    VkBool32                                    persistent;
+} VkDisplayPresentInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateSharedSwapchainsKHR)(VkDevice device, uint32_t swapchainCount, const VkSwapchainCreateInfoKHR* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchains);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
+    VkDevice                                    device,
+    uint32_t                                    swapchainCount,
+    const VkSwapchainCreateInfoKHR*             pCreateInfos,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSwapchainKHR*                             pSwapchains);
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+#define VK_KHR_xlib_surface 1
+#include <X11/Xlib.h>
+
+#define VK_KHR_XLIB_SURFACE_REVISION      5
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NUMBER 5
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME "VK_KHR_xlib_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, Display* dpy, Window window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display* dpy, VisualID visualID);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
+    VkInstance                                  instance,
+    Display*                                    dpy,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID);
+#endif
+#endif /* VK_USE_PLATFORM_XLIB_KHR */
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+#define VK_KHR_xcb_surface 1
+#include <xcb/xcb.h>
+
+#define VK_KHR_XCB_SURFACE_REVISION       5
+#define VK_KHR_XCB_SURFACE_EXTENSION_NUMBER 6
+#define VK_KHR_XCB_SURFACE_EXTENSION_NAME "VK_KHR_xcb_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateXcbSurfaceKHR)(VkInstance instance, xcb_connection_t* connection, xcb_window_t window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, xcb_connection_t* connection, xcb_visualid_t visual_id);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
+    VkInstance                                  instance,
+    xcb_connection_t*                           connection,
+    xcb_window_t                                window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id);
+#endif
+#endif /* VK_USE_PLATFORM_XCB_KHR */
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#define VK_KHR_wayland_surface 1
+#include <wayland-client.h>
+
+#define VK_KHR_WAYLAND_SURFACE_REVISION   4
+#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NUMBER 7
+#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, struct wl_display* display, struct wl_surface* surface, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, struct wl_display* display);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
+    VkInstance                                  instance,
+    struct wl_display*                          display,
+    struct wl_surface*                          surface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    struct wl_display*                          display);
+#endif
+#endif /* VK_USE_PLATFORM_WAYLAND_KHR */
+
+#ifdef VK_USE_PLATFORM_MIR_KHR
+#define VK_KHR_mir_surface 1
+#include <mir_toolkit/client_types.h>
+
+#define VK_KHR_MIR_SURFACE_REVISION       4
+#define VK_KHR_MIR_SURFACE_EXTENSION_NUMBER 8
+#define VK_KHR_MIR_SURFACE_EXTENSION_NAME "VK_KHR_mir_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateMirSurfaceKHR)(VkInstance instance, MirConnection* connection, MirSurface* mirSurface, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceMirPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, MirConnection* connection);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
+    VkInstance                                  instance,
+    MirConnection*                              connection,
+    MirSurface*                                 mirSurface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    MirConnection*                              connection);
+#endif
+#endif /* VK_USE_PLATFORM_MIR_KHR */
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#define VK_KHR_android_surface 1
+#include <android/native_window.h>
+
+#define VK_KHR_ANDROID_SURFACE_REVISION   4
+#define VK_KHR_ANDROID_SURFACE_EXTENSION_NUMBER 9
+#define VK_KHR_ANDROID_SURFACE_EXTENSION_NAME "VK_KHR_android_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateAndroidSurfaceKHR)(VkInstance instance, ANativeWindow* window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
+    VkInstance                                  instance,
+    ANativeWindow*                              window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+#endif
+#endif /* VK_USE_PLATFORM_ANDROID_KHR */
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+#define VK_KHR_win32_surface 1
+#include <windows.h>
+
+#define VK_KHR_WIN32_SURFACE_REVISION     4
+#define VK_KHR_WIN32_SURFACE_EXTENSION_NUMBER 10
+#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateWin32SurfaceKHR)(VkInstance instance, HINSTANCE hinstance, HWND hwnd, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex);
+
+#ifdef VK_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
+    VkInstance                                  instance,
+    HINSTANCE                                   hinstance,
+    HWND                                        hwnd,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32PresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex);
+#endif
+#endif /* VK_USE_PLATFORM_WIN32_KHR */
 
 #ifdef __cplusplus
 }
