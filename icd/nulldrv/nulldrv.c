@@ -694,48 +694,48 @@ static const VkFormat nulldrv_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_UNORM,
 };
 
-#if 0
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetDisplayInfoKHR(
-    VkDisplayKHR                            display,
-    VkDisplayInfoTypeKHR                    infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
+    VkPhysicalDevice                        physicalDevice,
+    uint32_t                                queueFamilyIndex,
+    VkSurfaceKHR                            surface,
+    VkBool32*                               pSupported)
 {
-    VkResult ret = VK_SUCCESS;
-
     NULLDRV_LOG_FUNC;
 
-    if (!pDataSize)
-        return VK_ERROR_INVALID_POINTER;
-
-    switch (infoType) {
-    case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_KHR:
-       {
-            VkDisplayFormatPropertiesKHR *dst = pData;
-            size_t size_ret;
-            uint32_t i;
-
-            size_ret = sizeof(*dst) * ARRAY_SIZE(nulldrv_presentable_formats);
-
-            if (dst && *pDataSize < size_ret)
-                return VK_ERROR_INVALID_VALUE;
-
-            *pDataSize = size_ret;
-            if (!dst)
-                return VK_SUCCESS;
-
-            for (i = 0; i < ARRAY_SIZE(nulldrv_presentable_formats); i++)
-                dst[i].swapchainFormat = nulldrv_presentable_formats[i];
-        }
-        break;
-    default:
-        ret = VK_ERROR_INVALID_VALUE;
-        break;
-    }
-
-    return ret;
+    return VK_SUCCESS;
 }
-#endif
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    VkPhysicalDevice                         physicalDevice,
+    VkSurfaceKHR                             surface,
+    VkSurfaceCapabilitiesKHR*                pSurfaceCapabilities)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice                         physicalDevice,
+    VkSurfaceKHR                             surface,
+    uint32_t*                                pSurfaceFormatCount,
+    VkSurfaceFormatKHR*                      pSurfaceFormats)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice                         physicalDevice,
+    VkSurfaceKHR                             surface,
+    uint32_t*                                pPresentModeCount,
+    VkPresentModeKHR*                        pPresentModes)
+{
+    NULLDRV_LOG_FUNC;
+
+    return VK_SUCCESS;
+}
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                device,
@@ -758,7 +758,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                device,
     VkSwapchainKHR                          swapchain)
 {
@@ -766,14 +766,13 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     struct nulldrv_swap_chain *sc = *(struct nulldrv_swap_chain **) &swapchain;
 
     free(sc);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
+    VkFence                                  fence,
     VkImage*                                 pSwapchainImages)
 {
     NULLDRV_LOG_FUNC;
@@ -805,49 +804,6 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
     uint32_t*                                pImageIndex)
-{
-    NULLDRV_LOG_FUNC;
-
-    return VK_SUCCESS;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    VkSurfaceCapabilitiesKHR*                pSurfaceProperties)
-{
-    NULLDRV_LOG_FUNC;
-
-    return VK_SUCCESS;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    uint32_t*                                pCount,
-    VkSurfaceFormatKHR*                      pSurfaceFormats)
-{
-    NULLDRV_LOG_FUNC;
-
-    return VK_SUCCESS;
-}
-
-VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    uint32_t*                                pCount,
-    VkPresentModeKHR*                        pPresentModes)
-{
-    NULLDRV_LOG_FUNC;
-
-    return VK_SUCCESS;
-}
-
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
-    VkPhysicalDevice                        physicalDevice,
-    uint32_t                                queueFamilyIndex,
-    const VkSurfaceDescriptionKHR*          pSurfaceDescription,
-    VkBool32*                               pSupported)
 {
     NULLDRV_LOG_FUNC;
 
