@@ -1050,8 +1050,9 @@ explicit_DestroyDescriptorPool(
     unordered_map<uint64_t, OBJTRACK_NODE*>::iterator itr = VkDescriptorSetMap.begin();
     while (itr != VkDescriptorSetMap.end()) {
         OBJTRACK_NODE* pNode = (*itr).second;
+        auto del_itr = itr++;
         if (pNode->parentObj == reinterpret_cast<uint64_t>(descriptorPool)) {
-            destroy_descriptor_set(device, reinterpret_cast<VkDescriptorSet>((*itr++).first));
+            destroy_descriptor_set(device, reinterpret_cast<VkDescriptorSet>((*del_itr).first));
         }
     }
     destroy_descriptor_pool(device, descriptorPool);
