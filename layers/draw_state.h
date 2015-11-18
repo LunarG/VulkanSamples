@@ -192,7 +192,7 @@ typedef struct _SET_NODE {
     struct _SET_NODE*    pNext;
 } SET_NODE;
 
-typedef struct _POOL_NODE {
+typedef struct _DESCRIPTOR_POOL_NODE {
     VkDescriptorPool           pool;
     uint32_t                   maxSets;
     VkDescriptorPoolCreateInfo createInfo;
@@ -200,7 +200,7 @@ typedef struct _POOL_NODE {
     vector<uint32_t>           maxDescriptorTypeCount; // max # of descriptors of each type in this pool
     vector<uint32_t>           availableDescriptorTypeCount; // available # of descriptors of each type in this pool
 
-    _POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo* pCreateInfo) :
+    _DESCRIPTOR_POOL_NODE(const VkDescriptorPool pool, const VkDescriptorPoolCreateInfo* pCreateInfo) :
     pool(pool), createInfo(*pCreateInfo), maxSets(pCreateInfo->maxSets), pSets(NULL),
     maxDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE), availableDescriptorTypeCount(VK_DESCRIPTOR_TYPE_END_RANGE)
     {
@@ -224,14 +224,14 @@ typedef struct _POOL_NODE {
             createInfo.pPoolSizes = NULL; // Make sure this is NULL so we don't try to clean it up
         }
     }
-    ~_POOL_NODE() {
+    ~_DESCRIPTOR_POOL_NODE() {
         if (createInfo.pPoolSizes) {
             delete[] createInfo.pPoolSizes;
         }
         // TODO : pSets are currently freed in deletePools function which uses freeShadowUpdateTree function
         //  need to migrate that struct to smart ptrs for auto-cleanup
     }
-} POOL_NODE;
+} DESCRIPTOR_POOL_NODE;
 
 // Cmd Buffer Tracking
 typedef enum _CMD_TYPE

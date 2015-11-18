@@ -33,6 +33,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <list>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -68,22 +69,23 @@ struct layer_data {
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     devExts device_extensions;
     // Layer specific data
-    unordered_map<VkSampler, unique_ptr<SAMPLER_NODE>> sampleMap;
-    unordered_map<VkImageView, unique_ptr<VkImageViewCreateInfo>> imageViewMap;
-    unordered_map<VkImage, unique_ptr<VkImageCreateInfo>> imageMap;
-    unordered_map<VkBufferView, unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
-    unordered_map<VkBuffer, unique_ptr<VkBufferCreateInfo>> bufferMap;
-    unordered_map<VkPipeline, PIPELINE_NODE*> pipelineMap;
-    unordered_map<VkDescriptorPool, POOL_NODE*> poolMap;
-    unordered_map<VkDescriptorSet, SET_NODE*> setMap;
-    unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*> layoutMap;
-    unordered_map<VkPipelineLayout, PIPELINE_LAYOUT_NODE> pipelineLayoutMap;
-    unordered_map<VkDeviceMemory, VkImage> memImageMap;
+    unordered_map<VkSampler,             unique_ptr<SAMPLER_NODE>>           sampleMap;
+    unordered_map<VkImageView,           unique_ptr<VkImageViewCreateInfo>>  imageViewMap;
+    unordered_map<VkImage,               unique_ptr<VkImageCreateInfo>>      imageMap;
+    unordered_map<VkBufferView,          unique_ptr<VkBufferViewCreateInfo>> bufferViewMap;
+    unordered_map<VkBuffer,              unique_ptr<VkBufferCreateInfo>>     bufferMap;
+    unordered_map<VkPipeline,            PIPELINE_NODE*>                     pipelineMap;
+    unordered_map<VkCommandPool,         list<VkCommandBuffer>>              commandPoolMap;
+    unordered_map<VkDescriptorPool,      DESCRIPTOR_POOL_NODE*>              descriptorPoolMap;
+    unordered_map<VkDescriptorSet,       SET_NODE*>                          setMap;
+    unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>                       layoutMap;
+    unordered_map<VkPipelineLayout,      PIPELINE_LAYOUT_NODE>               pipelineLayoutMap;
+    unordered_map<VkDeviceMemory,        VkImage>                            memImageMap;
     // Map for layout chains
-    unordered_map<void*, GLOBAL_CB_NODE*> commandBufferMap;
-    unordered_map<VkFramebuffer, VkFramebufferCreateInfo*> frameBufferMap;
-    unordered_map<VkImage, IMAGE_NODE*> imageLayoutMap;
-    unordered_map<VkRenderPass, RENDER_PASS_NODE*> renderPassMap;
+    unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
+    unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
+    unordered_map<VkImage,               IMAGE_NODE*>                        imageLayoutMap;
+    unordered_map<VkRenderPass,          RENDER_PASS_NODE*>                  renderPassMap;
     // Current render pass
     VkRenderPassBeginInfo renderPassBeginInfo;
     uint32_t currentSubpass;
@@ -646,15 +648,15 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
 // Block of code at start here specifically for managing/tracking DSs
 
 // Return Pool node ptr for specified pool or else NULL
-static POOL_NODE* getPoolNode(layer_data* my_data, const VkDescriptorPool pool)
+static DESCRIPTOR_POOL_NODE* getPoolNode(layer_data* my_data, const VkDescriptorPool pool)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (my_data->poolMap.find(pool) == my_data->poolMap.end()) {
+    if (my_data->descriptorPoolMap.find(pool) == my_data->descriptorPoolMap.end()) {
         loader_platform_thread_unlock_mutex(&globalLock);
         return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return my_data->poolMap[pool];
+    return my_data->descriptorPoolMap[pool];
 }
 // Return Set node ptr for specified set or else NULL
 static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
@@ -1132,7 +1134,7 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
     return skipCall;
 }
 // Verify that given pool has descriptors that are being requested for allocation
-static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, POOL_NODE* pPoolNode, uint32_t count, const VkDescriptorSetLayout* pSetLayouts)
+static VkBool32 validate_descriptor_availability_in_pool(layer_data* dev_data, DESCRIPTOR_POOL_NODE* pPoolNode, uint32_t count, const VkDescriptorSetLayout* pSetLayouts)
 {
     VkBool32 skipCall = VK_FALSE;
     uint32_t i = 0, j = 0;
@@ -1218,9 +1220,9 @@ static void freeShadowUpdateTree(SET_NODE* pSet)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deletePools(layer_data* my_data)
 {
-    if (my_data->poolMap.size() <= 0)
+    if (my_data->descriptorPoolMap.size() <= 0)
         return;
-    for (auto ii=my_data->poolMap.begin(); ii!=my_data->poolMap.end(); ++ii) {
+    for (auto ii=my_data->descriptorPoolMap.begin(); ii!=my_data->descriptorPoolMap.end(); ++ii) {
         SET_NODE* pSet = (*ii).second->pSets;
         SET_NODE* pFreeSet = pSet;
         while (pSet) {
@@ -1236,7 +1238,7 @@ static void deletePools(layer_data* my_data)
         }
         delete (*ii).second;
     }
-    my_data->poolMap.clear();
+    my_data->descriptorPoolMap.clear();
 }
 // WARN : Once deleteLayouts() called, any layout ptrs in Pool/Set data structure will be invalid
 // NOTE : Calls to this function should be wrapped in mutex
@@ -1273,7 +1275,7 @@ static void clearDescriptorSet(layer_data* my_data, VkDescriptorSet set)
 
 static void clearDescriptorPool(layer_data* my_data, const VkDevice device, const VkDescriptorPool pool, VkDescriptorPoolResetFlags flags)
 {
-    POOL_NODE* pPool = getPoolNode(my_data, pool);
+    DESCRIPTOR_POOL_NODE* pPool = getPoolNode(my_data, pool);
     if (!pPool) {
         log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t) pool, 0, DRAWSTATE_INVALID_POOL, "DS",
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkResetDescriptorPool() call", (uint64_t) pool);
@@ -1488,7 +1490,7 @@ static VkBool32 printDSConfig(layer_data* my_data, const VkCommandBuffer cb)
     GLOBAL_CB_NODE* pCB = getCBNode(my_data, cb);
     if (pCB && pCB->lastBoundDescriptorSet) {
         SET_NODE* pSet = getSetNode(my_data, pCB->lastBoundDescriptorSet);
-        POOL_NODE* pPool = getPoolNode(my_data, pSet->pool);
+        DESCRIPTOR_POOL_NODE* pPool = getPoolNode(my_data, pSet->pool);
         // Print out pool details
         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_NONE, "DS",
                 "Details for pool %#" PRIxLEAST64 ".", (uint64_t) pPool->pool);
@@ -1948,8 +1950,50 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDescriptorPool(VkDevice devi
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t count, const VkCommandBuffer *pCommandBuffers)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
-    // TODO : Clean up any internal data structures using this obj.
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    for (auto i = 0; i < count; i++) {
+        // Delete CB information structure, and remove from commandBufferMap
+        auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
+        if (cb != dev_data->commandBufferMap.end()) {
+            delete (*cb).second;
+            dev_data->commandBufferMap.erase(cb);
+        }
+
+        // Remove commandBuffer reference from commandPoolMap
+        dev_data->commandPoolMap[commandPool].remove(pCommandBuffers[i]);
+    }
+
+    dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    VkResult result = dev_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
+
+    if (VK_SUCCESS == result) {
+        dev_data->commandPoolMap[*pCommandPool];
+    }
+    return result;
+}
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
+    if (dev_data->commandPoolMap.find(commandPool) != dev_data->commandPoolMap.end()) {
+        for (auto poolCb = dev_data->commandPoolMap[commandPool].begin(); poolCb != dev_data->commandPoolMap[commandPool].end();) {
+            auto del_cb = dev_data->commandBufferMap.find(*poolCb);
+            delete (*del_cb).second;                                        // delete CB info structure
+            dev_data->commandBufferMap.erase(del_cb);                       // Remove this command buffer from cbMap
+            poolCb = dev_data->commandPoolMap[commandPool].erase(poolCb);   // Remove CB reference from commandPoolMap's list
+        }
+    }
+    dev_data->commandPoolMap.erase(commandPool);
+    dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(VkDevice device, VkFramebuffer framebuffer, const VkAllocationCallbacks* pAllocator)
@@ -2205,13 +2249,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice d
                 "Created Descriptor Pool %#" PRIxLEAST64, (uint64_t) *pDescriptorPool))
             return VK_ERROR_VALIDATION_FAILED;
         loader_platform_thread_lock_mutex(&globalLock);
-        POOL_NODE* pNewNode = new POOL_NODE(*pDescriptorPool, pCreateInfo);
+        DESCRIPTOR_POOL_NODE* pNewNode = new DESCRIPTOR_POOL_NODE(*pDescriptorPool, pCreateInfo);
         if (NULL == pNewNode) {
             if (log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t) *pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
-                    "Out of memory while attempting to allocate POOL_NODE in vkCreateDescriptorPool()"))
+                    "Out of memory while attempting to allocate DESCRIPTOR_POOL_NODE in vkCreateDescriptorPool()"))
                 return VK_ERROR_VALIDATION_FAILED;
         } else {
-            dev_data->poolMap[*pDescriptorPool] = pNewNode;
+            dev_data->descriptorPoolMap[*pDescriptorPool] = pNewNode;
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     } else {
@@ -2235,7 +2279,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Verify that requested descriptorSets are available in pool
-    POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
+    DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
     if (!pPoolNode) {
         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t) pAllocateInfo->descriptorPool, 0, DRAWSTATE_INVALID_POOL, "DS",
                 "Unable to find pool node for pool %#" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call", (uint64_t) pAllocateInfo->descriptorPool);
@@ -2246,7 +2290,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
         return VK_ERROR_VALIDATION_FAILED;
     VkResult result = dev_data->device_dispatch_table->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
     if (VK_SUCCESS == result) {
-        POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
+        DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
         if (pPoolNode) {
             if (pAllocateInfo->setLayoutCount == 0) {
                 log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, pAllocateInfo->setLayoutCount, 0, DRAWSTATE_NONE, "DS",
@@ -2296,7 +2340,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
+    DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, descriptorPool);
     if (pPoolNode && !(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT & pPoolNode->createInfo.flags)) {
         // Can't Free from a NON_FREE pool
         skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, (uint64_t)device, 0, DRAWSTATE_CANT_FREE_FROM_NON_FREE_POOL, "DS",
@@ -2336,15 +2380,22 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
     if (VK_SUCCESS == result) {
-        loader_platform_thread_lock_mutex(&globalLock);
-        GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
-        dev_data->commandBufferMap[*pCommandBuffer] = pCB;
-        loader_platform_thread_unlock_mutex(&globalLock);
-        resetCB(dev_data, *pCommandBuffer);
-        pCB->commandBuffer = *pCommandBuffer;
-        pCB->createInfo    = *pCreateInfo;
-        pCB->level         = pCreateInfo->level;
-        updateCBTracking(pCB);
+        for (auto i = 0; i < pCreateInfo->bufferCount; i++) {
+            // Validate command pool
+            if (dev_data->commandPoolMap.find(pCreateInfo->commandPool) != dev_data->commandPoolMap.end()) {
+                // Add command buffer to its commandPool map
+                dev_data->commandPoolMap[pCreateInfo->commandPool].push_back(pCommandBuffer[i]);
+
+                GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
+                // Add command buffer to map
+                dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
+                resetCB(dev_data, pCommandBuffer[i]);
+                pCB->commandBuffer = pCommandBuffer[i];
+                pCB->createInfo    = *pCreateInfo;
+                pCB->level         = pCreateInfo->level;
+                updateCBTracking(pCB);
+            }
+        }
     }
     return result;
 }
@@ -4387,8 +4438,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkDestroyDescriptorSetLayout;
     if (!strcmp(funcName, "vkDestroyDescriptorPool"))
         return (PFN_vkVoidFunction) vkDestroyDescriptorPool;
-    if (!strcmp(funcName, "vkFreeCommandBuffers"))
-        return (PFN_vkVoidFunction) vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkDestroyFramebuffer"))
         return (PFN_vkVoidFunction) vkDestroyFramebuffer;
     if (!strcmp(funcName, "vkDestroyRenderPass"))
@@ -4427,8 +4476,14 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkFreeDescriptorSets;
     if (!strcmp(funcName, "vkUpdateDescriptorSets"))
         return (PFN_vkVoidFunction) vkUpdateDescriptorSets;
+    if (!strcmp(funcName, "vkCreateCommandPool"))
+        return (PFN_vkVoidFunction) vkCreateCommandPool;
+    if (!strcmp(funcName, "vkDestroyCommandPool"))
+        return (PFN_vkVoidFunction) vkDestroyCommandPool;
     if (!strcmp(funcName, "vkAllocateCommandBuffers"))
         return (PFN_vkVoidFunction) vkAllocateCommandBuffers;
+    if (!strcmp(funcName, "vkFreeCommandBuffers"))
+        return (PFN_vkVoidFunction) vkFreeCommandBuffers;
     if (!strcmp(funcName, "vkBeginCommandBuffer"))
         return (PFN_vkVoidFunction) vkBeginCommandBuffer;
     if (!strcmp(funcName, "vkEndCommandBuffer"))
