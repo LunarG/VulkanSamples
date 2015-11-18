@@ -288,9 +288,9 @@ static VkResult x11_get_surface_capabilities(
         pSurfaceProperties->currentExtent.width;
     pSurfaceProperties->maxImageExtent.height =
         pSurfaceProperties->currentExtent.height;
+    pSurfaceProperties->maxImageArrayLayers = 0;
     pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
-    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
-    pSurfaceProperties->maxImageArraySize = 0;
+    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
     pSurfaceProperties->supportedUsageFlags =
         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -522,10 +522,10 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     img_info.extent.height = info->imageExtent.height;
     img_info.extent.depth = 1;
     img_info.mipLevels = 1;
-    img_info.arrayLayers = info->imageArraySize;
+    img_info.arrayLayers = info->imageArrayLayers;
     img_info.samples = VK_SAMPLE_COUNT_1_BIT;
     img_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    img_info.usage = info->imageUsageFlags;
+    img_info.usage = info->imageUsage;
     img_info.flags = 0;
 
     for (i = 0; i < info->minImageCount; i++) {
@@ -1029,6 +1029,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                device,
     const VkSwapchainCreateInfoKHR*         pCreateInfo,
+    const VkAllocationCallbacks*            pAllocator,
     VkSwapchainKHR*                         pSwapchain)
 {
     struct intel_dev *dev = intel_dev(device);
@@ -1049,7 +1050,8 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                 device,
-    VkSwapchainKHR                           swapchain)
+    VkSwapchainKHR                           swapchain,
+    const VkAllocationCallbacks*             pAllocator)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
 
@@ -1063,7 +1065,6 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
-    VkFence                                  fence,
     VkImage*                                 pSwapchainImages)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
@@ -1093,6 +1094,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
+    VkFence                                  fence,
     uint32_t*                                pImageIndex)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
@@ -1134,7 +1136,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue                                  queue_,
-    VkPresentInfoKHR*                        pPresentInfo)
+    const VkPresentInfoKHR*                  pPresentInfo)
 {
     struct intel_queue *queue = intel_queue(queue_);
     uint32_t i;
@@ -1149,7 +1151,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
         struct intel_x11_swap_chain *sc =
             x11_swap_chain(pPresentInfo->pSwapchains[i]);
         struct intel_img *img = 
-            sc->persistent_images[pPresentInfo->imageIndices[i]];
+            sc->persistent_images[pPresentInfo->pImageIndices[i]];
         struct intel_x11_fence_data *data =
             (struct intel_x11_fence_data *) queue->fence->wsi_data;
         VkResult ret;
@@ -1171,10 +1173,10 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 
         // Record the state change for this image, and add this image to the
         // present queue for the swap chain:
-        sc->image_state[pPresentInfo->imageIndices[i]] =
+        sc->image_state[pPresentInfo->pImageIndices[i]] =
             INTEL_SC_STATE_QUEUED_FOR_PRESENT;
         sc->present_queue[sc->present_queue_length++] =
-            pPresentInfo->imageIndices[i];
+            pPresentInfo->pImageIndices[i];
 
         data->swap_chain = sc;
         data->serial = sc->local.serial;
