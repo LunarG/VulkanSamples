@@ -916,8 +916,8 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
-    uint32_t                                queueNodeIndex,
-    const VkSurfaceDescriptionKHR*          pSurfaceDescription,
+    uint32_t                                queueFamilyIndex,
+    VkSurfaceKHR                            surface,
     VkBool32*                               pSupported)
 {
     VkResult ret = VK_SUCCESS;
@@ -944,66 +944,47 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    VkSurfaceCapabilitiesKHR*                pSurfaceProperties)
+    VkPhysicalDevice                        physicalDevice,
+    VkSurfaceKHR                            surface,
+    VkSurfaceCapabilitiesKHR*               pSurfaceCapabilities)
 {
-    // TODOVV: Move this check to a validation layer (i.e. the driver should
-    // assume the correct data type, and not check):
-    assert(pSurfaceProperties);
-
-    return x11_get_surface_capabilities(pSurfaceDescription, pSurfaceProperties);
+    return x11_get_surface_capabilities(surface, pSurfaceCapabilities);
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    uint32_t*                                pCount,
-    VkSurfaceFormatKHR*                      pSurfaceFormats)
+    VkPhysicalDevice                        physicalDevice,
+    VkSurfaceKHR                            surface,
+    uint32_t*                               pSurfaceFormatCount,
+    VkSurfaceFormatKHR*                     pSurfaceFormats)
 {
     VkResult ret = VK_SUCCESS;
 
-    // TODOVV: Move this check to a validation layer (i.e. the driver should
-    // assume the correct data type, and not check):
-    if (!pCount) {
-//        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
-
     if (pSurfaceFormats) {
         uint32_t i;
-        for (i = 0; i < *pCount; i++) {
+        for (i = 0; i < *pSurfaceFormatCount; i++) {
             pSurfaceFormats[i].format = x11_presentable_formats[i];
             pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
         }
     } else {
-        *pCount = ARRAY_SIZE(x11_presentable_formats);
+        *pSurfaceFormatCount = ARRAY_SIZE(x11_presentable_formats);
     }
 
     return ret;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
-    VkDevice                                 device,
-    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    uint32_t*                                pCount,
-    VkPresentModeKHR*                        pPresentModes)
+    VkPhysicalDevice                        physicalDevice,
+    VkSurfaceKHR                            surface,
+    uint32_t*                               pPresentModeCount,
+    VkPresentModeKHR*                       pPresentModes)
 {
     VkResult ret = VK_SUCCESS;
-
-    // TODOVV: Move this check to a validation layer (i.e. the driver should
-    // assume the correct data type, and not check):
-    if (!pCount) {
-//        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_VALIDATION_FAILED;
-    }
 
     if (pPresentModes) {
         pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_KHR;
         pPresentModes[1] = VK_PRESENT_MODE_FIFO_KHR;
-        // TODO: Consider adding VK_PRESENT_MODE_MAILBOX_KHR sometime
     } else {
-        *pCount = 2;
+        *pPresentModeCount = 2;
     }
 
     return ret;
@@ -1030,7 +1011,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
             (struct intel_x11_swap_chain **) pSwapchain);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain)
 {
@@ -1040,14 +1021,13 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
         x11_swap_chain_destroy_begin(sc);
     }
     x11_swap_chain_destroy_end(sc);
-
-    return VK_SUCCESS;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
     uint32_t*                                pCount,
+    VkFence                                  fence,
     VkImage*                                 pSwapchainImages)
 {
     struct intel_x11_swap_chain *sc = x11_swap_chain(swapchain);
