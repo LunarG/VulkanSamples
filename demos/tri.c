@@ -349,7 +349,7 @@ static void demo_set_image_layout(
         .oldLayout = old_image_layout,
         .newLayout = new_image_layout,
         .image = image,
-        .subresourceRange = { aspectMask, 0, 1, 0, 0 }
+        .subresourceRange = { aspectMask, 0, 1, 0, 1 }
     };
 
     if (new_image_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {

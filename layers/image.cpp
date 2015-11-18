@@ -846,6 +846,40 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
         srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
+    VkCommandBuffer                             commandBuffer,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        dstStageMask,
+    VkDependencyFlags                           dependencyFlags,
+    uint32_t                                    memoryBarrierCount,
+    const void* const*                          ppMemoryBarriers)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *device_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
+
+    for (uint32_t i = 0; i < memoryBarrierCount; ++i)
+    {
+        VkImageMemoryBarrier const*const barrier = (VkImageMemoryBarrier const*const)ppMemoryBarriers[i];
+        if (barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER)
+        {
+            if (barrier->subresourceRange.layerCount == 0)
+            {
+                std::stringstream ss;
+                ss << "vkCmdPipelineBarrier called with 0 in ppMemoryBarriers[" << i << "]->subresourceRange.layerCount.";
+                skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 0, "IMAGE", "%s", ss.str().c_str());
+            }
+        }
+    }
+
+    if (skipCall)
+    {
+        return;
+    }
+
+    device_data->device_dispatch_table->CmdPipelineBarrier(commandBuffer, srcStageMask, dstStageMask, dependencyFlags,
+        memoryBarrierCount, ppMemoryBarriers);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer       commandBuffer,
     VkImage               srcImage,
@@ -997,6 +1031,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkCmdCopyBufferToImage;
     if (!strcmp(funcName, "vkCmdBlitImage"))
         return (PFN_vkVoidFunction) vkCmdBlitImage;
+    if (!strcmp(funcName, "vkCmdPipelineBarrier"))
+        return (PFN_vkVoidFunction) vkCmdPipelineBarrier;
     if (!strcmp(funcName, "vkCmdResolveImage"))
         return (PFN_vkVoidFunction) vkCmdResolveImage;
     if (!strcmp(funcName, "vkGetImageSubresourceLayout"))
