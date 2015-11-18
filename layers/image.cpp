@@ -393,12 +393,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
         }
         if (!pCreateInfo->subresourceRange.levelCount) {
             std::stringstream ss;
-            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.mipLevels.";
+            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.levelCount.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
         if (!pCreateInfo->subresourceRange.layerCount) {
             std::stringstream ss;
-            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.arraySize.";
+            ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.layerCount.";
             skipCall |= log_msg(device_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
 
