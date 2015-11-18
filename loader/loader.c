@@ -1124,7 +1124,8 @@ static void loader_scanned_icd_init(const struct loader_instance *inst,
 static void loader_scanned_icd_add(
                             const struct loader_instance *inst,
                             struct loader_icd_libs *icd_libs,
-                            const char *filename)
+                            const char *filename,
+                            uint32_t api_version)
 {
     loader_platform_dl_handle handle;
     PFN_vkCreateInstance fp_create_inst;
@@ -1169,6 +1170,7 @@ static void loader_scanned_icd_add(
     new_node = &(icd_libs->list[icd_libs->count]);
 
     new_node->handle = handle;
+    new_node->api_version = api_version;
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
     new_node->CreateInstance = fp_create_inst;
     new_node->EnumerateInstanceExtensionProperties = fp_get_global_ext_props;
@@ -1897,7 +1899,7 @@ void loader_icd_scan(
         json = loader_get_json(file_str);
         if (!json)
             continue;
-        cJSON *item;
+        cJSON *item, *itemICD;
         item = cJSON_GetObjectItem(json, "file_format_version");
         if (item == NULL) {
             loader_platform_thread_unlock_mutex(&loader_json_lock);
@@ -1909,9 +1911,9 @@ void loader_icd_scan(
         if (strcmp(file_vers, "\"1.0.0\"") != 0)
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
         loader_tls_heap_free(file_vers);
-        item = cJSON_GetObjectItem(json, "ICD");
-        if (item != NULL) {
-            item = cJSON_GetObjectItem(item, "library_path");
+        itemICD = cJSON_GetObjectItem(json, "ICD");
+        if (itemICD != NULL) {
+            item = cJSON_GetObjectItem(itemICD, "library_path");
             if (item != NULL) {
                 char *temp= cJSON_Print(item);
                 if (!temp || strlen(temp) == 0) {
@@ -1946,8 +1948,18 @@ void loader_icd_scan(
                     // a filename which is assumed in a system directory
                     loader_get_fullpath(library_path, DEFAULT_VK_DRIVERS_PATH, sizeof(fullpath), fullpath);
                 }
-                loader_scanned_icd_add(inst, icds, fullpath);
+
+                uint32_t vers = 0;
+                item = cJSON_GetObjectItem(itemICD, "api_version");
+                if (item != NULL) {
+                    temp= cJSON_Print(item);
+                    vers = loader_make_version(temp);
+                    loader_tls_heap_free(temp);
+                }
+                loader_scanned_icd_add(inst, icds, fullpath, vers);
             }
+            else
+                loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"library_path\" object in ICD JSON file %s, skipping", file_str);
         }
         else
             loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Can't find \"ICD\" object in ICD JSON file %s, skipping", file_str);

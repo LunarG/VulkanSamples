@@ -235,7 +235,7 @@ struct loader_struct {
 struct loader_scanned_icds {
     char *lib_name;
     loader_platform_dl_handle handle;
-
+    uint32_t api_version;
     PFN_vkGetInstanceProcAddr GetInstanceProcAddr;
     PFN_vkCreateInstance CreateInstance;
     PFN_vkEnumerateInstanceExtensionProperties EnumerateInstanceExtensionProperties;
