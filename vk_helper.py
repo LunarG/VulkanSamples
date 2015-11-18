@@ -1301,7 +1301,7 @@ class StructWrapperGen:
             sh_funcs.append('%s}' % (indent))
             sh_funcs.append("%sreturn structSize;\n}" % (indent))
         # Now generate generic functions to loop over entire struct chain (or just handle single generic structs)
-        if 'khr' not in self.header_filename and '_debug_' not in self.header_filename:
+        if '_debug_' not in self.header_filename:
             for follow_chain in [True, False]:
                 sh_funcs.append('%s' % self.lineinfo.get())
                 if follow_chain:
@@ -1358,8 +1358,6 @@ class StructWrapperGen:
     def _generateSizeHelperHeaderC(self):
         header = []
         header.append('#include "vk_struct_size_helper.h"')
-        header.append('#include "vulkan/vk_ext_khr_swapchain.h"')
-        header.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
         header.append('#include <string.h>')
         header.append('#include <assert.h>')
         header.append('\n// Function definitions\n')
