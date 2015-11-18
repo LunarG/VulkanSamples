@@ -46,9 +46,9 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp  = my_data->device_dispatch_table;
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
-    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
-    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
+    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(device, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(device, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(device, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -77,7 +77,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     // No need to check if the extension was advertised by
     // vkEnumerateDeviceExtensionProperties(), since the loader handles that.
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
 
             my_data->deviceMap[device].deviceSwapchainExtensionEnabled = true;
         }
@@ -92,7 +92,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
 
-    // Remember this instance, and whether the VK_EXT_KHR_swapchain extension
+    // Remember this instance, and whether the VK_KHR_surface extension
     // was enabled for it:
     my_data->instanceMap[instance].instance = instance;
     my_data->instanceMap[instance].swapchainExtensionEnabled = false;
@@ -101,7 +101,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     // VkInstance.  No need to check if the extension was advertised by
     // vkEnumerateInstanceExtensionProperties(), since the loader handles that.
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
 
             my_data->instanceMap[instance].swapchainExtensionEnabled = true;
         }
@@ -396,7 +396,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
-                              __FUNCTION__, VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
@@ -419,7 +419,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfacePropertiesKHR* pSurfaceProperties)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, VkSurfaceCapabilitiesKHR* pSurfaceProperties)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -436,12 +436,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(VkDevic
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
-        result = my_data->device_dispatch_table->GetSurfacePropertiesKHR(
+        result = my_data->device_dispatch_table->GetPhysicalDeviceSurfaceCapabilitiesKHR(
                 device, pSurfaceDescription, pSurfaceProperties);
 
         if ((result == VK_SUCCESS) && pDevice) {
@@ -454,7 +454,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(VkDevic
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkSurfaceFormatKHR* pSurfaceFormats)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -471,12 +471,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(VkDevice d
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
-        result = my_data->device_dispatch_table->GetSurfaceFormatsKHR(
+        result = my_data->device_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(
                 device, pSurfaceDescription, pCount, pSurfaceFormats);
 
         if ((result == VK_SUCCESS) && pDevice && pSurfaceFormats && pCount &&
@@ -498,7 +498,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(VkDevice d
     return VK_ERROR_VALIDATION_FAILED;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(VkDevice device, const VkSurfaceDescriptionKHR* pSurfaceDescription, uint32_t* pCount, VkPresentModeKHR* pPresentModes)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -515,12 +515,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(VkDev
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
-        result = my_data->device_dispatch_table->GetSurfacePresentModesKHR(
+        result = my_data->device_dispatch_table->GetPhysicalDeviceSurfacePresentModesKHR(
                 device, pSurfaceDescription, pCount, pPresentModes);
 
         if ((result == VK_SUCCESS) && pDevice && pPresentModes && pCount &&
@@ -567,7 +567,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                          SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                          "%s() called even though the %s extension was not enabled for this VkDevice.",
-                         fn, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME );
+                         fn, VK_KHR_SWAPCHAIN_EXTENSION_NAME );
     }
 
     // Validate pCreateInfo with the results for previous queries:
@@ -575,12 +575,12 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
-                              "vkGetSurfacePropertiesKHR().",
+                              "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
                               fn);
     } else {
         // Validate pCreateInfo->minImageCount against
-        // VkSurfacePropertiesKHR::{min|max}ImageCount:
-        VkSurfacePropertiesKHR *pProps = &pDevice->surfaceProperties;
+        // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
+        VkSurfaceCapabilitiesKHR *pProps = &pDevice->surfaceProperties;
         if ((pCreateInfo->minImageCount < pProps->minImageCount) ||
             ((pProps->maxImageCount > 0) &&
              (pCreateInfo->minImageCount > pProps->maxImageCount))) {
@@ -588,7 +588,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,
                                   "%s() called with pCreateInfo->minImageCount "
                                   "= %d, which is outside the bounds returned "
-                                  "by vkGetSurfacePropertiesKHR() (i.e. "
+                                  "by vkGetPhysicalDeviceSurfaceCapabilitiesKHR() (i.e. "
                                   "minImageCount = %d, maxImageCount = %d).",
                                   fn,
                                   pCreateInfo->minImageCount,
@@ -596,7 +596,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   pProps->maxImageCount);
         }
         // Validate pCreateInfo->imageExtent against
-        // VkSurfacePropertiesKHR::{current|min|max}ImageExtent:
+        // VkSurfaceCapabilitiesKHR::{current|min|max}ImageExtent:
         if ((pProps->currentExtent.width == -1) &&
             ((pCreateInfo->imageExtent.width < pProps->minImageExtent.width) ||
              (pCreateInfo->imageExtent.width > pProps->maxImageExtent.width) ||
@@ -606,7 +606,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is outside the bounds "
-                                  "returned by vkGetSurfacePropertiesKHR(): "
+                                  "returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR(): "
                                   "currentExtent = (%d,%d), minImageExtent = "
                                   "(%d,%d), maxImageExtent = (%d,%d).",
                                   fn,
@@ -627,7 +627,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is not equal to the "
                                   "currentExtent = (%d,%d) returned by "
-                                  "vkGetSurfacePropertiesKHR().",
+                                  "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
                                   fn,
                                   pCreateInfo->imageExtent.width,
                                   pCreateInfo->imageExtent.height,
@@ -635,7 +635,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   pProps->currentExtent.height);
         }
         // Validate pCreateInfo->preTransform against
-        // VkSurfacePropertiesKHR::supportedTransforms:
+        // VkSurfaceCapabilitiesKHR::supportedTransforms:
         if (!((1 << pCreateInfo->preTransform) & pProps->supportedTransforms)) {
             // This is an error situation; one for which we'd like to give
             // the developer a helpful, multi-line error message.  Build it
@@ -669,7 +669,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                              errorString.c_str());
         }
         // Validate pCreateInfo->imageArraySize against
-        // VkSurfacePropertiesKHR::maxImageArraySize:
+        // VkSurfaceCapabilitiesKHR::maxImageArraySize:
         if (pCreateInfo->imageArraySize <= pProps->maxImageArraySize) {
             skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,
@@ -681,7 +681,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   pProps->maxImageArraySize);
         }
         // Validate pCreateInfo->imageUsageFlags against
-        // VkSurfacePropertiesKHR::supportedUsageFlags:
+        // VkSurfaceCapabilitiesKHR::supportedUsageFlags:
         if (pCreateInfo->imageUsageFlags &&
             (pCreateInfo->imageUsageFlags !=
              (pCreateInfo->imageUsageFlags & pProps->supportedUsageFlags))) {
@@ -699,7 +699,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
-                              "vkGetSurfaceFormatsKHR().",
+                              "vkGetPhysicalDeviceSurfaceFormatsKHR().",
                               fn);
     } else {
         // Validate pCreateInfo->imageFormat against
@@ -757,11 +757,11 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
-                              "vkGetSurfacePresentModesKHR().",
+                              "vkGetPhysicalDeviceSurfacePresentModesKHR().",
                               fn);
     } else {
         // Validate pCreateInfo->presentMode against
-        // vkGetSurfacePresentModesKHR():
+        // vkGetPhysicalDeviceSurfacePresentModesKHR():
         bool foundMatch = false;
         for (uint32_t i = 0 ; i < pDevice->presentModeCount ; i++) {
             if (pDevice->pPresentModes[i] == pCreateInfo->presentMode) {
@@ -832,7 +832,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(VkDevice de
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
 
     // Regardless of skipCall value, do some internal cleanup:
@@ -884,7 +884,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice 
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (!pSwapchain) {
@@ -938,7 +938,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(VkDevice de
         skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
-                              __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                              __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     // Validate that a valid VkSwapchainKHR was used:
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
@@ -1012,7 +1012,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
                                       pSwapchain->pDevice, "VkDevice",
                                       SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                                       "%s() called even though the %s extension was not enabled for this VkDevice.",
-                                      __FUNCTION__, VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+                                      __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
             if (index >= pSwapchain->imageCount) {
                 skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
@@ -1145,12 +1145,12 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
     if (my_data->deviceMap.size() != 0 &&
         my_data->deviceMap[device].deviceSwapchainExtensionEnabled)
     {
-        if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetSurfacePropertiesKHR);
-        if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetSurfaceFormatsKHR);
-        if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
-            return reinterpret_cast<PFN_vkVoidFunction>(vkGetSurfacePresentModesKHR);
+        if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);
+        if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
+        if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
         if (!strcmp("vkCreateSwapchainKHR", funcName))
             return reinterpret_cast<PFN_vkVoidFunction>(vkCreateSwapchainKHR);
         if (!strcmp("vkDestroySwapchainKHR", funcName))

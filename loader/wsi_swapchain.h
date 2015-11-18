@@ -26,7 +26,7 @@
 
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "vulkan/vk_ext_khr_swapchain.h"
+#include "vulkan/VK_KHR_surface.h"
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                  const char* name, void **addr);

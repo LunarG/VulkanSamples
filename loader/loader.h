@@ -34,8 +34,9 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_loader_platform.h>
+
 #include <vulkan/vk_lunarg_debug_report.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/VK_KHR_surface.h>
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_icd.h>
 #include <assert.h>

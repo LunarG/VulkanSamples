@@ -35,8 +35,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_lunarg_debug_report.h>
 #include <vulkan/vk_icd.h>
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+#include "vulkan/VK_KHR_surface.h"
+#include "vulkan/VK_KHR_swapchain.h"
 
 #include "icd.h"
 

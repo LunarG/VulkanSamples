@@ -41,9 +41,10 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+
+#include <vulkan/VK_KHR_surface.h>
+#include <vulkan/VK_KHR_swapchain.h>
+#include "vulkan/vk_lunarg_debug_report.h"
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -338,9 +339,9 @@ struct demo {
     VkColorSpaceKHR color_space;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetSurfacePropertiesKHR fpGetSurfacePropertiesKHR;
-    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
-    PFN_vkGetSurfacePresentModesKHR fpGetSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
     PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
     PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
@@ -600,7 +601,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
         .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         .dstAccessMask = 0,
         .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
@@ -679,7 +680,7 @@ static void demo_draw(struct demo *demo)
     // we need to set the image layout back to COLOR_ATTACHMENT_OPTIMAL
     demo_set_image_layout(demo, demo->buffers[demo->current_buffer].image,
                            VK_IMAGE_ASPECT_COLOR_BIT,
-                           VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR,
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     demo_flush_init_cmd(demo);
 
@@ -688,7 +689,7 @@ static void demo_draw(struct demo *demo)
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
 
-// FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
+// FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     VkSubmitInfo submit_info = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = NULL,
@@ -736,21 +737,21 @@ static void demo_prepare_buffers(struct demo *demo)
     VkSwapchainKHR oldSwapchain = demo->swapchain;
 
     // Check the surface properties and formats
-    VkSurfacePropertiesKHR surfProperties;
-    err = demo->fpGetSurfacePropertiesKHR(demo->device,
+    VkSurfaceCapabilitiesKHR surfProperties;
+    err = demo->fpGetPhysicalDeviceSurfaceCapabilitiesKHR(demo->device,
         (const VkSurfaceDescriptionKHR *)&demo->surface_description,
         &surfProperties);
     assert(!err);
 
     uint32_t presentModeCount;
-    err = demo->fpGetSurfacePresentModesKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->device,
         (const VkSurfaceDescriptionKHR *)&demo->surface_description,
         &presentModeCount, NULL);
     assert(!err);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
     assert(presentModes);
-    err = demo->fpGetSurfacePresentModesKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->device,
         (const VkSurfaceDescriptionKHR *)&demo->surface_description,
         &presentModeCount, presentModes);
     assert(!err);
@@ -879,12 +880,12 @@ static void demo_prepare_buffers(struct demo *demo)
 
         demo->buffers[i].image = swapchainImages[i];
 
-        // Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR
+        // Render loop will expect image to have been used before and in VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
         // layout and will change to COLOR_ATTACHMENT_OPTIMAL, so init the image to that state
         demo_set_image_layout(demo, demo->buffers[i].image,
                                VK_IMAGE_ASPECT_COLOR_BIT,
                                VK_IMAGE_LAYOUT_UNDEFINED,
-                               VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR);
+                               VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
         color_image_view.image = demo->buffers[i].image;
 
@@ -2167,9 +2168,9 @@ static void demo_init_vk(struct demo *demo)
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp("VK_EXT_KHR_swapchain", instance_extensions[i].extensionName)) {
+        if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             swapchainExtFound = 1;
-            extension_names[enabled_extension_count++] = "VK_EXT_KHR_swapchain";
+            extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
         }
         if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
@@ -2180,7 +2181,7 @@ static void demo_init_vk(struct demo *demo)
     }
     if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
-                 "\"VK_EXT_KHR_swapchain\" extension.\n\nDo you have a compatible "
+                 VK_KHR_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
                  "information.\n",
@@ -2276,15 +2277,15 @@ static void demo_init_vk(struct demo *demo)
     assert(!err);
 
     for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp("VK_EXT_KHR_device_swapchain", device_extensions[i].extensionName)) {
+        if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
             swapchainExtFound = 1;
-            extension_names[enabled_extension_count++] = "VK_EXT_KHR_device_swapchain";
+            extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
         }
         assert(enabled_extension_count < 64);
     }
     if (!swapchainExtFound) {
         ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the "
-                 "\"VK_EXT_KHR_device_swapchain\" extension.\n\nDo you have a compatible "
+                 VK_KHR_SWAPCHAIN_EXTENSION_NAME" extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
                  "information.\n",
@@ -2380,9 +2381,9 @@ static void demo_init_vk(struct demo *demo)
     free(device_layers);
 
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePropertiesKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfaceFormatsKHR);
-    GET_DEVICE_PROC_ADDR(demo->device, GetSurfacePresentModesKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, GetPhysicalDeviceSurfacePresentModesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(demo->device, DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
@@ -2469,13 +2470,13 @@ static void demo_init_vk_swapchain(struct demo *demo)
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
-    err = demo->fpGetSurfaceFormatsKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
                                     (VkSurfaceDescriptionKHR *) &demo->surface_description,
                                     &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = demo->fpGetSurfaceFormatsKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
                                     (VkSurfaceDescriptionKHR *) &demo->surface_description,
                                     &formatCount, surfFormats);
     assert(!err);

@@ -30,11 +30,13 @@
 #ifndef ICD_H
 #define ICD_H
 
-#include "vulkan/vulkan.h"
-#include "vulkan/vk_platform.h"
-#include "vulkan/vk_lunarg_debug_report.h"
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_platform.h>
+#include <vulkan/vk_lunarg_debug_report.h>
+#include "vulkan/VK_KHR_surface.h"
+#include "vulkan/VK_KHR_swapchain.h"
+
 #include "vulkan/vk_sdk_platform.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 4

@@ -26,8 +26,8 @@
  */
 
 #include "vkrenderframework.h"
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
+#include <vulkan/VK_KHR_surface.h>
+#include <vulkan/VK_KHR_swapchain.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define GET_DEVICE_PROC_ADDR(dev, entrypoint)                           \
@@ -177,19 +177,19 @@ void VkRenderFramework::InitState()
     VkResult err;
 
     // Get the list of VkFormat's that are supported:
-    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
     uint32_t formatCount;
     VkSurfaceDescriptionKHR surface_description;
     surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     surface_description.pNext = NULL;
-    GET_DEVICE_PROC_ADDR(device(), GetSurfaceFormatsKHR);
-    err = fpGetSurfaceFormatsKHR(device(),
+    GET_DEVICE_PROC_ADDR(device(), GetPhysicalDeviceSurfaceFormatsKHR);
+    err = fpGetPhysicalDeviceSurfaceFormatsKHR(device(),
                                     (VkSurfaceDescriptionKHR *) &surface_description,
                                     &formatCount, NULL);
     ASSERT_VK_SUCCESS(err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = fpGetSurfaceFormatsKHR(device(),
+    err = fpGetPhysicalDeviceSurfaceFormatsKHR(device(),
                                     (VkSurfaceDescriptionKHR *) &surface_description,
                                     &formatCount, surfFormats);
     ASSERT_VK_SUCCESS(err);

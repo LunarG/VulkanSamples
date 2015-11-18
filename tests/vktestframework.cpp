@@ -33,8 +33,8 @@
 #ifndef _WIN32
 #include <xcb/xcb.h>
 #endif
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+#include "vulkan/VK_KHR_surface.h"
+#include "vulkan/VK_KHR_swapchain.h"
 
 #if defined(PATH_MAX) && !defined(MAX_PATH)
 #define MAX_PATH PATH_MAX
@@ -137,9 +137,9 @@ private:
     uint32_t                                m_present_queue_node_index;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR m_fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetSurfacePropertiesKHR           m_fpGetSurfacePropertiesKHR;
-    PFN_vkGetSurfaceFormatsKHR              m_fpGetSurfaceFormatsKHR;
-    PFN_vkGetSurfacePresentModesKHR         m_fpGetSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR           m_fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR              m_fpGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR         m_fpGetPhysicalDeviceSurfacePresentModesKHR;
     PFN_vkCreateSwapchainKHR                m_fpCreateSwapchainKHR;
     PFN_vkDestroySwapchainKHR               m_fpDestroySwapchainKHR;
     PFN_vkGetSwapchainImagesKHR             m_fpGetSwapchainImagesKHR;
@@ -546,7 +546,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.pNext = NULL;
     memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     memoryBarrier.dstAccessMask = 0;
-    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -575,7 +575,7 @@ void  TestFrameworkVkPresent::Display()
         1, &region);
 
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
     m_cmdbuf.end();
@@ -820,13 +820,13 @@ void TestFrameworkVkPresent::CreateSwapchain()
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
-    err = m_fpGetSurfaceFormatsKHR(m_device.handle(),
+    err = m_fpGetPhysicalDeviceSurfaceFormatsKHR(m_device.handle(),
                                    (VkSurfaceDescriptionKHR *) &m_surface_description,
                                    &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = m_fpGetSurfaceFormatsKHR(m_device.handle(),
+    err = m_fpGetPhysicalDeviceSurfaceFormatsKHR(m_device.handle(),
                                    (VkSurfaceDescriptionKHR *) &m_surface_description,
                                    &formatCount, surfFormats);
     assert(!err);
@@ -845,21 +845,21 @@ void TestFrameworkVkPresent::CreateSwapchain()
     m_color_space = surfFormats[0].colorSpace;
 
     // Check the surface proprties and formats
-    VkSurfacePropertiesKHR surfProperties;
-    err = m_fpGetSurfacePropertiesKHR(m_device.handle(),
+    VkSurfaceCapabilitiesKHR surfProperties;
+    err = m_fpGetPhysicalDeviceSurfaceCapabilitiesKHR(m_device.handle(),
         (const VkSurfaceDescriptionKHR *)&m_surface_description,
         &surfProperties);
     assert(!err);
 
     uint32_t presentModeCount;
-    err = m_fpGetSurfacePresentModesKHR(m_device.handle(),
+    err = m_fpGetPhysicalDeviceSurfacePresentModesKHR(m_device.handle(),
         (const VkSurfaceDescriptionKHR *)&m_surface_description,
         &presentModeCount, NULL);
     assert(!err);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
     assert(presentModes);
-    err = m_fpGetSurfacePresentModesKHR(m_device.handle(),
+    err = m_fpGetPhysicalDeviceSurfacePresentModesKHR(m_device.handle(),
         (const VkSurfaceDescriptionKHR *)&m_surface_description,
         &presentModeCount, presentModes);
     assert(!err);
@@ -981,7 +981,7 @@ void TestFrameworkVkPresent::CreateSwapchain()
         /* Set image layout to PRESENT_SOURCE_KHR so that before the copy, it can be set to */
         /* TRANSFER_DESTINATION_OPTIMAL                                                     */
         SetImageLayout(m_buffers[i].image, VK_IMAGE_ASPECT_COLOR_BIT,
-                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR);
+                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     }
 }
@@ -1061,9 +1061,9 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
 void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord>  &imagesIn, VkInstance inst)
 {
     GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfacePropertiesKHR);
-    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfaceFormatsKHR);
-    GET_DEVICE_PROC_ADDR(m_device.handle(), GetSurfacePresentModesKHR);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_DEVICE_PROC_ADDR(m_device.handle(), GetPhysicalDeviceSurfacePresentModesKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), DestroySwapchainKHR);

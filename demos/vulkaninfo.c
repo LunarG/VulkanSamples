@@ -37,8 +37,9 @@
 #include <io.h>
 #endif
 
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
+
+#include "vulkan/VK_KHR_surface.h"
+#include "vulkan/VK_KHR_swapchain.h"
 
 #include <vulkan/vulkan.h>
 
@@ -414,7 +415,7 @@ static void app_dev_init(struct app_dev *dev, struct app_gpu *gpu)
     VkResult U_ASSERT_ONLY err;
     // Extensions to enable
     static const char *known_extensions[] = {
-        VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
 
     uint32_t count = 0;
@@ -556,7 +557,7 @@ static void app_create_instance(struct app_instance *inst)
     VkResult U_ASSERT_ONLY err;
     // Global Extensions to enable
     static char *known_extensions[] = {
-        "VK_EXT_KHR_swapchain",
+        VK_KHR_SURFACE_EXTENSION_NAME,
     };
 
     uint32_t global_extension_count = 0;

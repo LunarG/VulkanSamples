@@ -34,15 +34,15 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
         .specVersion = VK_DEBUG_REPORT_EXTENSION_REVISION,
     },
     {
-        .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
+        .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+        .specVersion = VK_KHR_SURFACE_REVISION,
     }
 };
 
 const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
     {
-        .extensionName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_DEVICE_SWAPCHAIN_REVISION,
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
     }
 };
 

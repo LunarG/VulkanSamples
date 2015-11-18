@@ -62,7 +62,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_INVALID_HANDLE,                   // Handle used that isn't currently valid
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
     SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
-    SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetSurfacePropertiesKHR())
+    SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
     SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,    // Called vkCreateSwapchainKHR() with out-of-bounds minImageCount
     SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,// Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
     SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
@@ -126,7 +126,7 @@ struct _SwpInstance {
     // remembered:
     unordered_map<const void*, SwpPhysicalDevice*> physicalDevices;
 
-    // Set to true if "VK_EXT_KHR_swapchain" was enabled for this VkInstance:
+    // Set to true if VK_KHR_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
     bool swapchainExtensionEnabled;
 
     // TODO: Add additional booleans for platform-specific extensions:
@@ -155,24 +155,24 @@ struct _SwpDevice {
     // Corresponding VkPhysicalDevice (and info) to this VkDevice:
     SwpPhysicalDevice *pPhysicalDevice;
 
-    // Set to true if "VK_EXT_KHR_device_swapchain" was enabled:
+    // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
     bool deviceSwapchainExtensionEnabled;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
-    // Results of vkGetSurfacePropertiesKHR():
+    // Results of vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
     bool gotSurfaceProperties;
-    VkSurfacePropertiesKHR surfaceProperties;
+    VkSurfaceCapabilitiesKHR surfaceProperties;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
-    // Count and VkSurfaceFormatKHR's returned by vkGetSurfaceFormatsKHR():
+    // Count and VkSurfaceFormatKHR's returned by vkGetPhysicalDeviceSurfaceFormatsKHR():
     uint32_t surfaceFormatCount;
     VkSurfaceFormatKHR* pSurfaceFormats;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
-    // Count and VkPresentModeKHR's returned by vkGetSurfacePresentModesKHR():
+    // Count and VkPresentModeKHR's returned by vkGetPhysicalDeviceSurfacePresentModesKHR():
     uint32_t presentModeCount;
     VkPresentModeKHR* pPresentModes;
 

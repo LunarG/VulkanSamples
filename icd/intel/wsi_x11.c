@@ -217,9 +217,9 @@ static int x11_get_drawable_depth(xcb_connection_t *c,
     return depth;
 }
 
-static VkResult x11_get_surface_properties(
+static VkResult x11_get_surface_capabilities(
     const VkSurfaceDescriptionKHR *pSurfaceDescription,
-    VkSurfacePropertiesKHR *pSurfaceProperties)
+    VkSurfaceCapabilitiesKHR *pSurfaceProperties)
 {
     const VkSurfaceDescriptionWindowKHR* pSurfaceDescriptionWindow =
         (VkSurfaceDescriptionWindowKHR*) pSurfaceDescription;
@@ -943,19 +943,19 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     return ret;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    VkSurfacePropertiesKHR*                  pSurfaceProperties)
+    VkSurfaceCapabilitiesKHR*                pSurfaceProperties)
 {
     // TODOVV: Move this check to a validation layer (i.e. the driver should
     // assume the correct data type, and not check):
     assert(pSurfaceProperties);
 
-    return x11_get_surface_properties(pSurfaceDescription, pSurfaceProperties);
+    return x11_get_surface_capabilities(pSurfaceDescription, pSurfaceProperties);
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
@@ -983,7 +983,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
     return ret;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,

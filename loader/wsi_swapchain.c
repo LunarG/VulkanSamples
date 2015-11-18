@@ -33,8 +33,8 @@
 #include "wsi_swapchain.h"
 
 static const VkExtensionProperties wsi_swapchain_extension_info = {
-        .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
+        .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+        .specVersion = VK_KHR_SURFACE_REVISION,
 };
 
 void wsi_swapchain_add_instance_extensions(
@@ -51,7 +51,7 @@ void wsi_swapchain_create_instance(
     ptr_instance->wsi_swapchain_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_swapchain_enabled = true;
             return;
         }

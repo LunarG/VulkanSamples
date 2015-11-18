@@ -44,12 +44,12 @@
 
 // The null driver supports all WSI extenstions ... for now ...
 static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-	[NULLDRV_EXT_KHR_SWAPCHAIN] = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
+	[NULLDRV_EXT_KHR_SWAPCHAIN] = VK_KHR_SURFACE_EXTENSION_NAME,
 };
 static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
     {
-        .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_EXT_KHR_SWAPCHAIN_REVISION,
+        .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+        .specVersion = VK_KHR_SURFACE_REVISION,
     }
 };
 
@@ -811,17 +811,17 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePropertiesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
-    VkSurfacePropertiesKHR*                  pSurfaceProperties)
+    VkSurfaceCapabilitiesKHR*                pSurfaceProperties)
 {
     NULLDRV_LOG_FUNC;
 
     return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,
@@ -832,7 +832,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfaceFormatsKHR(
     return VK_SUCCESS;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetSurfacePresentModesKHR(
+VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
     VkDevice                                 device,
     const VkSurfaceDescriptionKHR*           pSurfaceDescription,
     uint32_t*                                pCount,

@@ -175,9 +175,9 @@ static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_
     table->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(dev, "vkAcquireNextImageKHR");
     table->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(dev, "vkCreateSwapchainKHR");
     table->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(dev, "vkDestroySwapchainKHR");
-    table->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(dev, "vkGetSurfacePropertiesKHR");
-    table->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(dev, "vkGetSurfaceFormatsKHR");
-    table->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(dev, "vkGetSurfacePresentModesKHR");
+    table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(dev, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(dev, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    table->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(dev, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     table->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(dev, "vkGetSwapchainImagesKHR");
     table->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(dev, "vkQueuePresentKHR");
 }
