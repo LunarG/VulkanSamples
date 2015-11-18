@@ -17,7 +17,7 @@ in the following Linux directories:
 
 These directories will contain text information files (a.k.a. "manifest
 files"), that use a JSON format (NOTE: The JSON in this version of the
-specification is for illustration purposes, and isn’t completely valid yet).
+specification is for illustration purposes, and isn't completely valid yet).
 The Vulkan loader will open each info file to obtain the name or pathname of an
 ICD shared library (".so") file.  For example:
 
@@ -25,18 +25,21 @@ ICD shared library (".so") file.  For example:
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "abi_versions": "1.0.0"
+        "api_version": "1.0.0"
     }
 }
 
-The "library_path" specifies either a filename, a relative pathname or a full
-pathname to an ICD shared library file, which the loader will attempt to load
-using dlopen(). If the layer is specified via a relative pathname, it is
-relative to the path of the info file.  If the ICD is specified via a filename,
-the shared library lives in the system directory as defined by the Linux
-distribution, such that dlopen() will find the library. (e.g.
-"/usr/lib/x86_64-linux-gnu" on 64-bit Debian-based distributions, or
-"/usr/lib64" on 64-bit Red Hat-based systems).
+The "library_path" specifies either a filename, a relative pathname, or a full
+pathname to an ICD shared library file.  If the ICD is specified via a
+filename, the loader will attempt to open that file as a shared object using
+dlopen(), and the file must be in a directory that dlopen is configured to look
+in (Note: various distributions are configured differently).  A distribution is
+free to create Vulkan-specific system directories (e.g. ".../vulkan/icd"), but
+is not required to do so.  If the ICD is specified via a relative pathname, it
+is relative to the path of the info file.  Relative pathnames are those that do
+not start with, but do contain at least one directory separator (i.e. the '/'
+character).  For example, "lib/vendora.so" and "./vendora.so" are examples of
+relative pathnames.
 
 The "file_format_version" provides a major.minor.patch version number in case
 the format of the text information file changes in the future.  If the same ICD
@@ -44,9 +47,8 @@ shared library supports multiple, incompatible versions of text info file
 format versions, it must have multiple text info files (all of which may point
 to the same shared library).
 
-The "abi_versions" specifies a colon-separated list of major.minor.patch
-version numbers of the Vulkan ABI that the shared library (referenced by
-"library_path") support.
+The “api_version” specifies the major.minor.patch version number of the Vulkan
+API that the shared library (referenced by "library_path") was built with.
 
 The "/usr/share/vulkan/icd.d" directory is for ICDs that are installed from
 Linux-distribution-provided packages.  The "/etc/vulkan/icd.d" directory is for
@@ -73,7 +75,7 @@ indicated by the ICD.library_path value.
 IHV developers (and sometimes other developers) need to use special,
 pre-production ICDs.  In some cases, a pre-production ICD may be in an
 installable package.  In other cases, a pre-production ICD may simply be a
-shared library in the developer’s build tree.  In this latter case, we want to
+shared library in the developer's build tree.  In this latter case, we want to
 allow developers to point to such an ICD without modifying the
 properly-installed ICD(s) on their system.
 
@@ -156,12 +158,13 @@ information:
   on both device and instance chains.
 - (required) "library_path" - filename / full path / relative path to the text
   file
-- (required) "abi_versions" – same as for ICDs.
-- (required) "implementation_version" – layer code version.
+- (required) "api_version" – same as for ICDs.
+- (required) "implementation_version" – layer version, a single number increasing with backward compatible changes.
 - (required) "description" – informative decription of the layer.
-- (optional) extension and it's "name" - e.g."instance_extensions"{ DEBUG_REPORT }
-- (optional) extension "version" - extension version (formatted as
-  major.minor.patch).
+- (optional) "device_extensions" or "instance_extensions" - array of extension information as follows
+- (optional) extension "name" - Vulkan registered name
+- (optional) extension "spec_version" - extension specification version, a single number, increasing with backward compatible changes.
+- (optional) extension "entrypoints" - array of device extension entrypoints; not used for instance extensions
 - (sometimes required) "functions" - mapping list of function entry points.  If
   multiple layers exist within the same shared library (or if a layer is in the
   same shared library as an ICD), this must be specified to allow each layer to
@@ -172,7 +175,7 @@ information:
 - (optional for implicit layers) "enable_environment" requirement(s) -
   environment variable and value required to enable an implicit layer.  This
   environment variable (which should vary with each "version" of the layer, as
-  in "ENABLE_LAYER_FOO_1_0_0") must be set to the given value or else the
+  in "ENABLE_LAYER_FOO_1") must be set to the given value or else the
   implicit layer is not loaded.  This is for application environments
   (e.g. Steam) which want to enable a layer(s) only for applications that they
   launch, and allows for applications run outside of an application environment
@@ -183,7 +186,7 @@ information:
   application can set this environment variable (before calling Vulkan
   functions) in order to "blacklist" the layer.  This environment variable
   (which should vary with each "version" of the layer, as in
-  "DISABLE_LAYER_FOO_1_0_0") must be set (not particularly to any value).  If
+  "DISABLE_LAYER_FOO_1") must be set (not particularly to any value).  If
   both the "enable_environment" and "disable_environment" variables are set,
   the implicit layer is disabled.
 
@@ -195,8 +198,8 @@ For example:
          "name": "OverlayLayer",
          "type": "DEVICE",
          "library_path": "libvkOverlayLayer.so",
-         "abi_versions" : "1.0.0:1.1.0",
-         "implementation_version" : "0.9.3",
+         "api_version" : "1.0.0",
+         "implementation_version" : "2",
          "description" : "LunarG HUD layer",
          "functions": {
             "vkGetInstanceProcAddr": "Overlaylayer_GetInstanceProcAddr",
@@ -205,35 +208,37 @@ For example:
          "instance_extensions": [
              {
                  "name": "DEBUG_REPORT",
-                 "version": "1.0.0"
+                 "spec_version": "1"
              },
              {
                  "name": "DEBUG_X",
-                 "version": "1.0.0"
+                 "spec_version": "3"
              }
          ],
          "device_extensions": [
              {
                  "name": "DEBUG_MARKER",
-                 "version": "1.0.0"
+                 "spec_version": "1",
+		 "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
              }
          ],
          "disable_environment": {
-             "DISABLE_LAYER_OVERLAY_1_0_0": ""
+             "DISABLE_LAYER_OVERLAY_1": ""
          }
      }
 }
 
 The "library_path" specifies either a filename, a relative pathname, or a full
 pathname to a layer shared library (".so") file, which the loader will attempt
-to load using dlopen().  If the layer is specified via a relative pathname, it
-is relative to the path of the info file (e.g. for cases when an application
+to load using dlopen().  If the layer is specified via a filename, the loader
+will attempt to open that file as a shared object using dlopen(), and the file
+must be in a directory that dlopen is configured to look in (Note: various
+distributions are configured differently).  A distribution is free to create
+Vulkan-specific system directories (e.g. ".../vulkan/layers"), but is not
+required to do so.  If the layer is specified via a relative pathname, it is
+relative to the path of the info file (e.g. for cases when an application
 provides a layer that is in the same directory hierarchy as the rest of the
-application files).  If the layer is specified via a filename, the shared
-library lives in the system directory as defined by the Linux distribution,
-such that dlopen() will find the library. (e.g.
-"/usr/lib/x86_64-linux-gnu" on 64-bit Debian-based distributions, or
-"/usr/lib64" on 64-bit Red Hat-based systems).
+application files).
 
 There are no rules about the name of the text files (except the .json suffix).
 There are no rules about the name of the layer shared library files.

@@ -1,4 +1,4 @@
-﻿This is a specification for how the Vulkan loader should identify Vulkan
+This is a specification for how the Vulkan loader should identify Vulkan
 installable client drivers (ICDs) on MS Windows.  This is designed for
 production installation of Vulkan ICDs and layers.  The design is shown first
 for ICDs, and then the variation for layers will be discussed.
@@ -17,25 +17,28 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers
 For each value in this key which has DWORD data set to 0, the loader opens the
 text information file (a.k.a. "manifest file"), that uses a JSON format (NOTE:
 The JSON in this version of the specification is for illustration purposes, and
-isn’t completely valid yet), specified by the name of the value.  Each name
+isn't completely valid yet), specified by the name of the value.  Each name
 must be a full pathname to the text info file.  The Vulkan loader will open
 each info file to obtain the name or pathname of an ICD shared library (".dll")
 file.  For example:
 
 {
-    "file_format_version" : "1.0.0",
+    "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "abi_versions" : "1.0.0"
+        "api_version": "1.0.0"
     }
 }
 
 The "library_path" specifies either a filename, a relative pathname, or a full
 pathname to an ICD shared library file, which the loader will attempt to load
 using LoadLibrary().  If the ICD is specified via a filename, the shared
-library lives in the system’s DLL search path (e.g. in the
+library lives in the system's DLL search path (e.g. in the
 "C:\\Windows\\System32" folder).  If the ICD is specified via a relative
-pathname, it is relative to the path of the info file.
+pathname, it is relative to the path of the info file.  Relative pathnames are
+those that do not start with a drive specifier (e.g. "C:"), nor with a
+directory separator (i.e. the '\' character), but do contain at least one
+directory separator.
 
 The "file_format_version" specifies a major.minor.patch version number in case
 the format of the text information file changes in the future.  If the same ICD
@@ -43,9 +46,8 @@ shared library supports multiple, incompatible versions of text info file
 format versions, it must have multiple text info files (all of which may point
 to the same shared library).
 
-The "abi_versions" specifies a colon-separated list of major.minor.patch
-version numbers of the Vulkan ABI that the shared library (referenced by
-"library_path") support.
+The “api_version” specifies the major.minor.patch version number of the Vulkan
+API that the shared library (referenced by "library_path") was built with.
 
 There are no rules about the name of the text information files (except the
 .json suffix).  There are no rules about the name of the ICD shared library
@@ -75,7 +77,7 @@ indicated by the ICD.library_path value.
 IHV developers (and sometimes other developers) need to use special,
 pre-production ICDs.  In some cases, a pre-production ICD may be in an
 installable package.  In other cases, a pre-production ICD may simply be a
-shared library in the developer’s build tree.  In this latter case, we want to
+shared library in the developer's build tree.  In this latter case, we want to
 allow developers to point to such an ICD without modifying the
 properly-installed ICD(s) on their system.
 
@@ -141,7 +143,7 @@ explicit is by which registry key its layer information file is referenced by.
 The information file is in the JSON format and contains the following
 information:
 
-- (required) "file_format_version" – same as for ICDs, except that the format
+- (required) "file_format_version" - same as for ICDs, except that the format
   version can vary independently for ICDs and layers.
 - (required) "name" - layer name
 - (required) "type" - which layer chains should the layer be activated on.
@@ -149,12 +151,13 @@ information:
   on both device and instance chains.
 - (required) "library_path" - filename / full path / relative path to the text
   file
-- (required) "abi_versions" – same as for ICDs.
-- (required) "implementation_version" – layer code version.
-- (required) "description" – informative decription of the layer.
-- (optional) extension and it's "name" - e.g."instance_extensions"{ DEBUG_REPORT}
-- (optional) extension and it's "version" - extension version (formatted as
-  major.minor.patch).
+- (required) "api_version" - same as for ICDs.
+- (required) "implementation_version" - layer version, a single number increasing with backward compatible changes.
+- (required) "description" - informative decription of the layer.
+- (optional) "device_extensions" or "instance_extensions" - array of extension information as follows
+- (optional) extension "name" - Vulkan registered name
+- (optional) extension "spec_version" - extension specification version, a single number, increasing with backward compatible changes.
+- (optional) extension "entrypoints" - array of device extension entrypoints; not used for instance extensions
 - (sometimes required) "functions" - mapping list of function entry points.  If
   multiple layers exist within the same shared library (or if a layer is in the
   same shared library as an ICD), this must be specified to allow each layer to
@@ -165,7 +168,7 @@ information:
 - (optional for implicit layers) "enable_environment" requirement(s) -
   environment variable and value required to enable an implicit layer.  This
   environment variable (which should vary with each "version" of the layer, as
-  in "ENABLE_LAYER_FOO_1_0_0") must be set to the given value or else the
+  in "ENABLE_LAYER_FOO_1") must be set to the given value or else the
   implicit layer is not loaded.  This is for application environments
   (e.g. Steam) which want to enable a layer(s) only for applications that they
   launch, and allows for applications run outside of an application environment
@@ -176,7 +179,7 @@ information:
   application can set this environment variable (before calling Vulkan
   functions) in order to "blacklist" the layer.  This environment variable
   (which should vary with each "version" of the layer, as in
-  "DISABLE_LAYER_FOO_1_0_0") must be set (not particularly to any value).  If
+  "DISABLE_LAYER_FOO_1") must be set (not particularly to any value).  If
   both the "enable_environment" and "disable_environment" variables are set,
   the implicit layer is disabled.
 
@@ -188,8 +191,8 @@ For example:
          "name": "OverlayLayer",
          "type": "DEVICE",
          "library_path": "vkOverlayLayer.dll",
-         "abi_versions" : "1.0.0:1.1.0",
-         "implementation_version" : "0.9.3",
+         "api_version" : "1.0.0",
+         "implementation_version" : "2",
          "description" : "LunarG HUD layer",
          "functions": {
             "vkGetInstanceProcAddr": "OverlayLayer_GetInstanceProcAddr",
@@ -198,21 +201,22 @@ For example:
          instance_extensions": [
              {
                  "name": "DEBUG_REPORT",
-                 "version": "1.0.0"
+                 "spec_version": "1"
              },
              {
                  "name": "DEBUG_X",
-                 "version": "1.0.0"
+                 "spec_version": "3"
              }
          ],
          device_extensions": [
              {
                  "name": "DEBUG_MARKER",
-                 "version": "1.0.0"
+                 "spec_version": "1",
+		 "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
              }
          ],
          "disable_environment": {
-             "DISABLE_LAYER_OVERLAY_1_0_0": ""
+             "DISABLE_LAYER_OVERLAY_1": ""
          }
      }
 }
@@ -223,7 +227,7 @@ to load using LoadLibrary().  If the layer is specified via a relative
 pathname, it is relative to the path of the info file (e.g. for cases when an
 application provides a layer that is in the same folder hierarchy as the rest
 of the application files).  If the layer is specified via a filename, the
-shared library lives in the system’s DLL search path (e.g. in the
+shared library lives in the system's DLL search path (e.g. in the
 "C:\\Windows\\System32" folder).
 
 There are no rules about the name of the text files (except the .json suffix).

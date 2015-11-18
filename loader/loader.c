@@ -1467,7 +1467,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
      * (required) "name"
      * (required) "type"
      * (required) “library_path”
-     * (required) “abi_versions”
+     * (required) “api_version”
      * (required) “implementation_version”
      * (required) “description”
      * (required for implicit layers) “disable_environment”
@@ -1477,7 +1477,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
 
     cJSON *item, *layer_node, *ext_item;
     char *temp;
-    char *name, *type, *library_path, *abi_versions;
+    char *name, *type, *library_path, *api_version;
     char *implementation_version, *description;
     cJSON *disable_environment;
     int i;
@@ -1489,8 +1489,8 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
     char *file_vers = cJSON_PrintUnformatted(item);
     loader_log(VK_DBG_REPORT_INFO_BIT, 0, "Found manifest file %s, version %s",
                filename, file_vers);
-    if (strcmp(file_vers, "\"0.9.0\"") != 0)
-        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 0.9.0), may cause errors");
+    if (strcmp(file_vers, "\"1.0.0\"") != 0)
+        loader_log(VK_DBG_REPORT_WARN_BIT, 0, "Unexpected manifest file version (expected 1.0.0), may cause errors");
     loader_tls_heap_free(file_vers);
 
     layer_node = cJSON_GetObjectItem(json, "layer");
@@ -1523,7 +1523,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         GET_JSON_ITEM(layer_node, name)
         GET_JSON_ITEM(layer_node, type)
         GET_JSON_ITEM(layer_node, library_path)
-        GET_JSON_ITEM(layer_node, abi_versions)
+        GET_JSON_ITEM(layer_node, api_version)
         GET_JSON_ITEM(layer_node, implementation_version)
         GET_JSON_ITEM(layer_node, description)
         if (is_implicit) {
@@ -1582,8 +1582,8 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
             // a filename which is assumed in a system directory
             loader_get_fullpath(library_path, DEFAULT_VK_LAYERS_PATH, MAX_STRING_SIZE, fullpath);
         }
-        props->info.specVersion = loader_make_version(abi_versions);
-        props->info.implementationVersion = loader_make_version(implementation_version);
+        props->info.specVersion = loader_make_version(api_version);
+        props->info.implementationVersion = atoi(implementation_version);
         strncpy((char *) props->info.description, description, sizeof (props->info.description));
         props->info.description[sizeof (props->info.description) - 1] = '\0';
         if (is_implicit) {
@@ -1615,7 +1615,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         }
 
         cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
-        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *version=NULL;
+        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *spec_version=NULL;
         GET_JSON_OBJECT(layer_node, functions)
         if (functions != NULL) {
             GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
@@ -1633,10 +1633,10 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
             for (i = 0; i < count; i++) {
                 ext_item = cJSON_GetArrayItem(instance_extensions, i);
                 GET_JSON_ITEM(ext_item, name)
-                GET_JSON_ITEM(ext_item, version)
+                GET_JSON_ITEM(ext_item, spec_version)
                 strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
                 ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
-                ext_prop.specVersion = loader_make_version(version);
+                ext_prop.specVersion = atoi(spec_version);
                 loader_add_to_ext_list(inst, &props->instance_extension_list, 1, &ext_prop);
             }
         }
@@ -1646,10 +1646,10 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
             for (i = 0; i < count; i++) {
                 ext_item = cJSON_GetArrayItem(device_extensions, i);
                 GET_JSON_ITEM(ext_item, name);
-                GET_JSON_ITEM(ext_item, version);
+                GET_JSON_ITEM(ext_item, spec_version);
                 strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
                 ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
-                ext_prop.specVersion = loader_make_version(version);
+                ext_prop.specVersion = atoi(spec_version);
                 loader_add_to_ext_list(inst, &props->device_extension_list, 1, &ext_prop);
             }
         }
