@@ -740,6 +740,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                                device,
     const VkSwapchainCreateInfoKHR*         pCreateInfo,
+    const VkAllocationCallbacks*            pAllocator,
     VkSwapchainKHR*                         pSwapchain)
 {
     NULLDRV_LOG_FUNC;
@@ -760,7 +761,8 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                                device,
-    VkSwapchainKHR                          swapchain)
+    VkSwapchainKHR                          swapchain,
+    const VkAllocationCallbacks*            pAllocator)
 {
     NULLDRV_LOG_FUNC;
     struct nulldrv_swap_chain *sc = *(struct nulldrv_swap_chain **) &swapchain;
@@ -771,8 +773,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkDevice                                 device,
     VkSwapchainKHR                           swapchain,
-    uint32_t*                                pCount,
-    VkFence                                  fence,
+    uint32_t*                                pSwapchainImageCount,
     VkImage*                                 pSwapchainImages)
 {
     NULLDRV_LOG_FUNC;
@@ -780,7 +781,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     struct nulldrv_dev *dev = sc->dev;
     VkResult ret = VK_SUCCESS;
 
-    *pCount = 2;
+    *pSwapchainImageCount = 2;
     if (pSwapchainImages) {
         uint32_t i;
         for (i = 0; i < 2; i++) {
@@ -803,6 +804,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkSwapchainKHR                           swapchain,
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
+    VkFence                                  fence,
     uint32_t*                                pImageIndex)
 {
     NULLDRV_LOG_FUNC;
@@ -812,7 +814,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue                                  queue_,
-    VkPresentInfoKHR*                        pPresentInfo)
+    const VkPresentInfoKHR*                  pPresentInfo)
 {
     NULLDRV_LOG_FUNC;
 
