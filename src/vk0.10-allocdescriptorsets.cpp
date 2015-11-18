@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 
     VkWriteDescriptorSet writes[1];
 
+    writes[0] = {};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].pNext = NULL;
     writes[0].dstSet = info.desc_set[0];
