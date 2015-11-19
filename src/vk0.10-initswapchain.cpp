@@ -71,13 +71,6 @@ int main(int argc, char **argv)
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(info.queue_count >= 1);
-
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(info.queue_count >= 1);
-
     // Construct the surface description:
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
     info.surface_description.pNext = NULL;
