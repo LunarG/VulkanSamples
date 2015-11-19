@@ -120,7 +120,7 @@ void set_image_layout(
     image_memory_barrier.subresourceRange.aspectMask = aspectMask;
     image_memory_barrier.subresourceRange.baseMipLevel = 0;
     image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.layerCount = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
 
     if (old_image_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
         image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
