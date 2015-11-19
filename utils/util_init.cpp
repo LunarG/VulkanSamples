@@ -1226,7 +1226,12 @@ void execute_queue_command_buffer(struct sample_info &info)
 
     /* Queue the command buffer for execution */
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = VK_NULL_HANDLE;
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
@@ -1238,8 +1243,13 @@ void execute_queue_command_buffer(struct sample_info &info)
     submit_info[0].signalSemaphoreCount = 0;
     submit_info[0].pSignalSemaphores = NULL;
 
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
+
+    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    assert(res == VK_SUCCESS);
+
+    vkDestroyFence(info.device, drawFence, NULL);
 }
 
 void init_device_queue(struct sample_info &info)

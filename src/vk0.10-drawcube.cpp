@@ -196,7 +196,12 @@ int main(int argc, char **argv)
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = VK_NULL_HANDLE;
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
@@ -209,7 +214,7 @@ int main(int argc, char **argv)
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
     /* Now present the image in the window */
@@ -221,6 +226,9 @@ int main(int argc, char **argv)
     present.swapchains = &info.swap_chain;
     present.imageIndices = &info.current_buffer;
 
+    /* Make sure command buffer is finished before presenting */
+    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    assert(res == VK_SUCCESS);
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
@@ -228,6 +236,7 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_END */
 
     vkDestroySemaphore(info.device, presentCompleteSemaphore, NULL);
+    vkDestroyFence(info.device, drawFence, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_descriptor_pool(info);
