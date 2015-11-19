@@ -507,6 +507,12 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->EnumerateDeviceLayerProperties;
     if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR"))
         return (void *) table->GetPhysicalDeviceSurfaceSupportKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilitiesKHR"))
+        return (void *) table->GetPhysicalDeviceSurfaceCapabilitiesKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfaceFormatsKHR"))
+        return (void *) table->GetPhysicalDeviceSurfaceFormatsKHR;
+    if (!strcmp(name, "GetPhysicalDeviceSurfacePresentModesKHR"))
+        return (void *) table->GetPhysicalDeviceSurfacePresentModesKHR;
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

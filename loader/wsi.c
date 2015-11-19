@@ -239,6 +239,131 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
                                                    pSupported);
 }
 
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceSurfaceCapabilitiesKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetPhysicalDeviceSurfaceCapabilitiesKHR(
+                                                      physicalDevice,
+                                                      surface,
+                                                      pSurfaceCapabilities);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceSurfaceCapabilitiesKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceCapabilitiesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(pSurfaceCapabilities && "GetPhysicalDeviceSurfaceCapabilitiesKHR: Error, null pSurfaceCapabilities");
+
+    assert(icd->GetPhysicalDeviceSurfaceCapabilitiesKHR && "loader: null GetPhysicalDeviceSurfaceCapabilitiesKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceSurfaceCapabilitiesKHR(phys_dev->phys_dev,
+                                                      surface,
+                                                      pSurfaceCapabilities);
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceSurfaceFormatsKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pSurfaceFormatCount,
+    VkSurfaceFormatKHR*                         pSurfaceFormats)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetPhysicalDeviceSurfaceFormatsKHR(
+                                                      physicalDevice,
+                                                      surface,
+                                                      pSurfaceFormatCount,
+                                                      pSurfaceFormats);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceSurfaceFormatsKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pSurfaceFormatCount,
+    VkSurfaceFormatKHR*                         pSurfaceFormats)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(pSurfaceFormatCount && "GetPhysicalDeviceSurfaceFormatsKHR: Error, null pSurfaceFormatCount");
+
+    assert(icd->GetPhysicalDeviceSurfaceFormatsKHR && "loader: null GetPhysicalDeviceSurfaceFormatsKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceSurfaceFormatsKHR(phys_dev->phys_dev,
+                                                      surface,
+                                                      pSurfaceFormatCount,
+                                                      pSurfaceFormats);
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceSurfacePresentModesKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pPresentModeCount,
+    VkPresentModeKHR*                           pPresentModes)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkResult res = disp->GetPhysicalDeviceSurfacePresentModesKHR(
+                                                      physicalDevice,
+                                                      surface,
+                                                      pPresentModeCount,
+                                                      pPresentModes);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceSurfacePresentModesKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkSurfaceKHR                                surface,
+    uint32_t*                                   pPresentModeCount,
+    VkPresentModeKHR*                           pPresentModes)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(pPresentModeCount && "GetPhysicalDeviceSurfacePresentModesKHR: Error, null pPresentModeCount");
+
+    assert(icd->GetPhysicalDeviceSurfacePresentModesKHR && "loader: null GetPhysicalDeviceSurfacePresentModesKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceSurfacePresentModesKHR(phys_dev->phys_dev,
+                                                      surface,
+                                                      pPresentModeCount,
+                                                      pPresentModes);
+}
+
 
 
 
@@ -478,6 +603,18 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     }
     if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", name)) {
         *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfaceSupportKHR : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", name)) {
+        *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfaceCapabilitiesKHR : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", name)) {
+        *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfaceFormatsKHR : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", name)) {
+        *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfacePresentModesKHR : NULL;
         return true;
     }
 #ifdef _WIN32
