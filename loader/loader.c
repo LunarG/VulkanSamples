@@ -2877,7 +2877,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
     char **filtered_extension_names = NULL;
     VkInstanceCreateInfo icd_create_info;
     VkResult res = VK_SUCCESS;
-    bool success;
+    bool success = false;
 
     icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     icd_create_info.enabledLayerNameCount = 0;
@@ -2914,7 +2914,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
             res = ptr_instance->icd_libs.list[i].CreateInstance(&icd_create_info,
                                            pAllocator,
                                            &(icd->instance));
-            success = loader_icd_init_entrys(
+            if (res == VK_SUCCESS)
+                success = loader_icd_init_entrys(
                                 icd,
                                 icd->instance,
                                 ptr_instance->icd_libs.list[i].GetInstanceProcAddr);
