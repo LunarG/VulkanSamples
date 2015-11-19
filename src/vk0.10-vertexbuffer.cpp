@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, 0, 0, (void **) &pData);
+    res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0, (void **) &pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data));

@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     /* Get the subresource layout so we know what the row pitch is */
     vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &layout);
 
-    res = vkMapMemory(info.device, mappableMemory, 0, 0, 0, &data);
+    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, &data);
     assert(res == VK_SUCCESS);
 
     /* Read the ppm file into the mappable image's memory */

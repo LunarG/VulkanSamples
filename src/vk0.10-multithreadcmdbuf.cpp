@@ -355,7 +355,7 @@ static void * per_thread_code(void *arg)
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, vertex_buffer[threadNum].mem, 0, 0, 0, (void **) &pData);
+    res = vkMapMemory(info.device, vertex_buffer[threadNum].mem, 0, mem_reqs.size, 0, (void **) &pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &triData[threadNum*3], 3*sizeof(triData[0]));

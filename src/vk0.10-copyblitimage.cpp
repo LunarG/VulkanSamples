@@ -121,7 +121,7 @@ int main(int argc, char **argv)
     memAllocInfo.allocationSize = memReq.size;
     res = vkAllocateMemory(info.device, &memAllocInfo, NULL, &dmem);
     res = vkBindImageMemory(info.device, bltSrcImage, dmem, 0);
-    res = vkMapMemory(info.device, dmem, 0,memReq.size,0,(void **)&pImgMem);
+    res = vkMapMemory(info.device, dmem, 0,memReq.size, 0, (void **)&pImgMem);
     // Checkerboard of 8x8 pixel squares
     for (int row = 0; row < info.height; row++) {
        for (int col = 0; col < info.width; col++) {
