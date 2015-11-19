@@ -1871,13 +1871,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkCommandPool*                              pCommandPool)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    my_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
+    VkResult result = my_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
     loader_platform_thread_lock_mutex(&globalLock);
+
     // Add cmd pool to map
     my_data->commandPoolMap[*pCommandPool].createFlags = pCreateInfo->flags;
     loader_platform_thread_unlock_mutex(&globalLock);
-    return VK_SUCCESS;
+
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
@@ -1922,6 +1924,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     layer_data *my_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32    commandBufferComplete = VK_FALSE;
     VkBool32    skipCall              = VK_FALSE;
+    VkResult    result                = VK_ERROR_VALIDATION_FAILED;
 
     // TODO: Check the commandPool's flags to see if reset is available for this pool.
 
@@ -1938,7 +1941,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
             skipCall |= clear_cmd_buf_and_mem_references(my_data, (*it));
         }
     }
-    return VK_SUCCESS;
+
+    if (VK_FALSE == skipCall) {
+        result = my_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
+    }
+
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
