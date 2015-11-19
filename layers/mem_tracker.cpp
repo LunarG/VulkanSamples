@@ -1877,6 +1877,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     // Add cmd pool to map
     my_data->commandPoolMap[*pCommandPool].createFlags = pCreateInfo->flags;
     loader_platform_thread_unlock_mutex(&globalLock);
+    return VK_SUCCESS;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
@@ -1937,7 +1938,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
             skipCall |= clear_cmd_buf_and_mem_references(my_data, (*it));
         }
     }
-
+    return VK_SUCCESS;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
