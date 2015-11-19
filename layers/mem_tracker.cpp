@@ -1268,12 +1268,24 @@ VkBool32 validateMemRange(
 {
     VkBool32 skipCall = VK_FALSE;
 
+    if (size == 0) {
+        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
+            MEMTRACK_INVALID_MAP, "MEM", "VkMapMemory: Attempting to map memory range of size zero");
+    }
+
     auto mem_element = my_data->memObjMap.find(mem);
     if (mem_element != my_data->memObjMap.end()) {
+        // It is an application error to call VkMapMemory on an object that is already mapped
+        if (mem_element->second.memRange.size != 0) {
+            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
+                MEMTRACK_INVALID_MAP, "MEM", "VkMapMemory: Attempting to map memory on an already-mapped object %#" PRIxLEAST64, (uint64_t)mem);
+        }
+
+        // Validate that offset + size is within object's allocationSize
         if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
             skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
-                               MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
-                               offset, size + offset, mem_element->second.allocInfo.allocationSize);
+                MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
+                offset, size + offset, mem_element->second.allocInfo.allocationSize);
         }
     }
     return skipCall;
@@ -1348,6 +1360,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     VkBool32 skipCall   = VK_FALSE;
     VkResult result     = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
+
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
     if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {

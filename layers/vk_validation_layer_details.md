@@ -169,7 +169,7 @@ The MemTracker layer tracks memory objects and references and validates that the
 | Immutable Memory Binding | Validates that non-sparse memory bindings are immutable, so objects are not re-boundt | REBIND_OBJECT | vkBindBufferMemory, vkBindImageMemory | RebindMemory | NA |
 | Image/Buffer Usage bits | Verify correct USAGE bits set based on how Images and Buffers are used | INVALID_USAGE_FLAG | vkCreateImage, vkCreateBuffer, vkCreateBufferView, vkCmdCopyBuffer, vkCmdCopyQueryPoolResults, vkCmdCopyImage, vkCmdBlitImage, vkCmdCopyBufferToImage, vkCmdCopyImageToBuffer, vkCmdUpdateBuffer, vkCmdFillBuffer  | InvalidUsageBits | NA |
 | Objects Not Destroyed Warning | Warns if any memory objects have not been freed before their objects are destroyed | MEM_OBJ_CLEAR_EMPTY_BINDINGS | vkDestroyDevice | TBD | NA |
-| Memory Map Range Checks | Validates that Memory Mapping Requests are valid for the Memory Object | INVALID_MAP | vkMapMemory | TBD | NA |
+| Memory Map Range Checks | Validates that Memory Mapping Requests are valid for the Memory Object (in-range, not currently mapped on Map, currently mapped on UnMap, size is non-zero) | INVALID_MAP | vkMapMemory | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 
