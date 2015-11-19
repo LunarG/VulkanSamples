@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     uint8_t *pData;
-    res = vkMapMemory(info.device, info.uniform_data.mem, 0, 0, 0, (void **) &pData);
+    res = vkMapMemory(info.device, info.uniform_data.mem, 0, mem_reqs.size, 0, (void **) &pData);
     assert(res == VK_SUCCESS);
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
