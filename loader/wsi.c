@@ -365,14 +365,101 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfacePresentModesKHR(
 }
 
 
-
-
 /*
  * Functions for the VK_KHR_swapchain extension:
  */
 
+/*
+ * This is the trampoline entrypoint
+ * for CreateSwapchainKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
+    VkDevice                                     device,
+    const VkSwapchainCreateInfoKHR*              pCreateInfo,
+    const VkAllocationCallbacks*                 pAllocator,
+    VkSwapchainKHR*                              pSwapchain)
+{
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    VkResult res = disp->CreateSwapchainKHR(
+                                            device,
+                                            pCreateInfo,
+                                            pAllocator,
+                                            pSwapchain);
+    return res;
+}
 
+/*
+ * This is the trampoline entrypoint
+ * for DestroySwapchainKHR
+ */
+LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    const VkAllocationCallbacks*                 pAllocator)
+{
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    disp->DestroySwapchainKHR(device, swapchain, pAllocator);
+}
 
+/*
+ * This is the trampoline entrypoint
+ * for GetSwapchainImagesKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    uint32_t*                                    pSwapchainImageCount,
+    VkImage*                                     pSwapchainImages)
+{
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    VkResult res = disp->GetSwapchainImagesKHR(
+                                            device,
+                                            swapchain,
+                                            pSwapchainImageCount,
+                                            pSwapchainImages);
+    return res;
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for AcquireNextImageKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
+    VkDevice                                     device,
+    VkSwapchainKHR                               swapchain,
+    uint64_t                                     timeout,
+    VkSemaphore                                  semaphore,
+    VkFence                                      fence,
+    uint32_t*                                    pImageIndex)
+{
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(device);
+    VkResult res = disp->AcquireNextImageKHR(
+                                            device,
+                                            swapchain,
+                                            timeout,
+                                            semaphore,
+                                            fence,
+                                            pImageIndex);
+    return res;
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for QueuePresentKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
+    VkQueue                                      queue,
+    const VkPresentInfoKHR*                      pPresentInfo)
+{
+    const VkLayerDispatchTable *disp;
+    disp = loader_get_dispatch(queue);
+    VkResult res = disp->QueuePresentKHR(queue, pPresentInfo);
+    return res;
+}
 
 
 #ifdef _WIN32
@@ -597,6 +684,9 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
 {
     *addr = NULL;
 
+    /*
+     * Functions for the VK_KHR_surface extension:
+     */
     if (!strcmp("vkDestroySurfaceKHR", name)) {
         *addr = ptr_instance->wsi_surface_enabled ? (void *) vkDestroySurfaceKHR : NULL;
         return true;
@@ -617,8 +707,41 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfacePresentModesKHR : NULL;
         return true;
     }
+
+    /*
+     * Functions for the VK_KHR_swapchain extension:
+     *
+     * Note: This is a device extension, and its functions are statically
+     * exported from the loader.  Per Khronos decisions, the the loader's GIPA
+     * function will return the trampoline function for such device-extension
+     * functions, regardless of whether the extension has been enabled.
+     */
+    if (!strcmp("vkCreateSwapchainKHR", name)) {
+        *addr = (void *) vkCreateSwapchainKHR;
+        return true;
+    }
+    if (!strcmp("vkDestroySwapchainKHR", name)) {
+        *addr = (void *) vkDestroySwapchainKHR;
+        return true;
+    }
+    if (!strcmp("vkGetSwapchainImagesKHR", name)) {
+        *addr = (void *) vkGetSwapchainImagesKHR;
+        return true;
+    }
+    if (!strcmp("vkAcquireNextImageKHR", name)) {
+        *addr = (void *) vkAcquireNextImageKHR;
+        return true;
+    }
+    if (!strcmp("vkQueuePresentKHR", name)) {
+        *addr = (void *) vkQueuePresentKHR;
+        return true;
+    }
+
 #ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
+    /*
+     * Functions for the VK_KHR_win32_surface extension:
+     */
     if (!strcmp("vkCreateWin32SurfaceKHR", name)) {
         *addr = ptr_instance->wsi_win32_surface_enabled ? (void *) vkCreateWin32SurfaceKHR : NULL;
         return true;
@@ -626,24 +749,36 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #else // _WIN32 (i.e. Linux)
 #ifdef VK_USE_PLATFORM_MIR_KHR
+    /*
+     * Functions for the VK_KHR_mir_surface extension:
+     */
     if (!strcmp("vkCreateMirSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_mir_surface_enabled ? (void *) vkCreateMirSurfaceKHR : NULL;
         return true;
     }
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    /*
+     * Functions for the VK_KHR_wayland_surface extension:
+     */
     if (!strcmp("vkCreateWaylandSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_wayland_surface_enabled ? (void *) vkCreateWaylandSurfaceKHR : NULL;
         return true;
     }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
+    /*
+     * Functions for the VK_KHR_xcb_surface extension:
+     */
     if (!strcmp("vkCreateXcbSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xcb_surface_enabled ? (void *) vkCreateXcbSurfaceKHR : NULL;
         return true;
     }
 #endif // VK_USE_PLATFORM_XCB_KHR
 #ifdef VK_USE_PLATFORM_XLIB_KHR
+    /*
+     * Functions for the VK_KHR_xlib_surface extension:
+     */
     if (!strcmp("vkCreateXlibSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xlib_surface_enabled ? (void *) vkCreateXlibSurfaceKHR : NULL;
         return true;
