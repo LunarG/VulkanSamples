@@ -424,7 +424,8 @@ struct loader_instance *loader_get_instance(
         const VkInstance instance);
 void loader_remove_logical_device(
         const struct loader_instance *inst,
-        VkDevice device);
+        struct loader_icd *icd,
+        struct loader_device *found_dev);
 VkResult loader_enable_instance_layers(
         struct loader_instance *inst,
         const VkInstanceCreateInfo *pCreateInfo,

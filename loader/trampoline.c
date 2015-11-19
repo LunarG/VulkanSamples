@@ -295,7 +295,9 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const 
 
     loader_platform_thread_lock_mutex(&loader_lock);
     disp->DestroyDevice(device, pAllocator);
-    loader_remove_logical_device(inst, device);
+    dev->device = NULL;
+    loader_remove_logical_device(inst, icd, dev);
+
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 

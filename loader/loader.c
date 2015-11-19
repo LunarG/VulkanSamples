@@ -1024,11 +1024,10 @@ static struct loader_device *loader_add_logical_device(
 
 void loader_remove_logical_device(
                             const struct loader_instance *inst,
-                            VkDevice device)
+                            struct loader_icd *icd,
+                            struct loader_device *found_dev)
 {
-    struct loader_device *found_dev, *dev, *prev_dev;
-    struct loader_icd *icd;
-    icd = loader_get_icd_and_device(device, &found_dev);
+    struct loader_device *dev, *prev_dev;
 
     if (!icd || !found_dev)
         return;
