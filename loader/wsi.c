@@ -176,7 +176,7 @@ void wsi_create_instance(
  * This is the trampoline entrypoint
  * for GetPhysicalDeviceSurfaceSupportKHR
  */
-VKAPI_ATTR VkResult VKAPI_CALL wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR(
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
     VkSurfaceKHR                                surface,
@@ -222,7 +222,7 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     *addr = NULL;
 
     if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", name)) {
-        *addr = ptr_instance->wsi_swapchain_enabled ? (void *) wsi_swapchain_GetPhysicalDeviceSurfaceSupportKHR : NULL;
+        *addr = ptr_instance->wsi_surface_enabled ? (void *) vkGetPhysicalDeviceSurfaceSupportKHR : NULL;
         return true;
     }
     return false;
