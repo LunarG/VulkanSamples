@@ -2548,13 +2548,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
             if (pBeginInfo->renderPass || pBeginInfo->framebuffer) {
                 // These should be NULL for a Primary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkAllocateCommandBuffers():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)commandBuffer);
+                    "vkBeginCommandBuffer():  Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)commandBuffer);
             }
         } else {
             if (!pBeginInfo->renderPass || !pBeginInfo->framebuffer) {
                 // These should NOT be null for an Secondary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkAllocateCommandBuffers():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)commandBuffer);
+                    "vkBeginCommandBuffer():  Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)commandBuffer);
             }
         }
         pCB->beginInfo = *pBeginInfo;
