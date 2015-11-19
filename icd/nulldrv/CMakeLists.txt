@@ -31,5 +31,11 @@ if (WIN32)
         LINK_FLAGS "/DEF:${PROJECT_SOURCE_DIR}/icd/nulldrv/VK_nulldrv.def")
 else()
     set_target_properties(VK_nulldrv PROPERTIES
-	LINK_FLAGS "-Wl,-Bsymbolic")
+        LINK_FLAGS "-Wl,-Bsymbolic")
+    if (NOT (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
+        add_custom_target(nulldrv_icd-json ALL
+        COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/nulldrv_icd.json
+            VERBATIM
+            )
+    endif()
 endif()
