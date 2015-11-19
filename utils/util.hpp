@@ -64,6 +64,9 @@
 #define NUM_VIEWPORTS 1
 #define NUM_SCISSORS NUM_VIEWPORTS
 
+/* Amount of time, in nanoseconds, to wait for a command buffer to complete */
+#define FENCE_TIMEOUT 10000
+
 #define GET_INSTANCE_PROC_ADDR(inst, entrypoint)                         \
 {                                                                        \
     info.fp##entrypoint = (PFN_vk##entrypoint) vkGetInstanceProcAddr(inst, "vk"#entrypoint); \

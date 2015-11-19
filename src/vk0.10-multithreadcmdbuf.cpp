@@ -170,7 +170,6 @@ int main(int argc, char **argv)
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
-
     VkFence nullFence = VK_NULL_HANDLE;
 
     VkSubmitInfo submit_info[1] = {};
@@ -183,9 +182,6 @@ int main(int argc, char **argv)
 
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
-    assert(!res);
-
-    res = vkQueueWaitIdle(info.queue);
     assert(!res);
 
     VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo;
@@ -221,7 +217,6 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     sample_platform_thread vk_threads[3];
-
     for (long i = 0; i < 3; i++) {
         sample_platform_thread_create(&vk_threads[i], &per_thread_code, (void *) i);
     }
@@ -275,9 +270,20 @@ int main(int argc, char **argv)
         sample_platform_thread_join(vk_threads[i], NULL);
     }
 
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
+
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
     assert(!res);
+
+    /* Make sure command buffer is finished before presenting */
+    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    assert(res == VK_SUCCESS);
 
     execute_present_image(info);
 
@@ -292,6 +298,7 @@ int main(int argc, char **argv)
     vkFreeMemory(info.device, vertex_buffer[1].mem, NULL);
     vkFreeMemory(info.device, vertex_buffer[2].mem, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
+    vkDestroyFence(info.device, drawFence, NULL);
     destroy_pipeline(info);
     destroy_pipeline_cache(info);
     destroy_framebuffers(info);
