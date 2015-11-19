@@ -92,7 +92,11 @@ static loader_platform_thread_mutex globalLock;
 
 #define MAX_BINDING 0xFFFFFFFF
 
-static MT_OBJ_BINDING_INFO* get_object_binding_info(layer_data* my_data, uint64_t handle, VkDbgObjectType type)
+static MT_OBJ_BINDING_INFO*
+ get_object_binding_info(
+    layer_data      *my_data,
+    uint64_t         handle,
+    VkDbgObjectType  type)
 {
     MT_OBJ_BINDING_INFO* retValue = NULL;
     switch (type)
@@ -120,21 +124,29 @@ template layer_data *get_my_data_ptr<layer_data>(
         std::unordered_map<void *, layer_data *> &data_map);
 
 // Add new queue for this device to map container
-static void add_queue_info(layer_data* my_data, const VkQueue queue)
+static void
+add_queue_info(
+    layer_data    *my_data,
+    const VkQueue  queue)
 {
     MT_QUEUE_INFO* pInfo   = &my_data->queueMap[queue];
     pInfo->lastRetiredId   = 0;
     pInfo->lastSubmittedId = 0;
 }
 
-static void delete_queue_info_list(layer_data* my_data)
+static void
+delete_queue_info_list(
+    layer_data* my_data)
 {
     // Process queue list, cleaning up each entry before deleting
     my_data->queueMap.clear();
 }
 
-static void add_swap_chain_info(layer_data* my_data,
-    const VkSwapchainKHR swapchain, const VkSwapchainCreateInfoKHR* pCI)
+static void
+add_swap_chain_info(
+    layer_data                     *my_data,
+    const VkSwapchainKHR            swapchain,
+    const VkSwapchainCreateInfoKHR *pCI)
 {
     MT_SWAP_CHAIN_INFO* pInfo = new MT_SWAP_CHAIN_INFO;
     memcpy(&pInfo->createInfo, pCI, sizeof(VkSwapchainCreateInfoKHR));
@@ -142,15 +154,22 @@ static void add_swap_chain_info(layer_data* my_data,
 }
 
 // Add new CBInfo for this cb to map container
-static void add_cmd_buf_info(layer_data* my_data,
-    VkCommandPool commandPool, const VkCommandBuffer cb)
+static void
+add_cmd_buf_info(
+    layer_data            *my_data,
+    VkCommandPool          commandPool,
+    const VkCommandBuffer  cb)
 {
     my_data->cbMap[cb].commandBuffer = cb;
     my_data->commandPoolMap[commandPool].pCommandBuffers.push_front(cb);
 }
 
 // Delete CBInfo from container and clear mem references to CB
-static VkBool32 delete_cmd_buf_info(layer_data *my_data, VkCommandPool commandPool, const VkCommandBuffer cb)
+static VkBool32
+delete_cmd_buf_info(
+    layer_data            *my_data,
+    VkCommandPool          commandPool,
+    const VkCommandBuffer  cb)
 {
     VkBool32 result = VK_TRUE;
     result = clear_cmd_buf_and_mem_references(my_data, cb);
@@ -163,8 +182,10 @@ static VkBool32 delete_cmd_buf_info(layer_data *my_data, VkCommandPool commandPo
 }
 
 // Return ptr to Info in CB map, or NULL if not found
-static MT_CB_INFO* get_cmd_buf_info(layer_data* my_data,
-    const VkCommandBuffer cb)
+static MT_CB_INFO*
+get_cmd_buf_info(
+    layer_data            *my_data,
+    const VkCommandBuffer  cb)
 {
     auto item = my_data->cbMap.find(cb);
     if (item != my_data->cbMap.end()) {
@@ -174,7 +195,12 @@ static MT_CB_INFO* get_cmd_buf_info(layer_data* my_data,
     }
 }
 
-static void add_object_binding_info(layer_data* my_data, const uint64_t handle, const VkDbgObjectType type, const VkDeviceMemory mem)
+static void
+add_object_binding_info(
+    layer_data            *my_data,
+    const uint64_t         handle,
+    const VkDbgObjectType  type,
+    const VkDeviceMemory   mem)
 {
     switch (type)
     {
@@ -194,7 +220,12 @@ static void add_object_binding_info(layer_data* my_data, const uint64_t handle, 
     }
 }
 
-static void add_object_create_info(layer_data* my_data, const uint64_t handle, const VkDbgObjectType type, const void* pCreateInfo)
+static void
+add_object_create_info(
+    layer_data     *my_data,
+    const uint64_t  handle,
+    const           VkDbgObjectType type,
+    const void     *pCreateInfo)
 {
     // TODO : For any CreateInfo struct that has ptrs, need to deep copy them and appropriately clean up on Destroy
     switch (type)
@@ -230,10 +261,12 @@ static void add_object_create_info(layer_data* my_data, const uint64_t handle, c
 }
 
 // Add a fence, creating one if necessary to our list of fences/fenceIds
-static VkBool32 add_fence_info(layer_data* my_data,
-    VkFence   fence,
-    VkQueue   queue,
-    uint64_t *fenceId)
+static VkBool32
+add_fence_info(
+    layer_data *my_data,
+    VkFence     fence,
+    VkQueue     queue,
+    uint64_t   *fenceId)
 {
     VkBool32 skipCall = VK_FALSE;
     *fenceId = my_data->currentFenceId++;
@@ -257,15 +290,19 @@ static VkBool32 add_fence_info(layer_data* my_data,
 }
 
 // Remove a fenceInfo from our list of fences/fenceIds
-static void delete_fence_info(layer_data* my_data,
-    VkFence fence)
+static void
+delete_fence_info(
+    layer_data *my_data,
+    VkFence     fence)
 {
     my_data->fenceMap.erase(fence);
 }
 
 // Record information when a fence is known to be signalled
-static void update_fence_tracking(layer_data* my_data,
-    VkFence fence)
+static void
+update_fence_tracking(
+    layer_data *my_data,
+    VkFence     fence)
 {
     auto fence_item = my_data->fenceMap.find(fence);
     if (fence_item != my_data->fenceMap.end()) {
@@ -286,8 +323,10 @@ static void update_fence_tracking(layer_data* my_data,
 }
 
 // Helper routine that updates the fence list for a specific queue to all-retired
-static void retire_queue_fences(layer_data* my_data,
-    VkQueue queue)
+static void
+retire_queue_fences(
+    layer_data *my_data,
+    VkQueue     queue)
 {
     MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
     // Set queue's lastRetired to lastSubmitted indicating all fences completed
@@ -295,8 +334,10 @@ static void retire_queue_fences(layer_data* my_data,
 }
 
 // Helper routine that updates all queues to all-retired
-static void retire_device_fences(layer_data* my_data,
-    VkDevice device)
+static void
+retire_device_fences(
+    layer_data *my_data,
+    VkDevice    device)
 {
     // Process each queue for device
     // TODO: Add multiple device support
@@ -311,9 +352,18 @@ static void retire_device_fences(layer_data* my_data,
 //  Verify that (actual & desired) flags != 0 or,
 //   if strict is true, verify that (actual & desired) flags == desired
 //  In case of error, report it via dbg callbacks
-static VkBool32 validate_usage_flags(layer_data* my_data, void* disp_obj, VkFlags actual, VkFlags desired,
-                                     VkBool32 strict, uint64_t obj_handle, VkDbgObjectType obj_type,
-                                     char const* ty_str, char const* func_name, char const* usage_str)
+static VkBool32
+validate_usage_flags(
+    layer_data      *my_data,
+    void            *disp_obj,
+    VkFlags          actual,
+    VkFlags          desired,
+    VkBool32         strict,
+    uint64_t         obj_handle,
+    VkDbgObjectType  obj_type,
+    char const      *ty_str,
+    char const      *func_name,
+    char const      *usage_str)
 {
     VkBool32 correct_usage = VK_FALSE;
     VkBool32 skipCall      = VK_FALSE;
@@ -332,8 +382,15 @@ static VkBool32 validate_usage_flags(layer_data* my_data, void* disp_obj, VkFlag
 // Helper function to validate usage flags for images
 // Pulls image info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static VkBool32 validate_image_usage_flags(layer_data* my_data, void* disp_obj, VkImage image, VkFlags desired, VkBool32 strict,
-                                           char const* func_name, char const* usage_string)
+static VkBool32
+validate_image_usage_flags(
+    layer_data *my_data,
+    void       *disp_obj,
+    VkImage     image,
+    VkFlags     desired,
+    VkBool32    strict,
+    char const *func_name,
+    char const *usage_string)
 {
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t)image, VK_OBJECT_TYPE_IMAGE);
@@ -347,8 +404,15 @@ static VkBool32 validate_image_usage_flags(layer_data* my_data, void* disp_obj, 
 // Helper function to validate usage flags for buffers
 // Pulls buffer info and then sends actual vs. desired usage off to helper above where
 //  an error will be flagged if usage is not correct
-static VkBool32 validate_buffer_usage_flags(layer_data* my_data, void* disp_obj, VkBuffer buffer, VkFlags desired, VkBool32 strict,
-                                            char const* func_name, char const* usage_string)
+static VkBool32
+validate_buffer_usage_flags(
+    layer_data  *my_data,
+     void       *disp_obj,
+     VkBuffer    buffer,
+     VkFlags     desired,
+     VkBool32    strict,
+     char const *func_name,
+     char const *usage_string)
 {
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, (uint64_t) buffer, VK_OBJECT_TYPE_BUFFER);
@@ -361,8 +425,10 @@ static VkBool32 validate_buffer_usage_flags(layer_data* my_data, void* disp_obj,
 
 // Return ptr to info in map container containing mem, or NULL if not found
 //  Calls to this function should be wrapped in mutex
-static MT_MEM_OBJ_INFO* get_mem_obj_info(layer_data* my_data,
-    const VkDeviceMemory mem)
+static MT_MEM_OBJ_INFO*
+get_mem_obj_info(
+    layer_data           *my_data,
+    const VkDeviceMemory  mem)
 {
     auto item = my_data->memObjMap.find(mem);
     if (item != my_data->memObjMap.end()) {
@@ -372,10 +438,12 @@ static MT_MEM_OBJ_INFO* get_mem_obj_info(layer_data* my_data,
     }
 }
 
-static void add_mem_obj_info(layer_data* my_data,
-    void*                    object,
-    const VkDeviceMemory     mem,
-    const VkMemoryAllocateInfo* pAllocateInfo)
+static void
+add_mem_obj_info(
+    layer_data                 *my_data,
+    void                       *object,
+    const VkDeviceMemory        mem,
+    const VkMemoryAllocateInfo *pAllocateInfo)
 {
     assert(object != NULL);
 
@@ -389,11 +457,12 @@ static void add_mem_obj_info(layer_data* my_data,
 
 // Find CB Info and add mem reference to list container
 // Find Mem Obj Info and add CB reference to list container
-static VkBool32 update_cmd_buf_and_mem_references(
-    layer_data           *my_data,
-    const VkCommandBuffer     cb,
-    const VkDeviceMemory  mem,
-    const char           *apiName)
+static VkBool32
+update_cmd_buf_and_mem_references(
+    layer_data            *my_data,
+    const VkCommandBuffer  cb,
+    const VkDeviceMemory   mem,
+    const char            *apiName)
 {
     VkBool32 skipCall = VK_FALSE;
 
@@ -402,11 +471,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
 
         // First update CB binding in MemObj mini CB list
         MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
-        if (!pMemInfo) {
-            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                           "In %s, trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that mem obj.\n    "
-                           "Was it correctly allocated? Did it already get freed?", apiName, (uint64_t) mem, cb);
-        } else {
+        if (pMemInfo) {
             // Search for cmd buffer object in memory object's binding list
             VkBool32 found  = VK_FALSE;
             if (pMemInfo->pCommandBufferBindings.size() > 0) {
@@ -425,10 +490,7 @@ static VkBool32 update_cmd_buf_and_mem_references(
             // Now update CBInfo's Mem reference list
             MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
             // TODO: keep track of all destroyed CBs so we know if this is a stale or simply invalid object
-            if (!pCBInfo) {
-                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                               "Trying to bind mem obj %#" PRIxLEAST64 " to CB %p but no info for that CB. Was CB incorrectly destroyed?", (uint64_t) mem, cb);
-            } else {
+            if (pCBInfo) {
                 // Search for memory object in cmd buffer's reference list
                 VkBool32 found  = VK_FALSE;
                 if (pCBInfo->pMemObjList.size() > 0) {
@@ -450,23 +512,21 @@ static VkBool32 update_cmd_buf_and_mem_references(
 }
 
 // Free bindings related to CB
-static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data,
-    const VkCommandBuffer cb)
+static VkBool32
+clear_cmd_buf_and_mem_references(
+    layer_data            *my_data,
+    const VkCommandBuffer  cb)
 {
     VkBool32 skipCall = VK_FALSE;
     MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
-    if (!pCBInfo) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0, MEMTRACK_INVALID_CB, "MEM",
-                     "Unable to find global CB info %p for deletion", cb);
-    } else {
-        if (pCBInfo->pMemObjList.size() > 0) {
-            list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
-            for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
-                MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
-                if (pInfo) {
-                    pInfo->pCommandBufferBindings.remove(cb);
-                    pInfo->refCount--;
-                }
+
+    if (pCBInfo && (pCBInfo->pMemObjList.size() > 0)) {
+        list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
+        for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
+            MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
+            if (pInfo) {
+                pInfo->pCommandBufferBindings.remove(cb);
+                pInfo->refCount--;
             }
         }
         pCBInfo->pMemObjList.clear();
@@ -475,7 +535,9 @@ static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data,
 }
 
 // Delete the entire CB list
-static VkBool32 delete_cmd_buf_info_list(layer_data* my_data)
+static VkBool32
+delete_cmd_buf_info_list(
+    layer_data* my_data)
 {
     VkBool32 skipCall = VK_FALSE;
     for (unordered_map<VkCommandBuffer, MT_CB_INFO>::iterator ii=my_data->cbMap.begin(); ii!=my_data->cbMap.end(); ++ii) {
@@ -486,8 +548,10 @@ static VkBool32 delete_cmd_buf_info_list(layer_data* my_data)
 }
 
 // For given MemObjInfo, report Obj & CB bindings
-static VkBool32 reportMemReferencesAndCleanUp(layer_data* my_data,
-    MT_MEM_OBJ_INFO* pMemObjInfo)
+static VkBool32
+reportMemReferencesAndCleanUp(
+    layer_data      *my_data,
+    MT_MEM_OBJ_INFO *pMemObjInfo)
 {
     VkBool32 skipCall = VK_FALSE;
     size_t cmdBufRefCount = pMemObjInfo->pCommandBufferBindings.size();
@@ -520,9 +584,11 @@ static VkBool32 reportMemReferencesAndCleanUp(layer_data* my_data,
     return skipCall;
 }
 
-static VkBool32 deleteMemObjInfo(layer_data* my_data,
-    void* object,
-    VkDeviceMemory mem)
+static VkBool32
+deleteMemObjInfo(
+    layer_data     *my_data,
+    void           *object,
+    VkDeviceMemory  mem)
 {
     VkBool32 skipCall = VK_FALSE;
     auto item = my_data->memObjMap.find(mem);
@@ -536,43 +602,42 @@ static VkBool32 deleteMemObjInfo(layer_data* my_data,
 }
 
 // Check if fence for given CB is completed
-static VkBool32 checkCBCompleted(layer_data* my_data,
+static VkBool32
+checkCBCompleted(
+    layer_data            *my_data,
     const VkCommandBuffer  cb,
-    VkBool32          *complete)
+    VkBool32              *complete)
 {
-    VkBool32 skipCall = VK_FALSE;
-    *complete = VK_TRUE;
-    MT_CB_INFO* pCBInfo = get_cmd_buf_info(my_data, cb);
-    if (!pCBInfo) {
-        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
-                        MEMTRACK_INVALID_CB, "MEM", "Unable to find global CB info %p to check for completion", cb);
-        *complete = VK_FALSE;
-    } else if (pCBInfo->lastSubmittedQueue != NULL) {
-        VkQueue queue = pCBInfo->lastSubmittedQueue;
-        MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
-        if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
-            log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
-                MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
-                (uint64_t) pCBInfo->lastSubmittedFence, cb);
-            *complete = VK_FALSE;
+    MT_CB_INFO *pCBInfo  = get_cmd_buf_info(my_data, cb);
+    VkBool32    skipCall = VK_FALSE;
+    *complete            = VK_TRUE;
+
+    if (pCBInfo) {
+        if (pCBInfo->lastSubmittedQueue != NULL) {
+            VkQueue queue = pCBInfo->lastSubmittedQueue;
+            MT_QUEUE_INFO *pQueueInfo = &my_data->queueMap[queue];
+            if (pCBInfo->fenceId > pQueueInfo->lastRetiredId) {
+                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)cb, 0,
+                               MEMTRACK_NONE, "MEM", "fence %#" PRIxLEAST64 " for CB %p has not been checked for completion",
+                               (uint64_t) pCBInfo->lastSubmittedFence, cb);
+                *complete = VK_FALSE;
+            }
         }
     }
     return skipCall;
 }
 
-static VkBool32 freeMemObjInfo(layer_data* my_data,
-    void*          object,
-    VkDeviceMemory mem,
-    VkBool32       internal)
+static VkBool32
+freeMemObjInfo(
+    layer_data     *my_data,
+    void*           object,
+    VkDeviceMemory  mem,
+    VkBool32        internal)
 {
     VkBool32 skipCall = VK_FALSE;
     // Parse global list to find info w/ mem
     MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
-    if (!pInfo) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                       "Couldn't find mem info object for %#" PRIxLEAST64 "\n    Was %#" PRIxLEAST64 " never allocated or previously freed?",
-                       (uint64_t) mem, (uint64_t) mem);
-    } else {
+    if (pInfo) {
         if (pInfo->allocInfo.allocationSize == 0 && !internal) {
             skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
                             "Attempting to free memory associated with a Persistent Image, %#" PRIxLEAST64 ", "
@@ -608,7 +673,10 @@ static VkBool32 freeMemObjInfo(layer_data* my_data,
     return skipCall;
 }
 
-static const char *object_type_to_string(VkDbgObjectType type) {
+static const char*
+object_type_to_string(
+    VkDbgObjectType type)
+{
     switch (type)
     {
         case VK_OBJECT_TYPE_IMAGE:
@@ -630,18 +698,19 @@ static const char *object_type_to_string(VkDbgObjectType type) {
 // 2. Decrement refCount for MemObjInfo
 // 3. Clear mem binding for image/buffer by setting its handle to 0
 // TODO : This only applied to Buffer, Image, and Swapchain objects now, how should it be updated/customized?
-static VkBool32 clear_object_binding(layer_data* my_data, void* dispObj, uint64_t handle, VkDbgObjectType type)
+static VkBool32
+clear_object_binding(
+    layer_data      *my_data,
+    void            *dispObj,
+    uint64_t         handle,
+    VkDbgObjectType  type)
 {
     // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
     VkBool32 skipCall = VK_FALSE;
     MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
     if (pObjBindInfo) {
         MT_MEM_OBJ_INFO* pMemObjInfo = get_mem_obj_info(my_data, pObjBindInfo->mem);
-        if (!pMemObjInfo) {
-            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_WARN_BIT, type, handle, 0, MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS, "MEM",
-                           "Attempting to clear mem binding on %s obj %#" PRIxLEAST64 " but it has no binding.",
-                           object_type_to_string(type), handle);
-        } else {
+        if (pMemObjInfo) {
             // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the memObj's refcount
             // and set the objects memory binding pointer to NULL.
             VkBool32 clearSucceeded = VK_FALSE;
@@ -672,8 +741,10 @@ static VkBool32 clear_object_binding(layer_data* my_data, void* dispObj, uint64_
 //  Add reference off of objInfo
 //  device is required for error logging, need a dispatchable
 //  object for that.
-static VkBool32 set_mem_binding(layer_data* my_data,
-    void*            dispatch_object,
+static VkBool32
+set_mem_binding(
+    layer_data      *my_data,
+    void            *dispatch_object,
     VkDeviceMemory   mem,
     uint64_t         handle,
     VkDbgObjectType  type,
@@ -693,11 +764,7 @@ static VkBool32 set_mem_binding(layer_data* my_data,
         } else {
             // non-null case so should have real mem obj
             MT_MEM_OBJ_INFO* pMemInfo = get_mem_obj_info(my_data, mem);
-            if (!pMemInfo) {
-                skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem,
-                                0, MEMTRACK_INVALID_MEM_OBJ, "MEM", "In %s, while trying to bind mem for %s obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64,
-                                object_type_to_string(type), apiName, handle, (uint64_t) mem);
-            } else {
+            if (pMemInfo) {
                 // TODO : Need to track mem binding for obj and report conflict here
                 MT_MEM_OBJ_INFO* pPrevBinding = get_mem_obj_info(my_data, pObjBindInfo->mem);
                 if (pPrevBinding != NULL) {
@@ -734,8 +801,10 @@ static VkBool32 set_mem_binding(layer_data* my_data,
 //  Add reference from objectInfo to memoryInfo
 //  Add reference off of object's binding info
 // Return VK_TRUE if addition is successful, VK_FALSE otherwise
-static VkBool32 set_sparse_mem_binding(layer_data* my_data,
-    void*            dispObject,
+static VkBool32
+set_sparse_mem_binding(
+    layer_data      *my_data,
+    void            *dispObject,
     VkDeviceMemory   mem,
     uint64_t         handle,
     VkDbgObjectType  type,
@@ -753,10 +822,7 @@ static VkBool32 set_sparse_mem_binding(layer_data* my_data,
         }
         // non-null case so should have real mem obj
         MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, mem);
-        if (!pInfo) {
-            skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_MEM_OBJ, "MEM",
-                            "In %s, While trying to bind mem for obj %#" PRIxLEAST64 ", couldn't find info for mem obj %#" PRIxLEAST64, apiName, handle, (uint64_t) mem);
-        } else {
+        if (pInfo) {
             // Search for object in memory object's binding list
             VkBool32 found  = VK_FALSE;
             if (pInfo->pObjBindings.size() > 0) {
@@ -783,9 +849,10 @@ static VkBool32 set_sparse_mem_binding(layer_data* my_data,
     return skipCall;
 }
 
-template <typename T>
-void print_object_map_members(layer_data* my_data,
-    void*            dispObj,
+template <typename T> void
+print_object_map_members(
+    layer_data      *my_data,
+    void            *dispObj,
     T const&         objectName,
     VkDbgObjectType  objectType,
     const char      *objectStr)
@@ -797,8 +864,13 @@ void print_object_map_members(layer_data* my_data,
 }
 
 // For given Object, get 'mem' obj that it's bound to or NULL if no binding
-static VkBool32 get_mem_binding_from_object(layer_data* my_data,
-    void* dispObj, const uint64_t handle, const VkDbgObjectType type, VkDeviceMemory *mem)
+static VkBool32
+get_mem_binding_from_object(
+    layer_data            *my_data,
+    void                  *dispObj,
+    const uint64_t         handle,
+    const VkDbgObjectType  type,
+    VkDeviceMemory        *mem)
 {
     VkBool32 skipCall = VK_FALSE;
     *mem = VK_NULL_HANDLE;
@@ -819,8 +891,10 @@ static VkBool32 get_mem_binding_from_object(layer_data* my_data,
 }
 
 // Print details of MemObjInfo list
-static void print_mem_list(layer_data* my_data,
-    void* dispObj)
+static void
+print_mem_list(
+    layer_data *my_data,
+    void       *dispObj)
 {
     MT_MEM_OBJ_INFO* pInfo = NULL;
 
@@ -877,8 +951,10 @@ static void print_mem_list(layer_data* my_data,
     }
 }
 
-static void printCBList(layer_data* my_data,
-    void* dispObj)
+static void
+printCBList(
+    layer_data *my_data,
+    void       *dispObj)
 {
     MT_CB_INFO* pCBInfo = NULL;
 
@@ -912,7 +988,8 @@ static void printCBList(layer_data* my_data,
     }
 }
 
-static void init_mem_tracker(
+static void
+init_mem_tracker(
     layer_data *my_data)
 {
     uint32_t report_flags = 0;
@@ -948,7 +1025,9 @@ static void init_mem_tracker(
 }
 
 // hook DestroyInstance to remove tableInstanceMap entry
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
+    VkInstance                   instance,
+    const VkAllocationCallbacks *pAllocator)
 {
     // Grab the key before the instance is destroyed.
     dispatch_key key = get_dispatch_key(instance);
@@ -974,9 +1053,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
-    const VkInstanceCreateInfo*                 pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
-    VkInstance*                                 pInstance)
+    const VkInstanceCreateInfo  *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkInstance                  *pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -994,7 +1073,10 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     return result;
 }
 
-static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
+static void
+createDeviceRegisterExtensions(
+    const VkDeviceCreateInfo *pCreateInfo,
+    VkDevice                  device)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp = my_device_data->device_dispatch_table;
@@ -1015,10 +1097,10 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
-    VkPhysicalDevice          gpu,
-    const VkDeviceCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkDevice                 *pDevice)
+    VkPhysicalDevice             gpu,
+    const VkDeviceCreateInfo    *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDevice                    *pDevice)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkLayerDispatchTable *pDeviceTable = my_device_data->device_dispatch_table;
@@ -1032,8 +1114,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(
-    VkDevice device,
-    const VkAllocationCallbacks* pAllocator)
+    VkDevice                     device,
+    const VkAllocationCallbacks *pAllocator)
 {
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_device_data = get_my_data_ptr(key, layer_data_map);
@@ -1094,17 +1176,17 @@ static const VkLayerProperties mtGlobalLayers[] = {
 };
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
-        const char *pLayerName,
-        uint32_t *pCount,
-        VkExtensionProperties* pProperties)
+        const char            *pLayerName,
+        uint32_t              *pCount,
+        VkExtensionProperties *pProperties)
 {
     /* Mem tracker does not have any global extensions */
     return util_GetExtensionProperties(0, NULL, pCount, pProperties);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
-        uint32_t *pCount,
-        VkLayerProperties*    pProperties)
+        uint32_t          *pCount,
+        VkLayerProperties *pProperties)
 {
     return util_GetLayerProperties(ARRAY_SIZE(mtGlobalLayers),
                                    mtGlobalLayers,
@@ -1113,19 +1195,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerPropertie
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
         VkPhysicalDevice                            physicalDevice,
-        const char*                                 pLayerName,
-        uint32_t*                                   pCount,
-        VkExtensionProperties*                      pProperties)
+        const char                                 *pLayerName,
+        uint32_t                                   *pCount,
+        VkExtensionProperties                      *pProperties)
 {
     /* Mem tracker does not have any physical device extensions */
     if (pLayerName == NULL) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
         VkLayerInstanceDispatchTable *pInstanceTable = my_data->instance_dispatch_table;
         return pInstanceTable->EnumerateDeviceExtensionProperties(
-                                                    physicalDevice,
-                                                    NULL,
-                                                    pCount,
-                                                    pProperties);
+            physicalDevice, NULL, pCount, pProperties);
     } else {
         return util_GetExtensionProperties(0, NULL, pCount, pProperties);
     }
@@ -1133,8 +1212,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionPropert
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
         VkPhysicalDevice                            physicalDevice,
-        uint32_t*                                   pCount,
-        VkLayerProperties*                          pProperties)
+        uint32_t                                   *pCount,
+        VkLayerProperties                          *pProperties)
 {
     /* Mem tracker's physical device layers are the same as global */
     return util_GetLayerProperties(ARRAY_SIZE(mtGlobalLayers), mtGlobalLayers,
@@ -1145,7 +1224,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
     VkDevice  device,
     uint32_t  queueNodeIndex,
     uint32_t  queueIndex,
-    VkQueue   *pQueue)
+    VkQueue  *pQueue)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     my_data->device_dispatch_table->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
@@ -1175,9 +1254,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i = 0; i < submit->commandBufferCount; i++) {
             pCBInfo = get_cmd_buf_info(my_data, submit->pCommandBuffers[i]);
-            pCBInfo->fenceId = fenceId;
-            pCBInfo->lastSubmittedFence = fence;
-            pCBInfo->lastSubmittedQueue = queue;
+            if (pCBInfo) {
+                pCBInfo->fenceId = fenceId;
+                pCBInfo->lastSubmittedFence = fence;
+                pCBInfo->lastSubmittedQueue = queue;
+            }
         }
 
         for (uint32_t i = 0; i < submit->waitSemaphoreCount; i++) {
@@ -1229,10 +1310,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
-    VkDevice                 device,
-    const VkMemoryAllocateInfo *pAllocateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkDeviceMemory          *pMemory)
+    VkDevice                     device,
+    const VkMemoryAllocateInfo  *pAllocateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDeviceMemory              *pMemory)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->AllocateMemory(device, pAllocateInfo, pAllocator, pMemory);
@@ -1245,9 +1326,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
-    VkDevice       device,
-    VkDeviceMemory mem,
-    const VkAllocationCallbacks* pAllocator)
+    VkDevice                     device,
+    VkDeviceMemory               mem,
+    const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
@@ -1262,7 +1343,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     my_data->device_dispatch_table->FreeMemory(device, mem, pAllocator);
 }
 
-VkBool32 validateMemRange(
+VkBool32
+validateMemRange(
     layer_data     *my_data,
     VkDeviceMemory  mem,
     VkDeviceSize    offset,
@@ -1293,7 +1375,8 @@ VkBool32 validateMemRange(
     return skipCall;
 }
 
-void storeMemRanges(
+void
+storeMemRanges(
     layer_data     *my_data,
     VkDeviceMemory  mem,
     VkDeviceSize    offset,
@@ -1330,7 +1413,8 @@ VkBool32 deleteMemRanges(
 
 static char NoncoherentMemoryFillValue = 0xb;
 
-void initializeAndTrackMemory(
+void
+initializeAndTrackMemory(
     layer_data      *my_data,
     VkDeviceMemory   mem,
     VkDeviceSize     size,
@@ -1364,8 +1448,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     loader_platform_thread_lock_mutex(&globalLock);
 
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
-    if ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
-         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0) {
+    if (pMemObj && ((memProps.memoryTypes[pMemObj->allocInfo.memoryTypeIndex].propertyFlags &
+         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0)) {
         skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) mem, 0, MEMTRACK_INVALID_STATE, "MEM",
                        "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set: mem obj %#" PRIxLEAST64, (uint64_t) mem);
     }
@@ -1394,7 +1478,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkUnmapMemory(
     }
 }
 
-VkBool32 validateMemoryIsMapped(layer_data *my_data, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges) {
+VkBool32
+validateMemoryIsMapped(
+    layer_data                *my_data,
+    uint32_t                   memRangeCount,
+    const VkMappedMemoryRange *pMemRanges)
+{
     VkBool32 skipCall = VK_FALSE;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
@@ -1409,7 +1498,12 @@ VkBool32 validateMemoryIsMapped(layer_data *my_data, uint32_t memRangeCount, con
     return skipCall;
 }
 
-VkBool32 validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges) {
+VkBool32
+validateAndCopyNoncoherentMemoryToDriver(
+    layer_data                *my_data,
+    uint32_t                   memRangeCount,
+    const VkMappedMemoryRange *pMemRanges)
+{
     VkBool32 skipCall = VK_FALSE;
     for (uint32_t i = 0; i < memRangeCount; ++i) {
         auto mem_element = my_data->memObjMap.find(pMemRanges[i].memory);
@@ -1438,9 +1532,9 @@ VkBool32 validateAndCopyNoncoherentMemoryToDriver(layer_data *my_data, uint32_t 
 }
 
 VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
-    VkDevice                                    device,
-    uint32_t                                    memRangeCount,
-    const VkMappedMemoryRange*                  pMemRanges)
+    VkDevice                   device,
+    uint32_t                   memRangeCount,
+    const VkMappedMemoryRange *pMemRanges)
 {
     VkResult    result    = VK_ERROR_VALIDATION_FAILED;
     VkBool32    skipCall  = VK_FALSE;
@@ -1455,9 +1549,9 @@ VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
 }
 
 VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
-    VkDevice                                    device,
-    uint32_t                                    memRangeCount,
-    const VkMappedMemoryRange*                  pMemRanges)
+    VkDevice                   device,
+    uint32_t                   memRangeCount,
+    const VkMappedMemoryRange *pMemRanges)
 {
     VkResult    result    = VK_ERROR_VALIDATION_FAILED;
     VkBool32    skipCall = VK_FALSE;
@@ -1470,7 +1564,10 @@ VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(
+    VkDevice                     device,
+    VkFence                      fence,
+    const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1483,7 +1580,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFen
     my_data->device_dispatch_table->DestroyFence(device, fence, pAllocator);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(
+    VkDevice                     device,
+    VkBuffer                     buffer,
+    const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1499,7 +1599,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBu
     }
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkImage image, const VkAllocationCallbacks* pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
+    VkDevice                     device,
+    VkImage                      image,
+    const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1515,11 +1618,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(VkDevice device, VkIma
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
-    VkDevice                                    device,
-    VkBuffer                                    buffer,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memoryOffset)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
+    VkDevice       device,
+    VkBuffer       buffer,
+    VkDeviceMemory mem,
+    VkDeviceSize   memoryOffset)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
@@ -1535,11 +1638,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     return result;
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
-    VkDevice                                    device,
-    VkImage                                     image,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memoryOffset)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
+    VkDevice       device,
+    VkImage        image,
+    VkDeviceMemory mem,
+    VkDeviceSize   memoryOffset)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
@@ -1555,10 +1658,10 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     return result;
 }
 
-VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
-    VkDevice                                    device,
-    VkBuffer                                    buffer,
-    VkMemoryRequirements*                       pMemoryRequirements)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
+    VkDevice              device,
+    VkBuffer              buffer,
+    VkMemoryRequirements *pMemoryRequirements)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
@@ -1566,10 +1669,10 @@ VKAPI_ATTR void VKAPI_CALL vkGetBufferMemoryRequirements(
     my_data->device_dispatch_table->GetBufferMemoryRequirements(device, buffer, pMemoryRequirements);
 }
 
-VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
-    VkDevice                                    device,
-    VkImage                                     image,
-    VkMemoryRequirements*                       pMemoryRequirements)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
+    VkDevice              device,
+    VkImage               image,
+    VkMemoryRequirements *pMemoryRequirements)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // TODO : What to track here?
@@ -1578,10 +1681,10 @@ VKAPI_ATTR void VKAPI_CALL vkGetImageMemoryRequirements(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
-    VkQueue                                     queue,
-    uint32_t                                    bindInfoCount,
-    const VkBindSparseInfo*                     pBindInfo,
-    VkFence                                     fence)
+    VkQueue                 queue,
+    uint32_t                bindInfoCount,
+    const VkBindSparseInfo *pBindInfo,
+    VkFence                 fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     VkResult result = VK_ERROR_VALIDATION_FAILED;
@@ -1629,10 +1732,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
-    VkDevice                 device,
-    const VkFenceCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkFence                 *pFence)
+    VkDevice                     device,
+    const VkFenceCreateInfo     *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkFence                     *pFence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateFence(device, pCreateInfo, pAllocator, pFence);
@@ -1647,9 +1750,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
-    VkDevice  device,
-    uint32_t  fenceCount,
-    const VkFence  *pFences)
+    VkDevice       device,
+    uint32_t       fenceCount,
+    const VkFence *pFences)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result   = VK_ERROR_VALIDATION_FAILED;
@@ -1678,7 +1781,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     return result;
 }
 
-static inline VkBool32 verifyFenceStatus(VkDevice device, VkFence fence, const char* apiCall)
+static inline VkBool32
+verifyFenceStatus(
+    VkDevice    device,
+    VkFence     fence,
+    const char *apiCall)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
@@ -1771,10 +1878,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDeviceWaitIdle(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
-    VkDevice                  device,
-    const VkBufferCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkBuffer                 *pBuffer)
+    VkDevice                     device,
+    const VkBufferCreateInfo    *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkBuffer                    *pBuffer)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
@@ -1787,10 +1894,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
-    VkDevice                 device,
-    const VkImageCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkImage                 *pImage)
+    VkDevice                     device,
+    const VkImageCreateInfo     *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkImage                     *pImage)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateImage(device, pCreateInfo, pAllocator, pImage);
@@ -1805,7 +1912,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
     VkDevice                     device,
     const VkImageViewCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
+    const VkAllocationCallbacks *pAllocator,
     VkImageView                 *pView)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1824,7 +1931,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateBufferView(
     VkDevice                      device,
     const VkBufferViewCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
+    const VkAllocationCallbacks  *pAllocator,
     VkBufferView                 *pView)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1882,10 +1989,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
-    VkDevice                                    device,
-    const VkCommandPoolCreateInfo*              pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkCommandPool*                              pCommandPool)
+    VkDevice                       device,
+    const VkCommandPoolCreateInfo *pCreateInfo,
+    const VkAllocationCallbacks   *pAllocator,
+    VkCommandPool                 *pCommandPool)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
@@ -1900,9 +2007,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
-    VkDevice                                    device,
-    VkCommandPool                               commandPool,
-    const VkAllocationCallbacks*                pAllocator)
+    VkDevice                     device,
+    VkCommandPool                commandPool,
+    const VkAllocationCallbacks *pAllocator)
 {
     VkBool32 commandBufferComplete = VK_FALSE;
     VkBool32 skipCall              = VK_FALSE;
@@ -1936,9 +2043,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
-    VkDevice                                    device,
-    VkCommandPool                               commandPool,
-    VkCommandPoolResetFlags                     flags)
+    VkDevice                device,
+    VkCommandPool           commandPool,
+    VkCommandPoolResetFlags flags)
 {
     layer_data *my_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32    commandBufferComplete = VK_FALSE;
@@ -2008,7 +2115,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
-    VkCommandBuffer commandBuffer,
+    VkCommandBuffer           commandBuffer,
     VkCommandBufferResetFlags flags)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -2049,9 +2156,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
         MT_CB_INFO *pCBInfo = get_cmd_buf_info(my_data, commandBuffer);
         if (pCBInfo) {
             pCBInfo->pipelines[pipelineBindPoint] = pipeline;
-        } else {
-                    "Attempt to bind Pipeline %p to non-existant command buffer %p!", (void*)pipeline, commandBuffer);
-            layerCbMsg(VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, commandBuffer, 0, MEMTRACK_INVALID_CB, (char *) "DS", (char *) str);
         }
     }
     else {
@@ -2060,174 +2164,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     }
 #endif
     my_data->device_dispatch_table->CmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
-    VkCommandBuffer                     commandBuffer,
-    uint32_t                            viewportCount,
-    const VkViewport*                   pViewports)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetViewport(commandBuffer, viewportCount, pViewports);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
-    VkCommandBuffer                     commandBuffer,
-    uint32_t                            scissorCount,
-    const VkRect2D*                     pScissors)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetScissor(commandBuffer, scissorCount, pScissors);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetLineWidth(commandBuffer, lineWidth);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(
-    VkCommandBuffer                     commandBuffer,
-    float                               depthBiasConstantFactor,
-    float                               depthBiasClamp,
-    float                               depthBiasSlopeFactor)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetDepthBias(commandBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(
-     VkCommandBuffer                        commandBuffer,
-     const float                            blendConstants[4])
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetBlendConstants(commandBuffer, blendConstants);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
-    VkCommandBuffer                     commandBuffer,
-    float                               minDepthBounds,
-    float                               maxDepthBounds)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetDepthBounds(commandBuffer, minDepthBounds, maxDepthBounds);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(
-    VkCommandBuffer                     commandBuffer,
-    VkStencilFaceFlags                  faceMask,
-    uint32_t                            compareMask)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilCompareMask(commandBuffer, faceMask, compareMask);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(
-    VkCommandBuffer                     commandBuffer,
-    VkStencilFaceFlags                  faceMask,
-    uint32_t                            writeMask)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilWriteMask(commandBuffer, faceMask, writeMask);
-    }
-}
-
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(
-    VkCommandBuffer                     commandBuffer,
-    VkStencilFaceFlags                  faceMask,
-    uint32_t                            reference)
-{
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkBool32 skipCall = VK_FALSE;
-    loader_platform_thread_lock_mutex(&globalLock);
-    MT_CB_INFO *pCmdBuf = get_cmd_buf_info(my_data, commandBuffer);
-    if (!pCmdBuf) {
-        skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)commandBuffer, 0,
-                       MEMTRACK_INVALID_CB, "MEM", "Unable to find command buffer object %p, was it ever created?", (void*)commandBuffer);
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    if (VK_FALSE == skipCall) {
-        my_data->device_dispatch_table->CmdSetStencilReference(commandBuffer, faceMask, reference);
-    }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
@@ -2259,10 +2195,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
-    VkCommandBuffer  commandBuffer,
-    VkBuffer     buffer,
-    VkDeviceSize offset,
-    VkIndexType  indexType)
+    VkCommandBuffer commandBuffer,
+    VkBuffer        buffer,
+    VkDeviceSize    offset,
+    VkIndexType     indexType)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
@@ -2270,11 +2206,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
-    VkCommandBuffer   commandBuffer,
-     VkBuffer     buffer,
-     VkDeviceSize offset,
-     uint32_t     count,
-     uint32_t     stride)
+    VkCommandBuffer commandBuffer,
+     VkBuffer       buffer,
+     VkDeviceSize   offset,
+     uint32_t       count,
+     uint32_t       stride)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2288,11 +2224,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndirect(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
-    VkCommandBuffer  commandBuffer,
-    VkBuffer     buffer,
-    VkDeviceSize offset,
-    uint32_t     count,
-    uint32_t     stride)
+    VkCommandBuffer commandBuffer,
+    VkBuffer        buffer,
+    VkDeviceSize    offset,
+    uint32_t        count,
+    uint32_t        stride)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2306,9 +2242,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDrawIndexedIndirect(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
-    VkCommandBuffer  commandBuffer,
-    VkBuffer     buffer,
-    VkDeviceSize offset)
+    VkCommandBuffer commandBuffer,
+    VkBuffer        buffer,
+    VkDeviceSize    offset)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2346,14 +2282,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
-    VkCommandBuffer                             commandBuffer,
-    VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
-    uint32_t                                    queryCount,
-    VkBuffer                                    dstBuffer,
-    VkDeviceSize                                dstOffset,
-    VkDeviceSize                                destStride,
-    VkQueryResultFlags                          flags)
+    VkCommandBuffer    commandBuffer,
+    VkQueryPool        queryPool,
+    uint32_t           startQuery,
+    uint32_t           queryCount,
+    VkBuffer           dstBuffer,
+    VkDeviceSize       dstOffset,
+    VkDeviceSize       destStride,
+    VkQueryResultFlags flags)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2397,14 +2333,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
-    VkCommandBuffer        commandBuffer,
+    VkCommandBuffer    commandBuffer,
     VkImage            srcImage,
     VkImageLayout      srcImageLayout,
     VkImage            dstImage,
     VkImageLayout      dstImageLayout,
     uint32_t           regionCount,
     const VkImageBlit *pRegions,
-    VkFilter        filter)
+    VkFilter           filter)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2425,7 +2361,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
-    VkCommandBuffer              commandBuffer,
+    VkCommandBuffer          commandBuffer,
     VkBuffer                 srcBuffer,
     VkImage                  dstImage,
     VkImageLayout            dstImageLayout,
@@ -2451,7 +2387,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
-    VkCommandBuffer              commandBuffer,
+    VkCommandBuffer          commandBuffer,
     VkImage                  srcImage,
     VkImageLayout            srcImageLayout,
     VkBuffer                 dstBuffer,
@@ -2477,11 +2413,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
-    VkCommandBuffer     commandBuffer,
-    VkBuffer        dstBuffer,
-    VkDeviceSize    dstOffset,
-    VkDeviceSize    dataSize,
-    const uint32_t *pData)
+    VkCommandBuffer  commandBuffer,
+    VkBuffer         dstBuffer,
+    VkDeviceSize     dstOffset,
+    VkDeviceSize     dataSize,
+    const uint32_t  *pData)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2498,11 +2434,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
-    VkCommandBuffer  commandBuffer,
-    VkBuffer     dstBuffer,
-    VkDeviceSize dstOffset,
-    VkDeviceSize size,
-    uint32_t     data)
+    VkCommandBuffer commandBuffer,
+    VkBuffer        dstBuffer,
+    VkDeviceSize    dstOffset,
+    VkDeviceSize    size,
+    uint32_t        data)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
@@ -2519,7 +2455,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
-    VkCommandBuffer                    commandBuffer,
+    VkCommandBuffer                commandBuffer,
     VkImage                        image,
     VkImageLayout                  imageLayout,
     const VkClearColorValue       *pColor,
@@ -2540,12 +2476,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
-    VkCommandBuffer                         commandBuffer,
-    VkImage                             image,
-    VkImageLayout                       imageLayout,
-    const VkClearDepthStencilValue*     pDepthStencil,
-    uint32_t                            rangeCount,
-    const VkImageSubresourceRange*      pRanges)
+    VkCommandBuffer                 commandBuffer,
+    VkImage                         image,
+    VkImageLayout                   imageLayout,
+    const VkClearDepthStencilValue *pDepthStencil,
+    uint32_t                        rangeCount,
+    const VkImageSubresourceRange  *pRanges)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     // TODO : Verify memory is in VK_IMAGE_STATE_CLEAR state
@@ -2562,7 +2498,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
-    VkCommandBuffer           commandBuffer,
+    VkCommandBuffer       commandBuffer,
     VkImage               srcImage,
     VkImageLayout         srcImageLayout,
     VkImage               dstImage,
@@ -2587,9 +2523,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer commandBuffer,
-    VkQueryPool queryPool,
-    uint32_t    slot,
-    VkFlags     flags)
+    VkQueryPool     queryPool,
+    uint32_t        slot,
+    VkFlags         flags)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     my_data->device_dispatch_table->CmdBeginQuery(commandBuffer, queryPool, slot, flags);
@@ -2597,8 +2533,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer commandBuffer,
-    VkQueryPool queryPool,
-    uint32_t    slot)
+    VkQueryPool     queryPool,
+    uint32_t        slot)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     my_data->device_dispatch_table->CmdEndQuery(commandBuffer, queryPool, slot);
@@ -2606,20 +2542,20 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer commandBuffer,
-    VkQueryPool queryPool,
-    uint32_t    startQuery,
-    uint32_t    queryCount)
+    VkQueryPool     queryPool,
+    uint32_t        startQuery,
+    uint32_t        queryCount)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     my_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
-        VkInstance instance,
-        VkFlags msgFlags,
-        const PFN_vkDbgMsgCallback pfnMsgCallback,
-        void* pUserData,
-        VkDbgMsgCallback* pMsgCallback)
+    VkInstance                  instance,
+    VkFlags                     msgFlags,
+    const PFN_vkDbgMsgCallback  pfnMsgCallback,
+    void                       *pUserData,
+    VkDbgMsgCallback           *pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -2631,7 +2567,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
-        VkInstance instance,
+        VkInstance       instance,
         VkDbgMsgCallback msgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
@@ -2660,7 +2596,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
-    VkDevice                        device,
+    VkDevice       device,
     VkSwapchainKHR swapchain)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2689,10 +2625,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
-    VkDevice                device,
-    VkSwapchainKHR          swapchain,
-    uint32_t*               pCount,
-    VkImage*                pSwapchainImages)
+    VkDevice        device,
+    VkSwapchainKHR  swapchain,
+    uint32_t       *pCount,
+    VkImage        *pSwapchainImages)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
@@ -2758,7 +2694,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     VkDevice                     device,
     const VkSemaphoreCreateInfo *pCreateInfo,
-    const VkAllocationCallbacks*      pAllocator,
+    const VkAllocationCallbacks *pAllocator,
     VkSemaphore                 *pSemaphore)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2772,9 +2708,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
-    VkDevice    device,
-    VkSemaphore semaphore,
-    const VkAllocationCallbacks* pAllocator)
+    VkDevice                     device,
+    VkSemaphore                  semaphore,
+    const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2787,8 +2723,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
-    VkDevice         dev,
-    const char      *funcName)
+    VkDevice    dev,
+    const char *funcName)
 {
     if (dev == NULL)
         return NULL;
@@ -2878,24 +2814,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkResetCommandBuffer;
     if (!strcmp(funcName, "vkCmdBindPipeline"))
         return (PFN_vkVoidFunction) vkCmdBindPipeline;
-    if (!strcmp(funcName, "vkCmdSetViewport"))
-        return (PFN_vkVoidFunction) vkCmdSetViewport;
-    if (!strcmp(funcName, "vkCmdSetScissor"))
-        return (PFN_vkVoidFunction) vkCmdSetScissor;
-    if (!strcmp(funcName, "vkCmdSetLineWidth"))
-        return (PFN_vkVoidFunction) vkCmdSetLineWidth;
-    if (!strcmp(funcName, "vkCmdSetDepthBias"))
-        return (PFN_vkVoidFunction) vkCmdSetDepthBias;
-    if (!strcmp(funcName, "vkCmdSetBlendConstants"))
-        return (PFN_vkVoidFunction) vkCmdSetBlendConstants;
-    if (!strcmp(funcName, "vkCmdSetDepthBounds"))
-        return (PFN_vkVoidFunction) vkCmdSetDepthBounds;
-    if (!strcmp(funcName, "vkCmdSetStencilCompareMask"))
-        return (PFN_vkVoidFunction) vkCmdSetStencilCompareMask;
-    if (!strcmp(funcName, "vkCmdSetStencilWriteMask"))
-        return (PFN_vkVoidFunction) vkCmdSetStencilWriteMask;
-    if (!strcmp(funcName, "vkCmdSetStencilReference"))
-        return (PFN_vkVoidFunction) vkCmdSetStencilReference;
     if (!strcmp(funcName, "vkCmdBindDescriptorSets"))
         return (PFN_vkVoidFunction) vkCmdBindDescriptorSets;
     if (!strcmp(funcName, "vkCmdBindVertexBuffers"))
@@ -2957,8 +2875,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(
-    VkInstance       instance,
-    const char       *funcName)
+    VkInstance  instance,
+    const char *funcName)
 {
     PFN_vkVoidFunction fptr;
     if (instance == NULL)
