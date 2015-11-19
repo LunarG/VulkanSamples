@@ -258,16 +258,35 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
 VkResult init_device(struct sample_info &info)
 {
     VkResult res;
+    VkDeviceQueueCreateInfo queue_info = {};
+
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
+    assert(info.queue_count >= 1);
+
+    info.queue_props.resize(info.queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
+    assert(info.queue_count >= 1);
+
+    bool found = false;
+    for (int i = 0; i < info.queue_count; i++)
+    {
+        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            queue_info.queueFamilyIndex = i;
+            found = true;
+            break;
+        }
+    }
+    assert(found);
+    assert(info.queue_count >= 1);
 
     /* This is as good a place as any to do this */
     vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
     vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
 
     float queue_priorities[1] = { 0.0 };
-    VkDeviceQueueCreateInfo queue_info = {};
     queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info.pNext = NULL;
-    queue_info.queueFamilyIndex = 0;
     queue_info.queueCount = 1;
     queue_info.pQueuePriorities = queue_priorities;
 
@@ -631,13 +650,6 @@ void init_swapchain_extension(struct sample_info &info)
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(info.device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(info.device, QueuePresentKHR);
-
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(info.queue_count >= 1);
-
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(info.queue_count >= 1);
 
     // Construct the surface description:
     info.surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
