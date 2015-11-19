@@ -152,7 +152,7 @@ static VkResult x11_surface_create(struct intel_instance *instance,
     return VK_SUCCESS;
 }
 
-static void x11_surface_destroy(VkSurfaceKHR *surface)
+static void x11_surface_destroy(VkSurfaceKHR surface)
 {
     intel_free(surface, surface);
 }
@@ -970,9 +970,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkSurfaceKHR                             surface,
     const VkAllocationCallbacks*             pAllocator)
 {
-    const VkIcdSurfaceXcb *s = xcb_surface(surface);
-
-    x11_surface_destroy(s);
+    x11_surface_destroy(surface);
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
