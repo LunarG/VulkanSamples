@@ -463,8 +463,10 @@ static VkBool32 clear_cmd_buf_and_mem_references(layer_data* my_data,
             list<VkDeviceMemory> mem_obj_list = pCBInfo->pMemObjList;
             for (list<VkDeviceMemory>::iterator it=mem_obj_list.begin(); it!=mem_obj_list.end(); ++it) {
                 MT_MEM_OBJ_INFO* pInfo = get_mem_obj_info(my_data, *it);
-                pInfo->pCommandBufferBindings.remove(cb);
-                pInfo->refCount--;
+                if (pInfo) {
+                    pInfo->pCommandBufferBindings.remove(cb);
+                    pInfo->refCount--;
+                }
             }
         }
         pCBInfo->pMemObjList.clear();
