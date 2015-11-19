@@ -1534,7 +1534,6 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->activeRenderPass = 0;
         pCB->activeSubpass = 0;
         pCB->framebuffer = 0;
-        pCB->level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         pCB->boundDescriptorSets.clear();
         pCB->imageLayoutMap.clear();
         pCB->lastVtxBinding = MAX_BINDING;
@@ -2529,7 +2528,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
                 resetCB(dev_data, pCommandBuffer[i]);
                 pCB->commandBuffer = pCommandBuffer[i];
                 pCB->createInfo    = *pCreateInfo;
-                pCB->level         = pCreateInfo->level;
                 updateCBTracking(pCB);
             }
         }
@@ -2544,7 +2542,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
     // Validate command buffer level
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        if (pCB->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+        if (pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
             if (pBeginInfo->renderPass || pBeginInfo->framebuffer) {
                 // These should be NULL for a Primary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",

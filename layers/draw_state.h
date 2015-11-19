@@ -361,7 +361,6 @@ typedef struct _GLOBAL_CB_NODE {
     VkRenderPass                 activeRenderPass;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
-    VkCommandBufferLevel         level;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
 } GLOBAL_CB_NODE;
