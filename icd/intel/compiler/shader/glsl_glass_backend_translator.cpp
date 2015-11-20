@@ -106,10 +106,9 @@ namespace {
       if (ioRoot) {
          llvm::Type* proxyType;
          unsigned int proxyQualifiers;
-         int proxyOffset;
          int interpMode;
          if (! CrackIOMd(mdNode, metaType.name, metaType.ioKind, proxyType, metaType.typeLayout,
-                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn, metaType.binding, proxyQualifiers, proxyOffset)) {
+                         metaType.precision, metaType.location, metaType.mdSampler, metaType.mdAggregate, interpMode, metaType.builtIn, metaType.binding, proxyQualifiers)) {
             return false;
          }
 
