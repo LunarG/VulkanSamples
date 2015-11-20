@@ -2,6 +2,7 @@
  * Vulkan Samples Kit
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -376,7 +377,8 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     TBuiltInResource Resources;
     init_resources(Resources);
 
-    EShMessages messages = EShMsgDefault;
+    // Enable SPIR-V and Vulkan rules when parsing GLSL
+    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
     EShLanguage stage = FindLanguage(shader_type);
     glslang::TShader* shader = new glslang::TShader(stage);
