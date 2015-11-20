@@ -77,8 +77,13 @@ int main(int argc, char **argv)
     char sample_title[] = "Draw Textured Cube";
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+#ifdef _WIN32
+    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
+    info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
+    info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -131,6 +136,7 @@ int main(int argc, char **argv)
     res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
+                                      NULL,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -182,7 +188,7 @@ int main(int argc, char **argv)
     prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     prePresentBarrier.dstAccessMask = 0;
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR;
+    prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -227,8 +233,8 @@ int main(int argc, char **argv)
     present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present.pNext = NULL;
     present.swapchainCount = 1;
-    present.swapchains = &info.swap_chain;
-    present.imageIndices = &info.current_buffer;
+    present.pSwapchains = &info.swap_chain;
+    present.pImageIndices = &info.current_buffer;
 
     /* Make sure command buffer is finished before presenting */
     res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
