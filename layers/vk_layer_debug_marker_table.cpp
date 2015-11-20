@@ -24,7 +24,7 @@
  */
 #include <assert.h>
 #include <unordered_map>
-#include "vk_debug_marker_layer.h"
+#include "vulkan/vk_debug_marker_layer.h"
 std::unordered_map<void *, VkLayerDebugMarkerDispatchTable *> tableDebugMarkerMap;
 
 /* Various dispatchable objects will use the same underlying dispatch table if they
