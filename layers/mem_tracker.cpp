@@ -1850,11 +1850,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkResult    result  = my_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
 
     loader_platform_thread_lock_mutex(&globalLock);
-    if (VK_SUCCESS == result) { for (uint32_t i = 0; i < pCreateInfo->bufferCount; i++) { add_cmd_buf_info(my_data, pCreateInfo->commandPool, pCommandBuffer[i]);
+    if (VK_SUCCESS == result) {
+        for (uint32_t i = 0; i < pCreateInfo->bufferCount; i++) {
+            add_cmd_buf_info(my_data, pCreateInfo->commandPool, pCommandBuffer[i]);
         }
     }
-    printCBList(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
+    printCBList(my_data, device);
     return result;
 }
 
@@ -1922,6 +1924,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
         my_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
     }
 
+    loader_platform_thread_lock_mutex(&globalLock);
     auto item = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
     // Remove command buffers from command buffer map
     while (item != my_data->commandPoolMap[commandPool].pCommandBuffers.end()) {
@@ -1929,6 +1932,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(
         delete_cmd_buf_info(my_data, commandPool, *del_item);
     }
     my_data->commandPoolMap.erase(commandPool);
+    loader_platform_thread_unlock_mutex(&globalLock);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
@@ -1952,8 +1956,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
                                 MEMTRACK_RESET_CB_WHILE_IN_FLIGHT, "MEM", "Resetting CB %p before it has completed. You must check CB "
                                 "flag before calling vkResetCommandBuffer().", (*it));
         } else {
+            loader_platform_thread_lock_mutex(&globalLock);
             // Clear memory references at this point.
             skipCall |= clear_cmd_buf_and_mem_references(my_data, (*it));
+            loader_platform_thread_unlock_mutex(&globalLock);
         }
     }
 

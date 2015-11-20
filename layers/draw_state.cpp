@@ -1426,7 +1426,7 @@ static void clearDescriptorPool(layer_data* my_data, const VkDevice device, cons
 static GLOBAL_CB_NODE* getCBNode(layer_data* my_data, const VkCommandBuffer cb)
 {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (my_data->commandBufferMap.find(cb) == my_data->commandBufferMap.end()) {
+    if (my_data->commandBufferMap.count(cb) == 0) {
         loader_platform_thread_unlock_mutex(&globalLock);
         // TODO : How to pass cb as srcObj here?
         log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
@@ -1441,8 +1441,9 @@ static GLOBAL_CB_NODE* getCBNode(layer_data* my_data, const VkCommandBuffer cb)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteCommandBuffers(layer_data* my_data)
 {
-    if (my_data->commandBufferMap.size() <= 0)
+    if (my_data->commandBufferMap.size() <= 0) {
         return;
+    }
     for (auto ii=my_data->commandBufferMap.begin(); ii!=my_data->commandBufferMap.end(); ++ii) {
         vector<CMD_NODE*> cmd_node_list = (*ii).second->pCmds;
         while (!cmd_node_list.empty()) {
@@ -2091,6 +2092,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
     for (auto i = 0; i < count; i++) {
         // Delete CB information structure, and remove from commandBufferMap
         auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
+        loader_platform_thread_lock_mutex(&globalLock);
         if (cb != dev_data->commandBufferMap.end()) {
             delete (*cb).second;
             dev_data->commandBufferMap.erase(cb);
@@ -2098,6 +2100,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
 
         // Remove commandBuffer reference from commandPoolMap
         dev_data->commandPoolMap[commandPool].remove(pCommandBuffers[i]);
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
 
     dev_data->device_dispatch_table->FreeCommandBuffers(device, commandPool, count, pCommandBuffers);
@@ -2110,7 +2113,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
     VkResult result = dev_data->device_dispatch_table->CreateCommandPool(device, pCreateInfo, pAllocator, pCommandPool);
 
     if (VK_SUCCESS == result) {
+        loader_platform_thread_lock_mutex(&globalLock);
         dev_data->commandPoolMap[*pCommandPool];
+        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -2118,6 +2123,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(VkDevice devi
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    loader_platform_thread_lock_mutex(&globalLock);
 
     // Must remove cmdpool from cmdpoolmap, after removing all cmdbuffers in its list from the commandPoolMap
     if (dev_data->commandPoolMap.find(commandPool) != dev_data->commandPoolMap.end()) {
@@ -2129,6 +2135,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyCommandPool(VkDevice device,
         }
     }
     dev_data->commandPoolMap.erase(commandPool);
+
+    loader_platform_thread_unlock_mutex(&globalLock);
     dev_data->device_dispatch_table->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
@@ -2519,12 +2527,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
         for (auto i = 0; i < pCreateInfo->bufferCount; i++) {
             // Validate command pool
             if (dev_data->commandPoolMap.find(pCreateInfo->commandPool) != dev_data->commandPoolMap.end()) {
+                loader_platform_thread_lock_mutex(&globalLock);
                 // Add command buffer to its commandPool map
                 dev_data->commandPoolMap[pCreateInfo->commandPool].push_back(pCommandBuffer[i]);
-
                 GLOBAL_CB_NODE* pCB = new GLOBAL_CB_NODE;
                 // Add command buffer to map
                 dev_data->commandBufferMap[pCommandBuffer[i]] = pCB;
+                loader_platform_thread_unlock_mutex(&globalLock);
                 resetCB(dev_data, pCommandBuffer[i]);
                 pCB->commandBuffer = pCommandBuffer[i];
                 pCB->createInfo    = *pCreateInfo;
