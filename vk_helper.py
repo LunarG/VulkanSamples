@@ -861,7 +861,10 @@ class StructWrapperGen:
                             sh_funcs.append('%sstringstream index_ss;' % (indent))
                             idx_ss_decl = True
                         if (stp_list[index]['name'] == 'pQueueFamilyIndices'):
-                            sh_funcs.append('%sif (pStruct->sharingMode == VK_SHARING_MODE_CONCURRENT) {' % (indent))
+                            if (typedef_fwd_dict[s] == 'VkSwapchainCreateInfoKHR'):
+                                sh_funcs.append('%sif (pStruct->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {' % (indent))
+                            else:
+                                sh_funcs.append('%sif (pStruct->sharingMode == VK_SHARING_MODE_CONCURRENT) {' % (indent))
                             indent += '    '
                         sh_funcs.append('%sif (pStruct->%s) {' % (indent, stp_list[index]['name']))
                         indent += '    '
@@ -1015,18 +1018,6 @@ class StructWrapperGen:
         sh_funcs.append('    ss << toString;')
         sh_funcs.append('    string final_str = prefix + ss.str();')
         sh_funcs.append("    return final_str;")
-        sh_funcs.append("}")
-        sh_funcs.append('%s' % lineinfo.get())
-        #### TODO: Get the following function moved to be in "vk_enum_string_helper.h"
-        # Add function to return a string value for input VkSurfaceFormatKHR*
-        sh_funcs.append("static inline const char* string_VkColorSpaceKHR(VkColorSpaceKHR input_value)\n{")
-        sh_funcs.append("    switch ((VkColorSpaceKHR)input_value)")
-        sh_funcs.append("    {")
-        sh_funcs.append("        case VK_COLORSPACE_SRGB_NONLINEAR_KHR:")
-        sh_funcs.append("            return \"VK_COLORSPACE_SRGB_NONLINEAR_KHR\";")
-        sh_funcs.append("        default:")
-        sh_funcs.append("            return \"Unhandled VkColorSpaceKHR\";")
-        sh_funcs.append("    }")
         sh_funcs.append("}")
         sh_funcs.append('%s' % lineinfo.get())
         # Add function to return a string value for input VkSurfaceFormatKHR*

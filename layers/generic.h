@@ -76,9 +76,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     uint32_t i;
     VkLayerDispatchTable *pDisp  = device_dispatch_table(device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
-    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
-    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -87,7 +84,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 
     deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
 
     }
@@ -99,9 +96,12 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     VkLayerInstanceDispatchTable *pDisp  = instance_dispatch_table(instance);
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     instanceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
 
     }

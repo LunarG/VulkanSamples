@@ -263,7 +263,7 @@ bool is_depth_format(VkFormat format)
 static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value)
 {
     return ((validate_VkImageLayout(input_value) == 1) ||
-            (input_value == VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR));
+            (input_value == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)

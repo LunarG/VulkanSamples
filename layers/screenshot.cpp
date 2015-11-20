@@ -320,17 +320,13 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     uint32_t i;
     VkLayerDispatchTable *pDisp  = get_dispatch_table(screenshot_device_table_map, device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
-    pDisp->GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
-    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
-    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
     pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
     pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
     deviceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0)
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
             deviceExtMap[pDisp].wsi_enabled = true;
     }
 }
@@ -500,10 +496,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks    *pAllocator,
     VkSwapchainKHR                 *pSwapchain)
 {
     VkLayerDispatchTable* pTable = screenshot_device_table_map[device];
-    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    VkResult result = get_dispatch_table(screenshot_device_table_map, device)->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     loader_platform_thread_lock_mutex(&globalLock);
     if (screenshotEnvQueried && screenshotFrames.empty()) {
@@ -580,7 +577,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo)
 {
     static int frameNumber = 0;
     if (frameNumber == 10) {fflush(stdout); /* *((int*)0)=0; */ }
@@ -632,8 +629,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
             VkImage image;
             VkSwapchainKHR swapchain;
             // We'll dump only one image: the first
-            swapchain = pPresentInfo->swapchains[0];
-            image = swapchainMap[swapchain]->imageList[pPresentInfo->imageIndices[0]];
+            swapchain = pPresentInfo->pSwapchains[0];
+            image = swapchainMap[swapchain]->imageList[pPresentInfo->pImageIndices[0]];
             writePPM(fileName.c_str(), image);
             screenshotFrames.erase(it);
 

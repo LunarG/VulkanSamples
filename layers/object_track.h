@@ -190,9 +190,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(device, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
-    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(device, "vkGetPhysicalDeviceSurfaceFormatsKHR");
-    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(device, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -214,6 +211,9 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(ObjectTracker_instance_table_map, instance);
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     instanceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
@@ -967,10 +967,11 @@ explicit_FreeCommandBuffers(
     loader_platform_thread_unlock_mutex(&objLock);
 }
 
-VkResult
+void
 explicit_DestroySwapchainKHR(
-    VkDevice       device,
-    VkSwapchainKHR swapchain)
+    VkDevice                    device,
+    VkSwapchainKHR              swapchain,
+    const VkAllocationCallbacks *pAllocator)
 {
     loader_platform_thread_lock_mutex(&objLock);
     // A swapchain's images are implicitly deleted when the swapchain is deleted.
@@ -987,8 +988,7 @@ explicit_DestroySwapchainKHR(
     destroy_swapchain(device, swapchain);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain);
-    return result;
+    get_dispatch_table(ObjectTracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
 void

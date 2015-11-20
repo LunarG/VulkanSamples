@@ -1048,11 +1048,13 @@ ext_khr_device_swapchain = Extension(
         Proto("VkResult", "CreateSwapchainKHR",
             [Param("VkDevice", "device"),
              Param("const VkSwapchainCreateInfoKHR*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
              Param("VkSwapchainKHR*", "pSwapchain")]),
 
         Proto("void", "DestroySwapchainKHR",
             [Param("VkDevice", "device"),
-             Param("VkSwapchainKHR", "swapchain")]),
+             Param("VkSwapchainKHR", "swapchain"),
+             Param("const VkAllocationCallbacks*", "pAllocator")]),
 
         Proto("VkResult", "GetSwapchainImagesKHR",
             [Param("VkDevice", "device"),
@@ -1065,11 +1067,12 @@ ext_khr_device_swapchain = Extension(
              Param("VkSwapchainKHR", "swapchain"),
              Param("uint64_t", "timeout"),
              Param("VkSemaphore", "semaphore"),
+             Param("VkFence", "fence"),
              Param("uint32_t*", "pImageIndex")]),
 
         Proto("VkResult", "QueuePresentKHR",
             [Param("VkQueue", "queue"),
-             Param("VkPresentInfoKHR*", "pPresentInfo")]),
+             Param("const VkPresentInfoKHR*", "pPresentInfo")]),
     ],
 )
 lunarg_debug_report = Extension(

@@ -758,10 +758,12 @@ class GenericLayerSubcommand(Subcommand):
         self.layer_name = "Generic"
         instance_extensions=[('msg_callback_get_proc_addr', []),
                      ('wsi_enabled',
-                     ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
+                     ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                      'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                      'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                      'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
         extensions=[('wsi_enabled', 
-                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
-                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                     ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self._generate_layer_initialization(True),
@@ -1169,10 +1171,12 @@ class APIDumpSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "APIDump"
         instance_extensions=[('wsi_enabled',
-                     ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
+                     ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                      'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                      'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                      'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
         extensions=[('wsi_enabled',
-                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
-                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                     ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         body = [self.generate_init(),
@@ -1698,13 +1702,15 @@ class ObjectTrackerSubcommand(Subcommand):
     def generate_body(self):
         self.layer_name = "ObjectTracker"
         extensions=[('wsi_enabled',
-                     ['vkGetSurfacePropertiesKHR', 'vkGetSurfaceFormatsKHR',
-                      'vkGetSurfacePresentModesKHR', 'vkCreateSwapchainKHR',
+                     ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
         instance_extensions=[('msg_callback_get_proc_addr', []),
                               ('wsi_enabled',
-                              ['vkGetPhysicalDeviceSurfaceSupportKHR'])]
+                              ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                               'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                               'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                               'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

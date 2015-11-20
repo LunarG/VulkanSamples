@@ -68,9 +68,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     uint32_t i;
     VkLayerDispatchTable *pDisp  = device_dispatch_table(device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(device, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
-    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(device, "vkGetPhysicalDeviceSurfaceFormatsKHR");
-    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(device, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -91,6 +88,9 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     VkLayerInstanceDispatchTable *pDisp  = instance_dispatch_table(instance);
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
+    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
+    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     instanceExtMap[pDisp].wsi_enabled = false;
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)

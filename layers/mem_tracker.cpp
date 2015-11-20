@@ -254,7 +254,7 @@ add_object_create_info(
             memset(pCI, 0, sizeof(MT_OBJ_BINDING_INFO));
             pCI->mem = MEMTRACKER_SWAP_CHAIN_IMAGE_KEY;
             pCI->create_info.image.usage =
-                const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsageFlags;
+                const_cast<VkSwapchainCreateInfoKHR*>(static_cast<const VkSwapchainCreateInfoKHR *>(pCreateInfo))->imageUsage;
             break;
         }
     }
@@ -1081,9 +1081,6 @@ createDeviceRegisterExtensions(
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkLayerDispatchTable *pDisp = my_device_data->device_dispatch_table;
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(device, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
-    pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(device, "vkGetPhysicalDeviceSurfaceFormatsKHR");
-    pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(device, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -2585,10 +2582,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks    *pAllocator,
     VkSwapchainKHR                 *pSwapchain)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = my_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    VkResult result = my_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -2599,13 +2597,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
-    VkDevice       device,
-    VkSwapchainKHR swapchain)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
+    VkDevice                        device,
+    VkSwapchainKHR                  swapchain,
+    const VkAllocationCallbacks     *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = VK_FALSE;
-    VkResult result   = VK_ERROR_VALIDATION_FAILED;
     loader_platform_thread_lock_mutex(&globalLock);
     if (my_data->swapchainMap.find(swapchain) != my_data->swapchainMap.end()) {
         MT_SWAP_CHAIN_INFO* pInfo = my_data->swapchainMap[swapchain];
@@ -2623,9 +2621,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
-        result = my_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
+        my_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain, pAllocator);
     }
-    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
@@ -2672,6 +2669,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkSwapchainKHR  swapchain,
     uint64_t        timeout,
     VkSemaphore     semaphore,
+    VkFence         fence,
     uint32_t       *pImageIndex)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -2690,7 +2688,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
         result = my_data->device_dispatch_table->AcquireNextImageKHR(device,
-                                    swapchain, timeout, semaphore, pImageIndex);
+                                    swapchain, timeout, semaphore, fence, pImageIndex);
     }
     return result;
 }

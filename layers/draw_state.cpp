@@ -1815,9 +1815,6 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     VkLayerDispatchTable    *pDisp = dev_data->device_dispatch_table;
     PFN_vkGetDeviceProcAddr  gpa   = pDisp->GetDeviceProcAddr;
 
-    pDisp->GetSurfacePropertiesKHR   = (PFN_vkGetSurfacePropertiesKHR) gpa(device, "vkGetSurfacePropertiesKHR");
-    pDisp->GetSurfaceFormatsKHR      = (PFN_vkGetSurfaceFormatsKHR) gpa(device, "vkGetSurfaceFormatsKHR");
-    pDisp->GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(device, "vkGetSurfacePresentModesKHR");
     pDisp->CreateSwapchainKHR        = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR       = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR     = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
@@ -1825,7 +1822,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->QueuePresentKHR           = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");    
 
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             dev_data->device_extensions.wsi_enabled = true;
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
@@ -4438,10 +4435,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
+    const VkAllocationCallbacks    *pAllocator,
     VkSwapchainKHR                 *pSwapchain)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    VkResult result = dev_data->device_dispatch_table->CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
 
     if (VK_SUCCESS == result) {
         SWAPCHAIN_NODE *swapchain_data = new SWAPCHAIN_NODE;
@@ -4453,9 +4451,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     VkDevice                        device,
-    VkSwapchainKHR swapchain)
+    VkSwapchainKHR                  swapchain,
+    const VkAllocationCallbacks     *pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -4473,7 +4472,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDestroySwapchainKHR(
         dev_data->device_extensions.swapchainMap.erase(swapchain);
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain);
+    return dev_data->device_dispatch_table->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
@@ -4500,19 +4499,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, VkPresentInfoKHR* pPresentInfo)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     bool skip_call = false;
 
     if (pPresentInfo) {
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
-            auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->swapchains[i]);
-            if (swapchain_data != dev_data->device_extensions.swapchainMap.end() && pPresentInfo->imageIndices[i] < swapchain_data->second->images.size()) {
-                VkImage image = swapchain_data->second->images[pPresentInfo->imageIndices[i]];
+            auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->pSwapchains[i]);
+            if (swapchain_data != dev_data->device_extensions.swapchainMap.end() && pPresentInfo->pImageIndices[i] < swapchain_data->second->images.size()) {
+                VkImage image = swapchain_data->second->images[pPresentInfo->pImageIndices[i]];
                 auto image_data = dev_data->imageLayoutMap.find(image);
                 if (image_data != dev_data->imageLayoutMap.end()) {
-                    if (image_data->second->layout != VK_IMAGE_LAYOUT_PRESENT_SOURCE_KHR) {
+                    if (image_data->second->layout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
                         skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUEUE, (uint64_t)queue, 0, DRAWSTATE_INVALID_IMAGE_LAYOUT, "DS",
                                              "Images passed to present must be in layout PRESENT_SOURCE_KHR but is in %d", image_data->second->layout);
                     }
