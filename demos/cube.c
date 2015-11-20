@@ -2162,16 +2162,28 @@ static void demo_init_vk(struct demo *demo)
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL);
     assert(!err);
 
-    VkBool32 swapchainExtFound = 0;
+    VkBool32 surfaceExtFound = 0;
+    VkBool32 platformSurfaceExtFound = 0;
     memset(extension_names, 0, sizeof(extension_names));
     instance_extensions = malloc(sizeof(VkExtensionProperties) * instance_extension_count);
     err = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions);
     assert(!err);
     for (uint32_t i = 0; i < instance_extension_count; i++) {
         if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-            swapchainExtFound = 1;
+            surfaceExtFound = 1;
             extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
         }
+#ifdef _WIN32
+        if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+            platformSurfaceExtFound = 1;
+            extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+        }
+#else  // _WIN32
+        if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+            platformSurfaceExtFound = 1;
+            extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
+        }
+#endif // _WIN32
         if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
                 extension_names[enabled_extension_count++] = VK_DEBUG_REPORT_EXTENSION_NAME;
@@ -2179,9 +2191,21 @@ static void demo_init_vk(struct demo *demo)
         }
         assert(enabled_extension_count < 64);
     }
-    if (!swapchainExtFound) {
+    if (!surfaceExtFound) {
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
                  VK_KHR_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+    }
+    if (!platformSurfaceExtFound) {
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+#ifdef _WIN32
+                 VK_KHR_WIN32_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+#else  // _WIN32
+                 VK_KHR_XCB_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+#endif // _WIN32
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
                  "information.\n",
@@ -2268,7 +2292,7 @@ static void demo_init_vk(struct demo *demo)
               demo->gpu, NULL, &device_extension_count, NULL);
     assert(!err);
 
-    swapchainExtFound = 0;
+    VkBool32 swapchainExtFound = 0;
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
     device_extensions = malloc(sizeof(VkExtensionProperties) * device_extension_count);
@@ -2465,13 +2489,13 @@ static void demo_init_vk_swapchain(struct demo *demo)
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
-    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu,
                                     demo->surface,
                                     &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
+    err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu,
                                     demo->surface,
                                     &formatCount, surfFormats);
     assert(!err);
