@@ -79,8 +79,13 @@ int main(int argc, char **argv)
     float texels[] = {1.0, 0.0, 1.0};
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME);
-    info.device_extension_names.push_back(VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME);
+    info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+#ifdef _WIN32
+    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
+    info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
+    info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
@@ -275,6 +280,7 @@ int main(int argc, char **argv)
     res = info.fpAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       info.presentCompleteSemaphore,
+                                      NULL,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes

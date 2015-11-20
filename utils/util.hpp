@@ -34,21 +34,18 @@
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:console")
 #define WIN32_LEAN_AND_MEAN
+#define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX              /* Don't let Windows define min() or max() */
-#include <windows.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
-#include <vulkan/vk_lunarg_debug_report.h>
 #define APP_NAME_STR_LEN 80
 #else  // _WIN32
-#include <xcb/xcb.h>
+#define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
-#include <vulkan/vk_lunarg_debug_report.h>
 #endif // _WIN32
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_lunarg_debug_report.h>
+
+#include "vulkan/vk_sdk_platform.h"
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -140,8 +137,8 @@ struct sample_info {
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-    VkPlatformHandleXcbKHR platform_handle_xcb;
 #endif // _WIN32
+    VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
 
@@ -168,15 +165,14 @@ struct sample_info {
     VkFormat format;
 
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-    PFN_vkGetSurfacePropertiesKHR fpGetSurfacePropertiesKHR;
-    PFN_vkGetSurfaceFormatsKHR fpGetSurfaceFormatsKHR;
-    PFN_vkGetSurfacePresentModesKHR fpGetSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
+    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
+    PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
     PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
     PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
-    VkSurfaceDescriptionWindowKHR surface_description;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swap_chain;
     std::vector<swap_chain_buffer> buffers;
