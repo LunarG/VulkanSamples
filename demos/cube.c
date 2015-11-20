@@ -34,17 +34,16 @@
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
-#include <windows.h>
+#define VK_USE_PLATFORM_WIN32_KHR
 #define APP_NAME_STR_LEN 80
 #else  // _WIN32
-#include <xcb/xcb.h>
+#define VK_USE_PLATFORM_XCB_KHR
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
 
-#include <vulkan/VK_KHR_surface.h>
-#include <vulkan/VK_KHR_swapchain.h>
 #include "vulkan/vk_lunarg_debug_report.h"
+
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -320,8 +319,8 @@ struct demo {
     xcb_screen_t *screen;
     xcb_window_t window;
     xcb_intern_atom_reply_t *atom_wm_delete_window;
-    VkPlatformHandleXcbKHR platform_handle_xcb;
 #endif // _WIN32
+    VkSurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
 
@@ -347,7 +346,6 @@ struct demo {
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
-    VkSurfaceDescriptionWindowKHR surface_description;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers *buffers;
@@ -661,6 +659,7 @@ static void demo_draw(struct demo *demo)
     err = demo->fpAcquireNextImageKHR(demo->device, demo->swapchain,
                                       UINT64_MAX,
                                       presentCompleteSemaphore,
+                                      NULL,// TODO: Show use of fence
                                       &demo->current_buffer);
     if (err == VK_ERROR_OUT_OF_DATE_KHR) {
         // demo->swapchain is out of date (e.g. the window was resized) and
@@ -708,8 +707,8 @@ static void demo_draw(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .pNext = NULL,
         .swapchainCount = 1,
-        .swapchains = &demo->swapchain,
-        .imageIndices = &demo->current_buffer,
+        .pSwapchains = &demo->swapchain,
+        .pImageIndices = &demo->current_buffer,
     };
 
 // TBD/TODO: SHOULD THE "present" PARAMETER BE "const" IN THE HEADER?
@@ -736,29 +735,29 @@ static void demo_prepare_buffers(struct demo *demo)
     VkResult U_ASSERT_ONLY err;
     VkSwapchainKHR oldSwapchain = demo->swapchain;
 
-    // Check the surface properties and formats
-    VkSurfaceCapabilitiesKHR surfProperties;
-    err = demo->fpGetPhysicalDeviceSurfaceCapabilitiesKHR(demo->device,
-        (const VkSurfaceDescriptionKHR *)&demo->surface_description,
-        &surfProperties);
+    // Check the surface capabilities and formats
+    VkSurfaceCapabilitiesKHR surfCapabilities;
+    err = demo->fpGetPhysicalDeviceSurfaceCapabilitiesKHR(demo->gpu,
+        demo->surface,
+        &surfCapabilities);
     assert(!err);
 
     uint32_t presentModeCount;
-    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->device,
-        (const VkSurfaceDescriptionKHR *)&demo->surface_description,
+    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->gpu,
+        demo->surface,
         &presentModeCount, NULL);
     assert(!err);
     VkPresentModeKHR *presentModes =
         (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
     assert(presentModes);
-    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->device,
-        (const VkSurfaceDescriptionKHR *)&demo->surface_description,
+    err = demo->fpGetPhysicalDeviceSurfacePresentModesKHR(demo->gpu,
+        demo->surface,
         &presentModeCount, presentModes);
     assert(!err);
 
     VkExtent2D swapchainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfProperties.currentExtent.width == -1)
+    if (surfCapabilities.currentExtent.width == -1)
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
@@ -768,9 +767,9 @@ static void demo_prepare_buffers(struct demo *demo)
     else
     {
         // If the surface size is defined, the swap chain size must match
-        swapchainExtent = surfProperties.currentExtent;
-        demo->width = surfProperties.currentExtent.width;
-        demo->height = surfProperties.currentExtent.height;
+        swapchainExtent = surfCapabilities.currentExtent;
+        demo->width = surfCapabilities.currentExtent.width;
+        demo->height = surfCapabilities.currentExtent.height;
     }
 
     // If mailbox mode is available, use it, as is the lowest-latency non-
@@ -792,25 +791,25 @@ static void demo_prepare_buffers(struct demo *demo)
     // Determine the number of VkImage's to use in the swap chain (we desire to
     // own only 1 image at a time, besides the images being displayed and
     // queued for display):
-    uint32_t desiredNumberOfSwapchainImages = surfProperties.minImageCount + 1;
-    if ((surfProperties.maxImageCount > 0) &&
-        (desiredNumberOfSwapchainImages > surfProperties.maxImageCount))
+    uint32_t desiredNumberOfSwapchainImages = surfCapabilities.minImageCount + 1;
+    if ((surfCapabilities.maxImageCount > 0) &&
+        (desiredNumberOfSwapchainImages > surfCapabilities.maxImageCount))
     {
         // Application must settle for fewer images than desired:
-        desiredNumberOfSwapchainImages = surfProperties.maxImageCount;
+        desiredNumberOfSwapchainImages = surfCapabilities.maxImageCount;
     }
 
     VkSurfaceTransformFlagsKHR preTransform;
-    if (surfProperties.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
     } else {
-        preTransform = surfProperties.currentTransform;
+        preTransform = surfCapabilities.currentTransform;
     }
 
     const VkSwapchainCreateInfoKHR swapchain = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = NULL,
-        .pSurfaceDescription = (const VkSurfaceDescriptionKHR *)&demo->surface_description,
+        .surface = demo->surface,
         .minImageCount = desiredNumberOfSwapchainImages,
         .imageFormat = demo->format,
         .imageColorSpace = demo->color_space,
@@ -818,11 +817,11 @@ static void demo_prepare_buffers(struct demo *demo)
             .width = swapchainExtent.width,
             .height = swapchainExtent.height,
         },
-        .imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .preTransform = preTransform,
-        .imageArraySize = 1,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyCount = 0,
+        .imageArrayLayers = 1,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
         .pQueueFamilyIndices = NULL,
         .presentMode = swapchainPresentMode,
         .oldSwapchain = oldSwapchain,
@@ -830,7 +829,7 @@ static void demo_prepare_buffers(struct demo *demo)
     };
     uint32_t i;
 
-    err = demo->fpCreateSwapchainKHR(demo->device, &swapchain, &demo->swapchain);
+    err = demo->fpCreateSwapchainKHR(demo->device, &swapchain, NULL, &demo->swapchain);
     assert(!err);
 
     // If we just re-created an existing swapchain, we should destroy the old
@@ -838,7 +837,7 @@ static void demo_prepare_buffers(struct demo *demo)
     // Note: destroying the swapchain also cleans up all its associated
     // presentable images once the platform is done with them.
     if (oldSwapchain != VK_NULL_HANDLE) {
-        demo->fpDestroySwapchainKHR(demo->device, oldSwapchain);
+        demo->fpDestroySwapchainKHR(demo->device, oldSwapchain, NULL);
     }
 
     err = demo->fpGetSwapchainImagesKHR(demo->device, demo->swapchain,
@@ -1768,7 +1767,7 @@ static void demo_cleanup(struct demo *demo)
         vkFreeMemory(demo->device, demo->textures[i].mem, NULL);
         vkDestroySampler(demo->device, demo->textures[i].sampler, NULL);
     }
-    demo->fpDestroySwapchainKHR(demo->device, demo->swapchain);
+    demo->fpDestroySwapchainKHR(demo->device, demo->swapchain, NULL);
 
     vkDestroyImageView(demo->device, demo->depth.view, NULL);
     vkDestroyImage(demo->device, demo->depth.image, NULL);
@@ -1790,6 +1789,7 @@ static void demo_cleanup(struct demo *demo)
     if (demo->validate) {
         demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
     }
+    vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, NULL);
 
 #ifndef _WIN32
@@ -2396,26 +2396,21 @@ static void demo_init_vk_swapchain(struct demo *demo)
     VkResult err;
     uint32_t i;
 
-    // Construct the surface description:
-    demo->surface_description.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
-    demo->surface_description.pNext = NULL;
+    // Create a WSI surface for the window:
 #ifdef _WIN32
-    demo->surface_description.platform = VK_PLATFORM_WIN32_KHR;
-    demo->surface_description.pPlatformHandle = demo->connection;
-    demo->surface_description.pPlatformWindow = demo->window;
+    err = vkCreateWin32SurfaceKHR(demo->inst, demo->connection, demo->window,
+                                  NULL, &demo->surface);
+
 #else  // _WIN32
-    demo->platform_handle_xcb.connection = demo->connection;
-    demo->platform_handle_xcb.root = demo->screen->root;
-    demo->surface_description.platform = VK_PLATFORM_XCB_KHR;
-    demo->surface_description.pPlatformHandle = &demo->platform_handle_xcb;
-    demo->surface_description.pPlatformWindow = &demo->window;
+    err = vkCreateXcbSurfaceKHR(demo->inst, demo->connection, demo->window,
+                                NULL, &demo->surface);
 #endif // _WIN32
 
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32* supportsPresent = (VkBool32 *)malloc(demo->queue_count * sizeof(VkBool32));
     for (i = 0; i < demo->queue_count; i++) {
         demo->fpGetPhysicalDeviceSurfaceSupportKHR(demo->gpu, i,
-                                                   (VkSurfaceDescriptionKHR *) &demo->surface_description,
+                                                   demo->surface,
                                                    &supportsPresent[i]);
     }
 
@@ -2471,13 +2466,13 @@ static void demo_init_vk_swapchain(struct demo *demo)
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
     err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
-                                    (VkSurfaceDescriptionKHR *) &demo->surface_description,
+                                    demo->surface,
                                     &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->device,
-                                    (VkSurfaceDescriptionKHR *) &demo->surface_description,
+                                    demo->surface,
                                     &formatCount, surfFormats);
     assert(!err);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,

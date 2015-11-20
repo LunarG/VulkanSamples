@@ -32,14 +32,14 @@
 #include <inttypes.h>
 
 #ifdef _WIN32
-#include <Windows.h>
+#define VK_USE_PLATFORM_WIN32_KHR
 #include <fcntl.h>
 #include <io.h>
-#endif
 
+#else  // _WIN32
+#define VK_USE_PLATFORM_XCB_KHR
+#endif // _WIN32
 
-#include "vulkan/VK_KHR_surface.h"
-#include "vulkan/VK_KHR_swapchain.h"
 
 #include <vulkan/vulkan.h>
 
@@ -558,6 +558,24 @@ static void app_create_instance(struct app_instance *inst)
     // Global Extensions to enable
     static char *known_extensions[] = {
         VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        VK_KHR_MIR_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+#endif
     };
 
     uint32_t global_extension_count = 0;
