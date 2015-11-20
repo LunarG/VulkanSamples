@@ -1315,12 +1315,14 @@ void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32
     alloc_info.allocationSize = mem_reqs.size;
     pass = memory_type_from_properties(info,
                                       mem_reqs.memoryTypeBits,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                       &alloc_info.memoryTypeIndex);
     assert(pass);
 
     res = vkAllocateMemory(info.device, &alloc_info, NULL, &(info.vertex_buffer.mem));
     assert(res == VK_SUCCESS);
+    info.vertex_buffer.buffer_info.range = mem_reqs.size;
+    info.vertex_buffer.buffer_info.offset = 0;
 
     uint8_t *pData;
     res = vkMapMemory(info.device, info.vertex_buffer.mem, 0, mem_reqs.size, 0, (void **) &pData);
