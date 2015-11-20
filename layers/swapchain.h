@@ -145,24 +145,12 @@ struct _SwpPhysicalDevice {
 
     // Which queueFamilyIndices support presenting with WSI swapchains:
     unordered_map<uint32_t, VkBool32> queueFamilyIndexSupport;
-};
-
-// Create one of these for each VkDevice within a VkInstance:
-struct _SwpDevice {
-    // The actual handle for this VkDevice:
-    VkDevice device;
-
-    // Corresponding VkPhysicalDevice (and info) to this VkDevice:
-    SwpPhysicalDevice *pPhysicalDevice;
-
-    // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
-    bool deviceSwapchainExtensionEnabled;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
     // Results of vkGetPhysicalDeviceSurfaceCapabilitiesKHR():
-    bool gotSurfaceProperties;
-    VkSurfaceCapabilitiesKHR surfaceProperties;
+    bool gotSurfaceCapabilities;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
 
 // TODO: Record/use this info per-surface, not per-device, once a
 // non-dispatchable surface object is added to WSI:
@@ -175,6 +163,18 @@ struct _SwpDevice {
     // Count and VkPresentModeKHR's returned by vkGetPhysicalDeviceSurfacePresentModesKHR():
     uint32_t presentModeCount;
     VkPresentModeKHR* pPresentModes;
+};
+
+// Create one of these for each VkDevice within a VkInstance:
+struct _SwpDevice {
+    // The actual handle for this VkDevice:
+    VkDevice device;
+
+    // Corresponding VkPhysicalDevice (and info) to this VkDevice:
+    SwpPhysicalDevice *pPhysicalDevice;
+
+    // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
+    bool deviceSwapchainExtensionEnabled;
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
