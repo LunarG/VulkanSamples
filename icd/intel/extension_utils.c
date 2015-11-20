@@ -36,6 +36,10 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     {
         .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_SURFACE_REVISION,
+    },
+    {
+        .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+        .specVersion = VK_KHR_XCB_SURFACE_REVISION,
     }
 };
 
