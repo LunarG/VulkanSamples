@@ -38,7 +38,7 @@ endif()
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
-option(BUILD_VKTRACE "Build VkTrace" ON)
+option(BUILD_VKTRACE "Build VkTrace" OFF)
 
 if (BUILD_ICD OR BUILD_TESTS)
     # Hard code our glslang path for now
