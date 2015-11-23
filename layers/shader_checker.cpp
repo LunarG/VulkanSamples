@@ -473,9 +473,22 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
         return it->second;
 }
 
+
+static unsigned
+get_locations_consumed_by_type(shader_module const *src, unsigned type)
+{
+    /* Returns the number of vec4 locations consumed by a variable of type `type`
+     * appearing on a shader interface.
+     */
+    /* TODO: implement this properly */
+    return 1;
+}
+
+
 struct interface_var {
     uint32_t id;
     uint32_t type_id;
+    uint32_t offset;
     /* TODO: collect the name, too? Isn't required to be present. */
 };
 
@@ -515,6 +528,9 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
          * have the same location, and we DONT want to clobber. */
 
         if (opcode == spv::OpVariable && code[word+3] == sinterface) {
+            unsigned id = code[word+2];
+            unsigned type = code[word+1];
+
             int location = value_or_default(var_locations, code[word+2], -1);
             int builtin = value_or_default(var_builtins, code[word+2], -1);
 
@@ -528,17 +544,26 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                         code[word+2], code[word+1], storage_class_name(sinterface));
             }
             else if (location != -1) {
-                /* A user-defined interface variable, with a location. */
-                interface_var v;
-                v.id = code[word+2];
-                v.type_id = code[word+1];
-                out[location] = v;
+                /* A user-defined interface variable, with a location. Where a variable
+                 * occupied multiple locations, emit one result for each. */
+                unsigned num_locations = get_locations_consumed_by_type(src, type);
+                for (int offset = 0; offset < num_locations; offset++) {
+                    interface_var v;
+                    v.id = id;
+                    v.type_id = type;
+                    v.offset = offset;
+                    out[location + offset] = v;
+                }
             }
             else {
                 /* A builtin interface variable */
+                /* Note that since builtin interface variables do not consume numbered
+                 * locations, there is no larger-than-vec4 consideration as above
+                 */
                 interface_var v;
-                v.id = code[word+2];
-                v.type_id = code[word+1];
+                v.id = id;
+                v.type_id = type;
+                v.offset = 0;
                 builtins_out[builtin] = v;
             }
         }
