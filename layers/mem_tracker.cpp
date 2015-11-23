@@ -557,7 +557,7 @@ reportMemReferencesAndCleanUp(
     size_t cmdBufRefCount = pMemObjInfo->pCommandBufferBindings.size();
     size_t objRefCount    = pMemObjInfo->pObjBindings.size();
 
-    if ((pMemObjInfo->pCommandBufferBindings.size() + pMemObjInfo->pObjBindings.size()) != 0) {
+    if ((pMemObjInfo->pCommandBufferBindings.size()) != 0) {
         skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t) pMemObjInfo->mem, 0, MEMTRACK_FREED_MEM_REF, "MEM",
                        "Attempting to free memory object %#" PRIxLEAST64 " which still contains " PRINTF_SIZE_T_SPECIFIER " references",
                        (uint64_t) pMemObjInfo->mem, (cmdBufRefCount + objRefCount));
@@ -710,6 +710,8 @@ clear_object_binding(
     MT_OBJ_BINDING_INFO* pObjBindInfo = get_object_binding_info(my_data, handle, type);
     if (pObjBindInfo) {
         MT_MEM_OBJ_INFO* pMemObjInfo = get_mem_obj_info(my_data, pObjBindInfo->mem);
+        // TODO : Make sure this is a reasonable way to reset mem binding
+        pObjBindInfo->mem = VK_NULL_HANDLE;
         if (pMemObjInfo) {
             // This obj is bound to a memory object. Remove the reference to this object in that memory object's list, decrement the memObj's refcount
             // and set the objects memory binding pointer to NULL.
@@ -718,8 +720,6 @@ clear_object_binding(
                 if ((it->handle == handle) && (it->type == type)) {
                     pMemObjInfo->refCount--;
                     pMemObjInfo->pObjBindings.erase(it);
-                    // TODO : Make sure this is a reasonable way to reset mem binding
-                    pObjBindInfo->mem = VK_NULL_HANDLE;
                     clearSucceeded = VK_TRUE;
                     break;
                 }
@@ -1331,10 +1331,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    /* From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed. Before
-     * freeing a memory object, an application must ensure the memory object is unbound from
-     * all API objects referencing it and that it is not referenced by any queued command buffers
-     */
+
+    // From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed.
+    // Before freeing a memory object, an application must ensure the memory object is no longer
+    // in use by the device—for example by command buffers queued for execution. The memory need
+    // not yet be unbound from all images and buffers, but any further use of those images or
+    // buffers (on host or device) for anything other than destroying those objects will result in
+    // undefined behavior.
+
     loader_platform_thread_lock_mutex(&globalLock);
     freeMemObjInfo(my_data, device, mem, VK_FALSE);
     print_mem_list(my_data, device);
