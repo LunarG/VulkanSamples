@@ -24,7 +24,7 @@ application can also register callback functions via the DEBUG_REPORT extension 
 when the requested validation events happen. Application callbacks happen regardless of the
 settings in vk_layer_settings.txt
 
-##Layer library example code
+### Layer library example code
 
 Note that some layers are code-generated and will therefore exist in the directory (build_dir)/layers
 
@@ -83,7 +83,11 @@ layers/device_limits.cpp (name=DeviceLimits) - This layer is intended to capture
     This is required for the Loader to be able to scan and enumerate your library.
     Alternatively, use the VK\_LAYER\_PATH environment variable to specify where the layer libraries reside.
 
-3. Specify which Layers to activate by using 
+3. Create a vk_layer_settings.txt file in the same directory to specify how your layers should behave.
+
+    Model it after the following example:  [*vk_layer_settings.txt*](layers/vk_layer_settings.txt)
+
+4. Specify which Layers to activate by using
 vkCreateDevice and/or vkCreateInstance or environment variables.
 
     export VK\_INSTANCE\_LAYERS=Basic:Generic
@@ -114,4 +118,3 @@ vkCreateDevice and/or vkCreateInstance or environment variables.
 - Layers with multiple layers per library the manifest file parsing in Loader doesn't yet handle this;
 - multi.cpp Layer needs rewrite to allow manifest file to specify multiple layers
 - multi1  and multi2 layers from multi.cpp: only multi1 layer working
-
