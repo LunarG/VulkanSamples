@@ -269,10 +269,6 @@ objTypeToIndex(
     uint32_t objType)
 {
     uint32_t index = objType;
-    if (objType > VK_OBJECT_TYPE_END_RANGE) {
-        // These come from VK_KHR_surface.h, rebase
-        index = (index -(VK_KHR_SWAPCHAIN_EXTENSION_NUMBER * -1000)) + VK_OBJECT_TYPE_END_RANGE;
-    }
     return index;
 }
 
