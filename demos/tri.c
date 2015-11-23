@@ -2046,9 +2046,10 @@ static void demo_init_vk_swapchain(struct demo *demo)
     }
 
     // TODO: Add support for separate queues, including presentation,
-    //       synchronization, and appropriate tracking for QueueSubmit
-    // While it is possible for an application to use a separate graphics and a
-    // present queues, this demo program assumes it is only using one:
+    //       synchronization, and appropriate tracking for QueueSubmit.
+    // NOTE: While it is possible for an application to use a separate graphics
+    //       and a present queues, this demo program assumes it is only using
+    //       one:
     if (graphicsQueueNodeIndex != presentQueueNodeIndex) {
         ERR_EXIT("Could not find a common graphics and a present queue\n",
                  "Swapchain Initialization Failure");
@@ -2062,14 +2063,14 @@ static void demo_init_vk_swapchain(struct demo *demo)
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
     err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu,
-                                    demo->surface,
-                                    &formatCount, NULL);
+                                                     demo->surface,
+                                                     &formatCount, NULL);
     assert(!err);
     VkSurfaceFormatKHR *surfFormats =
         (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
     err = demo->fpGetPhysicalDeviceSurfaceFormatsKHR(demo->gpu,
-                                    demo->surface,
-                                    &formatCount, surfFormats);
+                                                     demo->surface,
+                                                     &formatCount, surfFormats);
     assert(!err);
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
