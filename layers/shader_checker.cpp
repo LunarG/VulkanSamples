@@ -477,11 +477,30 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
 static unsigned
 get_locations_consumed_by_type(shader_module const *src, unsigned type)
 {
-    /* Returns the number of vec4 locations consumed by a variable of type `type`
-     * appearing on a shader interface.
-     */
-    /* TODO: implement this properly */
-    return 1;
+    auto type_def_it = src->type_def_index.find(type);
+
+    if (type_def_it == src->type_def_index.end()) {
+        return 1;       /* This is actually broken SPIR-V... */
+    }
+
+    unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
+    unsigned opcode = code[0] & 0x0ffffu;
+    switch (opcode) {
+        case spv::OpTypePointer:
+            /* see through the ptr -- this is only ever at the toplevel for graphics shaders;
+             * we're never actually passing pointers around. */
+            return get_locations_consumed_by_type(src, code[3]);
+        case spv::OpTypeArray:
+        case spv::OpTypeMatrix:
+            /* num locations is the array dimension * element size */
+            return code[3] * get_locations_consumed_by_type(src, code[2]);
+        default:
+            /* everything else is just 1. */
+            return 1;
+
+        /* TODO: extend to handle 64bit scalar types, whose vectors may need
+         * multiple locations. */
+    }
 }
 
 
