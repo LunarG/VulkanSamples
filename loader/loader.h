@@ -226,7 +226,6 @@ struct loader_instance {
     bool wsi_xcb_surface_enabled;
     bool wsi_xlib_surface_enabled;
 #endif // _WIN32
-    bool wsi_swapchain_enabled;
 };
 
 /* per enumerated PhysicalDevice structure */

@@ -123,14 +123,13 @@ void wsi_create_instance(
 {
     ptr_instance->wsi_surface_enabled = false;
 #ifdef _WIN32
-    ptr_instance->wsi_surface_enabled = true;
+    ptr_instance->wsi_win32_surface_enabled = true;
 #else // _WIN32
     ptr_instance->wsi_mir_surface_enabled = false;
     ptr_instance->wsi_wayland_surface_enabled = false;
     ptr_instance->wsi_xcb_surface_enabled = false;
     ptr_instance->wsi_xlib_surface_enabled = false;
 #endif // _WIN32
-    ptr_instance->wsi_swapchain_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
@@ -140,7 +139,7 @@ void wsi_create_instance(
 #ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
-            ptr_instance->wsi_surface_enabled = true;
+            ptr_instance->wsi_win32_surface_enabled = true;
             continue;
         }
 #endif/ VK_USE_PLATFORM_WIN32_KHR
@@ -188,11 +187,9 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkSurfaceKHR                                 surface,
     const VkAllocationCallbacks*                 pAllocator)
 {
-    if (pAllocator) {
-        pAllocator->pfnFree(pAllocator->pUserData, surface);
-    } else {
-        free(surface);
-    }
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
+
+    loader_heap_free(ptr_instance, surface);
 }
 
 /*
@@ -481,17 +478,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceWin32 *pIcdSurface = NULL;
 
-    if (pAllocator) {
-        pIcdSurface = (VkIcdSurfaceWin32 *) pAllocator->pfnAllocation(
-                           pAllocator->pUserData,
-                           sizeof(VkIcdSurfaceWin32),
-                           sizeof(VkSurfaceKHR),
-                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    } else {
-        pIcdSurface = (VkIcdSurfaceWin32 *) malloc(sizeof(VkIcdSurfaceWin32));
-    }
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceWin32),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -525,17 +517,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceMir *pIcdSurface = NULL;
 
-    if (pAllocator) {
-        pIcdSurface = (VkIcdSurfaceMir *) pAllocator->pfnAllocation(
-                           pAllocator->pUserData,
-                           sizeof(VkIcdSurfaceMir),
-                           sizeof(VkSurfaceKHR),
-                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    } else {
-        pIcdSurface = (VkIcdSurfaceMir *) malloc(sizeof(VkIcdSurfaceMir));
-    }
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceMir),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -567,17 +554,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceWayland *pIcdSurface = NULL;
 
-    if (pAllocator) {
-        pIcdSurface = (VkIcdSurfaceWayland *) pAllocator->pfnAllocation(
-                           pAllocator->pUserData,
-                           sizeof(VkIcdSurfaceWayland),
-                           sizeof(VkSurfaceKHR),
-                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    } else {
-        pIcdSurface = (VkIcdSurfaceWayland *) malloc(sizeof(VkIcdSurfaceWayland));
-    }
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceWayland),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -609,17 +591,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceXcb *pIcdSurface = NULL;
 
-    if (pAllocator) {
-        pIcdSurface = (VkIcdSurfaceXcb *) pAllocator->pfnAllocation(
-                           pAllocator->pUserData,
-                           sizeof(VkIcdSurfaceXcb),
-                           sizeof(VkSurfaceKHR),
-                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    } else {
-        pIcdSurface = (VkIcdSurfaceXcb *) malloc(sizeof(VkIcdSurfaceXcb));
-    }
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceXcb),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -651,17 +628,12 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceXlib *pIcdSurface = NULL;
 
-    if (pAllocator) {
-        pIcdSurface = (VkIcdSurfaceXlib *) pAllocator->pfnAllocation(
-                           pAllocator->pUserData,
-                           sizeof(VkIcdSurfaceXlib),
-                           sizeof(VkSurfaceKHR),
-                           VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    } else {
-        pIcdSurface = (VkIcdSurfaceXlib *) malloc(sizeof(VkIcdSurfaceXlib));
-    }
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceXlib),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (pIcdSurface == NULL) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }

@@ -111,6 +111,21 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceSurfaceCapabilitiesKHR = loader_GetPhysicalDeviceSurfaceCapabilitiesKHR,
     .GetPhysicalDeviceSurfaceFormatsKHR = loader_GetPhysicalDeviceSurfaceFormatsKHR,
     .GetPhysicalDeviceSurfacePresentModesKHR = loader_GetPhysicalDeviceSurfacePresentModesKHR,
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    .CreateMirSurfaceKHR = vkCreateMirSurfaceKHR,
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    .CreateWaylandSurfaceKHR = vkCreateWaylandSurfaceKHR,
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    .CreateWin32SurfaceKHR = vkCreateWin32SurfaceKHR,
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    .CreateXcbSurfaceKHR = vkCreateXcbSurfaceKHR,
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    .CreateXlibSurfaceKHR = vkCreateXlibSurfaceKHR,
+#endif
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };

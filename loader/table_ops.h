@@ -469,6 +469,21 @@ static inline void loader_init_instance_extension_dispatch_table(
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     table->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    table->CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR) gpa(inst, "vkCreateMirSurfaceKHR");
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    table->CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) gpa(inst, "vkCreateWaylandSurfaceKHR");
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    table->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) gpa(inst, "vkCreateWin32SurfaceKHR");
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    table->CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR) gpa(inst, "vkCreateXcbSurfaceKHR");
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    table->CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR) gpa(inst, "vkCreateXlibSurfaceKHR");
+#endif
 }
 
 static inline void *loader_lookup_instance_dispatch_table(
@@ -513,6 +528,26 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->GetPhysicalDeviceSurfaceFormatsKHR;
     if (!strcmp(name, "GetPhysicalDeviceSurfacePresentModesKHR"))
         return (void *) table->GetPhysicalDeviceSurfacePresentModesKHR;
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    if (!strcmp(name, "CreateMirSurfaceKHR"))
+        return (void *) table->CreateMirSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    if (!strcmp(name, "CreateWaylandSurfaceKHR"))
+        return (void *) table->CreateWaylandSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    if (!strcmp(name, "CreateWin32SurfaceKHR"))
+        return (void *) table->CreateWin32SurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    if (!strcmp(name, "CreateXcbSurfaceKHR"))
+        return (void *) table->CreateXcbSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    if (!strcmp(name, "CreateXlibSurfaceKHR"))
+        return (void *) table->CreateXlibSurfaceKHR;
+#endif
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;
     if (!strcmp(name, "DbgDestroyMsgCallback"))

@@ -173,6 +173,21 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    PFN_vkCreateWaylandSurfaceKHR CreateWaylandSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    PFN_vkCreateWin32SurfaceKHR CreateWin32SurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    PFN_vkCreateXcbSurfaceKHR CreateXcbSurfaceKHR;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    PFN_vkCreateXlibSurfaceKHR CreateXlibSurfaceKHR;
+#endif
     PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 } VkLayerInstanceDispatchTable;
