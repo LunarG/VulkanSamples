@@ -4596,6 +4596,131 @@ TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
     }
 }
 
+TEST_F(VkLayerTest, CreatePipelineAttribMatrixType)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[2];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 2; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) in mat2x4 x;\n"
+        "void main(){\n"
+        "   gl_Position = x[0] + x[1];\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 2);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    /* expect success */
+    if (m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Expected to succeed but: " << m_errorMonitor->GetFailureMsg();
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
+/*
+ * Would work, but not supported by glslang! This is similar to the matrix case above.
+ *
+TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
+{
+    m_errorMonitor->SetDesiredFailureMsg(~0u, "");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+    ASSERT_NO_FATAL_FAILURE(InitRenderTarget());
+
+    VkVertexInputBindingDescription input_binding;
+    memset(&input_binding, 0, sizeof(input_binding));
+
+    VkVertexInputAttributeDescription input_attribs[2];
+    memset(input_attribs, 0, sizeof(input_attribs));
+
+    for (int i = 0; i < 2; i++) {
+        input_attribs[i].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        input_attribs[i].location = i;
+    }
+
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) in vec4 x[2];\n"
+        "void main(){\n"
+        "   gl_Position = x[0] + x[1];\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 color;\n"
+        "void main(){\n"
+        "   color = vec4(1);\n"
+        "}\n";
+
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+
+    VkPipelineObj pipe(m_device);
+    pipe.AddColorAttachment();
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+
+    pipe.AddVertexInputBindings(&input_binding, 1);
+    pipe.AddVertexInputAttribs(input_attribs, 2);
+
+    VkDescriptorSetObj descriptorSet(m_device);
+    descriptorSet.AppendDummy();
+    descriptorSet.CreateVKDescriptorSet(m_commandBuffer);
+
+    pipe.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());
+
+    if (m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Expected to succeed but: " << m_errorMonitor->GetFailureMsg();
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+*/
+
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 {
     m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
