@@ -564,8 +564,8 @@ collect_interface_by_descriptor_slot(layer_data *my_data, VkDevice dev,
         unsigned opcode = code[word] & 0x0ffffu;
         unsigned oplen = (code[word] & 0xffff0000u) >> 16;
 
-        /* We consider two interface models: SSO rendezvous-by-location, and
-         * builtins. Complain about anything that fits neither model.
+        /* All variables in the Uniform or UniformConstant storage classes are required to be decorated with both
+         * DecorationDescriptorSet and DecorationBinding.
          */
         if (opcode == spv::OpDecorate) {
             if (code[word+2] == spv::DecorationDescriptorSet) {
