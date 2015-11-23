@@ -322,9 +322,9 @@ storage_class_name(unsigned sc)
     case spv::StorageClassOutput: return "output";
     case spv::StorageClassUniformConstant: return "const uniform";
     case spv::StorageClassUniform: return "uniform";
-    case spv::StorageClassWorkgroupLocal: return "workgroup local";
-    case spv::StorageClassWorkgroupGlobal: return "workgroup global";
-    case spv::StorageClassPrivateGlobal: return "private global";
+    case spv::StorageClassWorkgroup: return "workgroup local";
+    case spv::StorageClassCrossWorkgroup: return "workgroup global";
+    case spv::StorageClassPrivate: return "private global";
     case spv::StorageClassFunction: return "function";
     case spv::StorageClassGeneric: return "generic";
     case spv::StorageClassAtomicCounter: return "atomic counter";
@@ -902,6 +902,7 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
     /* Check for legacy gl_FragColor broadcast: In this case, we should have no user-defined outputs,
      * and all color attachment should be UNORM/SNORM/FLOAT.
      */
+#if 0
     if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
         if (outputs.size()) {
             if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
@@ -922,6 +923,7 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 
         return pass;
     }
+#endif
 
     auto it = outputs.begin();
     uint32_t attachment = 0;
