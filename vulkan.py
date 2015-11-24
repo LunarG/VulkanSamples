@@ -1080,6 +1080,43 @@ ext_khr_device_swapchain = Extension(
              Param("const VkPresentInfoKHR*", "pPresentInfo")]),
     ],
 )
+
+ext_khr_xcb_surface = Extension(
+    name="VK_KHR_xcb_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateXcbSurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("xcb_connection_t*", "connection"),
+             Param("xcb_window_t", "window"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+
+        Proto("VkBool32", "GetPhysicalDeviceXcbPresentationSupportKHR",
+            [Param("    VkPhysicalDevice", "physicalDevice"),
+             Param("    uint32_t", "queueFamilyIndex"),
+             Param("    xcb_connection_t*", "connection"),
+             Param("    xcb_visualid_t", "visual_id")]),
+    ],
+)
+ext_khr_win32_surface = Extension(
+    name="VK_KHR_win32_surface",
+    headers=["vulkan/vulkan.h"],
+    objects=[],
+    protos=[
+        Proto("VkResult", "CreateWin32SurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("HINSTANCE", "hinstance"),
+             Param("HWND", "hwnd"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkSurfaceKHR*", "pSurface")]),
+
+        Proto("VkBool32", "GetPhysicalDeviceWin32PresentationSupportKHR",
+            [Param("    VkPhysicalDevice", "physicalDevice"),
+             Param("    uint32_t", "queueFamilyIndex")]),
+    ],
+)
 lunarg_debug_report = Extension(
     name="VK_LUNARG_DEBUG_REPORT",
     headers=["vk_lunarg_debug_report.h"],
