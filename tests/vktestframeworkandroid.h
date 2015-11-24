@@ -47,7 +47,7 @@ public:
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
-    bool GLSLtoSPV(const VkShaderStage shader_type,
+    bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
 

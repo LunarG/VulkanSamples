@@ -28,9 +28,9 @@ VkTestFramework::~VkTestFramework() {}
 
 bool VkTestFramework::m_use_glsl = true;
 
-bool VkTestFramework::GLSLtoSPV(const VkShaderStage shader_type,
-                                 const char *pshader,
-                                 std::vector<unsigned int> &spirv)
+bool VkTestFramework::GLSLtoSPV(const VkShaderStageFlagBits shader_type,
+                                const char *pshader,
+                                std::vector<unsigned int> &spv)
 {
     assert(false);
 }
