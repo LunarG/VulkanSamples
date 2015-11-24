@@ -966,6 +966,22 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
                               (VkIcdSurfaceXcb **) pSurface);
 }
 
+#ifdef VK_USE_PLATFORM_XCB_KHR
+ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id)
+{
+    // Just make sure we have a non-zero connection:
+    if (connection) {
+        return VK_TRUE;
+    } else {
+        return VK_FALSE;
+    }
+}
+#endif
+
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkInstance                               instance,
     VkSurfaceKHR                             surface,
