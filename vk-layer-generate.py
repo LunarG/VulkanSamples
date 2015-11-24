@@ -1598,7 +1598,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      '    return explicit_%s;\n'
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
-        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
+        # Temporarily prevent  DestroySurface call from being generated until WSI layer support is fleshed out
+        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name or 'DestroySurface' in proto.name:
             return ""
         else:
             if 'Create' in proto.name or 'Alloc' in proto.name:
@@ -1644,7 +1645,12 @@ class ObjectTrackerSubcommand(Subcommand):
                                 using_line += '    if (%s)\n' % (opn.split('-')[0])
                                 using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                             else:
-                                using_line += '    skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
+                                if 'AcquireNext' in proto.name and 'fence' == name:
+                                    using_line += '    if (fence != VK_NULL_HANDLE) {\n'
+                                    using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
+                                    using_line += '    }\n'
+                                else:
+                                    using_line += '    skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                     else:
                         base_param = loop_params[lc][0].split('-')[0].split('[')[0]
                         using_line += '    if (%s) {\n' % base_param
