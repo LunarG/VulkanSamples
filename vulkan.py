@@ -1064,7 +1064,7 @@ ext_khr_device_swapchain = Extension(
         Proto("VkResult", "GetSwapchainImagesKHR",
             [Param("VkDevice", "device"),
 	     Param("VkSwapchainKHR", "swapchain"),
-	     Param("uint32_t*", "pCount"),
+	     Param("uint32_t*", "pSwapchainImageCount"),
              Param("VkImage*", "pSwapchainImages")]),
 
         Proto("VkResult", "AcquireNextImageKHR",
