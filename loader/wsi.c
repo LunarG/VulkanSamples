@@ -525,7 +525,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWin32PresentationSupportK
     struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
     struct loader_icd *icd = phys_dev->this_icd;
 
-    assert(icd->GetPhysicalDeviceXcbPresentationSupportKHR && "loader: null GetPhysicalDeviceWin32PresentationSupportKHR ICD pointer");
+    assert(icd->GetPhysicalDeviceWin32PresentationSupportKHR && "loader: null GetPhysicalDeviceWin32PresentationSupportKHR ICD pointer");
 
     return icd->GetPhysicalDeviceWin32PresentationSupportKHR(phys_dev->phys_dev,
                                                 queueFamilyIndex);
