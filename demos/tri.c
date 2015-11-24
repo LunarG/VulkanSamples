@@ -1795,16 +1795,21 @@ static void demo_init_vk(struct demo *demo)
                  "vkCreateInstance Failure");
     }
     if (!platformSurfaceExtFound) {
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
 #ifdef _WIN32
-                 VK_KHR_WIN32_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+            VK_KHR_WIN32_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+            "Vulkan installable client driver (ICD) installed?\nPlease "
+            "look at the Getting Started guide for additional "
+            "information.\n",
+            "vkCreateInstance Failure");
 #else  // _WIN32
-                 VK_KHR_XCB_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the "
+            VK_KHR_XCB_SURFACE_EXTENSION_NAME" extension.\n\nDo you have a compatible "
+            "Vulkan installable client driver (ICD) installed?\nPlease "
+            "look at the Getting Started guide for additional "
+            "information.\n",
+            "vkCreateInstance Failure");
 #endif // _WIN32
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
     }
     const VkApplicationInfo app = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

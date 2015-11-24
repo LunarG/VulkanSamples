@@ -29,6 +29,12 @@
  */
 #pragma once
 
+#if defined(_WIN32)
+// WinSock2.h must be included *BEFORE* windows.h
+#define WIN32_LEAN_AND_MEAN
+#include <WinSock2.h>
+#endif // _WIN32
+
 #include "vulkan/vk_platform.h"
 #include "vulkan/vk_sdk_platform.h"
 
@@ -194,10 +200,6 @@ static inline void loader_platform_thread_cond_broadcast(loader_platform_thread_
 
 #elif defined(_WIN32) // defined(__linux__)
 /* Windows-specific common code: */
-
-// Headers:
-#include <WinSock2.h>
-#include <windows.h>
 // WinBase.h defines CreateSemaphore and synchapi.h defines CreateEvent
 //  undefine them to avoid conflicts with VkLayerDispatchTable struct members.
 #ifdef CreateSemaphore

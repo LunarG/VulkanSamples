@@ -9,6 +9,9 @@
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
+#define NOMINMAX
+// WinSock2.h must be included *BEFORE* windows.h
+#include <winsock2.h>
 #else
 #define VK_USE_PLATFORM_XCB_KHR
 #endif
@@ -122,10 +125,6 @@ static inline void test_platform_thread_cond_broadcast(test_platform_thread_cond
 }
 
 #elif defined(_WIN32) // defined(__linux__)
-/* Windows-specific common code: */
-#include <winsock2.h>
-#include <windows.h>
-
 // Threads:
 typedef HANDLE test_platform_thread;
 static inline int test_platform_thread_create(test_platform_thread *thread, void *(* func) (void *), void *data)
