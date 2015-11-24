@@ -1,5 +1,5 @@
 //
-// File: vk_debug_marker_lunarg.h
+// File: vk_debug_marker_layer.h
 //
 /*
 ** Copyright (c) 2015 The Khronos Group Inc.
@@ -31,7 +31,7 @@
 #pragma once
 
 #include "vulkan/vulkan.h"
-#include "vk_debug_marker_lunarg.h"
+#include "vulkan/vk_lunarg_debug_marker.h"
 #include "vk_layer.h"
 
 

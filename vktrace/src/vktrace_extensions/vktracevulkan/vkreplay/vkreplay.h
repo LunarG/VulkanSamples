@@ -28,7 +28,7 @@
 #include "vkreplay_window.h"
 #include "vkreplay_factory.h"
 #include "vkreplay_settings.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 
 
 extern void VkReplaySetLogCallback(VKTRACE_REPORT_CALLBACK_FUNCTION pCallback);

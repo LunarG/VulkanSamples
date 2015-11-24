@@ -1196,7 +1196,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('using namespace std;')
         header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_layer_config.h"')
-        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
+        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
         header_txt.append('#include "vk_layer_table.h"')
         header_txt.append('#include "vk_layer_data.h"')
         header_txt.append('#include "vk_layer_logging.h"')

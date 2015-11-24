@@ -48,7 +48,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include "vulkan/vk_debug_report_lunarg.h"
+#include <vulkan/vk_lunarg_debug_report.h>
 #include <vulkan/vk_ext_khr_swapchain.h>
 #include <vulkan/vk_ext_khr_device_swapchain.h>
 

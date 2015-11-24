@@ -1,15 +1,15 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "Basic",
+        "name": "VK_LAYER_LUNARG_Basic",
         "type": "GLOBAL",
         "library_path": ".\\VKLayerBasic.dll",
         "api_version": "0.210.0",
-        "implementation_version": "0",
+        "implementation_version": "1",
         "description": "LunarG Sample Layer",
         "device_extensions": [
              {
-                 "name": "vkLayerExtension1",
+                 "name": "VK_LUNARG_LayerExtension1",
                  "spec_version": "0"
              }
          ]

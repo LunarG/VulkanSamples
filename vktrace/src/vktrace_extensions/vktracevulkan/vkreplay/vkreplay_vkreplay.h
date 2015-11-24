@@ -45,12 +45,12 @@ extern "C" {
 #include "vktrace_vk_vk_packets.h"
 #include "vktrace_vk_vk_ext_khr_swapchain_packets.h"
 #include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"
-#include "vktrace_vk_vk_debug_report_lunarg_packets.h"
+#include "vktrace_vk_vk_lunarg_debug_report_packets.h"
 // TODO138 : Need to add packets files for new wsi headers
 }
 
 #include "vulkan/vulkan.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 #include "vulkan/vk_ext_khr_swapchain.h"
 #include "vulkan/vk_ext_khr_device_swapchain.h"
 #include "vkreplay_vkdisplay.h"

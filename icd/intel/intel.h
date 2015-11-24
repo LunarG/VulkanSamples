@@ -40,7 +40,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
-#include <vulkan/vk_debug_report_lunarg.h>
+#include <vulkan/vk_lunarg_debug_report.h>
 
 #include "icd.h"
 #include "icd-spv.h"

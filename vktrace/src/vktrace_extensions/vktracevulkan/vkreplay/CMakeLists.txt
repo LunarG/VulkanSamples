@@ -42,7 +42,7 @@ set (HDR_LIST
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_debug_report_lunarg_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h
 )
 
 include_directories(

@@ -1,11 +1,11 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "ObjectTracker",
+        "name": "VK_LAYER_LUNARG_ObjectTracker",
         "type": "GLOBAL",
         "library_path": ".\\VKLayerObjectTracker.dll",
         "api_version": "0.210.0",
-        "implementation_version": "0",
+        "implementation_version": "1",
         "description": "LunarG Validation Layer"
     }
 }

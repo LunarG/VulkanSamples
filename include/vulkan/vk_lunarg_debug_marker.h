@@ -1,5 +1,5 @@
 //
-// File: vk_debug_marker_lunarg.h
+// File: vk_lunarg_debug_marker.h
 //
 /*
 ** Copyright (c) 2015 The Khronos Group Inc.
@@ -32,7 +32,7 @@
 #define __VK_DEBUG_MARKER_H__
 
 #include "vulkan/vulkan.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 
 #define VK_DEBUG_MARKER_EXTENSION_NUMBER 6
 #define VK_DEBUG_MARKER_EXTENSION_REVISION 1

@@ -33,7 +33,7 @@
 #include "obj.h"
 #include "cmd_priv.h"
 #include "fb.h"
-#include "vulkan/vk_debug_marker_lunarg.h"
+#include "vulkan/vk_lunarg_debug_marker.h"
 
 /**
  * Free all resources used by a writer.  Note that the initial size is not

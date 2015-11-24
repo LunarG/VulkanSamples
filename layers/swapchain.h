@@ -28,7 +28,7 @@
 #define SWAPCHAIN_H
 
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 #include <vector>

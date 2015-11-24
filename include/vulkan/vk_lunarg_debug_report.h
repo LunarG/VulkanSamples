@@ -1,5 +1,5 @@
 //
-// File: vk_debug_report_lunarg.h
+// File: vk_lunarg_debug_report.h
 //
 /*
  *
@@ -29,8 +29,8 @@
  *
  */
 
-#ifndef __VK_DEBUG_REPORT_LUNARG_H__
-#define __VK_DEBUG_REPORT_LUNARG_H__
+#ifndef __VK_LUNARG_DEBUG_REPORT_H__
+#define __VK_LUNARG_DEBUG_REPORT_H__
 
 #include "vulkan/vulkan.h"
 
@@ -179,4 +179,4 @@ VKAPI_ATTR void VKAPI_CALL vkDbgBreakCallback(
 } // extern "C"
 #endif // __cplusplus
 
-#endif // __VK_DEBUG_REPORT_LUNARG_H__
+#endif // __VK_LUNARG_DEBUG_REPORT_H__

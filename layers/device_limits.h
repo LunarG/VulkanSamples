@@ -24,7 +24,7 @@
  */
 #include "vulkan/vk_layer.h"
 #include <vector>
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 
 using namespace std;
 

@@ -34,8 +34,8 @@ class VkImageObj;
 #else
 #include "vktestframework.h"
 #endif
-#include "vulkan/vk_debug_report_lunarg.h"
-#include "vulkan/vk_debug_marker_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_lunarg_debug_marker.h"
 
 #include <vector>
 

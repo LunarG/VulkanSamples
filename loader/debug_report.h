@@ -27,7 +27,7 @@
 
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
     /*
      * CreateMsgCallback is global and needs to be
      * applied to all layers and ICDs.

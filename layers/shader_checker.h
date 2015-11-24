@@ -23,7 +23,7 @@
  * Author: Chris Forbes <chrisf@ijw.co.nz>
  */
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_debug_report_lunarg.h"
+#include "vulkan/vk_lunarg_debug_report.h"
 #include "vk_layer_logging.h"
 
 /* Shader checker error codes */

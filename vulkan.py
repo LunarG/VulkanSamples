@@ -192,7 +192,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan/vulkan.h", "vk_debug_report_lunarg.h"],
+    headers=["vulkan/vulkan.h", "vk_lunarg_debug_report.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -1072,9 +1072,9 @@ ext_khr_device_swapchain = Extension(
              Param("VkPresentInfoKHR*", "pPresentInfo")]),
     ],
 )
-debug_report_lunarg = Extension(
-    name="VK_DEBUG_REPORT_LunarG",
-    headers=["vk_debug_report_lunarg.h"],
+lunarg_debug_report = Extension(
+    name="VK_LUNARG_DEBUG_REPORT",
+    headers=["vk_lunarg_debug_report.h"],
     objects=[
         "VkDbgMsgCallback",
     ],
@@ -1091,9 +1091,9 @@ debug_report_lunarg = Extension(
              Param("VkDbgMsgCallback", "msgCallback")]),
     ],
 )
-debug_marker_lunarg = Extension(
-    name="VK_DEBUG_MARKER_LunarG",
-    headers=["vulkan/vk_debug_marker_lunarg.h"],
+lunarg_debug_marker = Extension(
+    name="VK_LUNARG_DEBUG_MARKER",
+    headers=["vulkan/vk_lunarg_debug_marker.h"],
     objects=[],
     protos=[
         Proto("void", "CmdDbgMarkerBegin",
@@ -1119,7 +1119,7 @@ debug_marker_lunarg = Extension(
     ],
 )
 extensions = [core, ext_khr_swapchain, ext_khr_device_swapchain]
-extensions_all = [core, ext_khr_swapchain, ext_khr_device_swapchain, debug_report_lunarg, debug_marker_lunarg]
+extensions_all = [core, ext_khr_swapchain, ext_khr_device_swapchain, lunarg_debug_report, lunarg_debug_marker]
 object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",
@@ -1216,7 +1216,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan/vulkan.h", "vk_debug_report_lunarg.h"],
+            headers=["vulkan/vulkan.h", "vk_lunarg_debug_report.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))

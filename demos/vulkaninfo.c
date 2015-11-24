@@ -37,8 +37,8 @@
 #include <io.h>
 #endif
 
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/vk_ext_khr_device_swapchain.h>
 
 #include <vulkan/vulkan.h>
 

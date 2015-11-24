@@ -1,22 +1,22 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "multi1",
+        "name": "VK_LAYER_LUNARG_multi1",
         "type": "DEVICE",
         "library_path": ".\\VKLayerMulti.dll",
         "api_version": "0.210.0",
-        "implementation_version": "0",
+        "implementation_version": "1",
         "description": "LunarG Sample multiple layer per library",
         "functions" : {
           "vkGetDeviceProcAddr" : "multi1GetDeviceProcAddr"
         }
     },
     "layer" : {
-        "name": "multi2",
+        "name": "VK_LAYER_LUNARG_multi2",
         "type": "INSTANCE",
         "library_path": ".\\VKLayerMulti.dll",
         "api_version": "0.210.0",
-        "implementation_version": "0",
+        "implementation_version": "1",
         "description": "LunarG Sample multiple layer per library",
         "functions" : {
           "vkGetInstanceProcAddr" : "multi2GetInstanceProcAddr"

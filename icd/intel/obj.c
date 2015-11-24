@@ -30,7 +30,7 @@
 #include "gpu.h"
 #include "mem.h"
 #include "obj.h"
-#include "vulkan/vk_debug_marker_lunarg.h"
+#include "vulkan/vk_lunarg_debug_marker.h"
 
 VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements* pRequirements)
 {

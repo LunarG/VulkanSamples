@@ -11,10 +11,10 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_gener
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_report_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_report_lunarg.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_debug_marker_lunarg OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_debug_marker_lunarg.cpp)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.cpp)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_marker OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_marker.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_lunarg_debug_marker OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_marker.cpp)
 
 if (WIN32)
     # Put vktrace_layer.dll in the same directory as vktrace.exe
@@ -31,15 +31,15 @@ set(SRC_LIST
     vktrace_lib_trace.cpp
     vktrace_vk_exts.cpp
     codegen/vktrace_vk_vk.cpp
-    codegen/vktrace_vk_vk_debug_report_lunarg.cpp
-    codegen/vktrace_vk_vk_debug_marker_lunarg.cpp
+    codegen/vktrace_vk_vk_lunarg_debug_report.cpp
+    codegen/vktrace_vk_vk_lunarg_debug_marker.cpp
     codegen/vktrace_vk_vk_ext_khr_swapchain.cpp
     codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_swapchain_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_device_swapchain_struct_size_helper.c
-    ${CODEGEN_UTILS_DIR}/vk_debug_report_lunarg_struct_size_helper.c
-    ${CODEGEN_UTILS_DIR}/vk_debug_marker_lunarg_struct_size_helper.c
+    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.c
+    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.c
 )
 
 set_source_files_properties( ${SRC_LIST} PROPERTIES LANGUAGE CXX)
@@ -49,21 +49,21 @@ set (HDR_LIST
     vktrace_vk_exts.h
     vk_dispatch_table_helper.h
     codegen/vktrace_vk_vk.h
-    codegen/vktrace_vk_vk_debug_report_lunarg.h
-    codegen/vktrace_vk_vk_debug_marker_lunarg.h
+    codegen/vktrace_vk_vk_lunarg_debug_report.h
+    codegen/vktrace_vk_vk_lunarg_debug_marker.h
     codegen/vktrace_vk_vk_ext_khr_swapchain.h
     codegen/vktrace_vk_vk_ext_khr_device_swapchain.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_debug_report_lunarg_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_debug_marker_lunarg_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_marker_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_swapchain_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_ext_khr_device_swapchain_struct_size_helper.h
-    ${CODEGEN_UTILS_DIR}/vk_debug_report_lunarg_struct_size_helper.h
-    ${CODEGEN_UTILS_DIR}/vk_debug_marker_lunarg_struct_size_helper.h
+    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.h
+    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.h
 )
 
 add_custom_command(OUTPUT vk_dispatch_table_helper.h

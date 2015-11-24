@@ -438,7 +438,7 @@ class Subcommand(object):
 
                         # call down the layer chain and get return value (if there is one)
                         # Note: this logic doesn't work for CreateInstance or CreateDevice but those are handwritten
-                        if extensionName == 'vk_debug_marker_lunarg':
+                        if extensionName == 'vk_lunarg_debug_marker':
                             table_txt = 'mdd(%s)->debugMarkerTable' % proto.params[0].name
                         elif proto.params[0].ty in ['VkInstance', 'VkPhysicalDevice']:
                            table_txt = 'mid(%s)->instTable' % proto.params[0].name
@@ -1751,8 +1751,8 @@ class VktraceTraceC(Subcommand):
         header_txt.append('#include "vktrace_common.h"')
         header_txt.append('#include "vktrace_lib_helpers.h"')
         header_txt.append('#include "vktrace_vk_vk.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_marker_lunarg.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
@@ -1785,8 +1785,8 @@ class VktracePacketID(Subcommand):
         header_txt.append('#include "vktrace_trace_packet_identifiers.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_marker_lunarg_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"')
@@ -1863,7 +1863,7 @@ class VktraceExtTraceC(Subcommand):
         header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
         header_txt.append('#include "%s_struct_size_helper.h"' % extensionName.lower())
-        if extensionName == 'vk_debug_marker_lunarg':
+        if extensionName == 'vk_lunarg_debug_marker':
             header_txt.append('#include "vk_debug_marker_layer.h"\n')
 
         header_txt.append('#include "vktrace_lib_helpers.h"')
@@ -1895,8 +1895,8 @@ class VktraceReplayVkFuncPtrs(Subcommand):
         header_txt.append('#include <xcb/xcb.h>\n')
         header_txt.append('#endif')
         header_txt.append('#include "vulkan/vulkan.h"')
-        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
-        header_txt.append('#include "vk_debug_marker_lunarg.h"')
+        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
         header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
         header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
 
@@ -1913,8 +1913,8 @@ class VktraceReplayObjMapperHeader(Subcommand):
         header_txt.append('#include <vector>')
         header_txt.append('#include <string>')
         header_txt.append('#include "vulkan/vulkan.h"')
-        header_txt.append('#include "vulkan/vk_debug_report_lunarg.h"')
-        header_txt.append('#include "vk_debug_marker_lunarg.h"')
+        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
         header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
         header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
         return "\n".join(header_txt)
@@ -1934,8 +1934,8 @@ class VktraceReplayC(Subcommand):
         header_txt.append('\n')
         header_txt.append('extern "C" {')
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_report_lunarg_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_debug_marker_lunarg_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"')
         header_txt.append('#include "vktrace_vk_packet_id.h"')

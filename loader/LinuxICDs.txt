@@ -207,17 +207,17 @@ For example:
          },
          "instance_extensions": [
              {
-                 "name": "DEBUG_REPORT",
+                 "name": "VK_LUNARG_DEBUG_REPORT",
                  "spec_version": "1"
              },
              {
-                 "name": "DEBUG_X",
+                 "name": "VK_VENDOR_DEBUG_X",
                  "spec_version": "3"
              }
          ],
          "device_extensions": [
              {
-                 "name": "DEBUG_MARKER",
+                 "name": "VK_LUNARG_DEBUG_MARKER",
                  "spec_version": "1",
 		 "entrypoints": ["vkCmdDbgMarkerBegin", "vkCmdDbgMarkerEnd"]
              }
