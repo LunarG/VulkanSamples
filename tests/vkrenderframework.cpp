@@ -174,21 +174,29 @@ void VkRenderFramework::InitState()
 {
     VkResult err;
 
+// FIXME/TODO: The following code needs to be modified.  It was
+// written in a broken manner, when that was easier to do.  It
+// did/does not pass valid surface info to the
+// vkGetPhysicalDeviceSurfaceFormatsKHR() function.  This worked for
+// the early Vulkan ICDs, and it may work for some production ICDs;
+// but it is not valid.  The vkGetPhysicalDeviceSurfaceFormatsKHR()
+// function can only be called with a VkSurfaceKHR object, which means
+// that a window must have been created.  Perhaps there's a
+// chicken-and-egg problem with the API, where the test framework
+// wants to find out what VkFormat(s) it can use before creating a
+// window, but a window is needed in order to call the
+// vkGetPhysicalDeviceSurfaceFormatsKHR() function.  If so, let's
+// figure this out quickly!
+    
     // Get the list of VkFormat's that are supported:
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
     uint32_t formatCount;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
 #ifdef _WIN32
-    // FIXME: Call vkCreateWin32SurfaceKHR()
-    // FIXME: Call vkCreateWin32SurfaceKHR()
-    // FIXME: Call vkCreateWin32SurfaceKHR()
-    // FIXME: Call vkCreateWin32SurfaceKHR()
+    // FIXME/TODO: Call vkCreateWin32SurfaceKHR()
 #else // _WIN32
-    // FIXME: Call vkCreateXcbSurfaceKHR()
-    // FIXME: Call vkCreateXcbSurfaceKHR()
-    // FIXME: Call vkCreateXcbSurfaceKHR()
-    // FIXME: Call vkCreateXcbSurfaceKHR()
+    // FIXME/TODO: Call vkCreateXcbSurfaceKHR()
 #endif // _WIN32
-    VkSurfaceKHR surface; //FIXME: MUST GET THIS FROM SOMEWHERE--OLD CODE WASN'T FILLING IN THE SURFACE DESCRIPTION!!!
     GET_DEVICE_PROC_ADDR(device(), GetPhysicalDeviceSurfaceFormatsKHR);
     err = fpGetPhysicalDeviceSurfaceFormatsKHR(
                                     m_device->phy().handle(),
