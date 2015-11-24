@@ -64,8 +64,8 @@ typedef struct _VkIcdSurfaceWayland {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 typedef struct _VkIcdSurfaceWin32 {
     VkIcdSurfaceBase   base;
-    HINSTANCE          hinstance,
-    HWND               hwnd,
+    HINSTANCE          hinstance;
+    HWND               hwnd;
 } VkIcdSurfaceWin32;
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
