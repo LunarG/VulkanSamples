@@ -106,6 +106,7 @@ struct MT_OBJ_HANDLE_TYPE {
 struct MT_MEM_OBJ_INFO {
     void*                       object;                 // Dispatchable object used to create this memory (device of swapchain)
     uint32_t                    refCount;               // Count of references (obj bindings or CB use)
+    bool                        valid;                  // Stores if the memory has valid data or not
     VkDeviceMemory              mem;
     VkMemoryAllocateInfo        allocInfo;
     list<MT_OBJ_HANDLE_TYPE>    pObjBindings;           // list container of objects bound to this memory
@@ -117,6 +118,7 @@ struct MT_MEM_OBJ_INFO {
 // This only applies to Buffers and Images, which can have memory bound to them
 struct MT_OBJ_BINDING_INFO {
     VkDeviceMemory mem;
+    bool valid; //If this is a swapchain image backing memory is not a MT_MEM_OBJ_INFO so store it here.
     union create_info {
         VkImageCreateInfo  image;
         VkBufferCreateInfo buffer;
@@ -132,18 +134,41 @@ typedef struct _MT_CB_INFO {
     uint64_t                    fenceId;
     VkFence                     lastSubmittedFence;
     VkQueue                     lastSubmittedQueue;
+    VkRenderPass                pass;
     // Order dependent, stl containers must be at end of struct
     list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
     // Constructor
     _MT_CB_INFO():createInfo{},pipelines{},attachmentCount(0),fenceId(0),lastSubmittedFence{},lastSubmittedQueue{} {};
 } MT_CB_INFO;
 
-
 // Track command pools and their command buffers
 typedef struct _MT_CMD_POOL_INFO {
     VkCommandPoolCreateFlags    createFlags;
     list<VkCommandBuffer>       pCommandBuffers; // list container of cmd buffers allocated from this pool
 } MT_CMD_POOL_INFO;
+
+struct MT_IMAGE_VIEW_INFO {
+    VkImage image;
+};
+
+struct MT_FB_ATTACHMENT_INFO {
+    VkImage image;
+    VkDeviceMemory mem;
+};
+
+struct MT_FB_INFO {
+    std::vector<MT_FB_ATTACHMENT_INFO> attachments;
+};
+
+struct MT_PASS_ATTACHMENT_INFO {
+   VkAttachmentLoadOp load_op; 
+   VkAttachmentStoreOp store_op; 
+};
+
+struct MT_PASS_INFO {
+    VkFramebuffer fb;
+    std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
+};
 
 // Associate fenceId with a fence object
 struct MT_FENCE_INFO {
