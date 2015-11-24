@@ -694,6 +694,14 @@ static const VkFormat nulldrv_presentable_formats[] = {
     VK_FORMAT_B8G8R8A8_UNORM,
 };
 
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
+    VkInstance                                   instance,
+    VkSurfaceKHR                                 surface,
+    const VkAllocationCallbacks*                pAllocator)
+{
+   NULLDRV_LOG_FUNC;
+}
+
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,

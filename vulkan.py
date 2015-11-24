@@ -1010,11 +1010,16 @@ core = Extension(
     ],
 )
 
-ext_khr_swapchain = Extension(
+ext_khr_surface = Extension(
     name="VK_KHR_surface",
     headers=["vulkan/vulkan.h"],
-    objects=[],
+    objects=["vkSurfaceKHR"],
     protos=[
+        Proto("void", "DestroySurfaceKHR",
+            [Param("VkInstance", "instance"),
+             Param("VkSurfaceKHR", "surface"),
+             Param("const VkAllocationCallbacks*", "pAllocator")]),
+
         Proto("VkResult", "GetPhysicalDeviceSurfaceSupportKHR",
             [Param("VkPhysicalDevice", "physicalDevice"),
              Param("uint32_t", "queueFamilyIndex"),
@@ -1121,8 +1126,8 @@ lunarg_debug_marker = Extension(
              Param("const char*", "pName")]),
     ],
 )
-extensions = [core, ext_khr_swapchain, ext_khr_device_swapchain]
-extensions_all = [core, ext_khr_swapchain, ext_khr_device_swapchain, lunarg_debug_report, lunarg_debug_marker]
+extensions = [core, ext_khr_surface, ext_khr_device_swapchain]
+extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, lunarg_debug_report, lunarg_debug_marker]
 object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",
@@ -1153,6 +1158,7 @@ object_non_dispatch_list = [
     "VkRenderPass",
     "VkFramebuffer",
     "VkSwapchainKHR",
+    "VkSurfaceKHR",
     "VkDbgMsgCallback",
 ]
 
