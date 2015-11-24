@@ -169,6 +169,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkEnumerateDeviceExtensionProperties EnumerateDeviceExtensionProperties;
     PFN_vkEnumerateDeviceLayerProperties EnumerateDeviceLayerProperties;
+    PFN_vkDestroySurfaceKHR DestroySurfaceKHR;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
