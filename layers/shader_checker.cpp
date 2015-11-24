@@ -43,7 +43,7 @@
 #include "shader_checker.h"
 #include "vk_layer_extension_utils.h"
 
-#include "spirv/spirv.hpp"
+#include <spirv.hpp>
 
 // fwd decls
 struct shader_module;
