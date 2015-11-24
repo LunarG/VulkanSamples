@@ -113,18 +113,23 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceSurfacePresentModesKHR = loader_GetPhysicalDeviceSurfacePresentModesKHR,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = vkCreateMirSurfaceKHR,
+    .GetPhysicalDeviceMirPresentationSupportKHR = loader_GetPhysicalDeviceMirPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     .CreateWaylandSurfaceKHR = vkCreateWaylandSurfaceKHR,
+    .GetPhysicalDeviceWaylandPresentationSupportKHR = loader_GetPhysicalDeviceWaylandPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     .CreateWin32SurfaceKHR = vkCreateWin32SurfaceKHR,
+    .GetPhysicalDeviceWin32PresentationSupportKHR = loader_GetPhysicalDeviceWin32PresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     .CreateXcbSurfaceKHR = vkCreateXcbSurfaceKHR,
+    .GetPhysicalDeviceXcbPresentationSupportKHR = loader_GetPhysicalDeviceXcbPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     .CreateXlibSurfaceKHR = vkCreateXlibSurfaceKHR,
+    .GetPhysicalDeviceXlibPresentationSupportKHR = loader_GetPhysicalDeviceXlibPresentationSupportKHR,
 #endif
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
@@ -1236,6 +1241,12 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfacePresentModesKHR, false);
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    LOOKUP_GIPA(GetPhysicalDeviceWin32PresentationSupportKHR, false);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    LOOKUP_GIPA(GetPhysicalDeviceXcbPresentationSupportKHR, false);
+#endif
 
 #undef LOOKUP_GIPA
 

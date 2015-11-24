@@ -60,3 +60,35 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfacePresentModesKHR(
     VkSurfaceKHR                                surface,
     uint32_t*                                   pPresentModeCount,
     VkPresentModeKHR*                           pPresentModes);
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWin32PresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex);
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceMirPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    MirConnection*                              connection);
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWaylandPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    struct wl_display*                          display);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id);
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID);
+#endif

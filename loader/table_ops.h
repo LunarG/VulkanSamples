@@ -471,18 +471,23 @@ static inline void loader_init_instance_extension_dispatch_table(
     table->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 #ifdef VK_USE_PLATFORM_MIR_KHR
     table->CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR) gpa(inst, "vkCreateMirSurfaceKHR");
+    table->GetPhysicalDeviceMirPresentationSupportKHR = (PFN_vkGetPhysicalDeviceMirPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceMirPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     table->CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) gpa(inst, "vkCreateWaylandSurfaceKHR");
+    table->GetPhysicalDeviceWaylandPresentationSupportKHR = (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     table->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) gpa(inst, "vkCreateWin32SurfaceKHR");
+    table->GetPhysicalDeviceWin32PresentationSupportKHR = (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     table->CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR) gpa(inst, "vkCreateXcbSurfaceKHR");
+    table->GetPhysicalDeviceXcbPresentationSupportKHR = (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     table->CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR) gpa(inst, "vkCreateXlibSurfaceKHR");
+    table->GetPhysicalDeviceXlibPresentationSupportKHR = (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
 #endif
 }
 
@@ -531,22 +536,32 @@ static inline void *loader_lookup_instance_dispatch_table(
 #ifdef VK_USE_PLATFORM_MIR_KHR
     if (!strcmp(name, "CreateMirSurfaceKHR"))
         return (void *) table->CreateMirSurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceMirPresentationSupportKHR"))
+        return (void *) table->GetPhysicalDeviceMirPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     if (!strcmp(name, "CreateWaylandSurfaceKHR"))
         return (void *) table->CreateWaylandSurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceWaylandPresentationSupportKHR"))
+        return (void *) table->GetPhysicalDeviceWaylandPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     if (!strcmp(name, "CreateWin32SurfaceKHR"))
         return (void *) table->CreateWin32SurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceWin32PresentationSupportKHR"))
+        return (void *) table->GetPhysicalDeviceWin32PresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     if (!strcmp(name, "CreateXcbSurfaceKHR"))
         return (void *) table->CreateXcbSurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceXcbPresentationSupportKHR"))
+        return (void *) table->GetPhysicalDeviceXcbPresentationSupportKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     if (!strcmp(name, "CreateXlibSurfaceKHR"))
         return (void *) table->CreateXlibSurfaceKHR;
+    if (!strcmp(name, "GetPhysicalDeviceXlibPresentationSupportKHR"))
+        return (void *) table->GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
     if (!strcmp(name, "DbgCreateMsgCallback"))
         return (void *) table->DbgCreateMsgCallback;

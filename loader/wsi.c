@@ -496,6 +496,40 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
 
     return VK_SUCCESS;
 }
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceWin32PresentationSupportKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32PresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkBool32 res = disp->GetPhysicalDeviceWin32PresentationSupportKHR(
+                                                physicalDevice,
+                                                queueFamilyIndex);
+    return res;
+}
+
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceWin32PresentationSupportKHR
+ */
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWin32PresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(icd->GetPhysicalDeviceXcbPresentationSupportKHR && "loader: null GetPhysicalDeviceWin32PresentationSupportKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceWin32PresentationSupportKHR(phys_dev->phys_dev,
+                                                queueFamilyIndex);
+}
 #endif/ VK_USE_PLATFORM_WIN32_KHR
 
 #else // _WIN32 (i.e. Linux)
@@ -535,6 +569,44 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
 
     return VK_SUCCESS;
 }
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceMirPresentationSupportKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    MirConnection*                              connection)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkBool32 res = disp->GetPhysicalDeviceMirPresentationSupportKHR(
+                                                physicalDevice,
+                                                queueFamilyIndex,
+                                                connection);
+    return res;
+}
+
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceMirPresentationSupportKHR
+ */
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceMirPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    MirConnection*                              connection)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(icd->GetPhysicalDeviceMirPresentationSupportKHR && "loader: null GetPhysicalDeviceMirPresentationSupportKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceMirPresentationSupportKHR(phys_dev->phys_dev,
+                                                queueFamilyIndex,
+                                                connection);
+}
 #endif // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -571,6 +643,44 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
     return VK_SUCCESS;
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceWaylandPresentationSupportKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    struct wl_display*                          display)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkBool32 res = disp->GetPhysicalDeviceWaylandPresentationSupportKHR(
+                                                physicalDevice,
+                                                queueFamilyIndex,
+                                                display);
+    return res;
+}
+
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceWaylandPresentationSupportKHR
+ */
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWaylandPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    struct wl_display*                          display)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(icd->GetPhysicalDeviceWaylandPresentationSupportKHR && "loader: null GetPhysicalDeviceWaylandPresentationSupportKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceWaylandPresentationSupportKHR(phys_dev->phys_dev,
+                                                queueFamilyIndex,
+                                                display);
 }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 
@@ -609,6 +719,48 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
 
     return VK_SUCCESS;
 }
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceXcbPresentationSupportKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkBool32 res = disp->GetPhysicalDeviceXcbPresentationSupportKHR(
+                                                physicalDevice,
+                                                queueFamilyIndex,
+                                                connection,
+                                                visual_id);
+    return res;
+}
+
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceXcbPresentationSupportKHR
+ */
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(icd->GetPhysicalDeviceXcbPresentationSupportKHR && "loader: null GetPhysicalDeviceXcbPresentationSupportKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceXcbPresentationSupportKHR(phys_dev->phys_dev,
+                                                queueFamilyIndex,
+                                                connection,
+                                                visual_id);
+}
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
@@ -645,6 +797,48 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
     return VK_SUCCESS;
+}
+
+/*
+ * This is the trampoline entrypoint
+ * for GetPhysicalDeviceXlibPresentationSupportKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(physicalDevice);
+    VkBool32 res = disp->GetPhysicalDeviceXlibPresentationSupportKHR(
+                                                physicalDevice,
+                                                queueFamilyIndex,
+                                                dpy,
+                                                visualID);
+    return res;
+}
+
+
+/*
+ * This is the instance chain terminator function
+ * for GetPhysicalDeviceXlibPresentationSupportKHR
+ */
+VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID)
+{
+    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_icd *icd = phys_dev->this_icd;
+
+    assert(icd->GetPhysicalDeviceXlibPresentationSupportKHR && "loader: null GetPhysicalDeviceXlibPresentationSupportKHR ICD pointer");
+
+    return icd->GetPhysicalDeviceXlibPresentationSupportKHR(phys_dev->phys_dev,
+                                                queueFamilyIndex,
+                                                dpy,
+                                                visualID);
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
@@ -718,6 +912,10 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         *addr = ptr_instance->wsi_win32_surface_enabled ? (void *) vkCreateWin32SurfaceKHR : NULL;
         return true;
     }
+    if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", name)) {
+        *addr = ptr_instance->wsi_win32_surface_enabled ? (void *) vkGetPhysicalDeviceWin32PresentationSupportKHR : NULL;
+        return true;
+    }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 #else // _WIN32 (i.e. Linux)
 #ifdef VK_USE_PLATFORM_MIR_KHR
@@ -728,6 +926,9 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         *addr = ptr_instance->wsi_mir_surface_enabled ? (void *) vkCreateMirSurfaceKHR : NULL;
         return true;
     }
+    if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", name)) {
+        *addr = ptr_instance->wsi_mir_surface_enabled ? (void *) vkGetPhysicalDeviceMirPresentationSupportKHR : NULL;
+        return true;
 #endif // VK_USE_PLATFORM_MIR_KHR
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     /*
@@ -737,6 +938,9 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         *addr = ptr_instance->wsi_wayland_surface_enabled ? (void *) vkCreateWaylandSurfaceKHR : NULL;
         return true;
     }
+    if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", name)) {
+        *addr = ptr_instance->wsi_wayland_surface_enabled ? (void *) vkGetPhysicalDeviceWaylandPresentationSupportKHR : NULL;
+        return true;
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 #ifdef VK_USE_PLATFORM_XCB_KHR
     /*
@@ -744,6 +948,10 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
      */
     if (!strcmp("vkCreateXcbSurfaceKHR", name)) {
         *addr = ptr_instance->wsi_xcb_surface_enabled ? (void *) vkCreateXcbSurfaceKHR : NULL;
+        return true;
+    }
+    if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", name)) {
+        *addr = ptr_instance->wsi_xcb_surface_enabled ? (void *) vkGetPhysicalDeviceXcbPresentationSupportKHR : NULL;
         return true;
     }
 #endif // VK_USE_PLATFORM_XCB_KHR
@@ -755,6 +963,9 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         *addr = ptr_instance->wsi_xlib_surface_enabled ? (void *) vkCreateXlibSurfaceKHR : NULL;
         return true;
     }
+    if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name)) {
+        *addr = ptr_instance->wsi_xlib_surface_enabled ? (void *) vkGetPhysicalDeviceXlibPresentationSupportKHR : NULL;
+        return true;
 #endif // VK_USE_PLATFORM_XLIB_KHR
 #endif // _WIN32
 
