@@ -5209,6 +5209,28 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     PostCmdBindVertexBuffers(commandBuffer, startBinding, bindingCount);
 }
 
+bool PreCmdDraw(
+    VkCommandBuffer commandBuffer,
+    uint32_t vertexCount,
+    uint32_t instanceCount,
+    uint32_t firstVertex,
+    uint32_t firstInstance)
+{
+    if (vertexCount == 0) {
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdDraw parameter, uint32_t vertexCount, is 0");
+        return false;
+    }
+
+    if (instanceCount == 0) {
+        log_msg(mdd(commandBuffer), VK_DBG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        "vkCmdDraw parameter, uint32_t instanceCount, is 0");
+        return false;
+    }
+
+    return true;
+}
+
 bool PostCmdDraw(
     VkCommandBuffer commandBuffer,
     uint32_t firstVertex,
@@ -5231,6 +5253,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(
     uint32_t firstVertex,
     uint32_t firstInstance)
 {
+    PreCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+
     get_dispatch_table(pc_device_table_map, commandBuffer)->CmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 
     PostCmdDraw(commandBuffer, firstVertex, vertexCount, firstInstance, instanceCount);
