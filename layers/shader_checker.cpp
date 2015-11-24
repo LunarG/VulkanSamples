@@ -899,32 +899,6 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 
     collect_interface_by_location(my_data, dev, fs, spv::StorageClassOutput, outputs, builtin_outputs);
 
-    /* Check for legacy gl_FragColor broadcast: In this case, we should have no user-defined outputs,
-     * and all color attachment should be UNORM/SNORM/FLOAT.
-     */
-#if 0
-    if (builtin_outputs.find(spv::BuiltInFragColor) != builtin_outputs.end()) {
-        if (outputs.size()) {
-            if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_FS_MIXED_BROADCAST, "SC",
-                    "Should not have user-defined FS outputs when using broadcast")) {
-                pass = false;
-            }
-        }
-
-        for (unsigned i = 0; i < color_formats.size(); i++) {
-            unsigned attachmentType = get_format_type(color_formats[i]);
-            if (attachmentType == FORMAT_TYPE_SINT || attachmentType == FORMAT_TYPE_UINT) {
-                if (log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE, /*dev*/0, 0, SHADER_CHECKER_INTERFACE_TYPE_MISMATCH, "SC",
-                        "CB format should not be SINT or UINT when using broadcast")) {
-                    pass = false;
-                }
-            }
-        }
-
-        return pass;
-    }
-#endif
-
     auto it = outputs.begin();
     uint32_t attachment = 0;
 
