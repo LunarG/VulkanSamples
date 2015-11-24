@@ -31,6 +31,13 @@
 #define ICD_H
 
 
+// TODO: Generalize for other extension
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#else  // _WIN32
+#define VK_USE_PLATFORM_XCB_KHR
+#endif // _WIN32
+
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vk_lunarg_debug_report.h>

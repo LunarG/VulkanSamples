@@ -1,4 +1,4 @@
-"""VK API description"""
+" ""VK API description"""
 
 # Copyright (C) 2015 Valve Corporation
 #
@@ -1094,10 +1094,10 @@ ext_khr_xcb_surface = Extension(
              Param("VkSurfaceKHR*", "pSurface")]),
 
         Proto("VkBool32", "GetPhysicalDeviceXcbPresentationSupportKHR",
-            [Param("    VkPhysicalDevice", "physicalDevice"),
-             Param("    uint32_t", "queueFamilyIndex"),
-             Param("    xcb_connection_t*", "connection"),
-             Param("    xcb_visualid_t", "visual_id")]),
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueFamilyIndex"),
+             Param("xcb_connection_t*", "connection"),
+             Param("xcb_visualid_t", "visual_id")]),
     ],
 )
 ext_khr_win32_surface = Extension(
@@ -1113,8 +1113,8 @@ ext_khr_win32_surface = Extension(
              Param("VkSurfaceKHR*", "pSurface")]),
 
         Proto("VkBool32", "GetPhysicalDeviceWin32PresentationSupportKHR",
-            [Param("    VkPhysicalDevice", "physicalDevice"),
-             Param("    uint32_t", "queueFamilyIndex")]),
+            [Param("VkPhysicalDevice", "physicalDevice"),
+             Param("uint32_t", "queueFamilyIndex")]),
     ],
 )
 lunarg_debug_report = Extension(
@@ -1163,8 +1163,15 @@ lunarg_debug_marker = Extension(
              Param("const char*", "pName")]),
     ],
 )
-extensions = [core, ext_khr_surface, ext_khr_device_swapchain]
-extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, lunarg_debug_report, lunarg_debug_marker]
+
+import sys
+if sys.platform == 'win32':
+    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface]
+    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_win32_surface, lunarg_debug_report, lunarg_debug_marker]
+else:
+    extensions = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface]
+    extensions_all = [core, ext_khr_surface, ext_khr_device_swapchain, ext_khr_xcb_surface, lunarg_debug_report, lunarg_debug_marker]
+
 object_dispatch_list = [
     "VkInstance",
     "VkPhysicalDevice",
