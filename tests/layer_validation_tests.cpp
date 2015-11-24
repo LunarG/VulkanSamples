@@ -4654,9 +4654,6 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
     }
 }
 
-/* TODO: would be nice to test the mixed broadcast & custom case, but the GLSL->SPV compiler
- * rejects it. */
-
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 {
     m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
