@@ -22,8 +22,9 @@
  *
  * Author: Chia-I Wu <olvaffe@gmail.com>
  * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Ian Elliott <ian@LunarG.com>
+ * Author: Ian Elliott <ianelliott@google.com>
  * Author: Mike Stroyan <mike@LunarG.com>
- *
  */
 
 #define _GNU_SOURCE 1
