@@ -23,10 +23,10 @@
  *
  * Author: Jon Ashburn <jon@lunarg.com>
  */
+
 #include "vulkan/vk_lunarg_debug_marker.h"
 #include "vulkan/vk_lunarg_debug_report.h"
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+
 #include "vulkan/vk_layer.h"
 #include "vktrace_lib_helpers.h"
 
@@ -41,16 +41,49 @@ void ext_init_create_instance(
     instData->instTable.DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
     instData->instTable.DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
     instData->instTable.GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
-
+    instData->instTable.DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
+    instData->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapaabilitiesKHR");
+    instData->instTable.GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
+    instData->instTable.GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
     instData->LunargDebugReportEnabled = false;
-    instData->KHRSwapchainEnabled = false;
+    instData->KHRSurfaceEnabled = false;
+    instData->KHRXlibSurfaceEnabled = false;
+    instData->KHRXcbSurfaceEnabled = false;
+    instData->KHRWaylandSurfaceEnabled = false;
+    instData->KHRMirSurfaceEnabled = false;
+    instData->KHRWin32SurfaceEnabled = false;
     for (uint32_t i = 0; i < extension_count; i++) {
         if (strcmp(ppEnabledExtensions[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             instData->LunargDebugReportEnabled = true;
         }
-        if (strcmp(ppEnabledExtensions[i], VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
-            instData->KHRSwapchainEnabled = true;
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRSurfaceEnabled = true;
         }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRXlibSurfaceEnabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRXcbSurfaceEnabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRMirSurfaceEnabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRWaylandSurfaceEnabled = true;
+        }
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
+            instData->KHRWin32SurfaceEnabled = true;
+        }
+#endif
     }
 }
 
@@ -62,9 +95,6 @@ void ext_init_create_device(
 {
     PFN_vkGetDeviceProcAddr gpa = devData->devTable.GetDeviceProcAddr;
    
-    devData->devTable.GetSurfacePropertiesKHR = (PFN_vkGetSurfacePropertiesKHR) gpa(dev, "vkGetSurfacePropertiesKHR");
-    devData->devTable.GetSurfaceFormatsKHR = (PFN_vkGetSurfaceFormatsKHR) gpa(dev, "vkGetSurfaceFormatsKHR");
-    devData->devTable.GetSurfacePresentModesKHR = (PFN_vkGetSurfacePresentModesKHR) gpa(dev, "vkGetSurfacePresentModesKHR");
     devData->devTable.CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(dev, "vkCreateSwapchainKHR");
     devData->devTable.DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(dev, "vkDestroySwapchainKHR");
     devData->devTable.GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(dev, "vkGetSwapchainImagesKHR");

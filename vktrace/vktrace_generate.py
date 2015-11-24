@@ -122,7 +122,7 @@ class Subcommand(object):
         func_protos.append('#endif')
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
-            if 'Dbg' not in proto.name and 'KHR' not in proto.name:
+            if 'Dbg' not in proto.name:
                 func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
         func_protos.append('#ifdef __cplusplus')
@@ -235,8 +235,8 @@ class Subcommand(object):
                            'VkDescriptorSetLayoutCreateInfo': {'add_txt': 'add_create_ds_layout_to_trace_packet(pHeader, &pPacket->pCreateInfo, pCreateInfo)',
                                                           'finalize_txt': '// pCreateInfo finalized in add_create_ds_layout_to_trace_packet'},
                            'VkSwapchainCreateInfoKHR': {'add_txt':      'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapchainCreateInfoKHR), pCreateInfo);\n'
-                                                                        '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pCreateInfo->pSurfaceDescription)',
-                                                        'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));\n'
+                                                                        '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices), pPacket->pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices)',
+                                                        'finalize_txt': 'vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices));\n'
                                                                         '    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo))'},
                            'VkShaderModuleCreateInfo': {'add_txt':      'vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkShaderModuleCreateInfo), pCreateInfo);\n'
                                                                         '    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pCode), pPacket->pCreateInfo->codeSize, pCreateInfo->pCode)',
@@ -278,7 +278,7 @@ class Subcommand(object):
         # Dict of specific params with unique custom sizes
         # TODO: Now using bitfields for all stages, need pSetBindPoints to accomodate that.
         custom_size_dict = {'pSetBindPoints': '(VK_SHADER_STAGE_COMPUTE * sizeof(uint32_t))', # Accounting for largest possible array
-                            'VkSwapchainCreateInfoKHR' : 'vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo)',
+                            'VkSwapchainCreateInfoKHR' : 'vk_size_vkswapchaincreateinfokhr(pCreateInfo)',
                             }
         size_func_suffix = ''
         if extensionName.lower() != "vk_core":
@@ -376,12 +376,17 @@ class Subcommand(object):
                                          'MapMemory',
                                          'UnmapMemory',
                                          'UpdateDescriptorSets',
-                                         'GetSurfacePropertiesKHR',
-                                         'GetSurfaceFormatsKHR',
-                                         'GetSurfacePresentModesKHR',
+                                         'GetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                         'GetPhysicalDeviceSurfaceFormatsKHR',
+                                         'GetPhysicalDeviceSurfacePresentModesKHR',
                                          'CreateSwapchainKHR',
                                          'GetSwapchainImagesKHR',
                                          'QueuePresentKHR',
+                                         #TODO add Xlib, Wayland, Mir
+                                         'CreateXcbSurfaceKHR',
+                                         'GetPhysicalDeviceXcbPresentationSupportKHR',
+                                         'CreateWin32SurfaceKHR',
+                                         'GetPhysicalDeviceWin32PresentationSupportKHR',
                                          ]
 
         # validate the manually_written_hooked_funcs list
@@ -524,7 +529,7 @@ class Subcommand(object):
         for proto in self.protos:
             interp_func_body.append('        case VKTRACE_TPI_VK_vk%s:\n        {' % proto.name)
             header_prefix = 'h'
-            if 'KHR' in proto.name or 'Dbg' in proto.name:
+            if 'Dbg' in proto.name:
                 header_prefix = 'pH'
             interp_func_body.append('            return interpret_body_as_vk%s(pHeader)->%seader;\n        }' % (proto.name, header_prefix))
         interp_func_body.append('        default:')
@@ -925,7 +930,7 @@ class Subcommand(object):
         if_body.append('    return pPacket;')
         if_body.append('}\n')
         for proto in self.protos:
-            if 'KHR' not in proto.name and 'Dbg' not in proto.name:
+            if 'Dbg' not in proto.name:
                 if 'UnmapMemory' == proto.name:
                     proto.params.append(vulkan.Param("void*", "pData"))
                 elif 'FlushMappedMemoryRanges' == proto.name:
@@ -963,11 +968,9 @@ class Subcommand(object):
 
     def _generate_interp_funcs_ext(self, extensionName):
         if_body = []
-        custom_case_dict = { 'QueuePresentKHR' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->swapchains = (VkSwapchainKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->swapchains));\n',
-                                                                                   'pPacket->pPresentInfo->imageIndices = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->imageIndices));']},
-                             'CreateSwapchainKHR' : {'param': 'pCreateInfo', 'txt': ['VkSurfaceDescriptionKHR **ppSurfDescp = (VkSurfaceDescriptionKHR**)&pPacket->pCreateInfo->pSurfaceDescription;\n',
-                                                     'uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
-                                                     '(*ppSurfDescp) = (VkSurfaceDescriptionKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pSurfaceDescription));\n',
+        custom_case_dict = { 'QueuePresentKHR' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->pSwapchains = (VkSwapchainKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pSwapchains));\n',
+                                                                                   'pPacket->pPresentInfo->pImageIndices = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pImageIndices));']},
+                             'CreateSwapchainKHR' : {'param': 'pCreateInfo', 'txt': ['uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
                                                      '(*ppQFI) = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
                             }
         for ext in vulkan.extensions_all:
@@ -1468,14 +1471,13 @@ class Subcommand(object):
                                  #'GetObjectInfo',
                                  #'GetPhysicalDeviceExtensionInfo',
                                  'GetPhysicalDeviceSurfaceSupportKHR',
-                                 'GetSurfacePropertiesKHR',
-                                 'GetSurfaceFormatsKHR',
-                                 'GetSurfacePresentModesKHR',
+                                 'GetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                 'GetPhysicalDeviceSurfaceFormatsKHR',
+                                 'GetPhysicalDeviceSurfacePresentModesKHR',
                                  'CreateSwapchainKHR',
                                  'GetSwapchainImagesKHR',
                                  #'GetPhysicalDeviceInfo',
                                  'MapMemory',
-                                 #'QueuePresentKHR',
                                  'QueueSubmit',
                                  #'StorePipeline',
                                  'UnmapMemory',
@@ -1602,9 +1604,13 @@ class Subcommand(object):
                 # TODO: need a better way to indicate which extensions should be mapped to which Get*ProcAddr
                 elif proto.name == 'GetInstanceProcAddr':
                     for iProto in self.protos:
-                        if 'Dbg' in iProto.name or 'GetPhysicalDeviceSurfaceSupportKHR' in iProto.name:
+                        if 'Dbg' in iProto.name:
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
                             rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedinstance, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
+                            rbody.append('            }')
+                        elif  'GetPhysicalDevice' in iProto.name and 'KHR' in iProto.name:
+                            rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
+                            rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedphysicaldevice, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
                             rbody.append('            }')
                 elif proto.name == 'GetDeviceProcAddr':
                     for dProto in self.protos:
@@ -1753,8 +1759,6 @@ class VktraceTraceC(Subcommand):
         header_txt.append('#include "vktrace_vk_vk.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
         header_txt.append('#include "vktrace_filelike.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
@@ -1787,20 +1791,14 @@ class VktracePacketID(Subcommand):
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
         header_txt.append(' #pragma GCC diagnostic ignored "-Wwrite-strings"')
         header_txt.append('#endif')
         #header_txt.append('#include "vk_struct_string_helper.h"')
-        #header_txt.append('#include "vk_ext_khr_swapchain_struct_string_helper.h"')
-        #header_txt.append('#include "vk_ext_khr_device_swapchain_struct_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
         header_txt.append(' #pragma GCC diagnostic warning "-Wwrite-strings"')
         header_txt.append('#endif')
-        #header_txt.append('#include "vk_ext_khr_swapchain_enum_string_helper.h"')
-        #header_txt.append('#include "vk_ext_khr_device_swapchain_enum_string_helper.h"')
         header_txt.append('#if defined(WIN32)')
         header_txt.append('#define snprintf _snprintf')
         header_txt.append('#endif')
@@ -1856,8 +1854,6 @@ class VktraceExtTraceC(Subcommand):
         header_txt = []
         header_txt.append('#include "vktrace_platform.h"')
         header_txt.append('#include "vktrace_common.h"')
-        if extensionName == "vk_ext_khr_device_swapchain":
-            header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
         header_txt.append('#include "vktrace_vk_%s.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_%s_packets.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_packet_id.h"')
@@ -1897,8 +1893,6 @@ class VktraceReplayVkFuncPtrs(Subcommand):
         header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
-        header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
 
     def generate_body(self):
         body = [self._generate_replay_func_ptrs()]
@@ -1915,8 +1909,6 @@ class VktraceReplayObjMapperHeader(Subcommand):
         header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
-        header_txt.append('#include "vulkan/vk_ext_khr_swapchain.h"')
-        header_txt.append('#include "vulkan/vk_ext_khr_device_swapchain.h"')
         return "\n".join(header_txt)
 
     def generate_body(self):
@@ -1936,8 +1928,6 @@ class VktraceReplayC(Subcommand):
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"')
         header_txt.append('#include "vktrace_vk_packet_id.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"\n}\n')
 

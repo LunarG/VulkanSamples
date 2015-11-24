@@ -61,7 +61,12 @@ typedef struct _layer_device_data {
 typedef struct _layer_instance_data {
     VkLayerInstanceDispatchTable instTable;
     bool LunargDebugReportEnabled;
-    bool KHRSwapchainEnabled;
+    bool KHRSurfaceEnabled;
+    bool KHRXcbSurfaceEnabled;
+    bool KHRXlibSurfaceEnabled;
+    bool KHRWaylandSurfaceEnabled;
+    bool KHRMirSurfaceEnabled;
+    bool KHRWin32SurfaceEnabled;
 } layer_instance_data;
 
 // defined in manually written file: vktrace_lib_trace.c

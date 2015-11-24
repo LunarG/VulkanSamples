@@ -43,16 +43,14 @@
 
 extern "C" {
 #include "vktrace_vk_vk_packets.h"
-#include "vktrace_vk_vk_ext_khr_swapchain_packets.h"
-#include "vktrace_vk_vk_ext_khr_device_swapchain_packets.h"
+
 #include "vktrace_vk_vk_lunarg_debug_report_packets.h"
 // TODO138 : Need to add packets files for new wsi headers
 }
 
 #include "vulkan/vulkan.h"
 #include "vulkan/vk_lunarg_debug_report.h"
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+
 #include "vkreplay_vkdisplay.h"
 #include "vkreplay_vk_func_ptrs.h"
 #include "vkreplay_vk_objmapper.h"
@@ -133,9 +131,9 @@ private:
     VkResult manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket);
     // TODO138: Update these functions for new WSI
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket);
-    VkResult manually_replay_vkGetSurfacePropertiesKHR(packet_vkGetSurfacePropertiesKHR* pPacket);
-    VkResult manually_replay_vkGetSurfaceFormatsKHR(packet_vkGetSurfaceFormatsKHR* pPacket);
-    VkResult manually_replay_vkGetSurfacePresentModesKHR(packet_vkGetSurfacePresentModesKHR* pPacket);
+    VkResult manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(packet_vkGetPhysicalDeviceSurfaceCapabilitiesKHR* pPacket);
+    VkResult manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_vkGetPhysicalDeviceSurfaceFormatsKHR* pPacket);
+    VkResult manually_replay_vkGetPhysicalDeviceSurfacePresentModesKHR(packet_vkGetPhysicalDeviceSurfacePresentModesKHR* pPacket);
     VkResult manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchainKHR* pPacket);
     VkResult manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchainImagesKHR* pPacket);
     VkResult manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* pPacket);

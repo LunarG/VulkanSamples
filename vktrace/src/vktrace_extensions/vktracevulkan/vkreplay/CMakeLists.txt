@@ -40,9 +40,8 @@ set (HDR_LIST
     ${CMAKE_CURRENT_SOURCE_DIR}/../vulkan/codegen_utils/vk_enum_string_helper.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h
+
 )
 
 include_directories(

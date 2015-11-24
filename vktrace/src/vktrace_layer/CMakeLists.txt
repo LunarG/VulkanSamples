@@ -7,10 +7,6 @@ include("${SRC_DIR}/build_options.cmake")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_swapchain.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_khr_device_swapchain OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_marker OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_marker.h)
@@ -33,11 +29,7 @@ set(SRC_LIST
     codegen/vktrace_vk_vk.cpp
     codegen/vktrace_vk_vk_lunarg_debug_report.cpp
     codegen/vktrace_vk_vk_lunarg_debug_marker.cpp
-    codegen/vktrace_vk_vk_ext_khr_swapchain.cpp
-    codegen/vktrace_vk_vk_ext_khr_device_swapchain.cpp
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.c
-    ${CODEGEN_UTILS_DIR}/vk_ext_khr_swapchain_struct_size_helper.c
-    ${CODEGEN_UTILS_DIR}/vk_ext_khr_device_swapchain_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.c
 )
@@ -51,17 +43,11 @@ set (HDR_LIST
     codegen/vktrace_vk_vk.h
     codegen/vktrace_vk_vk_lunarg_debug_report.h
     codegen/vktrace_vk_vk_lunarg_debug_marker.h
-    codegen/vktrace_vk_vk_ext_khr_swapchain.h
-    codegen/vktrace_vk_vk_ext_khr_device_swapchain.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_marker_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.h
-    ${CODEGEN_UTILS_DIR}/vk_ext_khr_swapchain_struct_size_helper.h
-    ${CODEGEN_UTILS_DIR}/vk_ext_khr_device_swapchain_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.h
 )

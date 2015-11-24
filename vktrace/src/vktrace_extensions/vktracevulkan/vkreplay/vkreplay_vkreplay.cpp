@@ -1734,7 +1734,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_v
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceSupportKHR(remappedphysicalDevice, pPacket->queueFamilyIndex, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pSupported);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceSupportKHR(remappedphysicalDevice, pPacket->queueFamilyIndex, m_display->get_surface(), pPacket->pSupported);
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
 //        return VK_ERROR_VALIDATION_FAILED;
@@ -1753,35 +1753,35 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_v
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkGetSurfacePropertiesKHR(packet_vkGetSurfacePropertiesKHR* pPacket)
+VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(packet_vkGetPhysicalDeviceSurfaceCapabilitiesKHR* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
-    replayResult = m_vkFuncs.real_vkGetSurfacePropertiesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pSurfaceProperties);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pSurfaceProperties);
 
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkGetSurfaceFormatsKHR(packet_vkGetSurfaceFormatsKHR* pPacket)
+VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_vkGetPhysicalDeviceSurfaceFormatsKHR* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
-    replayResult = m_vkFuncs.real_vkGetSurfaceFormatsKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pSurfaceFormats);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceFormatsKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pSurfaceFormats);
 
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkGetSurfacePresentModesKHR(packet_vkGetSurfacePresentModesKHR* pPacket)
+VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfacePresentModesKHR(packet_vkGetPhysicalDeviceSurfacePresentModesKHR* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
-    replayResult = m_vkFuncs.real_vkGetSurfacePresentModesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pPresentModes);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfacePresentModesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pPresentModes);
 
     return replayResult;
 }

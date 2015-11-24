@@ -10,15 +10,30 @@ else()
 endif()
 
 
-set(VKTRACE_VULKAN_DRIVER_DIR ${CMAKE_SOURCE_DIR})
-set(VKTRACE_VULKAN_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/vulkan)
-set(VKTRACE_VULKAN_HEADER ${CMAKE_SOURCE_DIR}/include/vulkan/vulkan.h)
-set(VKTRACE_VULKAN_LUNARG_DEBUG_REPORT_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_lunarg_debug_report.h)
-set(VKTRACE_VULKAN_LUNARG_DEBUG_MARKER_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_lunarg_debug_marker.h)
-set(VKTRACE_VULKAN_KHR_SWAPCHAIN_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_ext_khr_swapchain.h)
-set(VKTRACE_VULKAN_KHR_DEVICE_SWAPCHAIN_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_ext_khr_device_swapchain.h)
+# if Vktrace is being built as part of a vulkan driver build, then use that target instead of the locally-commited binary.
+#if (TARGET vulkan)
+#    message(STATUS "Using external Vulkan header and library.")
+#    set(VKTRACE_VULKAN_LIB vulkan)
+    set(VKTRACE_VULKAN_DRIVER_DIR ${CMAKE_SOURCE_DIR})
+    set(VKTRACE_VULKAN_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/vulkan)
+    set(VKTRACE_VULKAN_HEADER ${CMAKE_SOURCE_DIR}/include/vulkan/vulkan.h)
+    set(VKTRACE_VULKAN_LUNARG_DEBUG_REPORT_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_lunarg_debug_report.h)
+    set(VKTRACE_VULKAN_LUNARG_DEBUG_MARKER_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_lunarg_debug_marker.h)
+#else()
+    # Use a locally committed vulkan header and binary
+#    message(STATUS "Using Vktrace-supplied Vulkan header and library.")
+#    set(VKTRACE_VULKAN_DRIVER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan)
+#    set(VKTRACE_VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
+#    set(VKTRACE_VULKAN_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vulkan/vulkan.h)
+#    set(VKTRACE_VULKAN_DEBUG_REPORT_LUNARG_HEADER ${VKTRACE_VULKAN_INCLUDE_DIR}/vk_debug_report_lunarg.h)
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+        set(VKTRACE_VULKAN_LIB
+            ${CMAKE_BINARY_DIR}/loader/${CMAKE_CFG_INTDIR}/vulkan-0.lib
+        )
+    endif()
+
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(VKTRACE_VULKAN_LIB
         ${CMAKE_BINARY_DIR}/loader/${CMAKE_CFG_INTDIR}/vulkan-0.lib
     )
@@ -44,14 +59,6 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${VKTRACE_VULKAN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_enum_string_helper ${VKTRACE_VULKAN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
 
-# generate files for vk_ext_khr_swapchain.h
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${VKTRACE_VULKAN_KHR_SWAPCHAIN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
-#execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_enum_string_helper ${VKTRACE_VULKAN_KHR_SWAPCHAIN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
-
-# generate files for vk_ext_khr_device_swapchain.h
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${VKTRACE_VULKAN_KHR_DEVICE_SWAPCHAIN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
-#execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_enum_string_helper ${VKTRACE_VULKAN_KHR_DEVICE_SWAPCHAIN_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
-
 # generate files for vk_lunarg_ debug_report.h
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DRIVER_DIR}/vk_helper.py --gen_struct_sizes ${VKTRACE_VULKAN_LUNARG_DEBUG_REPORT_HEADER} --abs_out_dir ${CMAKE_CURRENT_SOURCE_DIR}/${VKTRACE_VULKAN_CODEGEN_UTILS})
 
@@ -64,8 +71,6 @@ set(CODEGEN_VKTRACE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/codegen_vktrace_utils")
 file(MAKE_DIRECTORY ${CODEGEN_VKTRACE_DIR})
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-packet-id vk_core OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-core-trace-packets vk_core OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-packets vk_ext_khr_swapchain OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_swapchain_packets.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-packets vk_ext_khr_device_swapchain OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_khr_device_swapchain_packets.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-packets vk_lunarg_debug_report OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-packets vk_lunarg_debug_marker OUTPUT_FILE ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_marker_packets.h)
 

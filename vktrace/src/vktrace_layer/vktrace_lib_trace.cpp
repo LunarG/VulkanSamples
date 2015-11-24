@@ -33,11 +33,10 @@
 #include "vk_dispatch_table_helper.h"
 #include "vktrace_common.h"
 #include "vktrace_lib_helpers.h"
-#include "vktrace_vk_vk_ext_khr_swapchain.h"
-#include "vktrace_vk_vk_ext_khr_device_swapchain.h"
-#include "vk_ext_khr_device_swapchain_struct_size_helper.h"
+
 #include "vktrace_vk_vk_lunarg_debug_report.h"
 #include "vktrace_vk_vk_lunarg_debug_marker.h"
+
 #include "vktrace_vk_vk.h"
 #include "vktrace_interconnect.h"
 #include "vktrace_filelike.h"
@@ -999,90 +998,87 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkFreeDescriptorSets(
     return result;
 }
 
-VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfacePropertiesKHR(
-    VkDevice device,
-    const VkSurfaceDescriptionKHR* pSurfaceDescription,
-    VkSurfacePropertiesKHR* pSurfaceProperties)
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    VkPhysicalDevice physicalDevice,
+    VkSurfaceKHR surface,
+    VkSurfaceCapabilitiesKHR* pSurfaceCapabilities)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
-    packet_vkGetSurfacePropertiesKHR* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkGetSurfacePropertiesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(VkSurfacePropertiesKHR));
-    result = mdd(device)->devTable.GetSurfacePropertiesKHR(device, pSurfaceDescription, pSurfaceProperties);
-    pPacket = interpret_body_as_vkGetSurfacePropertiesKHR(pHeader);
-    pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceProperties), sizeof(VkSurfacePropertiesKHR), pSurfaceProperties);
+    packet_vkGetPhysicalDeviceSurfaceCapabilitiesKHR* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfaceCapabilitiesKHR, sizeof(VkSurfaceCapabilitiesKHR));
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, pSurfaceCapabilities);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    pPacket->surface = surface;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceCapabilities), sizeof(VkSurfaceCapabilitiesKHR), pSurfaceCapabilities);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceProperties));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceCapabilities));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfaceFormatsKHR(
-    VkDevice device,
-    const VkSurfaceDescriptionKHR* pSurfaceDescription,
-    uint32_t* pCount,
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfaceFormatsKHR(
+    VkPhysicalDevice physicalDevice,
+    VkSurfaceKHR surface,
+    uint32_t* pSurfaceFormatCount,
     VkSurfaceFormatKHR* pSurfaceFormats)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSurfaceFormatsKHR* pPacket = NULL;
+    packet_vkGetPhysicalDeviceSurfaceFormatsKHR* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.GetSurfaceFormatsKHR(device, pSurfaceDescription, pCount, pSurfaceFormats);
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, pSurfaceFormatCount, pSurfaceFormats);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pCount *sizeof(VkSurfaceFormatKHR));
-    CREATE_TRACE_PACKET(vkGetSurfaceFormatsKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
+    _dataSize = (pSurfaceFormatCount == NULL || pSurfaceFormats == NULL) ? 0 : (*pSurfaceFormatCount *sizeof(VkSurfaceFormatKHR));
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfaceFormatsKHR, sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSurfaceFormatsKHR(pHeader);
-    pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceSurfaceFormatsKHR(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    pPacket->surface = surface;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceFormatCount), sizeof(uint32_t), pSurfaceFormatCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceFormats), _dataSize, pSurfaceFormats);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceFormatCount));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceFormats));
     FINISH_TRACE_PACKET();
     return result;
 }
 
-VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfacePresentModesKHR(
-    VkDevice device,
-    const VkSurfaceDescriptionKHR* pSurfaceDescription,
-    uint32_t* pCount,
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfacePresentModesKHR(
+    VkPhysicalDevice physicalDevice,
+    VkSurfaceKHR surface,
+    uint32_t* pPresentModeCount,
     VkPresentModeKHR* pPresentModes)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     size_t _dataSize;
-    packet_vkGetSurfacePresentModesKHR* pPacket = NULL;
+    packet_vkGetPhysicalDeviceSurfacePresentModesKHR* pPacket = NULL;
     uint64_t startTime;
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.GetSurfacePresentModesKHR(device, pSurfaceDescription, pCount, pPresentModes);
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, pPresentModeCount, pPresentModes);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pPresentModes == NULL) ? 0 : (*pCount *sizeof(VkPresentModeKHR));
-    CREATE_TRACE_PACKET(vkGetSurfacePresentModesKHR, sizeof(VkSurfaceDescriptionKHR) + sizeof(uint32_t) + _dataSize);
+    _dataSize = (pPresentModeCount == NULL || pPresentModes == NULL) ? 0 : (*pPresentModeCount *sizeof(VkPresentModeKHR));
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceSurfacePresentModesKHR, sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
-    pPacket = interpret_body_as_vkGetSurfacePresentModesKHR(pHeader);
-    pPacket->device = device;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pSurfaceDescription);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceSurfacePresentModesKHR(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    pPacket->surface = surface;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentModeCount), sizeof(uint32_t), pPresentModeCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentModes), _dataSize, pPresentModes);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurfaceDescription));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentModeCount));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentModes));
     FINISH_TRACE_PACKET();
     return result;
@@ -1091,21 +1087,22 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSurfacePresentModes
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateSwapchainKHR(
     VkDevice device,
     const VkSwapchainCreateInfoKHR* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
     VkSwapchainKHR* pSwapchain)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     packet_vkCreateSwapchainKHR* pPacket = NULL;
-    CREATE_TRACE_PACKET(vkCreateSwapchainKHR, vk_ext_khr_device_swapchain_size_vkswapchaincreateinfokhr(pCreateInfo) + sizeof(VkSwapchainKHR));
-    result = mdd(device)->devTable.CreateSwapchainKHR(device, pCreateInfo, pSwapchain);
+    CREATE_TRACE_PACKET(vkCreateSwapchainKHR, vk_size_vkswapchaincreateinfokhr(pCreateInfo) + sizeof(VkSwapchainKHR) + sizeof(VkAllocationCallbacks));
+    result = mdd(device)->devTable.CreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapchain);
     pPacket = interpret_body_as_vkCreateSwapchainKHR(pHeader);
     pPacket->device = device;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo), sizeof(VkSwapchainCreateInfoKHR), pCreateInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription), sizeof(VkSurfaceDescriptionKHR), pCreateInfo->pSurfaceDescription);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapchain), sizeof(VkSwapchainKHR), pSwapchain);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices), pCreateInfo->queueFamilyCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices), pCreateInfo->queueFamilyIndexCount * sizeof(uint32_t), pCreateInfo->pQueueFamilyIndices);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pSurfaceDescription));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocator));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo->pQueueFamilyIndices));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCreateInfo));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapchain));
@@ -1116,7 +1113,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateSwapchainKHR(
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSwapchainImagesKHR(
     VkDevice device,
     VkSwapchainKHR swapchain,
-    uint32_t* pCount,
+    uint32_t* pSwapchainImageCount,
     VkImage* pSwapchainImages)
 {
     vktrace_trace_packet_header* pHeader;
@@ -1127,9 +1124,9 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSwapchainImagesKHR(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+    result = mdd(device)->devTable.GetSwapchainImagesKHR(device, swapchain, pSwapchainImageCount, pSwapchainImages);
     endTime = vktrace_get_time();
-    _dataSize = (pCount == NULL || pSwapchainImages == NULL) ? 0 : (*pCount *sizeof(VkImage));
+    _dataSize = (pSwapchainImageCount == NULL || pSwapchainImages == NULL) ? 0 : (*pSwapchainImageCount *sizeof(VkImage));
     CREATE_TRACE_PACKET(vkGetSwapchainImagesKHR, sizeof(uint32_t) + _dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
@@ -1137,10 +1134,10 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSwapchainImagesKHR(
     pPacket = interpret_body_as_vkGetSwapchainImagesKHR(pHeader);
     pPacket->device = device;
     pPacket->swapchain = swapchain;
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pCount), sizeof(uint32_t), pCount);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapchainImageCount), sizeof(uint32_t), pSwapchainImageCount);
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSwapchainImages), _dataSize, pSwapchainImages);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pCount));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapchainImageCount));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSwapchainImages));
     FINISH_TRACE_PACKET();
     return result;
@@ -1148,28 +1145,128 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetSwapchainImagesKHR(
 
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkQueuePresentKHR(
     VkQueue queue,
-    VkPresentInfoKHR* pPresentInfo)
+    const VkPresentInfoKHR* pPresentInfo)
 {
     vktrace_trace_packet_header* pHeader;
     VkResult result;
     packet_vkQueuePresentKHR* pPacket = NULL;
     size_t swapchainSize = pPresentInfo->swapchainCount*sizeof(VkSwapchainKHR);
     size_t indexSize = pPresentInfo->swapchainCount*sizeof(uint32_t);
-    CREATE_TRACE_PACKET(vkQueuePresentKHR, sizeof(VkPresentInfoKHR)+swapchainSize+indexSize);
+    size_t semaSize = pPresentInfo->waitSemaphoreCount * sizeof(VkSemaphore);
+    CREATE_TRACE_PACKET(vkQueuePresentKHR, sizeof(VkPresentInfoKHR) + swapchainSize + indexSize + semaSize);
     result = mdd(queue)->devTable.QueuePresentKHR(queue, pPresentInfo);
     vktrace_set_packet_entrypoint_end_time(pHeader);
     pPacket = interpret_body_as_vkQueuePresentKHR(pHeader);
     pPacket->queue = queue;
     vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo), sizeof(VkPresentInfoKHR), pPresentInfo);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->swapchains), swapchainSize, pPresentInfo->swapchains);
-    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->imageIndices), indexSize, pPresentInfo->imageIndices);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pSwapchains), swapchainSize, pPresentInfo->pSwapchains);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pImageIndices), indexSize, pPresentInfo->pImageIndices);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pPresentInfo->pWaitSemaphores), semaSize, pPresentInfo->pWaitSemaphores);
     pPacket->result = result;
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->imageIndices));
-    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->swapchains));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pImageIndices));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pSwapchains));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo->pWaitSemaphores));
     vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pPresentInfo));
     FINISH_TRACE_PACKET();
     return result;
 }
+
+/* TODO these can probably be moved into code gen */
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateWin32SurfaceKHR(
+    VkInstance                                  instance,
+    HINSTANCE                                   hinstance,
+    HWND                                        hwnd,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    vktrace_trace_packet_header* pHeader;
+    VkResult result;
+    packet_vkCreateWin32SurfaceKHR* pPacket = NULL;
+    // don't bother with copying the actual win32 hinstance, hwnd into the trace packet, vkreplay has to use it's own anyway
+    CREATE_TRACE_PACKET(vkCreateWin32SurfaceKHR, sizeof(VkSurfaceKHR) + sizeof(VkAllocationCallbacks));
+    result = mid(instance)->instTable.CreateWin32SurfaceKHR(instance, connection, window, pAllocator, pSurface);
+    pPacket = interpret_body_as_vkCreateWin32SurfaceKHR(pHeader);
+    pPacket->instance = instance;
+    pPacket->hinstance = hinstance;
+    pPacket->hwnd = hwnd;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurface), sizeof(VkSurfaceKHR), pSurface);
+    pPacket->result = result;
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocator));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurface));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceWin32PresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex)
+{
+    vktrace_trace_packet_header* pHeader;
+    VkBool32 result;
+    packet_vkGetPhysicalDeviceWin32PresentationSupportKHR* pPacket = NULL;
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceWin32PresentationSupportKHR, 0);
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndexn);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceWin32PresentationSupportKHR(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    pPacket->queueFamilyIndex = queueFamilyIndex;
+    pPacket->result = result;
+    FINISH_TRACE_PACKET();
+    return result;
+}
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+#include <xcb/xcb.h>
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateXcbSurfaceKHR(
+    VkInstance                                  instance,
+    xcb_connection_t*                           connection,
+    xcb_window_t                                window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    vktrace_trace_packet_header* pHeader;
+    VkResult result;
+    packet_vkCreateXcbSurfaceKHR* pPacket = NULL;
+    // don't bother with copying the actual xcb window and connection into the trace packet, vkreplay has to use it's own anyway
+    CREATE_TRACE_PACKET(vkCreateXcbSurfaceKHR, sizeof(VkSurfaceKHR) + sizeof(VkAllocationCallbacks));
+    result = mid(instance)->instTable.CreateXcbSurfaceKHR(instance, connection, window, pAllocator, pSurface);
+    pPacket = interpret_body_as_vkCreateXcbSurfaceKHR(pHeader);
+    pPacket->instance = instance;
+    pPacket->connection = connection;
+    pPacket->window = window;
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pAllocator), sizeof(VkAllocationCallbacks), pAllocator);
+    vktrace_add_buffer_to_trace_packet(pHeader, (void**)&(pPacket->pSurface), sizeof(VkSurfaceKHR), pSurface);
+    pPacket->result = result;
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pAllocator));
+    vktrace_finalize_buffer_address(pHeader, (void**)&(pPacket->pSurface));
+    FINISH_TRACE_PACKET();
+    return result;
+}
+
+VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id)
+{
+    vktrace_trace_packet_header* pHeader;
+    VkBool32 result;
+    packet_vkGetPhysicalDeviceXcbPresentationSupportKHR* pPacket = NULL;
+    // don't bother with copying the actual xcb visual_id and connection into the trace packet, vkreplay has to use it's own anyway
+    CREATE_TRACE_PACKET(vkGetPhysicalDeviceXcbPresentationSupportKHR, 0);
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice, queueFamilyIndex, connection, visual_id);
+    pPacket = interpret_body_as_vkGetPhysicalDeviceXcbPresentationSupportKHR(pHeader);
+    pPacket->physicalDevice = physicalDevice;
+    pPacket->connection = connection;
+    pPacket->queueFamilyIndex = queueFamilyIndex;
+    pPacket->visual_id = visual_id;
+    pPacket->result = result;
+    FINISH_TRACE_PACKET();
+    return result;
+}
+#endif
+//TODO Wayland, Mir and Xlib support
 
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -1535,12 +1632,6 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetDevicePro
 
         if (devData->KHRDeviceSwapchainEnabled)
         {
-            if (!strcmp("vkGetSurfacePropertiesKHR", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePropertiesKHR;
-            if (!strcmp("vkGetSurfaceFormatsKHR", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfaceFormatsKHR;
-            if (!strcmp("vkGetSurfacePresentModesKHR", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkGetSurfacePresentModesKHR;
             if (!strcmp("vkCreateSwapchainKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkCreateSwapchainKHR;
             if (!strcmp("vkDestroySwapchainKHR", funcName))
@@ -1627,10 +1718,53 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
                 return (PFN_vkVoidFunction) __HOOKED_vkDbgDestroyMsgCallback;
 
         }
-        if (instData->KHRSwapchainEnabled)
+        if (instData->KHRSurfaceEnabled)
         {
             if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR;
+            if (!strcmp("vkDestroySurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDestroySurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceSurfacePropertiesKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfacePropertiesKHR;
+            if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceFormatsKHR;
+            if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfacePresentModesKHR;
+        }
+        if (instData->KHRXlibSurfaceEnabled)
+        {
+            if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateXlibSurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceXlibPresentationSupportKHR;
+        }
+        if (instData->KHRXcbSurfaceEnabled)
+        {
+            if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateXcbSurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceXcbPresentationSupportKHR;
+        }
+        if (instData->KHRWaylandSurfaceEnabled)
+        {
+            if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateWaylandSurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceWaylandPresentationSupportKHR;
+        }
+        if (instData->KHRMirSurfaceEnabled)
+        {
+            if (!strcmp("vkCreateMirSurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateMirSurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceMirPresentationSupportKHR;
+        }
+        if (instData->KHRWin32SurfaceEnabled)
+        {
+            if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateWin32SurfaceKHR;
+            if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceWin32PresentationSupportKHR;
         }
     }
 

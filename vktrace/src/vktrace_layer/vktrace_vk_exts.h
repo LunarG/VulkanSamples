@@ -25,10 +25,27 @@
  */
 #pragma once
 
+
+// FIXME/TODO: DEVELOP A BETTER APPROACH FOR SETTING THE DEFAULT VALUES FOR
+// THESE PLATFORM-SPECIFIC MACROS APPROPRIATELY:
+#ifdef _WIN32
+// The Win32 default is to support the WIN32 platform:
+#ifndef VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+#else // _WIN32 (i.e. Linux)
+// The Linux default is to support the XCB platform:
+#if (!defined(VK_USE_PLATFORM_MIR_KHR) && \
+     !defined(VK_USE_PLATFORM_WAYLAND_KHR) && \
+     !defined(VK_USE_PLATFORM_XCB_KHR) && \
+     !defined(VK_USE_PLATFORM_XLIB_KHR))
+#define VK_USE_PLATFORM_XCB_KHR
+#endif
+#endif // _WIN32
+
 #include "vulkan/vk_lunarg_debug_marker.h"
 #include "vulkan/vk_lunarg_debug_report.h"
-#include "vulkan/vk_ext_khr_swapchain.h"
-#include "vulkan/vk_ext_khr_device_swapchain.h"
+
 #include "vulkan/vk_layer.h"
 #include "vktrace_lib_helpers.h"
 

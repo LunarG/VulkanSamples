@@ -44,10 +44,9 @@ vkDisplay::vkDisplay()
     m_XcbWindow = 0;
 #elif defined(WIN32)
     m_windowHandle = NULL;
-	m_connection = NULL;
+    m_connection = NULL;
 #endif
-    memset(&m_SurfaceDescription, 0, sizeof(VkSurfaceDescriptionWindowKHR));
-    m_SurfaceDescription.sType = VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR;
+    memset(&m_pSurfaceDescription, 0, sizeof(VkSurfaceKHR));
 }
 
 vkDisplay::~vkDisplay()
@@ -191,7 +190,7 @@ int vkDisplay::set_window(vktrace_window_handle hWindow, unsigned int width, uns
 
 int vkDisplay::create_window(const unsigned int width, const unsigned int height)
 {
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
 
     uint32_t value_mask, value_list[32];
     m_XcbWindow = xcb_generate_id(m_pXcbConnection);
@@ -212,11 +211,12 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
     xcb_map_window(m_pXcbConnection, m_XcbWindow);
     xcb_flush(m_pXcbConnection);
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
-    m_XcbPlatformHandle.connection = m_pXcbConnection;
-    m_XcbPlatformHandle.root = m_pXcbScreen->root;
-    m_SurfaceDescription.platform = VK_PLATFORM_XCB_KHR;
-    m_SurfaceDescription.pPlatformHandle = &m_XcbPlatformHandle;
-    m_SurfaceDescription.pPlatformWindow = &m_XcbWindow;
+    //m_XcbPlatformHandle.connection = m_pXcbConnection;
+    //m_XcbPlatformHandle.root = m_pXcbScreen->root;
+    VkIcdSurfaceXcb *pSurf = (VkIcdSurfaceXcb *) m_pSurfaceDescription;
+    pSurf->base.platform = VK_ICD_WSI_PLATFORM_XCB;
+    pSurf->connection = m_pXcbConnection;
+    pSurf->window = m_XcbWindow;
     return 0;
 #elif defined(WIN32)
     // Register Window class
@@ -254,9 +254,13 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
         return -1;
     }
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
-    m_SurfaceDescription.platform = VK_PLATFORM_WIN32_KHR;
-    m_SurfaceDescription.pPlatformHandle = wcex.hInstance;
-    m_SurfaceDescription.pPlatformWindow = m_windowHandle;
+    //m_SurfaceDescription.platform = VK_PLATFORM_WIN32_KHR;
+    //m_SurfaceDescription.pPlatformHandle = wcex.hInstance;
+    //m_SurfaceDescription.pPlatformWindow = m_windowHandle;
+    VkIcdSurfaceWin32 *pSurf = (VkIcdSurfaceWin32 *) m_pSurfaceDescription;
+    pSurf->base.platform = VK_ICD_WSI_PLATFORM_WIN32;
+    pSurf->hinstance = wcex.hInstance;
+    pSurf->hwnd = m_windowHandle;
     return 0;
 #endif
 }
