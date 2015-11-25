@@ -87,7 +87,7 @@ struct render_pass;
 
 struct layer_data {
     debug_report_data* report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
+    std::vector<VkDebugReportCallbackLUNARG> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     devExts device_extensions;
@@ -2560,7 +2560,7 @@ static void init_draw_state(layer_data *my_data, const VkAllocationCallbacks *pA
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    VkDbgMsgCallback callback;
+    VkDebugReportCallbackLUNARG callback;
     // initialize DrawState options
     report_flags = getLayerOptionFlags("DrawStateReportFlags", 0);
     getLayerOptionEnum("DrawStateDebugAction", (uint32_t *) &debug_action);
@@ -2616,7 +2616,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
-        VkDbgMsgCallback callback = my_data->logging_callback.back();
+        VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback);
         my_data->logging_callback.pop_back();
     }
@@ -5414,7 +5414,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
     void*                               pUserData,
-    VkDbgMsgCallback*                   pMsgCallback)
+    VkDebugReportCallbackLUNARG*                   pMsgCallback)
 {
     layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult res = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
@@ -5426,7 +5426,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
-    VkDbgMsgCallback                    msgCallback)
+    VkDebugReportCallbackLUNARG                    msgCallback)
 {
     layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult res = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);

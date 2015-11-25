@@ -142,8 +142,8 @@ protected:
     VkDepthStencilObj                  *m_depthStencil;
     PFN_vkDbgCreateMsgCallback          m_dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback         m_dbgDestroyMsgCallback;
-    VkDbgMsgCallback                    m_globalMsgCallback;
-    VkDbgMsgCallback                    m_devMsgCallback;
+    VkDebugReportCallbackLUNARG                    m_globalMsgCallback;
+    VkDebugReportCallbackLUNARG                    m_devMsgCallback;
 
     /*
      * SetUp and TearDown are called by the Google Test framework

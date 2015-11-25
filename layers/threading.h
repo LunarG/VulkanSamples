@@ -38,7 +38,7 @@ typedef enum _THREADING_CHECKER_ERROR
 
 struct layer_data {
     debug_report_data *report_data;
-    VkDbgMsgCallback   logging_callback;
+    VkDebugReportCallbackLUNARG   logging_callback;
 
     layer_data() :
         report_data(nullptr),

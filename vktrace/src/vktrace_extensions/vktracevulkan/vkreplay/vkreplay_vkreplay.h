@@ -93,7 +93,7 @@ private:
         void* pUserData;
     };
 
-    VkDbgMsgCallback m_dbgMsgCallbackObj;
+    VkDebugReportCallbackLUNARG m_dbgMsgCallbackObj;
 
     std::vector<struct ValidationMsg> m_validationMsgs;
     std::vector<int> m_screenshotFrames;

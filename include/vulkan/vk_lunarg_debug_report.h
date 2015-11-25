@@ -84,7 +84,7 @@ typedef enum {
 
 #define VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME "VK_EXT_LUNARG_debug_report"
 
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDbgMsgCallback)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackLUNARG)
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
@@ -127,8 +127,8 @@ typedef VkBool32 (*PFN_vkDbgMsgCallback)(
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef VkResult (VKAPI_PTR *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback);
-typedef VkResult (VKAPI_PTR *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDbgMsgCallback msgCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDebugReportCallbackLUNARG* pMsgCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback);
 
 #ifdef VK_PROTOTYPES
 
@@ -138,11 +138,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkFlags                             msgFlags,
     const PFN_vkDbgMsgCallback          pfnMsgCallback,
     void*                               pUserData,
-    VkDbgMsgCallback*                   pMsgCallback);
+    VkDebugReportCallbackLUNARG*        pMsgCallback);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
-    VkDbgMsgCallback                    msgCallback);
+    VkDebugReportCallbackLUNARG         msgCallback);
 
 #endif // VK_PROTOTYPES
 

@@ -48,7 +48,7 @@
 
 struct layer_data {
     debug_report_data *report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
+    std::vector<VkDebugReportCallbackLUNARG> logging_callback;
 
     layer_data() :
         report_data(nullptr)
@@ -86,7 +86,7 @@ debug_report_data *mdd(void* object)
 
 static void InitParamChecker(layer_data *data, const VkAllocationCallbacks *pAllocator)
 {
-    VkDbgMsgCallback callback;
+    VkDebugReportCallbackLUNARG callback;
     uint32_t report_flags = getLayerOptionFlags("ParamCheckerReportFlags", 0);
 
     uint32_t debug_action = 0;
@@ -111,7 +111,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkFlags msgFlags,
     const PFN_vkDbgMsgCallback pfnMsgCallback,
     void* pUserData,
-    VkDbgMsgCallback* pMsgCallback)
+    VkDebugReportCallbackLUNARG* pMsgCallback)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
     VkResult result =  pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
@@ -127,7 +127,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance instance,
-    VkDbgMsgCallback msgCallback)
+    VkDebugReportCallbackLUNARG msgCallback)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
     VkResult result =  pTable->DbgDestroyMsgCallback(instance, msgCallback);
@@ -1759,7 +1759,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     // Clean up logging callback, if any
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     while (my_data->logging_callback.size() > 0) {
-        VkDbgMsgCallback callback = my_data->logging_callback.back();
+        VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback);
         my_data->logging_callback.pop_back();
     }

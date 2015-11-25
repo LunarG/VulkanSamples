@@ -323,7 +323,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkFlags                    msgFlags,
     PFN_vkDbgMsgCallback                pfnMsgCallback,
     void*                               pUserData,
-    VkDbgMsgCallback*                   pMsgCallback)
+    VkDebugReportCallbackLUNARG*                   pMsgCallback)
 {
     struct intel_instance *inst = intel_instance(instance);
 
@@ -332,7 +332,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
-    VkDbgMsgCallback                    msgCallback)
+    VkDebugReportCallbackLUNARG                    msgCallback)
 {
     struct intel_instance *inst = intel_instance(instance);
 

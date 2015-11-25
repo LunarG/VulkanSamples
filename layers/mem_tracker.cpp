@@ -54,7 +54,7 @@ static const VkDeviceMemory MEMTRACKER_SWAP_CHAIN_IMAGE_KEY = (VkDeviceMemory)(-
 
 struct layer_data {
     debug_report_data                 *report_data;
-    std::vector<VkDbgMsgCallback>      logging_callback;
+    std::vector<VkDebugReportCallbackLUNARG>      logging_callback;
     VkLayerDispatchTable              *device_dispatch_table;
     VkLayerInstanceDispatchTable      *instance_dispatch_table;
     VkBool32                           wsi_enabled;
@@ -1001,7 +1001,7 @@ init_mem_tracker(
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    VkDbgMsgCallback callback;
+    VkDebugReportCallbackLUNARG callback;
     // initialize MemTracker options
     report_flags = getLayerOptionFlags("MemTrackerReportFlags", 0);
     getLayerOptionEnum("MemTrackerDebugAction", (uint32_t *) &debug_action);
@@ -1042,7 +1042,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
-        VkDbgMsgCallback callback = my_data->logging_callback.back();
+        VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback);
         my_data->logging_callback.pop_back();
     }
@@ -2562,11 +2562,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
-    VkInstance                  instance,
-    VkFlags                     msgFlags,
-    const PFN_vkDbgMsgCallback  pfnMsgCallback,
-    void                       *pUserData,
-    VkDbgMsgCallback           *pMsgCallback)
+    VkInstance                    instance,
+    VkFlags                       msgFlags,
+    const PFN_vkDbgMsgCallback    pfnMsgCallback,
+    void                         *pUserData,
+    VkDebugReportCallbackLUNARG  *pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -2579,7 +2579,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
         VkInstance       instance,
-        VkDbgMsgCallback msgCallback)
+        VkDebugReportCallbackLUNARG msgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;

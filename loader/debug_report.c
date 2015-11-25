@@ -70,7 +70,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
         VkFlags msgFlags,
         const PFN_vkDbgMsgCallback pfnMsgCallback,
         void* pUserData,
-        VkDbgMsgCallback* pMsgCallback)
+        VkDebugReportCallbackLUNARG* pMsgCallback)
 {
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc((struct loader_instance *)instance, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pNewDbgFuncNode)
@@ -95,7 +95,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
 
 static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgDestroyMsgCallback(
         VkInstance instance,
-        VkDbgMsgCallback msg_callback)
+        VkDebugReportCallbackLUNARG msg_callback)
 {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
@@ -131,9 +131,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
         VkFlags                             msgFlags,
         const PFN_vkDbgMsgCallback          pfnMsgCallback,
         void*                               pUserData,
-        VkDbgMsgCallback*                   pMsgCallback)
+        VkDebugReportCallbackLUNARG*                   pMsgCallback)
 {
-    VkDbgMsgCallback *icd_info;
+    VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
     struct loader_instance *inst;
     VkResult res;
@@ -144,7 +144,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
             break;
     }
 
-    icd_info = calloc(sizeof(VkDbgMsgCallback), inst->total_icd_count);
+    icd_info = calloc(sizeof(VkDebugReportCallbackLUNARG), inst->total_icd_count);
     if (!icd_info) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -183,7 +183,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
         return res;
     }
 
-    *(VkDbgMsgCallback **)pMsgCallback = icd_info;
+    *(VkDebugReportCallbackLUNARG **)pMsgCallback = icd_info;
 
     return VK_SUCCESS;
 }
@@ -194,10 +194,10 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
         VkInstance instance,
-        VkDbgMsgCallback msgCallback)
+        VkDebugReportCallbackLUNARG msgCallback)
 {
     uint32_t storage_idx;
-    VkDbgMsgCallback *icd_info;
+    VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
     VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
@@ -207,7 +207,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
             break;
     }
 
-    icd_info = *(VkDbgMsgCallback **) &msgCallback;
+    icd_info = *(VkDebugReportCallbackLUNARG **) &msgCallback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
         if (icd_info[storage_idx]) {

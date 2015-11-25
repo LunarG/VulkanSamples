@@ -152,7 +152,7 @@ static inline VkResult layer_create_msg_callback(
         VkFlags                         msgFlags,
         const PFN_vkDbgMsgCallback      pfnMsgCallback,
         void                           *pUserData,
-        VkDbgMsgCallback               *pMsgCallback)
+        VkDebugReportCallbackLUNARG               *pMsgCallback)
 {
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode*)malloc(sizeof(VkLayerDbgFunctionNode));
     if (!pNewDbgFuncNode)
@@ -160,7 +160,7 @@ static inline VkResult layer_create_msg_callback(
 
     // Handle of 0 is logging_callback so use allocated Node address as unique handle
     if (!(*pMsgCallback))
-        *pMsgCallback = (VkDbgMsgCallback) pNewDbgFuncNode;
+        *pMsgCallback = (VkDebugReportCallbackLUNARG) pNewDbgFuncNode;
     pNewDbgFuncNode->msgCallback = *pMsgCallback;
     pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
     pNewDbgFuncNode->msgFlags = msgFlags;
@@ -181,7 +181,7 @@ static inline VkResult layer_create_msg_callback(
 
 static inline void layer_destroy_msg_callback(
         debug_report_data              *debug_data,
-        VkDbgMsgCallback                msg_callback)
+        VkDebugReportCallbackLUNARG                msg_callback)
 {
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;

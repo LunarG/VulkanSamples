@@ -115,7 +115,7 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    VkDbgMsgCallback callback;
+    VkDebugReportCallbackLUNARG callback;
 
     // Initialize Swapchain options:
     report_flags = getLayerOptionFlags("SwapchainReportFlags", 0);
@@ -209,7 +209,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
         // Clean up logging callback, if any
         while (my_data->logging_callback.size() > 0) {
-            VkDbgMsgCallback callback = my_data->logging_callback.back();
+            VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
             layer_destroy_msg_callback(my_data->report_data, callback);
             my_data->logging_callback.pop_back();
         }
@@ -1113,7 +1113,7 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
     return NULL;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDbgMsgCallback* pMsgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDebugReportCallbackLUNARG* pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult result = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
@@ -1123,7 +1123,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(VkInstance instance, VkDbgMsgCallback msgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkResult result = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);

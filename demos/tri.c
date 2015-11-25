@@ -238,7 +238,7 @@ struct demo {
     bool validate;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
-    VkDbgMsgCallback msg_callback;
+    VkDebugReportCallbackLUNARG msg_callback;
 
     float depthStencil;
     float depthIncrement;

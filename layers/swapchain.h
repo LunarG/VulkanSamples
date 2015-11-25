@@ -210,7 +210,7 @@ struct _SwpSwapchain {
 
 struct layer_data {
     debug_report_data *report_data;
-    std::vector<VkDbgMsgCallback> logging_callback;
+    std::vector<VkDebugReportCallbackLUNARG> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     // NOTE: The following are for keeping track of info that is used for

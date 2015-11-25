@@ -204,7 +204,7 @@ typedef struct VkLayerInstanceDispatchTable_
 // LL node for tree of dbg callback functions
 typedef struct VkLayerDbgFunctionNode_
 {
-    VkDbgMsgCallback msgCallback;
+    VkDebugReportCallbackLUNARG msgCallback;
     PFN_vkDbgMsgCallback pfnMsgCallback;
     VkFlags msgFlags;
     const void *pUserData;

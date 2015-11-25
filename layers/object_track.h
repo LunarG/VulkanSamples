@@ -75,7 +75,7 @@ typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDebugReportO
 struct layer_data {
     debug_report_data *report_data;
     //TODO: put instance data here
-    VkDbgMsgCallback   logging_callback;
+    VkDebugReportCallbackLUNARG   logging_callback;
     bool wsi_enabled;
     bool objtrack_extensions_enabled;
 

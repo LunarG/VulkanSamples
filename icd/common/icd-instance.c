@@ -122,7 +122,7 @@ VkResult icd_instance_create_logger(
         VkFlags msg_flags,
         PFN_vkDbgMsgCallback func,
         void *user_data,
-        VkDbgMsgCallback *msg_obj)
+        VkDebugReportCallbackLUNARG *msg_obj)
 {
     struct icd_instance_logger *logger;
 
@@ -150,10 +150,10 @@ VkResult icd_instance_create_logger(
 
 VkResult icd_instance_destroy_logger(
         struct icd_instance *instance,
-        const VkDbgMsgCallback msg_obj)
+        const VkDebugReportCallbackLUNARG msg_obj)
 {
     struct icd_instance_logger *logger, *prev;
-    VkDbgMsgCallback local_msg_obj = msg_obj;
+    VkDebugReportCallbackLUNARG local_msg_obj = msg_obj;
 
     for (prev = NULL, logger = instance->loggers; logger;
          prev = logger, logger = logger->next) {

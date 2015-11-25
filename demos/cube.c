@@ -397,7 +397,8 @@ struct demo {
     bool use_break;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
-    VkDbgMsgCallback msg_callback;
+    PFN_vkDbgMsgCallback dbgBreakCallback;
+    VkDebugReportCallbackLUNARG msg_callback;
 
     uint32_t current_buffer;
     uint32_t queue_count;

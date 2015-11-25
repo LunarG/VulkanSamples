@@ -341,8 +341,8 @@ extern loader_platform_thread_mutex loader_json_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
 
 struct loader_msg_callback_map_entry {
-    VkDbgMsgCallback icd_obj;
-    VkDbgMsgCallback loader_obj;
+    VkDebugReportCallbackLUNARG icd_obj;
+    VkDebugReportCallbackLUNARG loader_obj;
 };
 
 bool compare_vk_extension_properties(

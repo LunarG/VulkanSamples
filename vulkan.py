@@ -1121,7 +1121,7 @@ lunarg_debug_report = Extension(
     name="VK_LUNARG_DEBUG_REPORT",
     headers=["vk_lunarg_debug_report.h"],
     objects=[
-        "VkDbgMsgCallback",
+        "VkDebugReportCallbackLUNARG",
     ],
     protos=[
         Proto("VkResult", "DbgCreateMsgCallback",
@@ -1129,11 +1129,11 @@ lunarg_debug_report = Extension(
              Param("VkFlags", "msgFlags"),
              Param("const PFN_vkDbgMsgCallback", "pfnMsgCallback"),
              Param("void*", "pUserData"),
-             Param("VkDbgMsgCallback*", "pMsgCallback")]),
+             Param("VkDebugReportCallbackLUNARG*", "pMsgCallback")]),
 
         Proto("VkResult", "DbgDestroyMsgCallback",
             [Param("VkInstance", "instance"),
-             Param("VkDbgMsgCallback", "msgCallback")]),
+             Param("VkDebugReportCallbackLUNARG", "msgCallback")]),
     ],
 )
 lunarg_debug_marker = Extension(
@@ -1203,7 +1203,7 @@ object_non_dispatch_list = [
     "VkFramebuffer",
     "VkSwapchainKHR",
     "VkSurfaceKHR",
-    "VkDbgMsgCallback",
+    "VkDebugReportCallbackLUNARG",
 ]
 
 object_type_list = object_dispatch_list + object_non_dispatch_list

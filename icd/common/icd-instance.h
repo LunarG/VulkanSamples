@@ -72,11 +72,11 @@ VkResult icd_instance_create_logger(struct icd_instance *instance,
         VkFlags msg_flags,
         PFN_vkDbgMsgCallback func,
         void *user_data,
-        VkDbgMsgCallback *msg_obj);
+        VkDebugReportCallbackLUNARG *msg_obj);
 
 VkResult icd_instance_destroy_logger(
         struct icd_instance *instance,
-        const VkDbgMsgCallback msg_obj);
+        const VkDebugReportCallbackLUNARG msg_obj);
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,

@@ -1938,7 +1938,7 @@ VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32S
 VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
-    VkDbgMsgCallback local_msgCallback;
+    VkDebugReportCallbackLUNARG local_msgCallback;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
 
     if (remappedInstance == NULL)
@@ -1952,7 +1952,7 @@ VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsg
         replayResult = m_vkFuncs.real_vkDbgCreateMsgCallback(remappedInstance, pPacket->msgFlags, g_fpDbgMsgCallback, NULL, &local_msgCallback);
         if (replayResult == VK_SUCCESS)
         {
-                m_objMapper.add_to_dbgmsgcallbacks_map(*(pPacket->pMsgCallback), local_msgCallback);
+                m_objMapper.add_to_debugreportcallbacklunargs_map(*(pPacket->pMsgCallback), local_msgCallback);
         }
     }
     return replayResult;
@@ -1962,8 +1962,8 @@ VkResult vkReplay::manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMs
 {
     VkResult replayResult = VK_SUCCESS;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
-    VkDbgMsgCallback remappedMsgCallback;
-    remappedMsgCallback = m_objMapper.remap_dbgmsgcallbacks(pPacket->msgCallback);
+    VkDebugReportCallbackLUNARG remappedMsgCallback;
+    remappedMsgCallback = m_objMapper.remap_debugreportcallbacklunargs(pPacket->msgCallback);
     if (!g_fpDbgMsgCallback) {
         // just eat this call as we don't have local call back function defined
         return VK_SUCCESS;
