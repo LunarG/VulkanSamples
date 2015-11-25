@@ -465,6 +465,7 @@ static inline void loader_init_instance_extension_dispatch_table(
 {
     table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
     table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
+    table->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
     table->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
@@ -525,6 +526,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->EnumerateDeviceExtensionProperties;
     if (!strcmp(name, "EnumerateDeviceLayerProperties"))
         return (void *) table->EnumerateDeviceLayerProperties;
+    if (!strcmp(name, "DestroySurfaceKHR"))
+        return (void *) table->DestroySurfaceKHR;
     if (!strcmp(name, "GetPhysicalDeviceSurfaceSupportKHR"))
         return (void *) table->GetPhysicalDeviceSurfaceSupportKHR;
     if (!strcmp(name, "GetPhysicalDeviceSurfaceCapabilitiesKHR"))

@@ -162,10 +162,22 @@ void wsi_create_instance(
 /*
  * This is the trampoline entrypoint
  * for DestroySurfaceKHR
- *
- * Note: There is no terminator for this function.
  */
 LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
+    VkInstance                                   instance,
+    VkSurfaceKHR                                 surface,
+    const VkAllocationCallbacks*                 pAllocator)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    disp->DestroySurfaceKHR(instance, surface, pAllocator);
+}
+
+/*
+ * This is the instance chain terminator function
+ * for DestroySurfaceKHR
+ */
+VKAPI_ATTR void VKAPI_CALL loader_DestroySurfaceKHR(
     VkInstance                                   instance,
     VkSurfaceKHR                                 surface,
     const VkAllocationCallbacks*                 pAllocator)

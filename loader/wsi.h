@@ -38,6 +38,11 @@ void wsi_create_instance(
         const VkInstanceCreateInfo *pCreateInfo);
 
 
+VKAPI_ATTR void VKAPI_CALL loader_DestroySurfaceKHR(
+    VkInstance                                   instance,
+    VkSurfaceKHR                                 surface,
+    const VkAllocationCallbacks*                 pAllocator);
+
 VKAPI_ATTR VkResult VKAPI_CALL loader_GetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,

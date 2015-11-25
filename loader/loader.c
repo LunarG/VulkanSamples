@@ -108,6 +108,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .EnumerateDeviceExtensionProperties = loader_EnumerateDeviceExtensionProperties,
     .EnumerateDeviceLayerProperties = loader_EnumerateDeviceLayerProperties,
     .GetPhysicalDeviceSparseImageFormatProperties = loader_GetPhysicalDeviceSparseImageFormatProperties,
+    .DestroySurfaceKHR = loader_DestroySurfaceKHR,
     .GetPhysicalDeviceSurfaceSupportKHR = loader_GetPhysicalDeviceSurfaceSupportKHR,
     .GetPhysicalDeviceSurfaceCapabilitiesKHR = loader_GetPhysicalDeviceSurfaceCapabilitiesKHR,
     .GetPhysicalDeviceSurfaceFormatsKHR = loader_GetPhysicalDeviceSurfaceFormatsKHR,
@@ -1238,6 +1239,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
     LOOKUP_GIPA(DbgCreateMsgCallback, false);
     LOOKUP_GIPA(DbgDestroyMsgCallback, false);
+    LOOKUP_GIPA(DestroySurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
