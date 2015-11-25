@@ -72,7 +72,7 @@ void ext_init_create_instance(
     instData->KHRMirSurfaceEnabled = false;
     instData->KHRWin32SurfaceEnabled = false;
     for (uint32_t i = 0; i < extension_count; i++) {
-        if (strcmp(ppEnabledExtensions[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensions[i], VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             instData->LunargDebugReportEnabled = true;
         }
         if (strcmp(ppEnabledExtensions[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {

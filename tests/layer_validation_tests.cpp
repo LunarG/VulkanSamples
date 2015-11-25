@@ -251,7 +251,7 @@ protected:
         std::vector<const char *> instance_extension_names;
         std::vector<const char *> device_extension_names;
 
-        instance_extension_names.push_back(VK_DEBUG_REPORT_EXTENSION_NAME);
+        instance_extension_names.push_back(VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME);
         /*
          * Since CreateDbgMsgCallback is an instance level extension call
          * any extension / layer that utilizes that feature also needs

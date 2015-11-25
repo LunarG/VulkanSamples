@@ -97,7 +97,7 @@ static inline debug_report_data *debug_report_create_instance(
     memset(debug_data, 0, sizeof(debug_report_data));
     for (uint32_t i = 0; i < extension_count; i++) {
         /* TODO: Check other property fields */
-        if (strcmp(ppEnabledExtensions[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensions[i], VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             debug_data->g_DEBUG_REPORT = true;
         }
     }

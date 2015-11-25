@@ -2177,9 +2177,9 @@ static void demo_init_vk(struct demo *demo)
             extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
         }
 #endif // _WIN32
-        if (!strcmp(VK_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+        if (!strcmp(VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
-                extension_names[enabled_extension_count++] = VK_DEBUG_REPORT_EXTENSION_NAME;
+                extension_names[enabled_extension_count++] = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME;
             }
         }
         assert(enabled_extension_count < 64);

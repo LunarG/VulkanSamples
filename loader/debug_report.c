@@ -40,8 +40,8 @@
 typedef void (VKAPI_PTR *PFN_stringCallback)(char *message);
 
 static const VkExtensionProperties debug_report_extension_info = {
-        .extensionName = VK_DEBUG_REPORT_EXTENSION_NAME,
-        .specVersion = VK_DEBUG_REPORT_EXTENSION_REVISION,
+        .extensionName = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
+        .specVersion = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION,
 };
 
 void debug_report_add_instance_extensions(
@@ -58,7 +58,7 @@ void debug_report_create_instance(
     ptr_instance->debug_report_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             ptr_instance->debug_report_enabled = true;
             return;
         }
