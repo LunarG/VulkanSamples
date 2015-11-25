@@ -253,7 +253,7 @@ static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
 // DebugReport utility callback functions
 static VKAPI_ATTR void VKAPI_CALL StringCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -285,7 +285,7 @@ static VKAPI_ATTR void VKAPI_CALL StringCallback(
 
 static VKAPI_ATTR void VKAPI_CALL StdioCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -303,7 +303,7 @@ static VKAPI_ATTR void VKAPI_CALL StdioCallback(
 
 static VKAPI_ATTR void VKAPI_CALL BreakCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

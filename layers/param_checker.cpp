@@ -1789,7 +1789,7 @@ bool PostEnumeratePhysicalDevices(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkEnumeratePhysicalDevices parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -1838,7 +1838,7 @@ bool PostGetPhysicalDeviceFormatProperties(
     if(format < VK_FORMAT_BEGIN_RANGE ||
         format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
         return false;
     }
@@ -1874,7 +1874,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     if(format < VK_FORMAT_BEGIN_RANGE ||
         format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
         return false;
     }
@@ -1882,7 +1882,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     if(type < VK_IMAGE_TYPE_BEGIN_RANGE ||
         type > VK_IMAGE_TYPE_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
         return false;
     }
@@ -1890,7 +1890,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     if(tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
         tiling > VK_IMAGE_TILING_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
         return false;
     }
@@ -1903,7 +1903,7 @@ bool PostGetPhysicalDeviceImageFormatProperties(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPhysicalDeviceImageFormatProperties parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -1936,7 +1936,7 @@ bool PostGetPhysicalDeviceProperties(
     if(pProperties->deviceType < VK_PHYSICAL_DEVICE_TYPE_BEGIN_RANGE ||
         pProperties->deviceType > VK_PHYSICAL_DEVICE_TYPE_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceProperties parameter, VkPhysicalDeviceType pProperties->deviceType, is an unrecognized enumerator");
         return false;
     }
@@ -2075,7 +2075,7 @@ bool PreQueueSubmit(
     const VkSubmitInfo* submit)
 {
     if(submit->sType != VK_STRUCTURE_TYPE_SUBMIT_INFO) {
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkQueueSubmit parameter, VkStructureType pSubmits->sType, is an invalid enumerator");
         return false;
     }
@@ -2099,7 +2099,7 @@ bool PostQueueSubmit(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueSubmit parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2131,7 +2131,7 @@ bool PostQueueWaitIdle(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2156,7 +2156,7 @@ bool PostDeviceWaitIdle(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkDeviceWaitIdle parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2181,7 +2181,7 @@ bool PreAllocateMemory(
     {
     if(pAllocateInfo->sType != VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkAllocateMemory parameter, VkStructureType pAllocateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -2203,7 +2203,7 @@ bool PostAllocateMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2246,7 +2246,7 @@ bool PostMapMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkMapMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2276,7 +2276,7 @@ bool PreFlushMappedMemoryRanges(
     {
     if(pMemoryRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkFlushMappedMemoryRanges parameter, VkStructureType pMemoryRanges->sType, is an invalid enumerator");
         return false;
     }
@@ -2295,7 +2295,7 @@ bool PostFlushMappedMemoryRanges(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkFlushMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2324,7 +2324,7 @@ bool PreInvalidateMappedMemoryRanges(
     {
     if(pMemoryRanges->sType != VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkInvalidateMappedMemoryRanges parameter, VkStructureType pMemoryRanges->sType, is an invalid enumerator");
         return false;
     }
@@ -2343,7 +2343,7 @@ bool PostInvalidateMappedMemoryRanges(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkInvalidateMappedMemoryRanges parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2402,7 +2402,7 @@ bool PostBindBufferMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindBufferMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2436,7 +2436,7 @@ bool PostBindImageMemory(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBindImageMemory parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2521,7 +2521,7 @@ bool PostGetImageSparseMemoryRequirements(
     if ((pSparseMemoryRequirements->formatProperties.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetImageSparseMemoryRequirements parameter, VkImageAspect pSparseMemoryRequirements->formatProperties.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -2555,7 +2555,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     if(format < VK_FORMAT_BEGIN_RANGE ||
         format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkFormat format, is an unrecognized enumerator");
         return false;
     }
@@ -2563,7 +2563,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     if(type < VK_IMAGE_TYPE_BEGIN_RANGE ||
         type > VK_IMAGE_TYPE_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageType type, is an unrecognized enumerator");
         return false;
     }
@@ -2573,7 +2573,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     if(tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
         tiling > VK_IMAGE_TILING_END_RANGE)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageTiling tiling, is an unrecognized enumerator");
         return false;
     }
@@ -2587,7 +2587,7 @@ bool PostGetPhysicalDeviceSparseImageFormatProperties(
     if ((pProperties->aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(physicalDevice), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetPhysicalDeviceSparseImageFormatProperties parameter, VkImageAspect pProperties->aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -2636,7 +2636,7 @@ bool PostQueueBindSparse(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkQueueBindSparse parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(queue), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2666,7 +2666,7 @@ bool PreCreateFence(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_FENCE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateFence parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -2688,7 +2688,7 @@ bool PostCreateFence(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateFence parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2731,7 +2731,7 @@ bool PostResetFences(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2762,7 +2762,7 @@ bool PostGetFenceStatus(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetFenceStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2805,7 +2805,7 @@ bool PostWaitForFences(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkWaitForFences parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2836,7 +2836,7 @@ bool PreCreateSemaphore(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSemaphore parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -2858,7 +2858,7 @@ bool PostCreateSemaphore(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSemaphore parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2888,7 +2888,7 @@ bool PreCreateEvent(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_EVENT_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateEvent parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -2910,7 +2910,7 @@ bool PostCreateEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2942,7 +2942,7 @@ bool PostGetEventStatus(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetEventStatus parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2970,7 +2970,7 @@ bool PostSetEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkSetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -2998,7 +2998,7 @@ bool PostResetEvent(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetEvent parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3024,14 +3024,14 @@ bool PreCreateQueryPool(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateQueryPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->queryType < VK_QUERY_TYPE_BEGIN_RANGE ||
         pCreateInfo->queryType > VK_QUERY_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateQueryPool parameter, VkQueryType pCreateInfo->queryType, is an unrecognized enumerator");
         return false;
     }
@@ -3053,7 +3053,7 @@ bool PostCreateQueryPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateQueryPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3098,7 +3098,7 @@ bool PostGetQueryPoolResults(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetQueryPoolResults parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3130,14 +3130,14 @@ bool PreCreateBuffer(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateBuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE ||
         pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateBuffer parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
         return false;
     }
@@ -3162,7 +3162,7 @@ bool PostCreateBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3192,14 +3192,14 @@ bool PreCreateBufferView(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateBufferView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateBufferView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
@@ -3221,7 +3221,7 @@ bool PostCreateBufferView(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateBufferView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3251,35 +3251,35 @@ bool PreCreateImage(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImage parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->imageType < VK_IMAGE_TYPE_BEGIN_RANGE ||
         pCreateInfo->imageType > VK_IMAGE_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImage parameter, VkImageType pCreateInfo->imageType, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImage parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->tiling < VK_IMAGE_TILING_BEGIN_RANGE ||
         pCreateInfo->tiling > VK_IMAGE_TILING_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImage parameter, VkImageTiling pCreateInfo->tiling, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->sharingMode < VK_SHARING_MODE_BEGIN_RANGE ||
         pCreateInfo->sharingMode > VK_SHARING_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImage parameter, VkSharingMode pCreateInfo->sharingMode, is an unrecognized enumerator");
         return false;
     }
@@ -3304,7 +3304,7 @@ bool PostCreateImage(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImage parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3335,7 +3335,7 @@ bool PreGetImageSubresourceLayout(
     if ((pSubresource->aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkGetImageSubresourceLayout parameter, VkImageAspect pSubresource->aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -3379,49 +3379,49 @@ bool PreCreateImageView(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->viewType < VK_IMAGE_VIEW_TYPE_BEGIN_RANGE ||
         pCreateInfo->viewType > VK_IMAGE_VIEW_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkImageViewType pCreateInfo->viewType, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkFormat pCreateInfo->format, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->components.r < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->components.r > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.r, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->components.g < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->components.g > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.g, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->components.b < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->components.b > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.b, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->components.a < VK_COMPONENT_SWIZZLE_BEGIN_RANGE ||
         pCreateInfo->components.a > VK_COMPONENT_SWIZZLE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateImageView parameter, VkComponentSwizzle pCreateInfo->components.a, is an unrecognized enumerator");
         return false;
     }
@@ -3443,7 +3443,7 @@ bool PostCreateImageView(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateImageView parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3471,17 +3471,17 @@ bool PreCreateShaderModule(
 {
     if(pCreateInfo) {
         if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
                 "vkCreateShaderModule parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
             return false;
         }
         if(!pCreateInfo->pCode) {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
                 "vkCreateShaderModule paramter, void* pCreateInfo->pCode, is null");
             return false;
         }
     } else {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
             "vkCreateShaderModule parameter, VkShaderModuleCreateInfo pCreateInfo, is null");
         return false;
     }
@@ -3496,7 +3496,7 @@ bool PostCreateShaderModule(
 {
     if(result < VK_SUCCESS) {
         std::string reason = "vkCreateShaderModule parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3523,7 +3523,7 @@ bool PreCreatePipelineCache(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreatePipelineCache parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -3548,7 +3548,7 @@ bool PostCreatePipelineCache(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreatePipelineCache parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3590,7 +3590,7 @@ bool PostGetPipelineCacheData(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkGetPipelineCacheData parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3633,7 +3633,7 @@ bool PostMergePipelineCaches(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkMergePipelineCaches parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3663,7 +3663,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->sType != VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
         return false;
     }
@@ -3671,7 +3671,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pStages->sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pStages->sType, is an invalid enumerator");
         return false;
     }
@@ -3689,7 +3689,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pVertexInputState->sType != VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pVertexInputState->sType, is an invalid enumerator");
         return false;
     }
@@ -3698,7 +3698,7 @@ bool PreCreateGraphicsPipelines(
     if(pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate < VK_VERTEX_INPUT_RATE_BEGIN_RANGE ||
         pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate > VK_VERTEX_INPUT_RATE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkVertexInputRate pCreateInfos->pVertexInputState->pVertexBindingDescriptions->inputRate, is an unrecognized enumerator");
         return false;
     }
@@ -3708,7 +3708,7 @@ bool PreCreateGraphicsPipelines(
     if(pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkFormat pCreateInfos->pVertexInputState->pVertexAttributeDescriptions->format, is an unrecognized enumerator");
         return false;
     }
@@ -3718,14 +3718,14 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pInputAssemblyState->sType != VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pInputAssemblyState->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfos->pInputAssemblyState->topology < VK_PRIMITIVE_TOPOLOGY_BEGIN_RANGE ||
         pCreateInfos->pInputAssemblyState->topology > VK_PRIMITIVE_TOPOLOGY_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkPrimitiveTopology pCreateInfos->pInputAssemblyState->topology, is an unrecognized enumerator");
         return false;
     }
@@ -3734,7 +3734,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pTessellationState->sType != VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pTessellationState->sType, is an invalid enumerator");
         return false;
     }
@@ -3743,7 +3743,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pViewportState->sType != VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pViewportState->sType, is an invalid enumerator");
         return false;
     }
@@ -3752,27 +3752,27 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pRasterizationState->sType != VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pRasterizationState->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfos->pRasterizationState->polygonMode < VK_POLYGON_MODE_BEGIN_RANGE ||
         pCreateInfos->pRasterizationState->polygonMode > VK_POLYGON_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkPolygonMode pCreateInfos->pRasterizationState->polygonMode, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pRasterizationState->cullMode & ~VK_CULL_MODE_FRONT_AND_BACK)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkCullMode pCreateInfos->pRasterizationState->cullMode, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pRasterizationState->frontFace < VK_FRONT_FACE_BEGIN_RANGE ||
         pCreateInfos->pRasterizationState->frontFace > VK_FRONT_FACE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkFrontFace pCreateInfos->pRasterizationState->frontFace, is an unrecognized enumerator");
         return false;
     }
@@ -3781,7 +3781,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pMultisampleState->sType != VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pMultisampleState->sType, is an invalid enumerator");
         return false;
     }
@@ -3790,70 +3790,70 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pDepthStencilState->sType != VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pDepthStencilState->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->depthCompareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->depthCompareOp > VK_COMPARE_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->depthCompareOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->front.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->front.failOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.failOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->front.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->front.passOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.passOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->front.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->front.depthFailOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->front.depthFailOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->front.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->front.compareOp > VK_COMPARE_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->front.compareOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->back.failOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->back.failOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.failOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->back.passOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->back.passOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.passOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->back.depthFailOp < VK_STENCIL_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->back.depthFailOp > VK_STENCIL_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStencilOp pCreateInfos->pDepthStencilState->back.depthFailOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pDepthStencilState->back.compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
         pCreateInfos->pDepthStencilState->back.compareOp > VK_COMPARE_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkCompareOp pCreateInfos->pDepthStencilState->back.compareOp, is an unrecognized enumerator");
         return false;
     }
@@ -3862,7 +3862,7 @@ bool PreCreateGraphicsPipelines(
     {
     if(pCreateInfos->pColorBlendState->sType != VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkStructureType pCreateInfos->pColorBlendState->sType, is an invalid enumerator");
         return false;
     }
@@ -3870,7 +3870,7 @@ bool PreCreateGraphicsPipelines(
         pCreateInfos->pColorBlendState->logicOp < VK_LOGIC_OP_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->logicOp > VK_LOGIC_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkLogicOp pCreateInfos->pColorBlendState->logicOp, is an unrecognized enumerator");
         return false;
     }
@@ -3879,42 +3879,42 @@ bool PreCreateGraphicsPipelines(
     if(pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcColorBlendFactor, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstColorBlendFactor, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->colorBlendOp < VK_BLEND_OP_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->colorBlendOp > VK_BLEND_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->colorBlendOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->srcAlphaBlendFactor, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor < VK_BLEND_FACTOR_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor > VK_BLEND_FACTOR_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendFactor pCreateInfos->pColorBlendState->pAttachments->dstAlphaBlendFactor, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp < VK_BLEND_OP_BEGIN_RANGE ||
         pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp > VK_BLEND_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkBlendOp pCreateInfos->pColorBlendState->pAttachments->alphaBlendOp, is an unrecognized enumerator");
         return false;
     }
@@ -3922,7 +3922,7 @@ bool PreCreateGraphicsPipelines(
     }
     if(pCreateInfos->renderPass == VK_NULL_HANDLE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateGraphicsPipelines parameter, VkRenderPass pCreateInfos->renderPass, is null pointer");
     }
     }
@@ -3947,7 +3947,7 @@ bool PostCreateGraphicsPipelines(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateGraphicsPipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -3979,13 +3979,13 @@ bool PreCreateComputePipelines(
     {
     if(pCreateInfos->sType != VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfos->stage.sType != VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateComputePipelines parameter, VkStructureType pCreateInfos->cs.sType, is an invalid enumerator");
         return false;
     }
@@ -4020,7 +4020,7 @@ bool PostCreateComputePipelines(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateComputePipelines parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4052,7 +4052,7 @@ bool PreCreatePipelineLayout(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreatePipelineLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4080,7 +4080,7 @@ bool PostCreatePipelineLayout(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreatePipelineLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4110,49 +4110,49 @@ bool PreCreateSampler(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->magFilter < VK_FILTER_BEGIN_RANGE ||
         pCreateInfo->magFilter > VK_FILTER_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkFilter pCreateInfo->magFilter, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->minFilter < VK_FILTER_BEGIN_RANGE ||
         pCreateInfo->minFilter > VK_FILTER_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkFilter pCreateInfo->minFilter, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->mipmapMode < VK_SAMPLER_MIPMAP_MODE_BEGIN_RANGE ||
         pCreateInfo->mipmapMode > VK_SAMPLER_MIPMAP_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkSamplerMipmapMode pCreateInfo->mipmapMode, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressModeU < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
         pCreateInfo->addressModeU > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeU, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressModeV < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
         pCreateInfo->addressModeV > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeV, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->addressModeW < VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE ||
         pCreateInfo->addressModeW > VK_SAMPLER_ADDRESS_MODE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkTexAddress pCreateInfo->addressModeW, is an unrecognized enumerator");
         return false;
     }
@@ -4161,7 +4161,7 @@ bool PreCreateSampler(
         if(pCreateInfo->compareOp < VK_COMPARE_OP_BEGIN_RANGE ||
             pCreateInfo->compareOp > VK_COMPARE_OP_END_RANGE)
         {
-            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+            log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
             "vkCreateSampler parameter, VkCompareOp pCreateInfo->compareOp, is an unrecognized enumerator");
             return false;
         }
@@ -4169,7 +4169,7 @@ bool PreCreateSampler(
     if(pCreateInfo->borderColor < VK_BORDER_COLOR_BEGIN_RANGE ||
         pCreateInfo->borderColor > VK_BORDER_COLOR_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateSampler parameter, VkBorderColor pCreateInfo->borderColor, is an unrecognized enumerator");
         return false;
     }
@@ -4191,7 +4191,7 @@ bool PostCreateSampler(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateSampler parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4221,7 +4221,7 @@ bool PreCreateDescriptorSetLayout(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorSetLayout parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4230,7 +4230,7 @@ bool PreCreateDescriptorSetLayout(
     if(pCreateInfo->pBinding->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pCreateInfo->pBinding->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorSetLayout parameter, VkDescriptorType pCreateInfo->pBinding->descriptorType, is an unrecognized enumerator");
         return false;
     }
@@ -4256,7 +4256,7 @@ bool PostCreateDescriptorSetLayout(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorSetLayout parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4286,7 +4286,7 @@ bool PreCreateDescriptorPool(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4295,7 +4295,7 @@ bool PreCreateDescriptorPool(
     if(pCreateInfo->pPoolSizes->type < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pCreateInfo->pPoolSizes->type > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateDescriptorPool parameter, VkDescriptorType pCreateInfo->pTypeCount->type, is an unrecognized enumerator");
         return false;
     }
@@ -4321,7 +4321,7 @@ bool PostCreateDescriptorPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4353,7 +4353,7 @@ bool PostResetDescriptorPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetDescriptorPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4399,7 +4399,7 @@ bool PostAllocateDescriptorSets(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4443,7 +4443,7 @@ bool PostFreeDescriptorSets(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkFreeDescriptorSets parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4474,14 +4474,14 @@ bool PreUpdateDescriptorSets(
     {
     if(pDescriptorWrites->sType != VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorWrites->sType, is an invalid enumerator");
         return false;
     }
     if(pDescriptorWrites->descriptorType < VK_DESCRIPTOR_TYPE_BEGIN_RANGE ||
         pDescriptorWrites->descriptorType > VK_DESCRIPTOR_TYPE_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkDescriptorType pDescriptorWrites->descriptorType, is an unrecognized enumerator");
         return false;
     }
@@ -4492,7 +4492,7 @@ bool PreUpdateDescriptorSets(
     if(pDescriptorWrites->pImageInfo->imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pDescriptorWrites->pImageInfo->imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkImageLayout pDescriptorWrites->pDescriptors->imageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -4503,7 +4503,7 @@ bool PreUpdateDescriptorSets(
     {
     if(pDescriptorCopies->sType != VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkUpdateDescriptorSets parameter, VkStructureType pDescriptorCopies->sType, is an invalid enumerator");
         return false;
     }
@@ -4532,7 +4532,7 @@ bool PreCreateFramebuffer(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateFramebuffer parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4557,7 +4557,7 @@ bool PostCreateFramebuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateFramebuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4587,7 +4587,7 @@ bool PreCreateRenderPass(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4596,49 +4596,49 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pAttachments->format < VK_FORMAT_BEGIN_RANGE ||
         pCreateInfo->pAttachments->format > VK_FORMAT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkFormat pCreateInfo->pAttachments->format, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->loadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
         pCreateInfo->pAttachments->loadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->loadOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->storeOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
         pCreateInfo->pAttachments->storeOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->storeOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->stencilLoadOp < VK_ATTACHMENT_LOAD_OP_BEGIN_RANGE ||
         pCreateInfo->pAttachments->stencilLoadOp > VK_ATTACHMENT_LOAD_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkAttachmentLoadOp pCreateInfo->pAttachments->stencilLoadOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->stencilStoreOp < VK_ATTACHMENT_STORE_OP_BEGIN_RANGE ||
         pCreateInfo->pAttachments->stencilStoreOp > VK_ATTACHMENT_STORE_OP_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkAttachmentStoreOp pCreateInfo->pAttachments->stencilStoreOp, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->initialLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pAttachments->initialLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->initialLayout, is an unrecognized enumerator");
         return false;
     }
     if(pCreateInfo->pAttachments->finalLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pAttachments->finalLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pAttachments->finalLayout, is an unrecognized enumerator");
         return false;
     }
@@ -4648,7 +4648,7 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pSubpasses->pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkPipelineBindPoint pCreateInfo->pSubpasses->pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
@@ -4657,7 +4657,7 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pSubpasses->pInputAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pInputAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pInputAttachments->layout, is an unrecognized enumerator");
         return false;
     }
@@ -4667,7 +4667,7 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pSubpasses->pColorAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pColorAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pColorAttachments->layout, is an unrecognized enumerator");
         return false;
     }
@@ -4677,7 +4677,7 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pSubpasses->pResolveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pResolveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pResolveAttachments->layout, is an unrecognized enumerator");
         return false;
     }
@@ -4686,7 +4686,7 @@ bool PreCreateRenderPass(
         (pCreateInfo->pSubpasses->pDepthStencilAttachment->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
          pCreateInfo->pSubpasses->pDepthStencilAttachment->layout > VK_IMAGE_LAYOUT_END_RANGE))
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pDepthStencilAttachment->layout, is an unrecognized enumerator");
         return false;
     }
@@ -4695,7 +4695,7 @@ bool PreCreateRenderPass(
     if(pCreateInfo->pSubpasses->pPreserveAttachments->layout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         pCreateInfo->pSubpasses->pPreserveAttachments->layout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateRenderPass parameter, VkImageLayout pCreateInfo->pSubpasses->pPreserveAttachments->layout, is an unrecognized enumerator");
         return false;
     }
@@ -4722,7 +4722,7 @@ bool PostCreateRenderPass(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateRenderPass parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4776,7 +4776,7 @@ bool PreCreateCommandPool(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCreateCommandPool parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4798,7 +4798,7 @@ bool PostCreateCommandPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkCreateCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4832,7 +4832,7 @@ bool PostResetCommandPool(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandPool parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4859,14 +4859,14 @@ bool PreCreateCommandBuffer(
     {
     if(pCreateInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkAllocateCommandBuffers parameter, VkStructureType pCreateInfo->sType, is an invalid enumerator");
         return false;
     }
     if(pCreateInfo->level < VK_COMMAND_BUFFER_LEVEL_BEGIN_RANGE ||
         pCreateInfo->level > VK_COMMAND_BUFFER_LEVEL_END_RANGE)
     {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkAllocateCommandBuffers parameter, VkCommandBufferLevel pCreateInfo->level, is an unrecognized enumerator");
         return false;
     }
@@ -4888,7 +4888,7 @@ bool PostCreateCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkAllocateCommandBuffers parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4917,7 +4917,7 @@ bool PreBeginCommandBuffer(
     {
     if(pBeginInfo->sType != VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkBeginCommandBuffer parameter, VkStructureType pBeginInfo->sType, is an invalid enumerator");
         return false;
     }
@@ -4934,7 +4934,7 @@ bool PostBeginCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkBeginCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4962,7 +4962,7 @@ bool PostEndCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkEndCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -4989,7 +4989,7 @@ bool PostResetCommandBuffer(
     if(result < VK_SUCCESS)
     {
         std::string reason = "vkResetCommandBuffer parameter, VkResult result, is " + EnumeratorString(result);
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK", "%s", reason.c_str());
         return false;
     }
 
@@ -5016,7 +5016,7 @@ bool PostCmdBindPipeline(
     if(pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindPipeline parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
@@ -5108,7 +5108,7 @@ bool PostCmdBindDescriptorSets(
     if(pipelineBindPoint < VK_PIPELINE_BIND_POINT_BEGIN_RANGE ||
         pipelineBindPoint > VK_PIPELINE_BIND_POINT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindDescriptorSets parameter, VkPipelineBindPoint pipelineBindPoint, is an unrecognized enumerator");
         return false;
     }
@@ -5149,7 +5149,7 @@ bool PostCmdBindIndexBuffer(
     if(indexType < VK_INDEX_TYPE_BEGIN_RANGE ||
         indexType > VK_INDEX_TYPE_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBindIndexBuffer parameter, VkIndexType indexType, is an unrecognized enumerator");
         return false;
     }
@@ -5217,13 +5217,13 @@ bool PreCmdDraw(
     uint32_t firstInstance)
 {
     if (vertexCount == 0) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdDraw parameter, uint32_t vertexCount, is 0");
         return false;
     }
 
     if (instanceCount == 0) {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdDraw parameter, uint32_t instanceCount, is 0");
         return false;
     }
@@ -5436,14 +5436,14 @@ bool PreCmdCopyImage(
     if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -5465,7 +5465,7 @@ bool PostCmdCopyImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5474,7 +5474,7 @@ bool PostCmdCopyImage(
     if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5508,14 +5508,14 @@ bool PreCmdBlitImage(
     if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -5538,7 +5538,7 @@ bool PostCmdBlitImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5547,7 +5547,7 @@ bool PostCmdBlitImage(
     if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5556,7 +5556,7 @@ bool PostCmdBlitImage(
     if(filter < VK_FILTER_BEGIN_RANGE ||
         filter > VK_FILTER_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBlitImage parameter, VkFilter filter, is an unrecognized enumerator");
         return false;
     }
@@ -5590,7 +5590,7 @@ bool PreCmdCopyBufferToImage(
     if ((pRegions->imageSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyBufferToImage parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -5612,7 +5612,7 @@ bool PostCmdCopyBufferToImage(
     if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyBufferToImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5645,7 +5645,7 @@ bool PreCmdCopyImageToBuffer(
     if ((pRegions->imageSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageAspect pRegions->imageSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -5666,7 +5666,7 @@ bool PostCmdCopyImageToBuffer(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdCopyImageToBuffer parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5784,7 +5784,7 @@ bool PostCmdClearColorImage(
     if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdClearColorImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5836,7 +5836,7 @@ bool PostCmdClearDepthStencilImage(
     if(imageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         imageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdClearDepthStencilImage parameter, VkImageLayout imageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5901,14 +5901,14 @@ bool PreCmdResolveImage(
     if ((pRegions->srcSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageAspect pRegions->srcSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
     if ((pRegions->dstSubresource.aspectMask &
        (VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_METADATA_BIT)) == 0)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageAspect pRegions->dstSubresource.aspectMask, is an unrecognized enumerator");
         return false;
     }
@@ -5930,7 +5930,7 @@ bool PostCmdResolveImage(
     if(srcImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         srcImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageLayout srcImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -5939,7 +5939,7 @@ bool PostCmdResolveImage(
     if(dstImageLayout < VK_IMAGE_LAYOUT_BEGIN_RANGE ||
         dstImageLayout > VK_IMAGE_LAYOUT_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdResolveImage parameter, VkImageLayout dstImageLayout, is an unrecognized enumerator");
         return false;
     }
@@ -6271,7 +6271,7 @@ bool PreCmdBeginRenderPass(
     {
     if(pRenderPassBegin->sType != VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBeginRenderPass parameter, VkStructureType pRenderPassBegin->sType, is an invalid enumerator");
         return false;
     }
@@ -6291,7 +6291,7 @@ bool PostCmdBeginRenderPass(
     if(contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE ||
         contents > VK_SUBPASS_CONTENTS_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdBeginRenderPass parameter, VkSubpassContents contents, is an unrecognized enumerator");
         return false;
     }
@@ -6319,7 +6319,7 @@ bool PostCmdNextSubpass(
     if(contents < VK_SUBPASS_CONTENTS_BEGIN_RANGE ||
         contents > VK_SUBPASS_CONTENTS_END_RANGE)
     {
-        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "PARAMCHECK",
+        log_msg(mdd(commandBuffer), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "PARAMCHECK",
         "vkCmdNextSubpass parameter, VkSubpassContents contents, is an unrecognized enumerator");
         return false;
     }

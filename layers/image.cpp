@@ -285,7 +285,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, co
         if ((properties.linearTilingFeatures) == 0 && (properties.optimalTilingFeatures == 0))
         {
             char const str[] = "vkCreateImage parameter, VkFormat pCreateInfo->format, contains unsupported format";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", str);
         }
     }
 
@@ -379,7 +379,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass parameter, VkFormat in pCreateInfo->pAttachments[" << i << "], contains unsupported format";
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", "%s", ss.str().c_str());
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_FORMAT_UNSUPPORTED, "IMAGE", "%s", ss.str().c_str());
             }
         }
     }
@@ -391,7 +391,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkImageLayout in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -401,7 +401,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentLoadOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -411,7 +411,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
         {
             std::stringstream ss;
             ss << "vkCreateRenderPass parameter, VkAttachmentStoreOp in pCreateInfo->pAttachments[" << i << "], is unrecognized";
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_RENDERPASS_INVALID_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
         }
     }
 
@@ -429,7 +429,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
                 pCreateInfo->pSubpasses[i].pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
                 std::stringstream ss;
                 ss << "vkCreateRenderPass has no depth/stencil attachment, yet subpass[" << i << "] has VkSubpassDescription::depthStencilAttachment value that is not VK_ATTACHMENT_UNUSED";
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_RENDERPASS_INVALID_DS_ATTACHMENT, "IMAGE", "%s", ss.str().c_str());
             }
         }
     }
@@ -451,23 +451,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
             std::stringstream ss;
             ss << "vkCreateImageView called with baseMipLevel " << pCreateInfo->subresourceRange.baseMipLevel
                << " for image " << pCreateInfo->image << " that only has " << imageEntry->second.mipLevels << " mip levels.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
         if (pCreateInfo->subresourceRange.baseArrayLayer >= imageEntry->second.arraySize) {
             std::stringstream ss;
             ss << "vkCreateImageView called with baseArrayLayer " << pCreateInfo->subresourceRange.baseArrayLayer << " for image "
                << pCreateInfo->image << " that only has " << imageEntry->second.arraySize << " mip levels.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
         if (!pCreateInfo->subresourceRange.levelCount) {
             std::stringstream ss;
             ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.levelCount.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
         if (!pCreateInfo->subresourceRange.layerCount) {
             std::stringstream ss;
             ss << "vkCreateImageView called with 0 in pCreateInfo->subresourceRange.layerCount.";
-            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
+            skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, IMAGE_VIEW_CREATE_ERROR, "IMAGE", "%s", ss.str().c_str());
         }
 
         // Validate correct image aspect bits for desired formats and format consistency
@@ -934,7 +934,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
             {
                 std::stringstream ss;
                 ss << "vkCmdPipelineBarrier called with 0 in ppMemoryBarriers[" << i << "]->subresourceRange.layerCount.";
-                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 0, "IMAGE", "%s", ss.str().c_str());
+                skipCall |= log_msg(device_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 0, "IMAGE", "%s", ss.str().c_str());
             }
         }
     }

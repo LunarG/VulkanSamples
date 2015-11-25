@@ -59,18 +59,18 @@ typedef enum _ObjectStatusFlagBits
 
 typedef struct _OBJTRACK_NODE {
     uint64_t             vkObj;                 // Object handle
-    VkDbgObjectType      objType;               // Object type identifier
+    VkDebugReportObjectTypeLUNARG      objType;               // Object type identifier
     ObjectStatusFlags    status;                // Object state
     uint64_t             parentObj;             // Parent object
 } OBJTRACK_NODE;
 
 // prototype for extension functions
 uint64_t objTrackGetObjectCount(VkDevice device);
-uint64_t objTrackGetObjectsOfTypeCount(VkDevice, VkDbgObjectType type);
+uint64_t objTrackGetObjectsOfTypeCount(VkDevice, VkDebugReportObjectTypeLUNARG type);
 
 // Func ptr typedefs
 typedef uint64_t (*OBJ_TRACK_GET_OBJECT_COUNT)(VkDevice);
-typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDbgObjectType);
+typedef uint64_t (*OBJ_TRACK_GET_OBJECTS_OF_TYPE_COUNT)(VkDevice, VkDebugReportObjectTypeLUNARG);
 
 struct layer_data {
     debug_report_data *report_data;
@@ -117,9 +117,9 @@ static uint32_t                         queueCount                    = 0;
 template layer_data *get_my_data_ptr<layer_data>(
         void *data_key, std::unordered_map<void *, layer_data *> &data_map);
 
-static inline const char* string_VkDbgObjectType(VkDbgObjectType input_value)
+static inline const char* string_VkDebugReportObjectTypeLUNARG(VkDebugReportObjectTypeLUNARG input_value)
 {
-    switch ((VkDbgObjectType)input_value)
+    switch ((VkDebugReportObjectTypeLUNARG)input_value)
     {
         case VK_OBJECT_TYPE_COMMAND_POOL:
             return "VK_OBJECT_TYPE_COMMAND_POOL";
@@ -443,10 +443,10 @@ initObjectTracker(
 // Forward declares of generated routines
 //
 
-static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDbgObjectType objType);
-static void create_instance(VkInstance dispatchable_object, VkInstance object, VkDbgObjectType objType);
-static void create_device(VkDevice dispatchable_object, VkDevice object, VkDbgObjectType objType);
-static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectType objType);
+static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeLUNARG objType);
+static void create_instance(VkInstance dispatchable_object, VkInstance object, VkDebugReportObjectTypeLUNARG objType);
+static void create_device(VkDevice dispatchable_object, VkDevice object, VkDebugReportObjectTypeLUNARG objType);
+static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeLUNARG objType);
 static VkBool32 validate_image(VkQueue dispatchable_object, VkImage object);
 static VkBool32 validate_image(VkCommandBuffer dispatchable_object, VkImage object);
 static VkBool32 validate_command_buffer(VkQueue dispatchable_object, VkCommandBuffer object);
@@ -462,10 +462,10 @@ static void destroy_descriptor_pool(VkDevice dispatchable_object, VkDescriptorPo
 static void destroy_descriptor_set(VkDevice dispatchable_object, VkDescriptorSet object);
 static void destroy_instance(VkInstance dispatchable_object, VkInstance object);
 static void destroy_device_memory(VkDevice dispatchable_object, VkDeviceMemory object);
-static VkBool32 set_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
-static VkBool32 reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDbgObjectType objType, ObjectStatusFlags status_flag);
+static VkBool32 set_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag);
+static VkBool32 reset_device_memory_status(VkDevice dispatchable_object, VkDeviceMemory object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag);
 #if 0
-static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, VkDbgObjectType objType,
+static VkBool32 validate_status(VkDevice dispatchable_object, VkFence object, VkDebugReportObjectTypeLUNARG objType,
     ObjectStatusFlags status_mask, ObjectStatusFlags status_flag, VkFlags msg_flags, OBJECT_TRACK_ERROR  error_code,
     const char         *fail_msg);
 #endif
@@ -484,7 +484,7 @@ static VkBool32 validate_image(VkQueue dispatchable_object, VkImage object)
 {
     if ((VkImageMap.find(reinterpret_cast<uint64_t>(object))        == VkImageMap.end()) &&
         (swapchainImageMap.find(reinterpret_cast<uint64_t>(object)) == swapchainImageMap.end())) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkImage Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
@@ -494,7 +494,7 @@ static VkBool32 validate_image(VkCommandBuffer dispatchable_object, VkImage obje
 {
     if ((VkImageMap.find(reinterpret_cast<uint64_t>(object))        == VkImageMap.end()) &&
         (swapchainImageMap.find(reinterpret_cast<uint64_t>(object)) == swapchainImageMap.end())) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkImage Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
@@ -503,7 +503,7 @@ static VkBool32 validate_image(VkCommandBuffer dispatchable_object, VkImage obje
 static VkBool32 validate_command_buffer(VkQueue dispatchable_object, VkCommandBuffer object)
 {
     if (VkCommandBufferMap.find(reinterpret_cast<uint64_t>(object)) == VkCommandBufferMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkCommandBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
@@ -512,7 +512,7 @@ static VkBool32 validate_command_buffer(VkQueue dispatchable_object, VkCommandBu
 static VkBool32 validate_descriptor_set(VkCommandBuffer dispatchable_object, VkDescriptorSet object)
 {
     if (VkDescriptorSetMap.find(reinterpret_cast<uint64_t>(object)) == VkDescriptorSetMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkDescriptorSet Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
@@ -521,13 +521,13 @@ static VkBool32 validate_descriptor_set(VkCommandBuffer dispatchable_object, VkD
 static VkBool32 validate_buffer(VkQueue dispatchable_object, VkBuffer object)
 {
     if (VkBufferMap.find(reinterpret_cast<uint64_t>(object)) != VkBufferMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
 
-static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObjectType objType, ObjectStatusFlags status_flag)
+static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag)
 {
     VkBool32 skipCall = VK_FALSE;
     if (object != VK_NULL_HANDLE) {
@@ -537,9 +537,9 @@ static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObj
         }
         else {
             // If we do not find it print an error
-            skipCall |= log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
+            skipCall |= log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
                 "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",
-                reinterpret_cast<uint64_t>(object), string_VkDbgObjectType(objType));
+                reinterpret_cast<uint64_t>(object), string_VkDebugReportObjectTypeLUNARG(objType));
         }
     }
     return skipCall;
@@ -548,7 +548,7 @@ static VkBool32 set_status(VkQueue dispatchable_object, VkFence object, VkDbgObj
 static VkBool32 validate_semaphore(VkQueue dispatchable_object, VkSemaphore object)
 {
     if (VkSemaphoreMap.find(reinterpret_cast<uint64_t>(object)) == VkSemaphoreMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkSemaphore Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
@@ -557,16 +557,16 @@ static VkBool32 validate_semaphore(VkQueue dispatchable_object, VkSemaphore obje
 static VkBool32 validate_command_buffer(VkDevice dispatchable_object, VkCommandBuffer object)
 {
     if (VkCommandBufferMap.find(reinterpret_cast<uint64_t>(object)) == VkCommandBufferMap.end()) {
-        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
+        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",
             "Invalid VkCommandBuffer Object %" PRIu64, reinterpret_cast<uint64_t>(object));
     }
     return VK_FALSE;
 }
 
-static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDbgObjectType objType)
+static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDevice vkObj, VkDebugReportObjectTypeLUNARG objType)
 {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
-        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
@@ -579,7 +579,7 @@ static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDev
     numTotalObjs++;
 }
 
-static void create_surface_khr(VkInstance instance, VkSurfaceKHR surface, VkDbgObjectType objType)
+static void create_surface_khr(VkInstance instance, VkSurfaceKHR surface, VkDebugReportObjectTypeLUNARG objType)
 {
     // TODO: Add tracking of surface objects
 }
@@ -589,10 +589,10 @@ static void destroy_surface_khr(VkInstance instance, VkSurfaceKHR surface)
     // TODO: Add tracking of surface objects
 }
 
-static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDbgObjectType objType)
+static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDebugReportObjectTypeLUNARG objType)
 {
     log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
-        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
@@ -625,22 +625,22 @@ static void free_command_buffer(VkDevice device, VkCommandPool commandPool, VkCo
             numObjs[objIndex]--;
             log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(commandBuffer), numTotalObjs, numObjs[objIndex],
-                string_VkDbgObjectType(pNode->objType));
+                string_VkDebugReportObjectTypeLUNARG(pNode->objType), reinterpret_cast<uint64_t>(commandBuffer), numTotalObjs, numObjs[objIndex],
+                string_VkDebugReportObjectTypeLUNARG(pNode->objType));
             delete pNode;
             VkCommandBufferMap.erase(object_handle);
         }
     } else {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
            object_handle);
     }
 }
 
-static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet vkObj, VkDbgObjectType objType)
+static void alloc_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSet vkObj, VkDebugReportObjectTypeLUNARG objType)
 {
     log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
-        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
@@ -672,22 +672,22 @@ static void free_descriptor_set(VkDevice device, VkDescriptorPool descriptorPool
             numObjs[objIndex]--;
             log_msg(mdd(device), VK_DEBUG_REPORT_INFO_BIT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
                "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-                string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(descriptorSet), numTotalObjs, numObjs[objIndex],
-                string_VkDbgObjectType(pNode->objType));
+                string_VkDebugReportObjectTypeLUNARG(pNode->objType), reinterpret_cast<uint64_t>(descriptorSet), numTotalObjs, numObjs[objIndex],
+                string_VkDebugReportObjectTypeLUNARG(pNode->objType));
             delete pNode;
             VkDescriptorSetMap.erase(object_handle);
         }
     } else {
-        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
            object_handle);
     }
 }
 
-static void create_swapchain_khr(VkDevice dispatchable_object, VkSwapchainKHR vkObj, VkDbgObjectType objType)
+static void create_swapchain_khr(VkDevice dispatchable_object, VkSwapchainKHR vkObj, VkDebugReportObjectTypeLUNARG objType)
 {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, objType, (uint64_t) vkObj, 0, OBJTRACK_NONE, "OBJTRACK",
-        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
@@ -699,10 +699,10 @@ static void create_swapchain_khr(VkDevice dispatchable_object, VkSwapchainKHR vk
     numObjs[objIndex]++;
     numTotalObjs++;
 }
-static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDbgObjectType objType)
+static void create_queue(VkDevice dispatchable_object, VkQueue vkObj, VkDebugReportObjectTypeLUNARG objType)
 {
     log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",
-        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),
+        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),
         reinterpret_cast<uint64_t>(vkObj));
 
     OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;
@@ -739,12 +739,12 @@ static void destroy_swapchain(VkDevice dispatchable_object, VkSwapchainKHR objec
         numObjs[objIndex]--;
         log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, pNode->objType, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
            "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",
-            string_VkDbgObjectType(pNode->objType), (uint64_t) object, numTotalObjs, numObjs[objIndex],
-            string_VkDbgObjectType(pNode->objType));
+            string_VkDebugReportObjectTypeLUNARG(pNode->objType), (uint64_t) object, numTotalObjs, numObjs[objIndex],
+            string_VkDebugReportObjectTypeLUNARG(pNode->objType));
         delete pNode;
         VkSwapchainKHRMap.erase(reinterpret_cast<uint64_t>(object));
     } else {
-        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
+        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, (uint64_t) object, 0, OBJTRACK_NONE, "OBJTRACK",
             "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",
            reinterpret_cast<uint64_t>(object));
     }

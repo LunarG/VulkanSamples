@@ -60,7 +60,7 @@ typedef enum _OBJECT_STATUS
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
 } OBJECT_STATUS;
 
-static const char* string_VK_OBJECT_TYPE(VkDbgObjectType type) {
+static const char* string_VK_OBJECT_TYPE(VkDebugReportObjectTypeLUNARG type) {
     switch ((unsigned int)type)
     {
         case VK_OBJECT_TYPE_INSTANCE:

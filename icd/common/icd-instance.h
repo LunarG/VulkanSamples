@@ -80,7 +80,7 @@ VkResult icd_instance_destroy_logger(
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,
-                      VkDbgObjectType obj_type,
+                      VkDebugReportObjectTypeLUNARG obj_type,
                       uint64_t src_object,
                       size_t location, int32_t msg_code,
                       const char *msg);

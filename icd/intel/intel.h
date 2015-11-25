@@ -88,7 +88,7 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     VkDbgObjectType type,
+                                     VkDebugReportObjectTypeLUNARG type,
                                      const struct intel_instance *instance)
 {
     set_loader_magic_value((void *)handle);
@@ -118,7 +118,7 @@ static inline bool intel_handle_validate(const void *handle)
  * \see intel_handle_validate().
  */
 static inline bool intel_handle_validate_type(const void *handle,
-                                              VkDbgObjectType type)
+                                              VkDebugReportObjectTypeLUNARG type)
 {
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
@@ -134,13 +134,13 @@ void intel_free(const void *handle, void *ptr);
 
 void intel_logv(const void *handle,
                 VkFlags msg_flags,
-                VkDbgObjectType obj_type, uint64_t src_object,
+                VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
                 size_t location, int32_t msg_code,
                 const char *format, va_list ap);
 
 static inline void intel_log(const void *handle,
                              VkFlags msg_flags,
-                             VkDbgObjectType obj_type, uint64_t src_object,
+                             VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {

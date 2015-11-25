@@ -257,7 +257,7 @@ void dumpVec4(const char *note, vec4 vector)
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

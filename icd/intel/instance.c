@@ -49,7 +49,7 @@ void intel_free(const void *handle, void *ptr)
 
 void intel_logv(const void *handle,
                 VkFlags msg_flags,
-                VkDbgObjectType obj_type, uint64_t src_object,
+                VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
                 size_t location, int32_t msg_code,
                 const char *format, va_list ap)
 {

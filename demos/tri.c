@@ -109,7 +109,7 @@ struct texture_object {
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

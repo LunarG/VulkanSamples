@@ -101,7 +101,7 @@ static const char bindStateFragShaderText[] =
 
 static VkBool32 myDbgFunc(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -204,7 +204,7 @@ private:
 
 static VkBool32 myDbgFunc(
     VkFlags                    msgFlags,
-    VkDbgObjectType            objType,
+    VkDebugReportObjectTypeLUNARG            objType,
     uint64_t                   srcObject,
     size_t                     location,
     int32_t                    msgCode,

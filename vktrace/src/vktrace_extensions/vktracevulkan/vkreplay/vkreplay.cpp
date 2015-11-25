@@ -39,7 +39,7 @@ vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
                                 VkFlags             msgFlags,
-                                VkDbgObjectType     objType,
+                                VkDebugReportObjectTypeLUNARG     objType,
                                 uint64_t            srcObjectHandle,
                                 size_t              location,
                                 int32_t             msgCode,

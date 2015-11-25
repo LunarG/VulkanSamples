@@ -80,7 +80,7 @@ typedef enum {
     VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_COMMAND_POOL,
     VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_COMMAND_POOL - VK_OBJECT_TYPE_INSTANCE + 1),
     VK_OBJECT_TYPE_MAX_ENUM = 0x7FFFFFFF
-} VkDbgObjectType;
+} VkDebugReportObjectTypeLUNARG;
 
 #define VK_DEBUG_REPORT_EXTENSION_NAME "DEBUG_REPORT"
 
@@ -108,7 +108,7 @@ typedef enum _DEBUG_REPORT_ERROR
 
 #define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
 
-#define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDbgObjectType, 0)
+#define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDebugReportObjectTypeLUNARG, 0)
 #define VK_ERROR_VALIDATION_FAILED VK_DEBUG_REPORT_ENUM_EXTEND(VkResult, 0)
 
 // ------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ typedef enum _DEBUG_REPORT_ERROR
 
 typedef VkBool32 (*PFN_vkDbgMsgCallback)(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -147,7 +147,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
 // DebugReport utility callback functions
 VKAPI_ATTR void VKAPI_CALL vkDbgStringCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -157,7 +157,7 @@ VKAPI_ATTR void VKAPI_CALL vkDbgStringCallback(
 
 VKAPI_ATTR void VKAPI_CALL vkDbgStdioCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -167,7 +167,7 @@ VKAPI_ATTR void VKAPI_CALL vkDbgStdioCallback(
 
 VKAPI_ATTR void VKAPI_CALL vkDbgBreakCallback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

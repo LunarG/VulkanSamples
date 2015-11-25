@@ -61,7 +61,7 @@ static struct nulldrv_base *nulldrv_base(void* base)
 static struct nulldrv_base *nulldrv_base_create(
         struct nulldrv_dev *dev,
         size_t obj_size,
-        VkDbgObjectType type)
+        VkDebugReportObjectTypeLUNARG type)
 {
     struct nulldrv_base *base;
 

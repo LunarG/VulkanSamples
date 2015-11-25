@@ -34,7 +34,7 @@ struct intel_dev;
 struct intel_mem;
 
 struct intel_base_dbg {
-    VkDbgObjectType type;
+    VkDebugReportObjectTypeLUNARG type;
 
     void *create_info;
     size_t create_info_size;
@@ -83,7 +83,7 @@ static inline void intel_obj_bind_mem(struct intel_obj *obj,
 VkResult intel_base_get_memory_requirements(struct intel_base *base, VkMemoryRequirements *data);
 
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VkDbgObjectType type,
+                                             VkDebugReportObjectTypeLUNARG type,
                                              const void *create_info,
                                              size_t dbg_size);
 void intel_base_dbg_destroy(const struct intel_handle *handle,
@@ -91,7 +91,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
 
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VkDbgObjectType type,
+                                     VkDebugReportObjectTypeLUNARG type,
                                      const void *create_info,
                                      size_t dbg_size);
 void intel_base_destroy(struct intel_base *base);

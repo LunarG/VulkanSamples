@@ -502,7 +502,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     // dstOffset is the byte offset into the buffer to start updating and must be a multiple of 4.
     if (dstOffset & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
         "vkCmdUpdateBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
             return;
         }
@@ -511,7 +511,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     // dataSize is the number of bytes to update, which must be a multiple of 4.
     if (dataSize & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
         "vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4")) {
             return;
         }
@@ -532,7 +532,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     // dstOffset is the byte offset into the buffer to start filling and must be a multiple of 4.
     if (dstOffset & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
         "vkCmdFillBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
             return;
         }
@@ -541,7 +541,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     // size is the number of bytes to fill, which must be a multiple of 4.
     if (size & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
         "vkCmdFillBuffer parameter, VkDeviceSize size, is not a multiple of 4")) {
             return;
         }

@@ -225,7 +225,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VkDbgObjectType type,
+                                             VkDebugReportObjectTypeLUNARG type,
                                              const void *create_info,
                                              size_t dbg_size)
 {
@@ -270,7 +270,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
  */
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VkDbgObjectType type,
+                                     VkDebugReportObjectTypeLUNARG type,
                                      const void *create_info,
                                      size_t dbg_size)
 {

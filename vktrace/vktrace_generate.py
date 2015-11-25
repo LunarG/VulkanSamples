@@ -1215,7 +1215,7 @@ class Subcommand(object):
         rc_body.append('')
         rc_body.append(' bool m_adjustForGPU; // true if replay adjusts behavior based on GPU')
         # Code for memory objects for handling replay GPU != trace GPU object memory requirements
-        rc_body.append('void init_objMemCount(const uint64_t handle, const VkDbgObjectType objectType, const uint32_t &num)\n {')
+        rc_body.append('void init_objMemCount(const uint64_t handle, const VkDebugReportObjectTypeLUNARG objectType, const uint32_t &num)\n {')
         rc_body.append('    switch (objectType) {')
         rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
         rc_body.append('        {')
@@ -1242,7 +1242,7 @@ class Subcommand(object):
         rc_body.append('    }')
         rc_body.append('    return;')
         rc_body.append('}\n')
-        rc_body.append('void init_objMemReqs(const uint64_t handle, const VkDbgObjectType objectType, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
+        rc_body.append('void init_objMemReqs(const uint64_t handle, const VkDebugReportObjectTypeLUNARG objectType, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
         rc_body.append('    switch (objectType) {')
         rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
         rc_body.append('        {')

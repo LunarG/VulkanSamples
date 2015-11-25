@@ -99,7 +99,7 @@ struct MemRange {
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
 struct MT_OBJ_HANDLE_TYPE {
     uint64_t        handle;
-    VkDbgObjectType type;
+    VkDebugReportObjectTypeLUNARG type;
 };
 
 // Data struct for tracking memory object

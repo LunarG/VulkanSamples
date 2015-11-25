@@ -96,7 +96,7 @@ static MT_OBJ_BINDING_INFO*
  get_object_binding_info(
     layer_data      *my_data,
     uint64_t         handle,
-    VkDbgObjectType  type)
+    VkDebugReportObjectTypeLUNARG  type)
 {
     MT_OBJ_BINDING_INFO* retValue = NULL;
     switch (type)
@@ -199,7 +199,7 @@ static void
 add_object_binding_info(
     layer_data            *my_data,
     const uint64_t         handle,
-    const VkDbgObjectType  type,
+    const VkDebugReportObjectTypeLUNARG  type,
     const VkDeviceMemory   mem)
 {
     switch (type)
@@ -224,7 +224,7 @@ static void
 add_object_create_info(
     layer_data     *my_data,
     const uint64_t  handle,
-    const           VkDbgObjectType type,
+    const           VkDebugReportObjectTypeLUNARG type,
     const void     *pCreateInfo)
 {
     // TODO : For any CreateInfo struct that has ptrs, need to deep copy them and appropriately clean up on Destroy
@@ -360,7 +360,7 @@ validate_usage_flags(
     VkFlags          desired,
     VkBool32         strict,
     uint64_t         obj_handle,
-    VkDbgObjectType  obj_type,
+    VkDebugReportObjectTypeLUNARG  obj_type,
     char const      *ty_str,
     char const      *func_name,
     char const      *usage_str)
@@ -679,7 +679,7 @@ freeMemObjInfo(
 
 static const char*
 object_type_to_string(
-    VkDbgObjectType type)
+    VkDebugReportObjectTypeLUNARG type)
 {
     switch (type)
     {
@@ -707,7 +707,7 @@ clear_object_binding(
     layer_data      *my_data,
     void            *dispObj,
     uint64_t         handle,
-    VkDbgObjectType  type)
+    VkDebugReportObjectTypeLUNARG  type)
 {
     // TODO : Need to customize images/buffers/swapchains to track mem binding and clear it here appropriately
     VkBool32 skipCall = VK_FALSE;
@@ -751,7 +751,7 @@ set_mem_binding(
     void            *dispatch_object,
     VkDeviceMemory   mem,
     uint64_t         handle,
-    VkDbgObjectType  type,
+    VkDebugReportObjectTypeLUNARG  type,
     const char      *apiName)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -811,7 +811,7 @@ set_sparse_mem_binding(
     void            *dispObject,
     VkDeviceMemory   mem,
     uint64_t         handle,
-    VkDbgObjectType  type,
+    VkDebugReportObjectTypeLUNARG  type,
     const char      *apiName)
 {
     VkBool32 skipCall = VK_FALSE;
@@ -858,7 +858,7 @@ print_object_map_members(
     layer_data      *my_data,
     void            *dispObj,
     T const&         objectName,
-    VkDbgObjectType  objectType,
+    VkDebugReportObjectTypeLUNARG  objectType,
     const char      *objectStr)
 {
     for (auto const& element : objectName) {
@@ -873,7 +873,7 @@ get_mem_binding_from_object(
     layer_data            *my_data,
     void                  *dispObj,
     const uint64_t         handle,
-    const VkDbgObjectType  type,
+    const VkDebugReportObjectTypeLUNARG  type,
     VkDeviceMemory        *mem)
 {
     VkBool32 skipCall = VK_FALSE;

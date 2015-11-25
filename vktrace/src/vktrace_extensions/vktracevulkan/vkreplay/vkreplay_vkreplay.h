@@ -67,7 +67,7 @@ public:
     vktrace_replay::VKTRACE_REPLAY_RESULT replay(vktrace_trace_packet_header *packet);
     vktrace_replay::VKTRACE_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const vktrace_replay::VKTRACE_REPLAY_RESULT resIn);
 
-    void push_validation_msg(VkFlags msgFlags, VkDbgObjectType objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
+    void push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeLUNARG objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData);
     vktrace_replay::VKTRACE_REPLAY_RESULT pop_validation_msgs();
     int dump_validation_data();
     int get_frame_number() { return m_frameNumber; }
@@ -84,7 +84,7 @@ private:
 
     struct ValidationMsg {
         VkFlags msgFlags;
-        VkDbgObjectType objType;
+        VkDebugReportObjectTypeLUNARG objType;
         uint64_t srcObjectHandle;
         size_t location;
         int32_t msgCode;

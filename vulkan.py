@@ -1150,14 +1150,14 @@ lunarg_debug_marker = Extension(
 
         Proto("VkResult", "DbgSetObjectTag",
             [Param("VkDevice", "device"),
-             Param("VkDbgObjectType", "objType"),
+             Param("VkDebugReportObjectTypeLUNARG", "objType"),
              Param("uint64_t", "object"),
              Param("size_t", "tagSize"),
              Param("const void*", "pTag")]),
 
         Proto("VkResult", "DbgSetObjectName",
             [Param("VkDevice", "device"),
-             Param("VkDbgObjectType", "objType"),
+             Param("VkDebugReportObjectTypeLUNARG", "objType"),
              Param("uint64_t", "object"),
              Param("size_t", "nameSize"),
              Param("const char*", "pName")]),

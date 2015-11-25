@@ -52,7 +52,7 @@ template debug_report_data *get_my_data_ptr<debug_report_data>(
 static inline VkBool32 debug_report_log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
-    VkDbgObjectType             objectType,
+    VkDebugReportObjectTypeLUNARG             objectType,
     uint64_t                    srcObject,
     size_t                      location,
     int32_t                     msgCode,
@@ -257,7 +257,7 @@ static inline VkBool32 will_log_msg(
 static inline VkBool32 log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
-    VkDbgObjectType             objectType,
+    VkDebugReportObjectTypeLUNARG             objectType,
     uint64_t                    srcObject,
     size_t                      location,
     int32_t                     msgCode,
@@ -268,7 +268,7 @@ static inline VkBool32 log_msg(
 static inline VkBool32 log_msg(
     debug_report_data          *debug_data,
     VkFlags                     msgFlags,
-    VkDbgObjectType             objectType,
+    VkDebugReportObjectTypeLUNARG             objectType,
     uint64_t                    srcObject,
     size_t                      location,
     int32_t                     msgCode,
@@ -294,7 +294,7 @@ static inline VkBool32 log_msg(
 
 static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -315,7 +315,7 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
 
 static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(
     VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportObjectTypeLUNARG                     objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
