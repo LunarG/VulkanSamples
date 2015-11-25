@@ -2113,27 +2113,27 @@ static void demo_init_vk(struct demo *demo)
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "Threading",
-        "MemTracker",
-        "ObjectTracker",
-        "DrawState",
-        "ParamChecker",
-        "ShaderChecker",
-        "Swapchain",
-        "DeviceLimits",
-        "Image",
+        "VK_LAYER_LUNARG_Threading",
+        "VK_LAYER_LUNARG_MemTracker",
+        "VK_LAYER_LUNARG_ObjectTracker",
+        "VK_LAYER_LUNARG_DrawState",
+        "VK_LAYER_LUNARG_ParamChecker",
+        "VK_LAYER_LUNARG_ShaderChecker",
+        "VK_LAYER_LUNARG_Swapchain",
+        "VK_LAYER_LUNARG_DeviceLimits",
+        "VK_LAYER_LUNARG_Image",
     };
 
     char *device_validation_layers[] = {
-        "Threading",
-        "MemTracker",
-        "ObjectTracker",
-        "DrawState",
-        "ParamChecker",
-        "ShaderChecker",
-        "Swapchain",
-        "DeviceLimits",
-        "Image",
+        "VK_LAYER_LUNARG_Threading",
+        "VK_LAYER_LUNARG_MemTracker",
+        "VK_LAYER_LUNARG_ObjectTracker",
+        "VK_LAYER_LUNARG_DrawState",
+        "VK_LAYER_LUNARG_ParamChecker",
+        "VK_LAYER_LUNARG_ShaderChecker",
+        "VK_LAYER_LUNARG_Swapchain",
+        "VK_LAYER_LUNARG_DeviceLimits",
+        "VK_LAYER_LUNARG_Image",
     };
 
     /* Look for validation layers */
