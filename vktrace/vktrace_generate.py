@@ -397,8 +397,9 @@ class Subcommand(object):
                 sys.exit("Entry '%s' in manually_written_hooked_funcs list is not in the vulkan function prototypes" % func)
 
         # process each of the entrypoint prototypes
+        wsi_ext = ['vk_khr_surface', 'vk_khr_swapchain', 'vk_khr_win32_surface', 'vk_khr_xcb_surface']
         for ext in vulkan.extensions_all:
-            if ext.name.lower() == extensionName.lower():
+            if (ext.name.lower() == extensionName.lower()) or ((extensionName.lower() == 'vk_core') and (ext.name.lower() in wsi_ext)):
                 for proto in ext.protos:
                     if proto.name in manually_written_hooked_funcs:
                         func_body.append( '// __HOOKED_vk%s is manually written. Look in vktrace_lib_trace.cpp\n' % proto.name)
