@@ -66,7 +66,6 @@ class Subcommand(object):
 
     def generate(self):
         copyright = self.generate_copyright()
-        platform_definition = self.platform_definition()
         header = self.generate_header()
         body = self.generate_body()
         footer = self.generate_footer()
@@ -74,8 +73,6 @@ class Subcommand(object):
         contents = []
         if copyright:
             contents.append(copyright)
-        if platform_definition:
-            contents.append(platform_definition)
         if header:
             contents.append(header)
         if body:
@@ -119,14 +116,6 @@ class Subcommand(object):
 
     def generate_header(self):
         return "\n".join(["#include <" + h + ">" for h in self.headers])
-
-    def platform_definition(self):
-        pd_body = []
-        if sys.platform == 'win32':
-            pd_body.append('#define VK_USE_PLATFORM_WIN32_KHR')
-        else:
-            pd_body.append('#define VK_USE_PLATFORM_XCB_KHR')
-        return "\n".join(pd_body)
 
     def generate_body(self):
         pass
@@ -1206,12 +1195,6 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include <string.h>')
         header_txt.append('#include <inttypes.h>')
         header_txt.append('')
-        # TODO: Add support for different linux flavors, android
-        if sys.platform == 'win32':
-            header_txt.append('#define VK_USE_PLATFORM_WIN32_KHR')
-        else:
-            header_txt.append('#define VK_USE_PLATFORM_XCB_KHR')
-            header_txt.append('')
         header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vk_loader_platform.h"')
         header_txt.append('')

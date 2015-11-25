@@ -174,6 +174,8 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
+    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 #ifdef VK_USE_PLATFORM_MIR_KHR
     PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;
@@ -194,8 +196,6 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkCreateXlibSurfaceKHR CreateXlibSurfaceKHR;
     PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
-    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
 } VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions

@@ -9,6 +9,12 @@ project (VULKAN)
 # vulkan-<major>.dll (and other files).
 set(MAJOR "0")
 
+if(WIN32)
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
+else()
+    add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Header file for CMake settings

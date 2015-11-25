@@ -29,13 +29,6 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
 
-// TODO: Generalize for other extension
-#ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#else  // _WIN32
-#define VK_USE_PLATFORM_XCB_KHR
-#endif // _WIN32
-
 // Object Tracker ERROR codes
 typedef enum _OBJECT_TRACK_ERROR
 {

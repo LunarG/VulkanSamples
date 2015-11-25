@@ -26,6 +26,7 @@
  * Author: Jon Ashburn <jon@lunarg.com>
  *
  */
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,6 +112,8 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceSurfaceCapabilitiesKHR = loader_GetPhysicalDeviceSurfaceCapabilitiesKHR,
     .GetPhysicalDeviceSurfaceFormatsKHR = loader_GetPhysicalDeviceSurfaceFormatsKHR,
     .GetPhysicalDeviceSurfacePresentModesKHR = loader_GetPhysicalDeviceSurfacePresentModesKHR,
+    .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
+    .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = vkCreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR = loader_GetPhysicalDeviceMirPresentationSupportKHR,
@@ -131,8 +134,6 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateXlibSurfaceKHR = vkCreateXlibSurfaceKHR,
     .GetPhysicalDeviceXlibPresentationSupportKHR = loader_GetPhysicalDeviceXlibPresentationSupportKHR,
 #endif
-    .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
-    .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);

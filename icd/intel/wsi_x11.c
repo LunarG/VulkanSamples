@@ -38,8 +38,6 @@
 #include <xcb/dri3.h>
 #include <xcb/present.h>
 
-#define VK_USE_PLATFORM_XCB_KHR
-
 #include "kmd/winsys.h"
 #include "kmd/libdrm/xf86drmMode.h"
 #include "dev.h"

@@ -41,10 +41,7 @@
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
-#define VK_USE_PLATFORM_WIN32_KHR
 #define APP_NAME_STR_LEN 80
-#else  // _WIN32
-#define VK_USE_PLATFORM_XCB_KHR
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>

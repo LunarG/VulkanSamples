@@ -8,13 +8,11 @@
 #include <assert.h>
 
 #ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX
 // WinSock2.h must be included *BEFORE* windows.h
 #include <winsock2.h>
-#else
-#define VK_USE_PLATFORM_XCB_KHR
 #endif
+
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_sdk_platform.h>
 
