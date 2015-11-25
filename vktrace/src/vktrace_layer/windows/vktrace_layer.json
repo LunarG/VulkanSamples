@@ -1,7 +1,7 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LUNARG_Vktrace",
+        "name": "VK_LAYER_LUNARG_Vktrace",
         "type": "GLOBAL",
         "library_path": ".\\vktrace_layer.dll",
         "api_version": "0.210.0",
