@@ -28,6 +28,7 @@
  */
 #include <stdbool.h>
 #include <unordered_map>
+#include "vktrace_vk_vk.h"
 #include "vulkan/vulkan.h"
 #include "vktrace_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -37,7 +38,6 @@
 #include "vktrace_vk_vk_lunarg_debug_report.h"
 #include "vktrace_vk_vk_lunarg_debug_marker.h"
 
-#include "vktrace_vk_vk.h"
 #include "vktrace_interconnect.h"
 #include "vktrace_filelike.h"
 #include "vktrace_trace_packet_utils.h"
@@ -1217,7 +1217,6 @@ VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceWin32
 }
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-#include <xcb/xcb.h>
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateXcbSurfaceKHR(
     VkInstance                                  instance,
     xcb_connection_t*                           connection,
@@ -1725,12 +1724,13 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkDestroySurfaceKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkDestroySurfaceKHR;
             if (!strcmp("vkGetPhysicalDeviceSurfacePropertiesKHR", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfacePropertiesKHR;
+                return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
             if (!strcmp("vkGetPhysicalDeviceSurfaceFormatsKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfaceFormatsKHR;
             if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceSurfacePresentModesKHR;
         }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
         if (instData->KHRXlibSurfaceEnabled)
         {
             if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
@@ -1738,6 +1738,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceXlibPresentationSupportKHR;
         }
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
         if (instData->KHRXcbSurfaceEnabled)
         {
             if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
@@ -1745,6 +1747,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkGetPhysicalDeviceXcbPresentationSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceXcbPresentationSupportKHR;
         }
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
         if (instData->KHRWaylandSurfaceEnabled)
         {
             if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
@@ -1752,6 +1756,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkGetPhysicalDeviceWaylandPresentationSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceWaylandPresentationSupportKHR;
         }
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
         if (instData->KHRMirSurfaceEnabled)
         {
             if (!strcmp("vkCreateMirSurfaceKHR", funcName))
@@ -1759,6 +1765,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkGetPhysicalDeviceMirPresentationSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceMirPresentationSupportKHR;
         }
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
         if (instData->KHRWin32SurfaceEnabled)
         {
             if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
@@ -1766,8 +1774,8 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
             if (!strcmp("vkGetPhysicalDeviceWin32PresentationSupportKHR", funcName))
                 return (PFN_vkVoidFunction) __HOOKED_vkGetPhysicalDeviceWin32PresentationSupportKHR;
         }
+#endif
     }
-
     VkLayerInstanceDispatchTable* pTable = &instData->instTable;
     if (pTable->GetInstanceProcAddr == NULL)
         return NULL;

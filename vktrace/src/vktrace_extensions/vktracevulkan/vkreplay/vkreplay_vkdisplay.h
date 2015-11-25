@@ -41,7 +41,7 @@ public:
     int create_window(const unsigned int width, const unsigned int height);
     void resize_window(const unsigned int width, const unsigned int height);
     void process_event();
-    VkSurfaceKHR get_surface() { return &m_pSurfaceDescription; };
+    VkSurfaceKHR get_surface() { return m_pSurfaceDescription; };
     // VK_DEVICE get_device() { return m_dev[m_gpuIdx];}
 #if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
     xcb_window_t get_window_handle() { return m_XcbWindow; }

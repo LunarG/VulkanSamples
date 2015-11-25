@@ -391,8 +391,9 @@ class Subcommand(object):
 
         # validate the manually_written_hooked_funcs list
         protoFuncs = [proto.name for proto in self.protos]
+        wsi_platform_manual_funcs = ['CreateWin32SurfaceKHR', 'CreateXcbSurfaceKHR', 'GetPhysicalDeviceXcbPresentationSupportKHR', 'GetPhysicalDeviceWin32PresentationSupportKHR']
         for func in manually_written_hooked_funcs:
-            if func not in protoFuncs:
+            if func not in protoFuncs and func not in wsi_platform_manual_funcs:
                 sys.exit("Entry '%s' in manually_written_hooked_funcs list is not in the vulkan function prototypes" % func)
 
         # process each of the entrypoint prototypes
@@ -1610,11 +1611,12 @@ class Subcommand(object):
                             rbody.append('            }')
                         elif  'GetPhysicalDevice' in iProto.name and 'KHR' in iProto.name:
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
-                            rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedphysicaldevice, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
+                            rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedinstance, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
                             rbody.append('            }')
                 elif proto.name == 'GetDeviceProcAddr':
                     for dProto in self.protos:
-                        if 'KHR' in dProto.name:
+                       if 'KHR' in dProto.name and dProto.params[0].ty != 'VkInstance' and dProto.params[0].ty != 'VkPhysicalDevice':
+                       # if 'KHR' in dProto.name:
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (dProto.name))
                             rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappeddevice, pPacket->pName);' % (dProto.name, dProto.name, proto.name))
                             rbody.append('            }')
@@ -1622,7 +1624,10 @@ class Subcommand(object):
                 # build the call to the "real_" entrypoint
                 rr_string = '            '
                 if ret_value:
-                    rr_string = '            replayResult = '
+                    if proto.ret != 'VkResult':
+                        ret_value = False
+                    else:
+                        rr_string = '            replayResult = '
                 rr_string += 'm_vkFuncs.real_vk%s(' % proto.name
                 for p in proto.params:
                     # For last param of Create funcs, pass address of param
@@ -1785,10 +1790,10 @@ class VktracePacketID(Subcommand):
     def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
+        header_txt.append('#include "vktrace_vk_vk_packets.h"')
         header_txt.append('#include "vktrace_trace_packet_utils.h"')
         header_txt.append('#include "vktrace_trace_packet_identifiers.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
-        header_txt.append('#include "vktrace_vk_vk_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"')
@@ -1826,6 +1831,22 @@ class VktraceCoreTracePackets(Subcommand):
     def generate_header(self, extensionName):
         header_txt = []
         header_txt.append('#pragma once\n')
+        header_txt.append('// FIXME/TODO: DEVELOP A BETTER APPROACH FOR SETTING THE DEFAULT VALUES FOR')
+        header_txt.append('// THESE PLATFORM-SPECIFIC MACROS APPROPRIATELY:')
+        header_txt.append('#ifdef _WIN32')
+        header_txt.append('// The Win32 default is to support the WIN32 platform:')
+        header_txt.append('#ifndef VK_USE_PLATFORM_WIN32_KHR')
+        header_txt.append('#define VK_USE_PLATFORM_WIN32_KHR 1')
+        header_txt.append('#endif')
+        header_txt.append('#else // _WIN32 (i.e. Linux)')
+        header_txt.append('// The Linux default is to support the XCB platform:')
+        header_txt.append('#if (!defined(VK_USE_PLATFORM_MIR_KHR) && \\')
+        header_txt.append('     !defined(VK_USE_PLATFORM_WAYLAND_KHR) && \\')
+        header_txt.append('     !defined(VK_USE_PLATFORM_XCB_KHR) && \\')
+        header_txt.append('     !defined(VK_USE_PLATFORM_XLIB_KHR))')
+        header_txt.append('#define VK_USE_PLATFORM_XCB_KHR 1')
+        header_txt.append('#endif')
+        header_txt.append('#endif // _WIN32')
         header_txt.append('#include "vulkan/vulkan.h"')
         header_txt.append('#include "vktrace_trace_packet_utils.h"\n')
         return "\n".join(header_txt)
@@ -1852,11 +1873,11 @@ class VktraceExtTraceHeader(Subcommand):
 class VktraceExtTraceC(Subcommand):
     def generate_header(self, extensionName):
         header_txt = []
+        header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vktrace_platform.h"')
         header_txt.append('#include "vktrace_common.h"')
         header_txt.append('#include "vktrace_vk_%s.h"' % extensionName.lower())
         header_txt.append('#include "vktrace_vk_%s_packets.h"' % extensionName.lower())
-        header_txt.append('#include "vktrace_vk_packet_id.h"')
         header_txt.append('#include "vk_struct_size_helper.h"')
         header_txt.append('#include "%s_struct_size_helper.h"' % extensionName.lower())
         if extensionName == 'vk_lunarg_debug_marker':

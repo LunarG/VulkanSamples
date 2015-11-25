@@ -28,7 +28,7 @@
  */
 
 #include "vkreplay_vkreplay.h"
-
+#include "vk_icd.h"
 #define APP_NAME "vkreplay_vk"
 #define IDI_ICON 101
 

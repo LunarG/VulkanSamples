@@ -23,12 +23,11 @@
  *
  * Author: Jon Ashburn <jon@lunarg.com>
  */
-
+#include "vktrace_lib_helpers.h"
 #include "vulkan/vk_lunarg_debug_marker.h"
 #include "vulkan/vk_lunarg_debug_report.h"
 
 #include "vulkan/vk_layer.h"
-#include "vktrace_lib_helpers.h"
 
 void ext_init_create_instance(
         layer_instance_data             *instData,
@@ -112,7 +111,7 @@ void ext_init_create_device(
         if (strcmp(ppEnabledExtensions[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             devData->LunargDebugMarkerEnabled = true;
         }
-        if (strcmp(ppEnabledExtensions[i], VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensions[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             devData->KHRDeviceSwapchainEnabled = true;
         }
     }

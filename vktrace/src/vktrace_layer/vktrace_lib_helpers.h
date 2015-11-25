@@ -27,9 +27,10 @@
  */
 #pragma once
 #include <unordered_map>
+#include "vktrace_vk_vk.h"
 #include "vulkan/vk_layer.h"
 #include "vktrace_platform.h"
-#include "vktrace_vk_vk.h"
+
 #include "vk_struct_size_helper.h"
 #include "vk_debug_marker_layer.h"
 

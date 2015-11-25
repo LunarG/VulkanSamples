@@ -1757,9 +1757,9 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pac
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
-    VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
+    VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
-    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pSurfaceProperties);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(remappedphysicalDevice, m_display->get_surface(), pPacket->pSurfaceCapabilities);
 
     return replayResult;
 }
@@ -1768,9 +1768,9 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_v
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
-    VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
+    VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
-    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceFormatsKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pSurfaceFormats);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceFormatsKHR(remappedphysicalDevice, m_display->get_surface(), pPacket->pSurfaceFormatCount, pPacket->pSurfaceFormats);
 
     return replayResult;
 }
@@ -1779,9 +1779,9 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfacePresentModesKHR(pac
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
 
-    VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
+    VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
-    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfacePresentModesKHR(remappeddevice, (VkSurfaceDescriptionKHR *) m_display->get_surface_description(), pPacket->pCount, pPacket->pPresentModes);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfacePresentModesKHR(remappedphysicalDevice, m_display->get_surface(), pPacket->pPresentModeCount, pPacket->pPresentModes);
 
     return replayResult;
 }
@@ -1791,6 +1791,7 @@ VkResult vkReplay::manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchain
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
     VkSwapchainKHR local_pSwapchain;
     VkSwapchainKHR save_oldSwapchain, *pSC;
+    VkSurfaceKHR save_surface;
     pSC = (VkSwapchainKHR *) &pPacket->pCreateInfo->oldSwapchain;
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
@@ -1800,17 +1801,19 @@ VkResult vkReplay::manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchain
 //    }
     save_oldSwapchain = pPacket->pCreateInfo->oldSwapchain;
     (*pSC) = m_objMapper.remap_swapchainkhrs(save_oldSwapchain);
-    VkSurfaceDescriptionKHR** ppSD = (VkSurfaceDescriptionKHR**)&(pPacket->pCreateInfo->pSurfaceDescription);
-    *ppSD = (VkSurfaceDescriptionKHR*) m_display->get_surface_description();
+    save_surface = pPacket->pCreateInfo->surface;
+    VkSurfaceKHR *pSurf = (VkSurfaceKHR *) &(pPacket->pCreateInfo->surface);
+    *pSurf = m_display->get_surface();
 
     // No need to remap pCreateInfo
-    replayResult = m_vkFuncs.real_vkCreateSwapchainKHR(remappeddevice, pPacket->pCreateInfo, &local_pSwapchain);
+    replayResult = m_vkFuncs.real_vkCreateSwapchainKHR(remappeddevice, pPacket->pCreateInfo, pPacket->pAllocator, &local_pSwapchain);
     if (replayResult == VK_SUCCESS)
     {
         m_objMapper.add_to_swapchainkhrs_map(*(pPacket->pSwapchain), local_pSwapchain);
     }
 
     (*pSC) = save_oldSwapchain;
+    *pSurf = save_surface;
     return replayResult;
 }
 
@@ -1832,13 +1835,13 @@ VkResult vkReplay::manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchain
     if (pPacket->pSwapchainImages != NULL) {
         // Need to store the images and then add to map after we get actual image handles back
         VkImage* pPacketImages = (VkImage*)pPacket->pSwapchainImages;
-        numImages = *(pPacket->pCount);
+        numImages = *(pPacket->pSwapchainImageCount);
         for (uint32_t i = 0; i < numImages; i++) {
             packetImage[i] = pPacketImages[i];
         }
     }
 
-    replayResult = m_vkFuncs.real_vkGetSwapchainImagesKHR(remappeddevice, remappedswapchain, pPacket->pCount, pPacket->pSwapchainImages);
+    replayResult = m_vkFuncs.real_vkGetSwapchainImagesKHR(remappeddevice, remappedswapchain, pPacket->pSwapchainImageCount, pPacket->pSwapchainImages);
     if (replayResult == VK_SUCCESS)
     {
         if (numImages != 0) {
@@ -1861,7 +1864,7 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     uint32_t i;
     VkSwapchainKHR* remappedswapchains = VKTRACE_NEW_ARRAY(VkSwapchainKHR, pPacket->pPresentInfo->swapchainCount);
     for (i=0; i<pPacket->pPresentInfo->swapchainCount; i++) {
-        remappedswapchains[i] = m_objMapper.remap_swapchainkhrs(pPacket->pPresentInfo->swapchains[i]);
+        remappedswapchains[i] = m_objMapper.remap_swapchainkhrs(pPacket->pPresentInfo->pSwapchains[i]);
     }
     // TODO : Probably need some kind of remapping from image indices grabbed w/
     //   AcquireNextImageKHR call, and then the indicies that are passed in here
@@ -1870,8 +1873,8 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     present.sType = pPacket->pPresentInfo->sType;
     present.pNext = pPacket->pPresentInfo->pNext;
     present.swapchainCount = pPacket->pPresentInfo->swapchainCount;
-    present.swapchains = remappedswapchains;
-    present.imageIndices = pPacket->pPresentInfo->imageIndices;
+    present.pSwapchains = remappedswapchains;
+    present.pImageIndices = pPacket->pPresentInfo->pImageIndices;
 
     replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedqueue, &present);
 
