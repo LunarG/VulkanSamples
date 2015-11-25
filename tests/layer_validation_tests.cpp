@@ -258,21 +258,21 @@ protected:
          * to be enabled at create instance time.
          */
         // Use Threading layer first to protect others from ThreadCommandBufferCollision test
-        instance_layer_names.push_back("Threading");
-        instance_layer_names.push_back("ObjectTracker");
-        instance_layer_names.push_back("MemTracker");
-        instance_layer_names.push_back("DrawState");
-        instance_layer_names.push_back("ShaderChecker");
-        instance_layer_names.push_back("DeviceLimits");
-        instance_layer_names.push_back("Image");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_Threading");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_DeviceLimits");
+        instance_layer_names.push_back("VK_LAYER_LUNARG_Image");
 
-        device_layer_names.push_back("Threading");
-        device_layer_names.push_back("ObjectTracker");
-        device_layer_names.push_back("MemTracker");
-        device_layer_names.push_back("DrawState");
-        device_layer_names.push_back("ShaderChecker");
-        device_layer_names.push_back("DeviceLimits");
-        device_layer_names.push_back("Image");
+        device_layer_names.push_back("VK_LAYER_LUNARG_Threading");
+        device_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
+        device_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
+        device_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
+        device_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
+        device_layer_names.push_back("VK_LAYER_LUNARG_DeviceLimits");
+        device_layer_names.push_back("VK_LAYER_LUNARG_Image");
 
         this->app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         this->app_info.pNext = NULL;
