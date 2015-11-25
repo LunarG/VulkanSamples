@@ -89,14 +89,15 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDbgMsgCallback)
 // ------------------------------------------------------------------------------------------------
 // Enumerations
 
-typedef enum VkDbgReportFlags_
+typedef enum VkDebugReportFlagsLUNARG_
 {
-    VK_DBG_REPORT_INFO_BIT       = 0x0001,
-    VK_DBG_REPORT_WARN_BIT       = 0x0002,
-    VK_DBG_REPORT_PERF_WARN_BIT  = 0x0004,
-    VK_DBG_REPORT_ERROR_BIT      = 0x0008,
-    VK_DBG_REPORT_DEBUG_BIT      = 0x0010,
-} VkDbgReportFlags;
+    VK_DEBUG_REPORT_INFO_BIT       = 0x0001,
+    VK_DEBUG_REPORT_WARN_BIT       = 0x0002,
+    VK_DEBUG_REPORT_PERF_WARN_BIT  = 0x0004,
+    VK_DEBUG_REPORT_ERROR_BIT      = 0x0008,
+    VK_DEBUG_REPORT_DEBUG_BIT      = 0x0010,
+} VkDebugReportFlagBitsLUNARG;
+typedef VkFlags VkDebugReportFlagsLUNARG;
 
 // Debug Report ERROR codes
 typedef enum _DEBUG_REPORT_ERROR

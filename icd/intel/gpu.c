@@ -65,7 +65,7 @@ static int gpu_open_render_node(struct intel_gpu *gpu)
     if (gpu->render_fd_internal < 0 && gpu->render_node) {
         gpu->render_fd_internal = open(gpu->render_node, O_RDWR);
         if (gpu->render_fd_internal < 0) {
-            intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE, 0,
+            intel_log(gpu, VK_DEBUG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE, 0,
                     0, "failed to open %s", gpu->render_node);
         }
     }
@@ -156,7 +156,7 @@ VkResult intel_gpu_create(const struct intel_instance *instance, int devid,
     struct intel_gpu *gpu;
 
     if (gen < 0) {
-        intel_log(instance, VK_DBG_REPORT_WARN_BIT, 0,
+        intel_log(instance, VK_DEBUG_REPORT_WARN_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "unsupported device id 0x%04x", devid);
         return VK_ERROR_INITIALIZATION_FAILED;
     }
@@ -385,7 +385,7 @@ int intel_gpu_get_max_threads(const struct intel_gpu *gpu,
         break;
     }
 
-    intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE,
+    intel_log(gpu, VK_DEBUG_REPORT_ERROR_BIT, 0, VK_NULL_HANDLE,
             0, 0, "unknown Gen or shader stage");
 
     switch (stage) {
@@ -417,7 +417,7 @@ VkResult intel_gpu_init_winsys(struct intel_gpu *gpu)
 
     gpu->winsys = intel_winsys_create_for_fd(gpu->handle.instance->icd, fd);
     if (!gpu->winsys) {
-        intel_log(gpu, VK_DBG_REPORT_ERROR_BIT, 0,
+        intel_log(gpu, VK_DEBUG_REPORT_ERROR_BIT, 0,
                 VK_NULL_HANDLE, 0, 0, "failed to create GPU winsys");
         gpu_close_render_node(gpu);
         return VK_ERROR_INITIALIZATION_FAILED;

@@ -225,26 +225,26 @@ static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
     bool separator = false;
 
     msg_flags[0] = 0;
-    if (msgFlags & VK_DBG_REPORT_DEBUG_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT) {
         strcat(msg_flags, "DEBUG");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_INFO_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_INFO_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "INFO");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "WARN");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "PERF");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "ERROR");
     }

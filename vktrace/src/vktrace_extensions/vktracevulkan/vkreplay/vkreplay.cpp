@@ -50,7 +50,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
     VkBool32 bail = false;
 
     vktrace_enter_critical_section(&g_handlerLock);
-    if ((msgFlags & VK_DBG_REPORT_ERROR_BIT) == VK_DBG_REPORT_ERROR_BIT)
+    if ((msgFlags & VK_DEBUG_REPORT_ERROR_BIT) == VK_DEBUG_REPORT_ERROR_BIT)
     {
         vktrace_LogError("MsgFlags %d with object %#" PRIxLEAST64 ", location %u returned msgCode %d and msg %s",
                      msgFlags, srcObjectHandle, location, msgCode, (char *) pMsg);
@@ -65,8 +65,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
          */
         bail = true;
     }
-    else if ((msgFlags & VK_DBG_REPORT_WARN_BIT) == VK_DBG_REPORT_WARN_BIT ||
-             (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) == VK_DBG_REPORT_PERF_WARN_BIT)
+    else if ((msgFlags & VK_DEBUG_REPORT_WARN_BIT) == VK_DEBUG_REPORT_WARN_BIT ||
+             (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT) == VK_DEBUG_REPORT_PERF_WARN_BIT)
     {
         if (g_fpVktraceCallback != NULL)
         {

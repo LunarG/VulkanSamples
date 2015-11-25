@@ -125,7 +125,7 @@ public:
     {
         test_platform_thread_create_mutex(&m_mutex);
         test_platform_thread_lock_mutex(&m_mutex);
-        m_msgFlags = VK_DBG_REPORT_INFO_BIT;
+        m_msgFlags = VK_DEBUG_REPORT_INFO_BIT;
         m_bailout  = NULL;
         test_platform_thread_unlock_mutex(&m_mutex);
     }
@@ -212,7 +212,7 @@ static VkBool32 myDbgFunc(
     const char*                pMsg,
     void*                      pUserData)
 {
-    if (msgFlags & (VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_PERF_WARN_BIT | VK_DBG_REPORT_ERROR_BIT)) {
+    if (msgFlags & (VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT | VK_DEBUG_REPORT_ERROR_BIT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;
         return errMonitor->CheckForDesiredMsg(msgFlags, pMsg);
     }
@@ -470,7 +470,7 @@ TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "Resetting CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, "Resetting CB");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -516,7 +516,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     fenceInfo.pNext = NULL;
     fenceInfo.flags = 0;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "Calling vkBeginCommandBuffer() on active CB");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, "Calling vkBeginCommandBuffer() on active CB");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -569,7 +569,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Mapping Memory without VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -646,7 +646,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 //{
 //    VkResult        err;
 //
-//    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT,
 //        "Freeing memory object while it still has references");
 //
 //    ASSERT_NO_FATAL_FAILURE(InitState());
@@ -715,7 +715,7 @@ TEST_F(VkLayerTest, RebindMemory)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "which has already been bound to mem object");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -791,7 +791,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
 {
     vk_testing::Fence testFence;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "submitted in SIGNALED state.  Fences must be reset before being submitted");
 
     VkFenceCreateInfo fenceInfo = {};
@@ -835,7 +835,7 @@ TEST_F(VkLayerTest, ResetUnsignaledFence)
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.pNext = NULL;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT,
         "submitted to VkResetFences in UNSIGNALED STATE");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -855,7 +855,7 @@ TEST_F(VkLayerTest, InvalidUsageBits)
 {
     // Initiate Draw w/o a PSO bound
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Invalid usage flag for image ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -908,7 +908,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Invalid VkPipeline Object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -985,7 +985,7 @@ TEST_F(VkLayerTest, BindInvalidMemory)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Invalid VkDeviceMemory Object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1057,7 +1057,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "Invalid VkImage Object ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, "Invalid VkImage Object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -1128,7 +1128,7 @@ TEST_F(VkLayerTest, BindMemoryToDestroyedObject)
 #if DRAW_STATE_TESTS
 TEST_F(VkLayerTest, LineWidthStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic line width state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a line width state object is not bound beforehand");
@@ -1143,7 +1143,7 @@ TEST_F(VkLayerTest, LineWidthStateNotBound)
 
 TEST_F(VkLayerTest, DepthBiasStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic depth bias state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bias state object is not bound beforehand");
@@ -1159,7 +1159,7 @@ TEST_F(VkLayerTest, DepthBiasStateNotBound)
 // Disable these two tests until we can sort out how to track multiple layer errors
 TEST_F(VkLayerTest, ViewportStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic viewport state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport state object is not bound beforehand");
@@ -1174,7 +1174,7 @@ TEST_F(VkLayerTest, ViewportStateNotBound)
 
 TEST_F(VkLayerTest, ScissorStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic scissor state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a viewport state object is not bound beforehand");
@@ -1189,7 +1189,7 @@ TEST_F(VkLayerTest, ScissorStateNotBound)
 
 TEST_F(VkLayerTest, BlendStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic blend object state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a blend state object is not bound beforehand");
@@ -1204,7 +1204,7 @@ TEST_F(VkLayerTest, BlendStateNotBound)
 
 TEST_F(VkLayerTest, DepthBoundsStateNotBound)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic depth bounds state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a depth bounds state object is not bound beforehand");
@@ -1219,7 +1219,7 @@ TEST_F(VkLayerTest, DepthBoundsStateNotBound)
 
 TEST_F(VkLayerTest, StencilReadMaskNotSet)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic stencil read mask state not set for this command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1236,7 +1236,7 @@ TEST_F(VkLayerTest, StencilReadMaskNotSet)
 
 TEST_F(VkLayerTest, StencilWriteMaskNotSet)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic stencil write mask state not set for this command buffer");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1253,7 +1253,7 @@ TEST_F(VkLayerTest, StencilWriteMaskNotSet)
 
 TEST_F(VkLayerTest, StencilReferenceNotSet)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic stencil reference state not set for this command buffer");
 
     TEST_DESCRIPTION("Simple Draw Call that validates failure when a stencil reference is not set beforehand");
@@ -1270,7 +1270,7 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits)
 {
     vk_testing::Fence testFence;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "was begun w/ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT set, but has been submitted");
 
     VkFenceCreateInfo fenceInfo = {};
@@ -1318,7 +1318,7 @@ TEST_F(VkLayerTest, BindPipelineNoRenderPass)
     // Initiate Draw w/o a PSO bound
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Incorrectly binding graphics pipeline ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1417,7 +1417,7 @@ TEST_F(VkLayerTest, AllocDescriptorFromEmptyPool)
     // Initiate Draw w/o a PSO bound
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Unable to allocate 1 descriptors of type VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1478,7 +1478,7 @@ TEST_F(VkLayerTest, FreeDescriptorFromOneShotPool)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to call vkFreeDescriptorSets() with a pool created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1544,7 +1544,7 @@ TEST_F(VkLayerTest, InvalidDescriptorPool)
     //   The DS check for this is after driver has been called to validate DS internal data struct
     // Attempt to clear DS Pool with bad object
 /*
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Unable to find pool node for pool 0xbaad6001 specified in vkResetDescriptorPool() call");
 
     VkDescriptorPool badPool = (VkDescriptorPool)0xbaad6001;
@@ -1577,7 +1577,7 @@ TEST_F(VkLayerTest, InvalidPipeline)
     // Create a valid cmd buffer
     // call vkCmdBindPipeline w/ false Pipeline
 //
-//    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+//    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
 //        "Attempt to bind Pipeline ");
 //
 //    ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1597,7 +1597,7 @@ TEST_F(VkLayerTest, DescriptorSetNotUpdated)
     // Create and update CommandBuffer then call QueueSubmit w/o calling End on CommandBuffer
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT,
         " bound but it was never updated. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1681,7 +1681,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     // Create a single TEXEL_BUFFER descriptor and send it an invalid bufferView
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Attempt to update descriptor with invalid bufferView ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -1750,7 +1750,7 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
 {
     // Create a descriptorSet w/ some dynamic descriptors and then don't send offsets when binding
     VkResult        err;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2108,14 +2108,14 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     //  Second disturb early and late sets and verify INFO msgs
     // verify_set_layout_compatibility fail cases:
     // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " due to: invalid VkPipelineLayout ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " due to: invalid VkPipelineLayout ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)0xbaadb1be, 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind descriptorSets with invalid VkPipelineLayout.";
         m_errorMonitor->DumpFailureMsgs();
     }
     // 2. layoutIndex exceeds # of layouts in layout
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " attempting to bind set to index 1");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " attempting to bind set to index 1");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, single_pipe_layout, 0, 2, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind descriptorSet to index 1 when pipelineLayout only has index 0.";
@@ -2123,7 +2123,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     }
     vkDestroyPipelineLayout(m_device->device(), single_pipe_layout, NULL);
     // 3. Pipeline setLayout[0] has 2 descriptors, but set being bound has 5 descriptors
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, ", but corresponding set being bound has 5 descriptors.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, ", but corresponding set being bound has 5 descriptors.");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_one_desc, 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind descriptorSet w/ 5 descriptors to pipelineLayout with only 2 descriptors.";
@@ -2131,7 +2131,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     }
     vkDestroyPipelineLayout(m_device->device(), pipe_layout_one_desc, NULL);
     // 4. same # of descriptors but mismatch in type
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " descriptor from pipelineLayout is type 'VK_DESCRIPTOR_TYPE_SAMPLER'");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " descriptor from pipelineLayout is type 'VK_DESCRIPTOR_TYPE_SAMPLER'");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_five_samp, 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind UNIFORM_BUFFER descriptorSet to pipelineLayout with overlapping SAMPLER type.";
@@ -2139,7 +2139,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     }
     vkDestroyPipelineLayout(m_device->device(), pipe_layout_five_samp, NULL);
     // 5. same # of descriptors but mismatch in stageFlags
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " descriptor from pipelineLayout has stageFlags ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " descriptor from pipelineLayout has stageFlags ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind UNIFORM_BUFFER descriptorSet with ALL stageFlags to pipelineLayout with FS-only stageFlags.";
@@ -2149,7 +2149,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     // First bind sets 0 & 1
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
     // 1. Disturb bound set0 by re-binding set1 w/ updated pipelineLayout
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT, " previously bound as set #0 was disturbed ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT, " previously bound as set #0 was disturbed ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1, &descriptorSet[1], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct info msg when binding Set1 w/ pipelineLayout that should disturb Set0.";
@@ -2158,7 +2158,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
     // 2. Disturb set after last bound set
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT, " newly bound as set #0 so set #1 and any subsequent sets were disturbed ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT, " newly bound as set #0 so set #1 and any subsequent sets were disturbed ");
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &ds0_fs_only, 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct info msg when re-binding Set0 w/ pipelineLayout that should disturb Set1.";
@@ -2169,7 +2169,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     // 1. Error due to not binding required set (we actually use same code as above to disturb set0)
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1, &descriptorSet[1], 0, NULL);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " uses set #0 but that set is not bound.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " uses set #0 but that set is not bound.");
     Draw(1, 0, 0, 0);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting draw requiring Set0 but Set0 is not bound.";
@@ -2177,7 +2177,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     }
     // 2. Error due to bound set not being compatible with PSO's VkPipelineLayout (diff stageFlags in this case)
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " bound as set #0 is not compatible with ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " bound as set #0 is not compatible with ");
     Draw(1, 0, 0, 0);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempted draw where bound Set0 layout is not compatible PSO Set0 layout.";
@@ -2198,7 +2198,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
 TEST_F(VkLayerTest, NoBeginCommandBuffer)
 {
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "You must call vkBeginCommandBuffer() before this call to ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2215,7 +2215,7 @@ TEST_F(VkLayerTest, NoBeginCommandBuffer)
 TEST_F(VkLayerTest, PrimaryCommandBufferFramebufferAndRenderpass)
 {
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "may not specify framebuffer or renderpass parameters");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2246,7 +2246,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
     VkResult        err;
     VkCommandBuffer     draw_cmd;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "must specify framebuffer and renderpass parameters");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2283,7 +2283,7 @@ TEST_F(VkLayerTest, CommandBufferResetErrors)
     // Then cause 2 errors for attempting to reset CB w/o having
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set for the pool from
     // which CBs were allocated. Note that this bit is off by default.
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Cannot call Begin on CB");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2305,7 +2305,7 @@ TEST_F(VkLayerTest, CommandBufferResetErrors)
         FAIL() << "Did not receive Error 'Cannot call Begin on CB (0x<ADDR>) in the RECORDING state...'";
         m_errorMonitor->DumpFailureMsgs();
     }
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "Attempt to reset command buffer ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, "Attempt to reset command buffer ");
     VkCommandBufferResetFlags flags = 0; // Don't care about flags for this test
     // Reset attempt will trigger error due to incorrect CommandPool state
     vkResetCommandBuffer(commandBuffer.GetBufferHandle(), flags);
@@ -2313,7 +2313,7 @@ TEST_F(VkLayerTest, CommandBufferResetErrors)
         FAIL() << "Did not receive Error 'Attempt to reset command buffer (0x<ADDR>) created from command pool...'";
         m_errorMonitor->DumpFailureMsgs();
     }
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " attempts to implicitly reset cmdBuffer created from ");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, " attempts to implicitly reset cmdBuffer created from ");
     // Transition CB to RECORDED state
     vkEndCommandBuffer(commandBuffer.GetBufferHandle());
     // Now attempting to Begin will implicitly reset, which triggers error
@@ -2329,7 +2329,7 @@ TEST_F(VkLayerTest, InvalidPipelineCreateState)
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Invalid Pipeline CreateInfo State: Vtx Shader required");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2430,7 +2430,7 @@ TEST_F(VkLayerTest, InvalidPatchControlPoints)
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Invalid Pipeline CreateInfo State: VK_PRIMITIVE_TOPOLOGY_PATCH primitive ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2555,7 +2555,7 @@ TEST_F(VkLayerTest, PSOViewportScissorCountMismatch)
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Gfx Pipeline viewport count (1) must match scissor count (0).");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2661,7 +2661,7 @@ TEST_F(VkLayerTest, PSOViewportStateNotSet)
     // Attempt to Create Gfx Pipeline w/o a VS
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Gfx Pipeline pViewportState is null. Even if ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2766,7 +2766,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Gfx Pipeline viewportCount is 1, but pViewports is NULL. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -2894,7 +2894,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
 
     // Now hit second fail case where we set scissor w/ different count than PSO
     // First need to successfully create the PSO from above by setting pViewports
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic scissorCount from vkCmdSetScissor() is 2, but PSO scissorCount is 1. These counts must match.");
 
     VkViewport vp = {}; // Just need dummy vp to point to
@@ -2924,7 +2924,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Gfx Pipeline scissorCount is 1, but pScissors is NULL. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3051,7 +3051,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 
     // Now hit second fail case where we set scissor w/ different count than PSO
     // First need to successfully create the PSO from above by setting pViewports
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Dynamic viewportCount from vkCmdSetViewport() is 2, but PSO viewportCount is 1. These counts must match.");
 
     VkRect2D sc = {}; // Just need dummy vp to point to
@@ -3079,7 +3079,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
 TEST_F(VkLayerTest, NullRenderPass)
 {
     // Bind a NULL RenderPass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "You cannot use a NULL RenderPass object in vkCmdBeginRenderPass()");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3098,7 +3098,7 @@ TEST_F(VkLayerTest, NullRenderPass)
 TEST_F(VkLayerTest, RenderPassWithinRenderPass)
 {
     // Bind a BeginRenderPass within an active RenderPass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to issue this call inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3123,7 +3123,7 @@ TEST_F(VkLayerTest, RenderPassWithinRenderPass)
 TEST_F(VkLayerTest, FillBufferWithinRenderPass)
 {
     // Call CmdFillBuffer within an active renderpass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to issue this call inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3147,7 +3147,7 @@ TEST_F(VkLayerTest, FillBufferWithinRenderPass)
 TEST_F(VkLayerTest, UpdateBufferWithinRenderPass)
 {
     // Call CmdUpdateBuffer within an active renderpass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to issue this call inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3175,7 +3175,7 @@ TEST_F(VkLayerTest, UpdateBufferWithinRenderPass)
 TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
 {
     // Call CmdClearColorImage within an active RenderPass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to issue this call inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3225,7 +3225,7 @@ TEST_F(VkLayerTest, ClearColorImageWithinRenderPass)
 TEST_F(VkLayerTest, ClearDepthStencilImageWithinRenderPass)
 {
     // Call CmdClearDepthStencilImage within an active RenderPass
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "It is invalid to issue this call inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3268,7 +3268,7 @@ TEST_F(VkLayerTest, ClearColorAttachmentsOutsideRenderPass)
     // Call CmdClearAttachmentss outside of an active RenderPass
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
          "vkCmdClearAttachments: This call must be issued inside an active render pass");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3309,7 +3309,7 @@ TEST_F(VkLayerTest, IdxBufferAlignmentError)
     // Bind a BeginRenderPass within an active RenderPass
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdBindIndexBuffer() offset (0x7) does not fall on ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3344,7 +3344,7 @@ TEST_F(VkLayerTest, ExecuteCommandsPrimaryCB)
 {
     // Attempt vkCmdExecuteCommands w/ a primary cmd buffer (should only be secondary)
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdExecuteCommands() called w/ Primary Cmd Buffer ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3366,7 +3366,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
     // Create DS w/ layout of one type and attempt Update w/ mis-matched type
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Write descriptor update has descriptor type VK_DESCRIPTOR_TYPE_SAMPLER that does not match ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3463,7 +3463,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
     // For overlapping Update, have arrayIndex exceed that of layout
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Descriptor update type of VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET is out of bounds for matching binding");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3562,7 +3562,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
     // Create layout w/ count of 1 and attempt update to that layout w/ binding index 2
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         " does not have binding to match update binding ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3660,7 +3660,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
     // Call UpdateDS w/ struct type other than valid VK_STRUCTUR_TYPE_UPDATE_* types
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Unexpected UPDATE struct of type ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3757,7 +3757,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     // Create a single Sampler descriptor and send it an invalid Sampler
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Attempt to update descriptor with invalid sampler 0xbaadbeef");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3833,7 +3833,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     // Create a single combined Image/Sampler descriptor and send it an invalid imageView
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Attempt to update descriptor with invalid imageView 0xbaadbeef");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -3933,7 +3933,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     // Create DS w/ layout of 2 types, write update 1 and attempt to copy-update into the other
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Copy descriptor update index 0, update count #1, has src update descriptor type VK_DESCRIPTOR_TYPE_SAMPLER ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4037,7 +4037,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
         m_errorMonitor->DumpFailureMsgs();
     }
     // Now perform a copy update that fails due to binding out of bounds
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Copy descriptor update 0 has srcBinding 3 which is out of bounds ");
     memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
     copy_ds_update.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
@@ -4054,7 +4054,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
     }
 
     // Now perform a copy update that fails due to binding out of bounds
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Copy descriptor src update is out of bounds for matching binding 1 ");
 
     memset(&copy_ds_update, 0, sizeof(VkCopyDescriptorSet));
@@ -4081,7 +4081,7 @@ TEST_F(VkLayerTest, NumSamplesMismatch)
     // Create CommandBuffer where MSAA samples doesn't match RenderPass sampleCount
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Num samples mismatch! ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4172,7 +4172,7 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
     // Create CommandBuffer where we add ClearCmd for FB Color attachment prior to issuing a Draw
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT,
         "vkCmdClearAttachments() issued on CB object ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4277,7 +4277,7 @@ TEST_F(VkLayerTest, VtxBufferBadIndex)
     // Create CommandBuffer where MSAA samples doesn't match RenderPass sampleCount
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Vtx Buffer Index 1 was bound, but no vtx buffers are attached to PSO.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4398,7 +4398,7 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision)
 {
     test_platform_thread thread;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "THREADING ERROR");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT, "THREADING ERROR");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -4449,7 +4449,7 @@ TEST_F(VkLayerTest, ThreadCommandBufferCollision)
 #if SHADER_CHECKER_TESTS
 TEST_F(VkLayerTest, InvalidSPIRVCodeSize)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Shader is not SPIR-V");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4478,7 +4478,7 @@ TEST_F(VkLayerTest, InvalidSPIRVCodeSize)
 
 TEST_F(VkLayerTest, InvalidSPIRVMagic)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Shader is not SPIR-V");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4507,7 +4507,7 @@ TEST_F(VkLayerTest, InvalidSPIRVMagic)
 
 TEST_F(VkLayerTest, InvalidSPIRVVersion)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Shader is not SPIR-V");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4537,7 +4537,7 @@ TEST_F(VkLayerTest, InvalidSPIRVVersion)
 
 TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT,
         "not consumed by fragment shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4585,7 +4585,7 @@ TEST_F(VkLayerTest, CreatePipelineVertexOutputNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "not written by vertex shader");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4632,7 +4632,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentInputNotProvided)
 
 TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Type mismatch on location 0");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4681,7 +4681,7 @@ TEST_F(VkLayerTest, CreatePipelineVsFsTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT,
         "location 0 not consumed by VS");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4737,7 +4737,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "VS consumes input at location 0 but not provided");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4784,7 +4784,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribNotProvided)
 
 TEST_F(VkLayerTest, CreatePipelineAttribTypeMismatch)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "location 0 does not match VS input type");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -4966,7 +4966,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribArrayType)
 
 TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Duplicate vertex input binding descriptions for binding 0");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5024,7 +5024,7 @@ TEST_F(VkLayerTest, CreatePipelineAttribBindingConflict)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Attachment 0 not written by FS");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5070,7 +5070,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotWritten)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_WARN_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_WARN_BIT,
         "FS writes to output location 1 with no matching attachment");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5121,7 +5121,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputNotConsumed)
 
 TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "does not match FS output type");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5169,7 +5169,7 @@ TEST_F(VkLayerTest, CreatePipelineFragmentOutputTypeMismatch)
 
 TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "not declared in pipeline layout");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5224,7 +5224,7 @@ TEST_F(VkLayerTest, CreatePipelineUniformBlockNotProvided)
 #if DEVICE_LIMITS_TESTS
 TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "CreateImage extents exceed allowable limits for format");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5263,7 +5263,7 @@ TEST_F(VkLayerTest, CreateImageLimitsViolationWidth)
 
 TEST_F(VkLayerTest, CreateImageResourceSizeViolation)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "CreateImage resource size exceeds allowable maximum");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5310,7 +5310,7 @@ TEST_F(VkLayerTest, UpdateBufferAlignment)
 {
     uint32_t updateData[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "dstOffset, is not a multiple of 4");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5328,7 +5328,7 @@ TEST_F(VkLayerTest, UpdateBufferAlignment)
     }
 
     // Introduce failure by using size that is not multiple of 4
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "dataSize, is not a multiple of 4");
 
     m_commandBuffer->UpdateBuffer(buffer.handle(), 0, 6, updateData);
@@ -5342,7 +5342,7 @@ TEST_F(VkLayerTest, UpdateBufferAlignment)
 
 TEST_F(VkLayerTest, FillBufferAlignment)
 {
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "dstOffset, is not a multiple of 4");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5360,7 +5360,7 @@ TEST_F(VkLayerTest, FillBufferAlignment)
     }
 
     // Introduce failure by using size that is not multiple of 4
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "size, is not a multiple of 4");
 
     m_commandBuffer->FillBuffer(buffer.handle(), 0, 6, 0x11111111);
@@ -5379,7 +5379,7 @@ TEST_F(VkLayerTest, InvalidImageView)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCreateImageView called with baseMipLevel 10 ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5432,7 +5432,7 @@ TEST_F(VkLayerTest, InvalidImageViewAspect)
 {
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCreateImageView: Color image formats must have ONLY the VK_IMAGE_ASPECT_COLOR_BIT set");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5485,7 +5485,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdCopyImage called with unmatched source and dest image types");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5590,7 +5590,7 @@ TEST_F(VkLayerTest, CopyImageDepthStencilFormatMismatch)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdCopyImage called with unmatched source and dest image types");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5690,7 +5690,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdResolveImage called with source sample count less than 2.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5793,7 +5793,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdResolveImage called with dest sample count greater than 1.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -5898,7 +5898,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdResolveImage called with unmatched source and dest formats.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -6005,7 +6005,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
     VkResult        err;
     bool            pass;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "vkCmdResolveImage called with unmatched source and dest image types.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
@@ -6114,7 +6114,7 @@ TEST_F(VkLayerTest, DepthStencilImageViewWithColorAspectBitError)
     //  then when we cause aspect fail next, bad format check will be preempted
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
         "Combination depth/stencil image formats can have only the ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());

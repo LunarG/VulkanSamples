@@ -62,7 +62,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
         my_device_data->deviceMap[device].pPhysicalDevice = pPhysicalDevice;
         pPhysicalDevice->pDevice = &my_device_data->deviceMap[device];
     } else {
-        log_msg(my_instance_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,
                 (uint64_t)physicalDevice , 0, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
                 "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
     }
@@ -660,7 +660,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             }
             // Log the message that we've built up:
             skipCall |= debug_report_log_msg(my_data->report_data,
-                                             VK_DBG_REPORT_ERROR_BIT,
+                                             VK_DEBUG_REPORT_ERROR_BIT,
                                              VK_OBJECT_TYPE_DEVICE,
                                              (uint64_t) device, 0,
                                              SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,

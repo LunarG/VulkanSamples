@@ -74,16 +74,16 @@ static VkLayerDbgAction stringToDbgAction(const char *_enum)
 static VkFlags stringToDbgReportFlags(const char *_enum)
 {
     // only handles single enum values
-    if (!strcmp(_enum, "VK_DBG_REPORT_INFO"))
-        return VK_DBG_REPORT_INFO_BIT;
-    else if (!strcmp(_enum, "VK_DBG_REPORT_WARN"))
-        return VK_DBG_REPORT_WARN_BIT;
-    else if (!strcmp(_enum, "VK_DBG_REPORT_PERF_WARN"))
-        return VK_DBG_REPORT_PERF_WARN_BIT;
-    else if (!strcmp(_enum, "VK_DBG_REPORT_ERROR"))
-        return VK_DBG_REPORT_ERROR_BIT;
-    else if (!strcmp(_enum, "VK_DBG_REPORT_DEBUG"))
-        return VK_DBG_REPORT_DEBUG_BIT;
+    if (!strcmp(_enum, "VK_DEBUG_REPORT_INFO"))
+        return VK_DEBUG_REPORT_INFO_BIT;
+    else if (!strcmp(_enum, "VK_DEBUG_REPORT_WARN"))
+        return VK_DEBUG_REPORT_WARN_BIT;
+    else if (!strcmp(_enum, "VK_DEBUG_REPORT_PERF_WARN"))
+        return VK_DEBUG_REPORT_PERF_WARN_BIT;
+    else if (!strcmp(_enum, "VK_DEBUG_REPORT_ERROR"))
+        return VK_DEBUG_REPORT_ERROR_BIT;
+    else if (!strcmp(_enum, "VK_DEBUG_REPORT_DEBUG"))
+        return VK_DEBUG_REPORT_DEBUG_BIT;
     return (VkFlags) 0;
 }
 
@@ -138,15 +138,15 @@ uint32_t getLayerOptionFlags(const char *_option, uint32_t optionDefault)
 
         if (len > 0) {
             if (strncmp(option, "warn", len) == 0) {
-                flags |= VK_DBG_REPORT_WARN_BIT;
+                flags |= VK_DEBUG_REPORT_WARN_BIT;
             } else if (strncmp(option, "info", len) == 0) {
-                flags |= VK_DBG_REPORT_INFO_BIT;
+                flags |= VK_DEBUG_REPORT_INFO_BIT;
             } else if (strncmp(option, "perf", len) == 0) {
-                flags |= VK_DBG_REPORT_PERF_WARN_BIT;
+                flags |= VK_DEBUG_REPORT_PERF_WARN_BIT;
             } else if (strncmp(option, "error", len) == 0) {
-                flags |= VK_DBG_REPORT_ERROR_BIT;
+                flags |= VK_DEBUG_REPORT_ERROR_BIT;
             } else if (strncmp(option, "debug", len) == 0) {
-                flags |= VK_DBG_REPORT_DEBUG_BIT;
+                flags |= VK_DEBUG_REPORT_DEBUG_BIT;
             }
         }
 
@@ -257,26 +257,26 @@ void print_msg_flags(VkFlags msgFlags, char *msg_flags)
     bool separator = false;
 
     msg_flags[0] = 0;
-    if (msgFlags & VK_DBG_REPORT_DEBUG_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT) {
         strcat(msg_flags, "DEBUG");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_INFO_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_INFO_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "INFO");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "WARN");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "PERF");
         separator = true;
     }
-    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
         if (separator) strcat(msg_flags, ",");
         strcat(msg_flags, "ERROR");
     }

@@ -443,7 +443,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
             fmt = VK_FORMAT_R32G32B32A32_UINT;
         } else {
             if (cmd_gen(cmd) == INTEL_GEN(6)) {
-                intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+                intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT,
                         &cmd->obj.base, 0, 0,
                         "unaligned vkCmdCopyBuffer unsupported");
                 cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
@@ -671,7 +671,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     if (img_format == VK_FORMAT_UNDEFINED ||
         (cmd_gen(cmd) == INTEL_GEN(6) &&
          icd_format_get_size(img_format) < 4)) {
-        intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+        intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT,
                       &cmd->obj.base, 0, 0,
                       "vkCmdCopyImageToBuffer with bpp %d unsupported",
                       icd_format_get_size(img->layout.format));

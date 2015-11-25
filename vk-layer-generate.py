@@ -738,7 +738,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    char str[1024];\n'
                      '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    sprintf(str, "At start of Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,'
+                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,'
                      '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
@@ -746,7 +746,7 @@ class GenericLayerSubcommand(Subcommand):
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
@@ -793,7 +793,7 @@ class GenericLayerSubcommand(Subcommand):
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        initGeneric(my_data);\n'
                          '        sprintf(str, "Completed Generic layered %s\\n");\n'
-                         '        log_msg(my_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
@@ -1315,7 +1315,7 @@ class ObjectTrackerSubcommand(Subcommand):
             else:
                 procs_txt.append('static void create_%s(VkDevice dispatchable_object, %s vkObj, VkDbgObjectType objType)' % (name, o))
             procs_txt.append('{')
-            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDbgObjectType(objType),')
             procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
             procs_txt.append('')
@@ -1343,7 +1343,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('{')
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType ) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
             else:
                 if o == "VkImage":
@@ -1352,7 +1352,7 @@ class ObjectTrackerSubcommand(Subcommand):
                     procs_txt.append('        (swapchainImageMap.find((uint64_t)object) == swapchainImageMap.end())) {')
                 else:
                     procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType ) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
@@ -1373,14 +1373,14 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        numTotalObjs--;')
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_INFO_BIT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
             procs_txt.append('            string_VkDbgObjectType(pNode->objType));')
             procs_txt.append('        delete pNode;')
             procs_txt.append('        %sMap.erase(object_handle);' % (o))
             procs_txt.append('    } else {')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
             procs_txt.append('           object_handle);')
             procs_txt.append('    }')
@@ -1400,7 +1400,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        }')
             procs_txt.append('        else {')
             procs_txt.append('            // If we do not find it print an error')
-            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
             procs_txt.append('                object_handle, string_VkDbgObjectType(objType));')
             procs_txt.append('        }')
@@ -1454,7 +1454,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, objType, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, objType, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
             procs_txt.append('            object_handle, string_VkDbgObjectType(objType));')
             procs_txt.append('    }')
@@ -1480,7 +1480,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 continue
             gedi_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedi_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-            gedi_txt.append('        log_msg(mid(instance), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedi_txt.append('        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
             gedi_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
             gedi_txt.append('                pNode->vkObj);')
             gedi_txt.append('    }')
@@ -1530,7 +1530,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 continue
             gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-            gedd_txt.append('        log_msg(mdd(device), VK_DBG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedd_txt.append('        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
             gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDbgObjectType(pNode->objType),')
             gedd_txt.append('                pNode->vkObj);')
             gedd_txt.append('    }')
@@ -1562,7 +1562,7 @@ class ObjectTrackerSubcommand(Subcommand):
             cbv_txt.append('{')
             cbv_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
             cbv_txt.append('    if (%sMap.find(object_handle) == %sMap.end()) {' % (o, o))
-            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, object_handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDbgObjectType ) 0, object_handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
             cbv_txt.append('            "Invalid %s Object 0x%%" PRIx64, object_handle);' % (o))
             cbv_txt.append('    }')
             cbv_txt.append('    return VK_FALSE;')
@@ -1893,7 +1893,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('        %sObjectsInUse[%s] = tid;' % (ty, key))
         header_txt.append('    } else {')
         header_txt.append('        if (%sObjectsInUse[%s] != tid) {' % (ty, key))
-        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
+        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
         header_txt.append('                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",')
         header_txt.append('                "THREADING ERROR : object of type %s is simultaneously used in thread %%ld and thread %%ld",' % (ty))
         header_txt.append('                %sObjectsInUse[%s], tid);' % (ty, key))
@@ -1903,7 +1903,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('            }')
         header_txt.append('            %sObjectsInUse[%s] = tid;' % (ty, key))
         header_txt.append('        } else {')
-        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
+        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
         header_txt.append('                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",')
         header_txt.append('                "THREADING ERROR : object of type %s is recursively used in thread %%ld",' % (ty))
         header_txt.append('                tid);')

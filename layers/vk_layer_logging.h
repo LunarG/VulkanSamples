@@ -119,7 +119,7 @@ static inline void layer_debug_report_destroy_instance(debug_report_data *debug_
         pTravNext = pTrav->pNext;
 
         debug_report_log_msg(
-                    debug_data, VK_DBG_REPORT_WARN_BIT,
+                    debug_data, VK_DEBUG_REPORT_WARN_BIT,
                     VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) pTrav->msgCallback,
                     0, DEBUG_REPORT_CALLBACK_REF,
                     "DebugReport",
@@ -171,7 +171,7 @@ static inline VkResult layer_create_msg_callback(
     debug_data->active_flags |= msgFlags;
 
     debug_report_log_msg(
-                debug_data, VK_DBG_REPORT_DEBUG_BIT,
+                debug_data, VK_DEBUG_REPORT_DEBUG_BIT,
                 VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) *pMsgCallback,
                 0, DEBUG_REPORT_CALLBACK_REF,
                 "DebugReport",
@@ -196,7 +196,7 @@ static inline void layer_destroy_msg_callback(
                 debug_data->g_pDbgFunctionHead = pTrav->pNext;
             }
             debug_report_log_msg(
-                        debug_data, VK_DBG_REPORT_DEBUG_BIT,
+                        debug_data, VK_DEBUG_REPORT_DEBUG_BIT,
                         VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) pTrav->msgCallback,
                         0, DEBUG_REPORT_NONE,
                         "DebugReport",

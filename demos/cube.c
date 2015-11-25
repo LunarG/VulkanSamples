@@ -269,9 +269,9 @@ VkBool32 dbgFunc(
 
     assert (message);
 
-    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
         // We know that we're submitting queues without fences, ignore this warning
         if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer")){
             return false;
@@ -2340,7 +2340,7 @@ static void demo_init_vk(struct demo *demo)
         }
         err = demo->dbgCreateMsgCallback(
                   demo->inst,
-                  VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
+                  VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT,
                   callback, NULL,
                   &demo->msg_callback);
         switch (err) {

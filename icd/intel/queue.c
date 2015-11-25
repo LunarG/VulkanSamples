@@ -70,7 +70,7 @@ static void queue_submit_hang(struct intel_queue *queue,
 {
     intel_cmd_decode(cmd, true);
 
-    intel_dev_log(queue->dev, VK_DBG_REPORT_ERROR_BIT,
+    intel_dev_log(queue->dev, VK_DEBUG_REPORT_ERROR_BIT,
                   VK_NULL_HANDLE, 0, 0,
                   "GPU hanged with %d/%d active/pending command buffers lost",
                   active_lost, pending_lost);
@@ -220,7 +220,7 @@ static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
     if (unlikely(cmd->result != VK_SUCCESS || !cmd->primary)) {
-        intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+        intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT,
                       &cmd->obj.base, 0, 0,
                       "invalid command buffer submitted");
     }
@@ -297,7 +297,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
         ring = INTEL_RING_RENDER;
         break;
     default:
-        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
+        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT,
                       &dev->base, 0, 0,
                       "invalid engine type");
         return VK_ERROR_VALIDATION_FAILED;

@@ -100,7 +100,7 @@ VKAPI_ATTR void VKAPI_CALL myDbgFunc(
         case VK_DBG_MSG_WARNING:
             printf("CALLBACK WARNING : %s\n", pMsg);
             break;
-        case VK_DBG_REPORT_ERROR_BIT:
+        case VK_DEBUG_REPORT_ERROR_BIT:
             printf("CALLBACK ERROR : %s\n", pMsg);
             break;
         default:

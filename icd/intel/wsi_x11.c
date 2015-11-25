@@ -871,7 +871,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 
     /* TODOVV: Add test to validation layer */
     if (!x11_is_format_presentable(dev, info->imageFormat)) {
-        intel_dev_log(dev, VK_DBG_REPORT_ERROR_BIT,
+        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT,
                       VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
 //        return VK_ERROR_INVALID_VALUE;
         return VK_ERROR_VALIDATION_FAILED;

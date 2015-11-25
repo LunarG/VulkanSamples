@@ -432,7 +432,7 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
         if (remappedInstance == VK_NULL_HANDLE)
             return VK_ERROR_VALIDATION_FAILED;
 
-        VkFlags reportFlags = VK_DBG_REPORT_INFO_BIT | VK_DBG_REPORT_WARN_BIT | VK_DBG_REPORT_PERF_WARN_BIT | VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_DEBUG_BIT;
+        VkFlags reportFlags = VK_DEBUG_REPORT_INFO_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT | VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_DEBUG_BIT;
         if (m_vkFuncs.real_vkDbgCreateMsgCallback != NULL)
         {
             if (m_vkFuncs.real_vkDbgCreateMsgCallback(remappedInstance, reportFlags, g_fpDbgMsgCallback, NULL, &m_dbgMsgCallbackObj) != VK_SUCCESS)

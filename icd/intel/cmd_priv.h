@@ -148,7 +148,7 @@ static inline int cmd_gen(const struct intel_cmd *cmd)
 
 static inline void cmd_fail(struct intel_cmd *cmd, VkResult result)
 {
-    intel_dev_log(cmd->dev, VK_DBG_REPORT_ERROR_BIT,
+    intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT,
                   &cmd->obj.base, 0, 0,
                   "command building error");
 
