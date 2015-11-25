@@ -1419,14 +1419,33 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
+const VkExtensionProperties nulldrv_phy_dev_gpu_exts[1] = {
+    {
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
+    }
+};
+
 VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
+    uint32_t copy_size;
+    uint32_t extension_count = ARRAY_SIZE(nulldrv_phy_dev_gpu_exts);
 
-    *pPropertyCount = 0;
+    if (pProperties == NULL) {
+        *pPropertyCount = extension_count;
+        return VK_SUCCESS;
+    }
+
+    copy_size = *pPropertyCount < extension_count ? *pPropertyCount : extension_count;
+    memcpy(pProperties, nulldrv_phy_dev_gpu_exts, copy_size * sizeof(VkExtensionProperties));
+    *pPropertyCount = copy_size;
+    if (copy_size < extension_count) {
+        return VK_INCOMPLETE;
+    }
 
     return VK_SUCCESS;
 }
