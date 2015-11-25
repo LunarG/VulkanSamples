@@ -144,37 +144,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkInstance                          instance,
     VkDbgMsgCallback                    msgCallback);
 
-// DebugReport utility callback functions
-VKAPI_ATTR void VKAPI_CALL vkDbgStringCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData);
-
-VKAPI_ATTR void VKAPI_CALL vkDbgStdioCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData);
-
-VKAPI_ATTR void VKAPI_CALL vkDbgBreakCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData);
-
 #endif // VK_PROTOTYPES
 
 #ifdef __cplusplus

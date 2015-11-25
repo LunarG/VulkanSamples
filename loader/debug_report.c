@@ -250,74 +250,6 @@ static void print_msg_flags(VkFlags msgFlags, char *msg_flags)
     }
 }
 
-// DebugReport utility callback functions
-static VKAPI_ATTR void VKAPI_CALL StringCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData)
-{
-    size_t buf_size;
-    char *buf;
-    char msg_flags[30];
-    PFN_stringCallback callback = (PFN_stringCallback) pUserData;
-
-    print_msg_flags(msgFlags, msg_flags);
-
-    buf_size = strlen(msg_flags) + /* ReportFlags: i.e. (DEBUG,INFO,WARN,PERF,ERROR) */
-               20 +  /* objType */
-               20 + /* srcObject */
-               20 + /* location */
-               20 + /* msgCode */
-               strlen(pLayerPrefix) +
-               strlen(pMsg) +
-               50 /* other / whitespace */;
-    buf = loader_stack_alloc(buf_size);
-
-    snprintf(buf, buf_size, "%s (%s): object: 0x%" PRIxLEAST64 " type: %d location: " PRINTF_SIZE_T_SPECIFIER " msgCode : %d : %s",
-             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
-    callback(buf);
-}
-
-static VKAPI_ATTR void VKAPI_CALL StdioCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData)
-{
-    char msg_flags[30];
-
-    print_msg_flags(msgFlags, msg_flags);
-
-    fprintf((FILE *)pUserData, "%s(%s): object: 0x%" PRIxLEAST64 " type: %d location: " PRINTF_SIZE_T_SPECIFIER " msgCode : %d : %s",
-             pLayerPrefix, msg_flags, srcObject, objType, location, msgCode, pMsg);
-}
-
-static VKAPI_ATTR void VKAPI_CALL BreakCallback(
-    VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
-    uint64_t                            srcObject,
-    size_t                              location,
-    int32_t                             msgCode,
-    const char*                         pLayerPrefix,
-    const char*                         pMsg,
-    void*                               pUserData)
-{
-#ifndef WIN32
-    raise(SIGTRAP);
-#else
-    DebugBreak();
-#endif
-}
-
 bool debug_report_instance_gpa(
         struct loader_instance *ptr_instance,
         const char* name,
@@ -333,18 +265,6 @@ bool debug_report_instance_gpa(
     }
     if (!strcmp("vkDbgDestroyMsgCallback", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgDestroyMsgCallback : NULL;
-        return true;
-    }
-    if (!strcmp("vkDbgStringCallback", name)) {
-        *addr = ptr_instance->debug_report_enabled ? (void *) StringCallback : NULL;
-        return true;
-    }
-    if (!strcmp("vkDbgStdioCallback", name)) {
-        *addr = ptr_instance->debug_report_enabled ? (void *) StdioCallback : NULL;
-        return true;
-    }
-    if (!strcmp("vkDbgBreakCallback", name)) {
-        *addr = ptr_instance->debug_report_enabled ? (void *) BreakCallback : NULL;
         return true;
     }
     return false;
