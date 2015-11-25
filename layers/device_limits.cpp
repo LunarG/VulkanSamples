@@ -99,7 +99,7 @@ template layer_data *get_my_data_ptr<layer_data>(
         void *data_key,
         std::unordered_map<void *, layer_data *> &data_map);
 
-static void init_device_limits(layer_data *my_data)
+static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
@@ -174,7 +174,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
                                    pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
-        init_device_limits(my_data);
+        init_device_limits(my_data, pAllocator);
         my_data->instanceState = unique_ptr<INSTANCE_STATE>(new INSTANCE_STATE());
     }
     return result;

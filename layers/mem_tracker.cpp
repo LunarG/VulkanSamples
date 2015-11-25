@@ -994,7 +994,8 @@ printCBList(
 
 static void
 init_mem_tracker(
-    layer_data *my_data)
+    layer_data *my_data,
+    const VkAllocationCallbacks *pAllocator)
 {
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
@@ -1057,9 +1058,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
-    const VkInstanceCreateInfo  *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator,
-    VkInstance                  *pInstance)
+    const VkInstanceCreateInfo*                 pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkInstance*                                 pInstance)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -1072,7 +1073,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                    pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
-        init_mem_tracker(my_data);
+        init_mem_tracker(my_data, pAllocator);
     }
     return result;
 }

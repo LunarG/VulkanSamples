@@ -84,7 +84,7 @@ debug_report_data *mdd(void* object)
     return data->report_data;
 }
 
-static void InitParamChecker(layer_data *data)
+static void InitParamChecker(layer_data *data, const VkAllocationCallbacks *pAllocator)
 {
     VkDbgMsgCallback callback;
     uint32_t report_flags = getLayerOptionFlags("ParamCheckerReportFlags", 0);
@@ -1741,7 +1741,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
             pCreateInfo->ppEnabledExtensionNames);
 
-        InitParamChecker(data);
+        InitParamChecker(data, pAllocator);
     }
 
         return result;

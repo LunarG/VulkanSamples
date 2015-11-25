@@ -610,7 +610,7 @@ class Subcommand(object):
     def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static void init%s(layer_data *my_data)\n'
+        func_body.append('static void init%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
                          '{\n' % self.layer_name)
         if init_opts:
             func_body.append('%s' % self.lineinfo.get())
@@ -648,7 +648,7 @@ class Subcommand(object):
     def _generate_new_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static void init%s(layer_data *my_data)\n'
+        func_body.append('static void init%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
                          '{\n' % self.layer_name)
         if init_opts:
             func_body.append('%s' % self.lineinfo.get())
@@ -791,7 +791,7 @@ class GenericLayerSubcommand(Subcommand):
                          '                                   *pInstance,\n'
                          '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        initGeneric(my_data);\n'
+                         '        initGeneric(my_data, pAllocator);\n'
                          '        sprintf(str, "Completed Generic layered %s\\n");\n'
                          '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                          '    }\n'
@@ -2077,7 +2077,7 @@ class ThreadingSubcommand(Subcommand):
                          '                                   *pInstance,\n'
                          '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        initThreading(my_data);\n'
+                         '        initThreading(my_data, pAllocator);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl))

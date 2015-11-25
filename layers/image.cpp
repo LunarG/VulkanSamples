@@ -72,7 +72,7 @@ struct layer_data {
 
 static unordered_map<void*, layer_data*> layer_data_map;
 
-static void InitImage(layer_data *data)
+static void InitImage(layer_data *data, const VkAllocationCallbacks *pAllocator)
 {
     VkDbgMsgCallback callback;
     uint32_t report_flags = getLayerOptionFlags("ImageReportFlags", 0);
@@ -129,7 +129,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
         my_data->report_data = debug_report_create_instance(pTable, *pInstance, pCreateInfo->enabledExtensionNameCount,
             pCreateInfo->ppEnabledExtensionNames);
 
-        InitImage(my_data);
+        InitImage(my_data, pAllocator);
     }
     return result;
 }

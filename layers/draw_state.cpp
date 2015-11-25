@@ -2546,7 +2546,7 @@ static VkBool32 outsideRenderPass(const layer_data* my_data, GLOBAL_CB_NODE *pCB
     return outside;
 }
 
-static void init_draw_state(layer_data *my_data)
+static void init_draw_state(layer_data *my_data, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
@@ -2592,7 +2592,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
                                    pCreateInfo->enabledExtensionNameCount,
                                    pCreateInfo->ppEnabledExtensionNames);
 
-        init_draw_state(my_data);
+        init_draw_state(my_data, pAllocator);
     }
     return result;
 }

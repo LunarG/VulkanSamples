@@ -109,7 +109,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
 
 
 #include "vk_dispatch_table_helper.h"
-static void initSwapchain(layer_data *my_data)
+static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
@@ -185,7 +185,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
                                    pCreateInfo->ppEnabledExtensionNames);
         // Call the following function after my_data is initialized:
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);
-        initSwapchain(my_data);
+        initSwapchain(my_data, pAllocator);
     }
     return result;
 }

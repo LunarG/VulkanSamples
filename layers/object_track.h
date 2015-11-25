@@ -410,7 +410,8 @@ validate_status(
 #include "vk_dispatch_table_helper.h"
 static void
 initObjectTracker(
-    layer_data *my_data)
+    layer_data *my_data,
+    const VkAllocationCallbacks *pAllocator)
 {
     uint32_t report_flags = 0;
     uint32_t debug_action = 0;
@@ -771,7 +772,7 @@ explicit_CreateInstance(
                                    pCreateInfo->ppEnabledExtensionNames);
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);
 
-        initObjectTracker(my_data);
+        initObjectTracker(my_data, pAllocator);
         create_instance(*pInstance, *pInstance, VK_OBJECT_TYPE_INSTANCE);
     }
     return result;
