@@ -1806,6 +1806,9 @@ def main(argv=None):
     #print(enum_val_dict)
     #print(typedef_dict)
     #print(struct_dict)
+    input_header = os.path.basename(opts.input_file)
+    if 'vulkan.h' == input_header:
+        input_header = "vulkan/vulkan.h"
     prefix = os.path.basename(opts.input_file).strip(".h")
     if prefix == "vulkan":
         prefix = "vk"
@@ -1829,7 +1832,7 @@ def main(argv=None):
     if opts.gen_struct_wrappers:
         sw = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
         #print(sw.get_class_name(struct))
-        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","inttypes.h", "stdio.h","stdlib.h"])
+        sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","inttypes.h", "stdio.h","stdlib.h"])
         print("Generating struct wrapper header to %s" % sw.header_filename)
         sw.generateHeader()
         print("Generating struct wrapper class to %s" % sw.class_filename)
@@ -1840,17 +1843,17 @@ def main(argv=None):
         sw.set_no_addr(True)
         sw.generateStringHelper()
         sw.set_no_addr(False)
-        sw.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
+        sw.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h","iostream","sstream","string"])
         sw.set_no_addr(True)
         sw.generateStringHelperCpp()
         sw.set_no_addr(False)
         sw.generateStringHelperCpp()
-        sw.set_include_headers(["stdio.h", "stdlib.h", "vulkan/vulkan.h"])
+        sw.set_include_headers(["stdio.h", "stdlib.h", input_header])
         sw.generateSizeHelper()
         sw.generateSizeHelperC()
     if opts.gen_struct_sizes:
         st = StructWrapperGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        st.set_include_headers(["stdio.h", "stdlib.h", "vulkan/vulkan.h"])
+        st.set_include_headers(["stdio.h", "stdlib.h", input_header])
         st.generateSizeHelper()
         st.generateSizeHelperC()
     if opts.gen_cmake:
@@ -1858,7 +1861,7 @@ def main(argv=None):
         cmg.generate()
     if opts.gen_graphviz:
         gv = GraphVizGen(struct_dict, os.path.basename(opts.input_file).strip(".h"), os.path.dirname(enum_sh_filename))
-        gv.set_include_headers([os.path.basename(opts.input_file),os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "inttypes.h"])
+        gv.set_include_headers([input_header,os.path.basename(enum_sh_filename),"stdint.h","stdio.h","stdlib.h", "inttypes.h"])
         gv.generate()
     print("DONE!")
     #print(typedef_rev_dict)
