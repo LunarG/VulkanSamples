@@ -41,9 +41,29 @@ void ext_init_create_instance(
     instData->instTable.DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
     instData->instTable.GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     instData->instTable.DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
-    instData->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapaabilitiesKHR");
+    instData->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     instData->instTable.GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     instData->instTable.GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(inst, "vkGetPhysicalDeviceSurfacePresentModesKHR");
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    instData->instTable.CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR) gpa(inst, "vkCreateXlibSurfaceKHR");
+    instData->instTable.GetPhysicalDeviceXlibPresentationSupportKHR = (PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceXlibPresentationSupportKHR");
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    instData->instTable.CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR) gpa(inst, "vkCreateXcbSurfaceKHR");
+    instData->instTable.GetPhysicalDeviceXcbPresentationSupportKHR = (PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceXcbPresentationSupportKHR");
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    instData->instTable.CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR) gpa(inst, "vkCreateMirSurfaceKHR");
+    instData->instTable.GetPhysicalDeviceMirPresentationSupportKHR = (PFN_vkGetPhysicalDeviceMirPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceMirPresentationSupportKHR");
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    instData->instTable.CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) gpa(inst, "vkCreateWaylandSurfaceKHR");
+    instData->instTable.GetPhysicalDeviceWaylandPresentationSupportKHR = (PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceWaylandPresentationSupportKHR");
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    instData->instTable.CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) gpa(inst, "vkCreateWin32SurfaceKHR");
+    instData->instTable.GetPhysicalDeviceWin32PresentationSupportKHR = (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR) gpa(inst, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
+#endif
     instData->LunargDebugReportEnabled = false;
     instData->KHRSurfaceEnabled = false;
     instData->KHRXlibSurfaceEnabled = false;

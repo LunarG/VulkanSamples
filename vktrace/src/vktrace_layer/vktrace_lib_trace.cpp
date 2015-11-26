@@ -405,7 +405,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateInstance(
     if (result == VK_SUCCESS)
         ext_init_create_instance(mid(*pInstance), *pInstance, pCreateInfo->enabledExtensionNameCount, pCreateInfo->ppEnabledExtensionNames);
 
-    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo));
+    CREATE_TRACE_PACKET(vkCreateInstance, sizeof(VkInstance) + get_struct_chain_size((void*)pCreateInfo) + sizeof(VkAllocationCallbacks));
     pHeader->vktrace_begin_time = vktraceStartTime;
     pHeader->entrypoint_begin_time = startTime;
     pHeader->entrypoint_end_time = endTime;
