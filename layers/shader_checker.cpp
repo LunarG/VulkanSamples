@@ -475,7 +475,7 @@ value_or_default(std::unordered_map<unsigned, unsigned> const &map, unsigned id,
 
 
 static unsigned
-get_locations_consumed_by_type(shader_module const *src, unsigned type)
+get_locations_consumed_by_type(shader_module const *src, unsigned type, bool strip_array_level)
 {
     auto type_def_it = src->type_def_index.find(type);
 
@@ -485,15 +485,22 @@ get_locations_consumed_by_type(shader_module const *src, unsigned type)
 
     unsigned int const *code = (unsigned int const *)&src->words[type_def_it->second];
     unsigned opcode = code[0] & 0x0ffffu;
+
     switch (opcode) {
         case spv::OpTypePointer:
             /* see through the ptr -- this is only ever at the toplevel for graphics shaders;
              * we're never actually passing pointers around. */
-            return get_locations_consumed_by_type(src, code[3]);
+            return get_locations_consumed_by_type(src, code[3], strip_array_level);
         case spv::OpTypeArray:
+            if (strip_array_level) {
+                return get_locations_consumed_by_type(src, code[2], false);
+            }
+            else {
+                return code[3] * get_locations_consumed_by_type(src, code[2], false);
+            }
         case spv::OpTypeMatrix:
-            /* num locations is the array dimension * element size */
-            return code[3] * get_locations_consumed_by_type(src, code[2]);
+            /* num locations is the dimension * element size */
+            return code[3] * get_locations_consumed_by_type(src, code[2], false);
         default:
             /* everything else is just 1. */
             return 1;
@@ -515,7 +522,8 @@ static void
 collect_interface_by_location(layer_data *my_data, VkDevice dev,
                               shader_module const *src, spv::StorageClass sinterface,
                               std::map<uint32_t, interface_var> &out,
-                              std::map<uint32_t, interface_var> &builtins_out)
+                              std::map<uint32_t, interface_var> &builtins_out,
+                              bool is_array_of_verts)
 {
     unsigned int const *code = (unsigned int const *)&src->words[0];
     size_t size = src->words.size();
@@ -565,7 +573,8 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
             else if (location != -1) {
                 /* A user-defined interface variable, with a location. Where a variable
                  * occupied multiple locations, emit one result for each. */
-                unsigned num_locations = get_locations_consumed_by_type(src, type);
+                unsigned num_locations = get_locations_consumed_by_type(src, type,
+                        is_array_of_verts);
                 for (int offset = 0; offset < num_locations; offset++) {
                     interface_var v;
                     v.id = id;
@@ -702,8 +711,9 @@ validate_interface_between_stages(layer_data *my_data, VkDevice dev,
 
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, producer, spv::StorageClassOutput, outputs, builtin_outputs);
-    collect_interface_by_location(my_data, dev, consumer, spv::StorageClassInput, inputs, builtin_inputs);
+    collect_interface_by_location(my_data, dev, producer, spv::StorageClassOutput, outputs, builtin_outputs, false);
+    collect_interface_by_location(my_data, dev, consumer, spv::StorageClassInput, inputs, builtin_inputs,
+            consumer_arrayed_input);
 
     auto a_it = outputs.begin();
     auto b_it = inputs.begin();
@@ -875,7 +885,7 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
     std::map<uint32_t, interface_var> builtin_inputs;
     bool pass = true;
 
-    collect_interface_by_location(my_data, dev, vs, spv::StorageClassInput, inputs, builtin_inputs);
+    collect_interface_by_location(my_data, dev, vs, spv::StorageClassInput, inputs, builtin_inputs, false);
 
     /* Build index by location */
     std::map<uint32_t, VkVertexInputAttributeDescription const *> attribs;
@@ -941,7 +951,7 @@ validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shade
 
     /* TODO: dual source blend index (spv::DecIndex, zero if not provided) */
 
-    collect_interface_by_location(my_data, dev, fs, spv::StorageClassOutput, outputs, builtin_outputs);
+    collect_interface_by_location(my_data, dev, fs, spv::StorageClassOutput, outputs, builtin_outputs, false);
 
     auto it = outputs.begin();
     uint32_t attachment = 0;
