@@ -473,6 +473,25 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateWin32SurfaceKHR(instance, hinstance, hwnd, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateWin32SurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWin32SurfaceKHR(
+    VkInstance                                  instance,
+    HINSTANCE                                   hinstance,
+    HWND                                        hwnd,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceWin32 *pIcdSurface = NULL;
 
@@ -546,6 +565,25 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateMirSurfaceKHR(instance, connection, mirSurface, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateMirSurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateMirSurfaceKHR(
+    VkInstance                                  instance,
+    Display*                                    dpy,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceMir *pIcdSurface = NULL;
 
@@ -615,6 +653,25 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceMirPresentationSupportKHR
  * for CreateWaylandSurfaceKHR
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
+    VkInstance                                  instance,
+    struct wl_display*                          display,
+    struct wl_surface*                          surface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateWaylandSurfaceKHR(instance, display, surface, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateXlibSurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWaylandSurfaceKHR(
     VkInstance                                  instance,
     struct wl_display*                          display,
     struct wl_surface*                          surface,
@@ -696,6 +753,25 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateXcbSurfaceKHR(instance, connection, window, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateXcbSurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXcbSurfaceKHR(
+    VkInstance                                  instance,
+    xcb_connection_t*                           connection,
+    xcb_window_t                                window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
     struct loader_instance *ptr_instance = loader_get_instance(instance);
     VkIcdSurfaceXcb *pIcdSurface = NULL;
 
@@ -769,6 +845,25 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXcbPresentationSupportKHR
  * for CreateXlibSurfaceKHR
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
+    VkInstance                                  instance,
+    Display*                                    dpy,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateXlibSurfaceKHR(instance, dpy, window, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateXlibSurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXlibSurfaceKHR(
     VkInstance                                  instance,
     Display*                                    dpy,
     Window                                      window,

@@ -116,23 +116,23 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
     .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
 #ifdef VK_USE_PLATFORM_MIR_KHR
-    .CreateMirSurfaceKHR = vkCreateMirSurfaceKHR,
+    .CreateMirSurfaceKHR = loader_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR = loader_GetPhysicalDeviceMirPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-    .CreateWaylandSurfaceKHR = vkCreateWaylandSurfaceKHR,
+    .CreateWaylandSurfaceKHR = loader_CreateWaylandSurfaceKHR,
     .GetPhysicalDeviceWaylandPresentationSupportKHR = loader_GetPhysicalDeviceWaylandPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-    .CreateWin32SurfaceKHR = vkCreateWin32SurfaceKHR,
+    .CreateWin32SurfaceKHR = loader_CreateWin32SurfaceKHR,
     .GetPhysicalDeviceWin32PresentationSupportKHR = loader_GetPhysicalDeviceWin32PresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-    .CreateXcbSurfaceKHR = vkCreateXcbSurfaceKHR,
+    .CreateXcbSurfaceKHR = loader_CreateXcbSurfaceKHR,
     .GetPhysicalDeviceXcbPresentationSupportKHR = loader_GetPhysicalDeviceXcbPresentationSupportKHR,
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
-    .CreateXlibSurfaceKHR = vkCreateXlibSurfaceKHR,
+    .CreateXlibSurfaceKHR = loader_CreateXlibSurfaceKHR,
     .GetPhysicalDeviceXlibPresentationSupportKHR = loader_GetPhysicalDeviceXlibPresentationSupportKHR,
 #endif
 };
@@ -1239,7 +1239,6 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
     LOOKUP_GIPA(DbgCreateMsgCallback, false);
     LOOKUP_GIPA(DbgDestroyMsgCallback, false);
-    LOOKUP_GIPA(DestroySurfaceKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);
@@ -2613,6 +2612,8 @@ uint32_t loader_activate_instance_layers(struct loader_instance *inst)
         nextObj = (void*) nextInstObj;
 
         lib_handle = loader_add_layer_lib(inst, "instance", layer_prop);
+        if (!lib_handle)
+            continue;   // TODO what should we do in this case
         if ((nextGPA = layer_prop->functions.get_instance_proc_addr) == NULL) {
             if (layer_prop->functions.str_gipa == NULL || strlen(layer_prop->functions.str_gipa) == 0) {
                 nextGPA = (PFN_vkGetInstanceProcAddr) loader_platform_get_proc_address(lib_handle, "vkGetInstanceProcAddr");
