@@ -31,7 +31,6 @@
 
 #if defined(_WIN32)
 // WinSock2.h must be included *BEFORE* windows.h
-#define WIN32_LEAN_AND_MEAN
 #include <WinSock2.h>
 #endif // _WIN32
 

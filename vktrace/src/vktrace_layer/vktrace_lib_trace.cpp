@@ -1185,7 +1185,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateWin32SurfaceKHR(
     packet_vkCreateWin32SurfaceKHR* pPacket = NULL;
     // don't bother with copying the actual win32 hinstance, hwnd into the trace packet, vkreplay has to use it's own anyway
     CREATE_TRACE_PACKET(vkCreateWin32SurfaceKHR, sizeof(VkSurfaceKHR) + sizeof(VkAllocationCallbacks));
-    result = mid(instance)->instTable.CreateWin32SurfaceKHR(instance, connection, window, pAllocator, pSurface);
+    result = mid(instance)->instTable.CreateWin32SurfaceKHR(instance, hinstance, hwnd, pAllocator, pSurface);
     pPacket = interpret_body_as_vkCreateWin32SurfaceKHR(pHeader);
     pPacket->instance = instance;
     pPacket->hinstance = hinstance;
@@ -1207,7 +1207,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceWin32
     VkBool32 result;
     packet_vkGetPhysicalDeviceWin32PresentationSupportKHR* pPacket = NULL;
     CREATE_TRACE_PACKET(vkGetPhysicalDeviceWin32PresentationSupportKHR, 0);
-    result = mid(physicalDevice)->instTable.GetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndexn);
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
     pPacket = interpret_body_as_vkGetPhysicalDeviceWin32PresentationSupportKHR(pHeader);
     pPacket->physicalDevice = physicalDevice;
     pPacket->queueFamilyIndex = queueFamilyIndex;

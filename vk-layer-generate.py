@@ -39,7 +39,7 @@ from source_line_info import sourcelineinfo
 from collections import defaultdict
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "EnumerateInstanceLayerProperties" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateDeviceLayerProperties" or proto.name == "EnumerateDeviceExtensionProperties" or proto.name == "CreateXcbSurfaceKHR" or proto.name == "vkGetPhysicalDeviceXcbPresentationSupportKHR":
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "EnumerateInstanceLayerProperties" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateDeviceLayerProperties" or proto.name == "EnumerateDeviceExtensionProperties" or proto.name == "CreateXcbSurfaceKHR" or proto.name == "vkGetPhysicalDeviceXcbPresentationSupportKHR"  or proto.name == "CreateWin32SurfaceKHR" or proto.name == "vkGetPhysicalDeviceWin32PresentationSupportKHR":
        return True
     else:
        return False
@@ -1170,13 +1170,22 @@ class APIDumpSubcommand(Subcommand):
 
     def generate_body(self):
         self.layer_name = "APIDump"
-        instance_extensions=[('wsi_enabled',
-                     ['vkGetPhysicalDeviceSurfaceSupportKHR',
-                      'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
-                      'vkGetPhysicalDeviceSurfaceFormatsKHR',
-                      'vkGetPhysicalDeviceSurfacePresentModesKHR',
-                      'vkCreateXcbSurfaceKHR',
-                      'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+        if sys.platform == 'win32':
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateWin32SurfaceKHR',
+                                   'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
+        else:
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateXcbSurfaceKHR',
+                                   'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
         extensions=[('wsi_enabled',
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
@@ -1601,7 +1610,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
         # Temporarily prevent  DestroySurface call from being generated until WSI layer support is fleshed out
-        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name or 'SurfaceKHR' in proto.name:
+        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name: # LUGMAL or 'SurfaceKHR' in proto.name:
             return ""
         else:
             if 'Create' in proto.name or 'Alloc' in proto.name:
@@ -1713,14 +1722,24 @@ class ObjectTrackerSubcommand(Subcommand):
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
-        instance_extensions=[('msg_callback_get_proc_addr', []),
-                              ('wsi_enabled',
-                              ['vkGetPhysicalDeviceSurfaceSupportKHR',
-                               'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
-                               'vkGetPhysicalDeviceSurfaceFormatsKHR',
-                               'vkGetPhysicalDeviceSurfacePresentModesKHR',
-                               'vkCreateXcbSurfaceKHR',
-                               'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+        if sys.platform == 'win32':
+            instance_extensions=[('msg_callback_get_proc_addr', []),
+                                  ('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateWin32SurfaceKHR',
+                                   'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
+        else:
+            instance_extensions=[('msg_callback_get_proc_addr', []),
+                                  ('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateXcbSurfaceKHR',
+                                   'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

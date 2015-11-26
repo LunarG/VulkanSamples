@@ -407,7 +407,7 @@ initObjectTracker(
     {
         option_str = getLayerOption("ObjectTrackerLogFilename");
         log_output = getLayerLogOutput(option_str, "ObjectTracker");
-        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);
+        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &(my_data->logging_callback));
     }
 
     if (!objLockInitialized)
@@ -560,6 +560,16 @@ static void create_physical_device(VkInstance dispatchable_object, VkPhysicalDev
     uint32_t objIndex = objTypeToIndex(objType);
     numObjs[objIndex]++;
     numTotalObjs++;
+}
+
+static void create_surface_khr(VkInstance instance, VkSurfaceKHR surface, VkDbgObjectType objType)
+{
+    // TODO: Add tracking of surface objects
+}
+
+static void destroy_surface_khr(VkInstance instance, VkSurfaceKHR surface)
+{
+    // TODO: Add tracking of surface objects
 }
 
 static void alloc_command_buffer(VkDevice device, VkCommandPool commandPool, VkCommandBuffer vkObj, VkDbgObjectType objType)
