@@ -29,6 +29,7 @@
 #include <vk_loader_platform.h>
 #include "swapchain.h"
 #include "vk_layer_extension_utils.h"
+#include "vk_enum_string_helper.h"
 
 // FIXME/TODO: Make sure this layer is thread-safe!
 
@@ -44,27 +45,29 @@ template layer_data *get_my_data_ptr<layer_data>(
 static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     uint32_t i;
-    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pDisp  = my_data->device_dispatch_table;
-    PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
-    pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
-    pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
-    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
-    pDisp->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
-    pDisp->QueuePresentKHR = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
+    layer_data *my_device_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
 
-    SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
+    VkLayerDispatchTable *pDisp  = my_device_data->device_dispatch_table;
+    PFN_vkGetDeviceProcAddr gpa  = pDisp->GetDeviceProcAddr;
+
+    pDisp->CreateSwapchainKHR    = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
+    pDisp->DestroySwapchainKHR   = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
+    pDisp->GetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
+    pDisp->AcquireNextImageKHR   = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
+    pDisp->QueuePresentKHR       = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
+
+    SwpPhysicalDevice *pPhysicalDevice = &my_instance_data->physicalDeviceMap[physicalDevice];
     if (pPhysicalDevice) {
-        my_data->deviceMap[device].pPhysicalDevice = pPhysicalDevice;
-        pPhysicalDevice->pDevice = &my_data->deviceMap[device];
+        my_device_data->deviceMap[device].pPhysicalDevice = pPhysicalDevice;
+        pPhysicalDevice->pDevice = &my_device_data->deviceMap[device];
     } else {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-        LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
-                                physicalDevice,
-                                "VkPhysicalDevice");
+        log_msg(my_instance_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+                (uint64_t)physicalDevice , 0, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
+                "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
     }
-    my_data->deviceMap[device].device = device;
-    my_data->deviceMap[device].deviceSwapchainExtensionEnabled = false;
+    my_device_data->deviceMap[device].device = device;
+    my_device_data->deviceMap[device].deviceSwapchainExtensionEnabled = false;
 
     // Record whether the WSI device extension was enabled for this VkDevice.
     // No need to check if the extension was advertised by
@@ -72,7 +75,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
 
-            my_data->deviceMap[device].deviceSwapchainExtensionEnabled = true;
+            my_device_data->deviceMap[device].deviceSwapchainExtensionEnabled = true;
         }
     }
 }
@@ -136,36 +139,10 @@ static void initSwapchain(layer_data *my_data)
 
 static const char *surfaceTransformStr(VkSurfaceTransformFlagBitsKHR value)
 {
-    static std::string surfaceTransformStrings[] = {
-        "VK_SURFACE_TRANSFORM_NONE_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR",
-        "VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR",
-        "Out-of-Range Value"};
 
-    // Deal with a out-of-range value:
-    switch (value) {
-    case VK_SURFACE_TRANSFORM_NONE_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR:
-    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR:
-        break;
-    default:
-        value =
-            (VkSurfaceTransformFlagBitsKHR) (VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR + 1);
-        break;
-    }
-
+    // TODO: parse flags and print out one at a time
     // Return a string corresponding to the value:
-    return surfaceTransformStrings[value].c_str();
+    return string_VkSurfaceTransformFlagBitsKHR(value);
 }
 
 static const char *presentModeStr(VkPresentModeKHR value)
@@ -659,7 +636,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         }
         // Validate pCreateInfo->preTransform against
         // VkSurfaceCapabilitiesKHR::supportedTransforms:
-        if (!((1 << pCreateInfo->preTransform) & pCapabilities->supportedTransforms)) {
+        if (!((pCreateInfo->preTransform) & pCapabilities->supportedTransforms)) {
             // This is an error situation; one for which we'd like to give
             // the developer a helpful, multi-line error message.  Build it
             // up a little at a time, and then log it:
@@ -672,8 +649,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                     fn,
                     surfaceTransformStr(pCreateInfo->preTransform));
             errorString += str;
-            for (int i = VK_SURFACE_TRANSFORM_NONE_BIT_KHR ;
-                 i < VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR ; i++) {
+            for (int i = 0; i < 32; i++) {
                 // Build up the rest of the message:
                 if ((1 << i) & pCapabilities->supportedTransforms) {
                     const char *newStr =
@@ -686,7 +662,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             skipCall |= debug_report_log_msg(my_data->report_data,
                                              VK_DBG_REPORT_ERROR_BIT,
                                              VK_OBJECT_TYPE_DEVICE,
-                                             (uint64_t) device, 0, 
+                                             (uint64_t) device, 0,
                                              SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,
                                              LAYER_NAME,
                                              errorString.c_str());
