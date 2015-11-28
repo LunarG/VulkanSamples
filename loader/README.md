@@ -28,7 +28,12 @@ finds ICD driver libraries.
 - vkEnumerateInstanceExtensionProperties exported
 - vkGetDeviceProcAddr exported and returns valid function pointers for all the VK API entrypoints
 - vkGetInstanceProcAddr exported and returns valid function pointers for all the VK API entrypoints
-- all objects created by ICD can be cast to (VK\_LAYER\_DISPATCH\_TABLE \*\*)
+- WSI surface extensions (vk_KHR_*surface) handling:
+  1. Loader handles the vkCreate*SurfaceKHR() and vkDestroySurfaceKHR()  functions including creating/destroying the VkSurfaceKHR object
+  2. VkSurfaceKHR objects have the underlying structure (VKIcdSurface*) as defined in include/vulkan/vk_icd.h
+  3. ICDs can cast any VkSurfaceKHR object to a pointer to the appropriate VKIcdSurface* structure
+  4. VkIcdSurface* structures include VkIcdSurfaceWin32, VkIcdSurfaceXcb, VkIcdSurfaceXlib, VkIcdSurfaceMir, and VkIcdSurfaceWayland
+- all objects created by an ICD can be cast to (VK\_LAYER\_DISPATCH\_TABLE \*\*)
  where the loader will replace the first entry with a pointer to the dispatch table which is
  owned by the loader. This implies three things for ICD drivers:
   1. The ICD must return a pointer for the opaque object handle
