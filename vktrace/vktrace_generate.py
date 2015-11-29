@@ -393,7 +393,7 @@ class Subcommand(object):
         protoFuncs = [proto.name for proto in self.protos]
         wsi_platform_manual_funcs = ['CreateWin32SurfaceKHR', 'CreateXcbSurfaceKHR', 'GetPhysicalDeviceXcbPresentationSupportKHR', 'GetPhysicalDeviceWin32PresentationSupportKHR']
         for func in manually_written_hooked_funcs:
-            if func not in protoFuncs and func not in wsi_platform_manual_funcs:
+            if (func not in protoFuncs) and (func not in wsi_platform_manual_funcs):
                 sys.exit("Entry '%s' in manually_written_hooked_funcs list is not in the vulkan function prototypes" % func)
 
         # process each of the entrypoint prototypes
@@ -919,7 +919,17 @@ class Subcommand(object):
                                                                                      'for (i = 0; i < pPacket->memoryRangeCount; i++)\n',
                                                                                      '{\n',
                                                                                      '    pPacket->ppData[i] = (void*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)pPacket->ppData[i]);\n',
-                                                                                     '}']}}
+                                                                                     '}']},
+                             'QueuePresentKHR' : {'param': 'pPresentInfo', 'txt': ['VkSwapchainKHR **ppSC = (VkSwapchainKHR **)& pPacket->pPresentInfo->pSwapchains;\n',
+                                                                                   '*ppSC = (VkSwapchainKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pSwapchains));\n',
+                                                                                   'VkSemaphore **ppS = (VkSemaphore **) &pPacket->pPresentInfo->pWaitSemaphores;\n',
+                                                                                   '*ppS = (VkSemaphore *) vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pWaitSemaphores));\n',
+                                                                                   'uint32_t **ppII = (uint32_t **) &pPacket->pPresentInfo->pImageIndices;\n',
+                                                                                   '*ppII = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pImageIndices));']},
+                             'CreateSwapchainKHR' : {'param': 'pCreateInfo', 'txt': ['uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
+                                                     '(*ppQFI) = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
+
+        }
         if_body = []
         if_body.append('typedef struct packet_vkApiVersion {')
         if_body.append('    vktrace_trace_packet_header* header;')
@@ -970,11 +980,7 @@ class Subcommand(object):
 
     def _generate_interp_funcs_ext(self, extensionName):
         if_body = []
-        custom_case_dict = { 'QueuePresentKHR' : {'param': 'pPresentInfo', 'txt': ['pPacket->pPresentInfo->pSwapchains = (VkSwapchainKHR*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pSwapchains));\n',
-                                                                                   'pPacket->pPresentInfo->pImageIndices = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pPresentInfo->pImageIndices));']},
-                             'CreateSwapchainKHR' : {'param': 'pCreateInfo', 'txt': ['uint32_t **ppQFI = (uint32_t**)&pPacket->pCreateInfo->pQueueFamilyIndices;\n',
-                                                     '(*ppQFI) = (uint32_t*)vktrace_trace_packet_interpret_buffer_pointer(pHeader, (intptr_t)(pPacket->pCreateInfo->pQueueFamilyIndices));']},
-                            }
+        custom_case_dict = { }
         for ext in vulkan.extensions_all:
             if ext.name.lower() == extensionName.lower():
                 for proto in ext.protos:
@@ -1343,7 +1349,7 @@ class Subcommand(object):
         rif_body = []
         rif_body.append('void vkFuncs::init_funcs(void * handle)\n{\n    m_libHandle = handle;')
         for proto in self.protos:
-            if 'KHR' not in proto.name and 'Dbg' not in proto.name:
+            if 'Dbg' not in proto.name:
                 rif_body.append('    real_vk%s = (type_vk%s)(vktrace_platform_get_library_entrypoint(handle, "vk%s"));' % (proto.name, proto.name, proto.name))
             else: # These func ptrs get assigned at GetProcAddr time
                 rif_body.append('    real_vk%s = (type_vk%s)NULL;' % (proto.name, proto.name))
@@ -1480,6 +1486,7 @@ class Subcommand(object):
                                  'GetSwapchainImagesKHR',
                                  'CreateXcbSurfaceKHR',
                                  'CreateWin32SurfaceKHR',
+                                 #TODO Wayland, Mir, Xlib
                                  #'GetPhysicalDeviceInfo',
                                  'MapMemory',
                                  'QueueSubmit',
@@ -1494,8 +1501,10 @@ class Subcommand(object):
 
         # validate the manually_replay_funcs list
         protoFuncs = [proto.name for proto in self.protos]
+        wsi_platform_manual_funcs = ['CreateWin32SurfaceKHR', 'CreateXcbSurfaceKHR']
+
         for func in manually_replay_funcs:
-            if func not in protoFuncs:
+            if (func not in protoFuncs) and (func not in wsi_platform_manual_funcs):
                 sys.exit("Entry '%s' in manually_replay_funcs list is not in the vulkan function prototypes" % func)
 
         # map protos to custom functions if body is fully custom
@@ -1612,7 +1621,7 @@ class Subcommand(object):
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
                             rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedinstance, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
                             rbody.append('            }')
-                        elif  'GetPhysicalDevice' in iProto.name and 'KHR' in iProto.name:
+                        elif  (iProto.params[0].ty == 'VkInstance' or iProto.params[0].ty != 'VkPhysicalDevice')  and 'KHR' in iProto.name:
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
                             rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedinstance, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
                             rbody.append('            }')
