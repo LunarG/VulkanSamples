@@ -1478,6 +1478,8 @@ class Subcommand(object):
                                  'GetPhysicalDeviceSurfacePresentModesKHR',
                                  'CreateSwapchainKHR',
                                  'GetSwapchainImagesKHR',
+                                 'CreateXcbSurfaceKHR',
+                                 'CreateWin32SurfaceKHR',
                                  #'GetPhysicalDeviceInfo',
                                  'MapMemory',
                                  'QueueSubmit',

@@ -1883,6 +1883,45 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     return replayResult;
 }
 
+#ifdef VK_USE_PLATFORM_XCB_KHR
+VkResult vkReplay::manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfaceKHR* pPacket)
+{
+    VkResult replayResult;
+    VkSurfaceKHR local_pSurface;
+    VkInstance remappedinstance = m_objMapper.remap_instances(pPacket->instance);
+
+    if (pPacket->instance != VK_NULL_HANDLE && remappedinstance == VK_NULL_HANDLE) {
+        return VK_ERROR_VALIDATION_FAILED;
+    }
+
+    VkIcdSurfaceXcb *pSurf = (VkIcdSurfaceXcb *) m_display->get_surface();
+    replayResult = m_vkFuncs.real_vkCreateXcbSurfaceKHR(remappedinstance, pSurf->connection, pSurf->window, pPacket->pAllocator, &local_pSurface);
+    if (replayResult == VK_SUCCESS) {
+        m_objMapper.add_to_surfacekhrs_map(*(pPacket->pSurface), local_pSurface);
+    }
+    return replayResult;
+}
+#endif
+
+#ifdef VK_USE_PLATFORM_Win32_KHR
+VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket)
+{
+    VkResult replayResult;
+    VkSurfaceKHR local_pSurface;
+    VkInstance remappedinstance = m_objMapper.remap_instances(pPacket->instance);
+
+    if (pPacket->instance != VK_NULL_HANDLE && remappedinstance == VK_NULL_HANDLE) {
+        return VK_ERROR_VALIDATION_FAILED;
+    }
+
+    VkIcdSurfaceWin32 *pSurf = (VkIcdSurfaceWin32 *) m_display->get_surface();
+    replayResult = m_vkFuncs.real_vkCreateWin32SurfaceKHR(remappedinstance, pSurf->hinstance, pSurf->hwnd, pPacket->pAllocator, &local_pSurface);
+    if (replayResult == VK_SUCCESS) {
+        m_objMapper.add_to_surfacekhrs_map(*(pPacket->pSurface), local_pSurface);
+    }
+    return replayResult;
+}
+#endif
 
 VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket)
 {

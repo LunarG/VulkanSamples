@@ -30,6 +30,7 @@
 #pragma once
 
 #include "vkreplay_vkreplay.h"
+#include "vk_icd.h"
 
 class vkDisplay: public vktrace_replay::DisplayImp {
 friend class vkReplay;
@@ -41,9 +42,9 @@ public:
     int create_window(const unsigned int width, const unsigned int height);
     void resize_window(const unsigned int width, const unsigned int height);
     void process_event();
-    VkSurfaceKHR get_surface() { return m_pSurfaceDescription; };
+    VkSurfaceKHR get_surface() { return (VkSurfaceKHR) &m_surface; };
     // VK_DEVICE get_device() { return m_dev[m_gpuIdx];}
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
     xcb_window_t get_window_handle() { return m_XcbWindow; }
     xcb_connection_t* get_connection_handle() { return m_pXcbConnection; }
     xcb_screen_t* get_screen_handle() { return m_pXcbScreen; }
@@ -54,13 +55,14 @@ public:
 private:
     VkResult init_vk(const unsigned int gpu_idx);
     bool m_initedVK;
-    VkSurfaceKHR m_pSurfaceDescription;
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
+    VkIcdSurfaceXcb m_surface;
     xcb_connection_t *m_pXcbConnection;
     xcb_screen_t *m_pXcbScreen;
     xcb_window_t m_XcbWindow;
     //VkPlatformHandleXcbKHR m_XcbPlatformHandle;
 #elif defined(WIN32)
+    VkIcdSurfaceWin32 m_surface;
     HWND m_windowHandle;
     HINSTANCE m_connection;
 #endif

@@ -33,7 +33,7 @@
 #include <map>
 #include <vector>
 #include <string>
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
 #include <xcb/xcb.h>
 
 #endif
@@ -129,7 +129,6 @@ private:
     VkResult manually_replay_vkMapMemory(packet_vkMapMemory* pPacket);
     void manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket);
     VkResult manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket);
-    // TODO138: Update these functions for new WSI
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket);
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(packet_vkGetPhysicalDeviceSurfaceCapabilitiesKHR* pPacket);
     VkResult manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_vkGetPhysicalDeviceSurfaceFormatsKHR* pPacket);
@@ -137,6 +136,12 @@ private:
     VkResult manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchainKHR* pPacket);
     VkResult manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchainImagesKHR* pPacket);
     VkResult manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* pPacket);
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    VkResult manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfaceKHR* pPacket);
+#endif
+#ifdef VK_USE_PLATFORM_Win32_KHR
+    VkResult manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket);
+#endif
     VkResult manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket);
     VkResult manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMsgCallback* pPacket);
 

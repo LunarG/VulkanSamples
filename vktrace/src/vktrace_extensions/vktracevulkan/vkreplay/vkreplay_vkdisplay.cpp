@@ -38,20 +38,21 @@ vkDisplay::vkDisplay()
     m_windowHeight(0),
     m_frameNumber(0)
 {
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
+    memset(&m_surface, 0, sizeof(VkIcdSurfaceXcb));
     m_pXcbConnection = NULL;
     m_pXcbScreen = NULL;
     m_XcbWindow = 0;
 #elif defined(WIN32)
+    memset(&m_surface, 0, sizeof(VkIcdSurfaceWin32));
     m_windowHandle = NULL;
     m_connection = NULL;
 #endif
-    memset(&m_pSurfaceDescription, 0, sizeof(VkSurfaceKHR));
 }
 
 vkDisplay::~vkDisplay()
 {
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
     if (m_XcbWindow != 0)
     {
         xcb_destroy_window(m_pXcbConnection, m_XcbWindow);
@@ -145,7 +146,7 @@ int vkDisplay::init(const unsigned int gpu_idx)
         m_initedVK = true;
     }
 #endif
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -178,7 +179,7 @@ LRESULT WINAPI WindowProcVk( HWND window, unsigned int msg, WPARAM wp, LPARAM lp
 
 int vkDisplay::set_window(vktrace_window_handle hWindow, unsigned int width, unsigned int height)
 {
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
     m_XcbWindow = hWindow;
 #elif defined(WIN32)
     m_windowHandle = hWindow;
@@ -213,10 +214,9 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
     //m_XcbPlatformHandle.connection = m_pXcbConnection;
     //m_XcbPlatformHandle.root = m_pXcbScreen->root;
-    VkIcdSurfaceXcb *pSurf = (VkIcdSurfaceXcb *) m_pSurfaceDescription;
-    pSurf->base.platform = VK_ICD_WSI_PLATFORM_XCB;
-    pSurf->connection = m_pXcbConnection;
-    pSurf->window = m_XcbWindow;
+    m_surface.base.platform = VK_ICD_WSI_PLATFORM_XCB;
+    m_surface.connection = m_pXcbConnection;
+    m_surface.window = m_XcbWindow;
     return 0;
 #elif defined(WIN32)
     // Register Window class
@@ -254,20 +254,16 @@ int vkDisplay::create_window(const unsigned int width, const unsigned int height
         return -1;
     }
     // TODO : Not sure of best place to put this, but I have all the info I need here so just setting it all here for now
-    //m_SurfaceDescription.platform = VK_PLATFORM_WIN32_KHR;
-    //m_SurfaceDescription.pPlatformHandle = wcex.hInstance;
-    //m_SurfaceDescription.pPlatformWindow = m_windowHandle;
-    VkIcdSurfaceWin32 *pSurf = (VkIcdSurfaceWin32 *) m_pSurfaceDescription;
-    pSurf->base.platform = VK_ICD_WSI_PLATFORM_WIN32;
-    pSurf->hinstance = wcex.hInstance;
-    pSurf->hwnd = m_windowHandle;
+    m_surface.base.platform = VK_ICD_WSI_PLATFORM_WIN32;
+    m_surface.hinstance = wcex.hInstance;
+    m_surface.hwnd = m_windowHandle;
     return 0;
 #endif
 }
 
 void vkDisplay::resize_window(const unsigned int width, const unsigned int height)
 {
-#if defined(PLATFORM_LINUX) || defined(XCB_NVIDIA)
+#if defined(PLATFORM_LINUX)
     if (width != m_windowWidth || height != m_windowHeight)
     {
         uint32_t values[2];
