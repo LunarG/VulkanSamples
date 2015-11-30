@@ -94,15 +94,41 @@ function build_LunarGLASS () {
    make install
 }
 
+# Parse options
+while [[ $# > 0 ]]
+do
+option="$1"
+
+case $option in
+    # option to allow just building glslang components
+    -g|--glslang-only)
+    GLSLANG_ONLY=true
+    echo "Building glslang only: GLSLANG_ONLY=true"
+    ;;
+    *)
+    echo "Unrecognized option: $option"
+    exit 1
+    ;;
+esac
+shift
+done
+
 if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
    create_glslang
 fi
-if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
-   create_LunarGLASS
+
+if [ ! $GLSLANG_ONLY ]; then
+    if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
+       create_LunarGLASS
+    fi
 fi
 
 update_glslang
-update_LunarGLASS
+if [ ! $GLSLANG_ONLY ]; then
+    update_LunarGLASS
+fi
 
 build_glslang
-build_LunarGLASS
+if [ ! $GLSLANG_ONLY ]; then
+    build_LunarGLASS
+fi
