@@ -6,6 +6,12 @@
         "library_path": "./libVKLayerImage.so",
         "api_version": "0.210.0",
         "implementation_version": "1",
-        "description": "LunarG Validation Layer"
+        "description": "LunarG Validation Layer",
+        "instance_extensions": [
+             {
+                 "name": "VK_EXT_LUNARG_debug_report",
+                 "spec_version": "1"
+             }
+         ]
     }
 }

@@ -146,13 +146,21 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
         globalLockInitialized = 1;
     }
 }
+
+static const VkExtensionProperties dl_physicaldevice_extensions[] = {
+    {
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION
+    }
+};
+
 /* DeviceLimits does not have any global extensions */
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
         const char *pLayerName,
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
 {
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    return util_GetExtensionProperties(1, dl_physicaldevice_extensions, pCount, pProperties);
 }
 
 static const VkLayerProperties dl_global_layers[] = {
