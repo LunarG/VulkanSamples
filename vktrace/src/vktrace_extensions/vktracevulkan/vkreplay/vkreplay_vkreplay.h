@@ -139,7 +139,7 @@ private:
 #ifdef VK_USE_PLATFORM_XCB_KHR
     VkResult manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfaceKHR* pPacket);
 #endif
-#ifdef VK_USE_PLATFORM_Win32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
     VkResult manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket);
 #endif
     VkResult manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket);
