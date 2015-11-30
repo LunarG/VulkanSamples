@@ -137,7 +137,7 @@ typedef struct VkDebugReportCallbackCreateInfoLUNARG {
 // API functions
 
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackLUNARG* pCallback);
-typedef VkResult (VKAPI_PTR *PFN_vkDestroyDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator);
+typedef void (VKAPI_PTR *PFN_vkDestroyDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator);
 
 #ifdef VK_PROTOTYPES
 

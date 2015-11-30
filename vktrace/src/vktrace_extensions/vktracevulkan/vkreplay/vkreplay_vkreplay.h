@@ -143,7 +143,7 @@ private:
     VkResult manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket);
 #endif
     VkResult manually_replay_vkCreateDebugReportCallbackLUNARG(packet_vkCreateDebugReportCallbackLUNARG* pPacket);
-    VkResult manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket);
+    void manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket);
 
     void process_screenshot_list(const char *list)
     {

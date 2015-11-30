@@ -1130,7 +1130,7 @@ lunarg_debug_report = Extension(
              Param("const VkAllocationCallbacks*", "pAllocator"),
              Param("VkDebugReportCallbackLUNARG*", "pCallback")]),
 
-        Proto("VkResult", "DestroyDebugReportCallbackLUNARG",
+        Proto("void", "DestroyDebugReportCallbackLUNARG",
             [Param("VkInstance", "instance"),
              Param("VkDebugReportCallbackLUNARG", "callback"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),

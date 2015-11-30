@@ -108,7 +108,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
         const VkAllocationCallbacks           *pAllocator,
         VkDebugReportCallbackLUNARG           *pCallback);
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_DestroyDebugReportCallback(
+VKAPI_ATTR void VKAPI_CALL loader_DestroyDebugReportCallback(
     VkInstance                                 instance,
     VkDebugReportCallbackLUNARG                callback,
     const VkAllocationCallbacks               *pAllocator);

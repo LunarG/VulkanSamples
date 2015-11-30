@@ -1970,21 +1970,18 @@ VkResult  vkReplay::manually_replay_vkCreateDebugReportCallbackLUNARG(packet_vkC
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket)
+void vkReplay::manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket)
 {
-    VkResult replayResult = VK_SUCCESS;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
     VkDebugReportCallbackLUNARG remappedMsgCallback;
     remappedMsgCallback = m_objMapper.remap_debugreportcallbacklunargs(pPacket->callback);
     if (!g_fpDbgMsgCallback) {
         // just eat this call as we don't have local call back function defined
-        return VK_SUCCESS;
+        return;
     } else
     {
-        replayResult = m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG(remappedInstance, remappedMsgCallback, NULL);
+        m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG(remappedInstance, remappedMsgCallback, NULL);
     }
-
-    return replayResult;
 }
 
 VkResult vkReplay::manually_replay_vkAllocateCommandBuffers(packet_vkAllocateCommandBuffers* pPacket)

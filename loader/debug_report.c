@@ -92,7 +92,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
     return result;
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DestroyDebugReportCallback(
+static VKAPI_ATTR void VKAPI_CALL debug_report_DestroyDebugReportCallback(
         VkInstance instance,
         VkDebugReportCallbackLUNARG callback,
         VkAllocationCallbacks *pAllocator)
@@ -102,7 +102,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DestroyDebugReportCallback(
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
 
-    VkResult result = inst->disp->DestroyDebugReportCallbackLUNARG(instance, callback, pAllocator);
+    inst->disp->DestroyDebugReportCallbackLUNARG(instance, callback, pAllocator);
 
     while (pTrav) {
         if (pTrav->msgCallback == callback) {
@@ -117,7 +117,6 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DestroyDebugReportCallback(
     }
 
     loader_platform_thread_unlock_mutex(&loader_lock);
-    return result;
 }
 
 
@@ -191,13 +190,12 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
  * This is the instance chain terminator function
  * for DestroyDebugReportCallback
  */
-VKAPI_ATTR VkResult VKAPI_CALL loader_DestroyDebugReportCallback(VkInstance instance,
+VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
         VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t storage_idx;
     VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
-    VkResult res = VK_SUCCESS;
     struct loader_instance *inst;
 
     for (inst = loader.instances; inst; inst = inst->next) {
@@ -216,7 +214,6 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DestroyDebugReportCallback(VkInstance inst
         }
         storage_idx++;
     }
-    return res;
 }
 
 bool debug_report_instance_gpa(
