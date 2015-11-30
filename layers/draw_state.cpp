@@ -55,6 +55,10 @@
 #include "vk_layer_extension_utils.h"
 #include "vk_layer_utils.h"
 
+// This definition controls whether image layout transitions are enabled/disabled.
+// disable until corner cases are fixed
+#define DISABLE_IMAGE_LAYOUT_VALIDATION
+
 struct devExts {
     VkBool32 debug_marker_enabled;
     VkBool32 wsi_enabled;
@@ -1973,7 +1977,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
-            skipCall |= ValidateCmdBufImageLayouts(submit->pCommandBuffers[i]);
+
+#ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
+             skipCall |= ValidateCmdBufImageLayouts(submit->pCommandBuffers[i]);
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
             // Validate that cmd buffers have been updated
             pCB = getCBNode(dev_data, submit->pCommandBuffers[i]);
             loader_platform_thread_lock_mutex(&globalLock);
@@ -3244,6 +3252,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer comma
 
 bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout) {
     bool skip_call = false;
+
+#ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
+    // TODO: Fix -- initialLayout may have been set in a previous command buffer
+    return skip_call;
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     auto src_image_element = pCB->imageLayoutMap.find(srcImage);
@@ -3270,6 +3284,12 @@ bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImag
 
 bool VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkImageLayout destImageLayout) {
     bool skip_call = false;
+
+#ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
+    // TODO: Fix -- initialLayout may have been set in a previous command buffer
+    return skip_call;
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     auto dest_image_element = pCB->imageLayoutMap.find(destImage);
@@ -3593,6 +3613,12 @@ bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     bool skip = false;
+
+#ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
+    // TODO: Fix -- pay attention to image subresource ranges -- not all subresources transition at the same time
+    return skip;
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = reinterpret_cast<const VkMemoryBarrier*>(ppMemBarriers[i]);
         if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
@@ -4015,6 +4041,11 @@ VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const 
 
 bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
     bool skip = false;
+
+#ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
+    return skip;
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
@@ -4411,7 +4442,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     void           **ppData)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = ValidateMapImageLayouts(device, mem);
+
+    bool skip_call = VK_FALSE;
+#ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
+    skip_call = ValidateMapImageLayouts(device, mem);
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
+
     if (VK_FALSE == skip_call) {
         return dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
     }
@@ -4504,6 +4540,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     bool skip_call = false;
 
+#ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
     if (pPresentInfo) {
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
             auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->pSwapchains[i]);
@@ -4519,6 +4556,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
             }
         }
     }
+#endif // DISABLE_IMAGE_LAYOUT_VALIDATION
 
     if (VK_FALSE == skip_call)
         return dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
