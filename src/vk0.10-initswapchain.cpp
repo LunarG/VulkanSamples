@@ -66,10 +66,9 @@ int main(int argc, char **argv)
 
     /* VULKAN_KEY_START */
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceSupportKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetPhysicalDeviceSurfaceCapabilitiesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetPhysicalDeviceSurfaceFormatsKHR);
-    GET_DEVICE_PROC_ADDR(info.device, GetPhysicalDeviceSurfacePresentModesKHR);
-    GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
     GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
