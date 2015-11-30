@@ -176,6 +176,7 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
     PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
     PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
+    PFN_vkDebugReportMessageLUNARG DebugReportMessageLUNARG;
 #ifdef VK_USE_PLATFORM_MIR_KHR
     PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;

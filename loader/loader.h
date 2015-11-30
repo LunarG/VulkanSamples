@@ -190,6 +190,7 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
     PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
     PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
+    PFN_vkDebugReportMessageLUNARG DebugReportMessageLUNARG;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;

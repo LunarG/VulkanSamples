@@ -116,6 +116,7 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceSurfacePresentModesKHR = loader_GetPhysicalDeviceSurfacePresentModesKHR,
     .CreateDebugReportCallbackLUNARG = loader_CreateDebugReportCallback,
     .DestroyDebugReportCallbackLUNARG = loader_DestroyDebugReportCallback,
+    .DebugReportMessageLUNARG = loader_DebugReportMessage,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = loader_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR = loader_GetPhysicalDeviceMirPresentationSupportKHR,

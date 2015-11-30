@@ -92,6 +92,39 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
     return result;
 }
 
+// Utility function to handle reporting
+static inline VkBool32 debug_report_log_msg(
+    VkInstance                          instance,
+    VkFlags                             msgFlags,
+    VkDebugReportObjectTypeLUNARG       objectType,
+    uint64_t                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg)
+{
+    struct loader_instance *inst = loader_get_instance(instance);
+    VkBool32 bail = false;
+    VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
+    while (pTrav) {
+        if (pTrav->msgFlags & msgFlags) {
+            if (pTrav->pfnMsgCallback(msgFlags,
+                                  objectType, srcObject,
+                                  location,
+                                  msgCode,
+                                  pLayerPrefix,
+                                  pMsg,
+                                  (void *) pTrav->pUserData)) {
+                bail = true;
+            }
+        }
+        pTrav = pTrav->pNext;
+    }
+
+    return bail;
+}
+
+
 static VKAPI_ATTR void VKAPI_CALL debug_report_DestroyDebugReportCallback(
         VkInstance instance,
         VkDebugReportCallbackLUNARG callback,
@@ -119,6 +152,21 @@ static VKAPI_ATTR void VKAPI_CALL debug_report_DestroyDebugReportCallback(
     loader_platform_thread_unlock_mutex(&loader_lock);
 }
 
+static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
+        VkInstance                                  instance,
+        VkDebugReportFlagsLUNARG                    flags,
+        VkDebugReportObjectTypeLUNARG               objType,
+        uint64_t                                    object,
+        size_t                                      location,
+        int32_t                                     msgCode,
+        const char*                                 pLayerPrefix,
+        const char*                                 pMsg)
+{
+    struct loader_instance *inst = loader_get_instance(instance);
+
+    inst->disp->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+
+}
 
 /*
  * This is the instance chain terminator function
@@ -216,6 +264,37 @@ VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
     }
 }
 
+
+/*
+ * This is the instance chain terminator function
+ * for DebugReportMessage
+ */
+VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
+        VkInstance                                  instance,
+        VkDebugReportFlagsLUNARG                    flags,
+        VkDebugReportObjectTypeLUNARG               objType,
+        uint64_t                                    object,
+        size_t                                      location,
+        int32_t                                     msgCode,
+        const char*                                 pLayerPrefix,
+        const char*                                 pMsg)
+{
+    const struct loader_icd *icd;
+    struct loader_instance *inst = loader_get_instance(instance);
+
+    for (icd = inst->icds; icd; icd = icd->next) {
+        if (icd->DebugReportMessageLUNARG != NULL) {
+            icd->DebugReportMessageLUNARG(icd->instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+        }
+    }
+
+    /*
+     * Now that all ICDs have seen the message, call the necessary callbacks.
+     * Ignoring "bail" return value as there is nothing to bail from at this point.
+     */
+    debug_report_log_msg(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+}
+
 bool debug_report_instance_gpa(
         struct loader_instance *ptr_instance,
         const char* name,
@@ -231,6 +310,10 @@ bool debug_report_instance_gpa(
     }
     if (!strcmp("vkDestroyDebugReportCallbackLUNARG", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DestroyDebugReportCallback : NULL;
+        return true;
+    }
+    if (!strcmp("vkDebugReportMessageLUNARG", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DebugReportMessage : NULL;
         return true;
     }
     return false;

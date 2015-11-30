@@ -1134,6 +1134,16 @@ lunarg_debug_report = Extension(
             [Param("VkInstance", "instance"),
              Param("VkDebugReportCallbackLUNARG", "callback"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
+
+        Proto("void", "DebugReportMessageLUNARG",
+            [Param("VkInstance", "instance"),
+             Param("VkDebugReportFlagsLUNARG", "flags"),
+             Param("VkDebugReportObjectTypeLUNARG", "objType"),
+             Param("uint64_t", "object"),
+             Param("size_t", "location"),
+             Param("int32_t", "msgCode"),
+             Param("const char *", "pLayerPrefix"),
+             Param("const char *", "pMsg")]),
     ],
 )
 lunarg_debug_marker = Extension(

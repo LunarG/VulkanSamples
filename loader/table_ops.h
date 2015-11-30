@@ -471,6 +471,7 @@ static inline void loader_init_instance_extension_dispatch_table(
     table->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
     table->CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
     table->DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
+    table->DebugReportMessageLUNARG = (PFN_vkDebugReportMessageLUNARG) gpa(inst, "vkDebugReportMessageLUNARG");
     table->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
@@ -575,6 +576,8 @@ static inline void *loader_lookup_instance_dispatch_table(
         return (void *) table->CreateDebugReportCallbackLUNARG;
     if (!strcmp(name, "DestroyDebugReportCallbackLUNARG"))
         return (void *) table->DestroyDebugReportCallbackLUNARG;
+    if (!strcmp(name, "DebugReportMessageLUNARG"))
+        return (void *) table->DebugReportMessageLUNARG;
 
     return NULL;
 }

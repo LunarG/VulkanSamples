@@ -230,6 +230,10 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(
         return (PFN_vkVoidFunction) vkDestroyDebugReportCallbackLUNARG;
     }
 
+    if (!strcmp(funcName, "vkDebugReportMessageLUNARG")) {
+        return (PFN_vkVoidFunction) vkDebugReportMessageLUNARG;
+    }
+
     return NULL;
 }
 

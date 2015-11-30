@@ -131,6 +131,8 @@ void VkRenderFramework::InitFramework(
 
             m_DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackLUNARG) vkGetInstanceProcAddr(this->inst, "vkDestroyDebugReportCallbackLUNARG");
             ASSERT_NE(m_DestroyDebugReportCallback, (PFN_vkDestroyDebugReportCallbackLUNARG) NULL) << "Did not get function pointer for DestroyDebugReportCallback";
+            m_DebugReportMessage = (PFN_vkDebugReportMessageLUNARG) vkGetInstanceProcAddr(this->inst, "vkDebugReportMessageLUNARG");
+            ASSERT_NE(m_DebugReportMessage, (PFN_vkDebugReportMessageLUNARG) NULL) << "Did not get function pointer for DebugReportMessage";
         }
     }
 

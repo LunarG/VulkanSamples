@@ -112,3 +112,13 @@ VKAPI_ATTR void VKAPI_CALL loader_DestroyDebugReportCallback(
     VkInstance                                 instance,
     VkDebugReportCallbackLUNARG                callback,
     const VkAllocationCallbacks               *pAllocator);
+
+VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
+    VkInstance                                  instance,
+    VkDebugReportFlagsLUNARG                       flags,
+    VkDebugReportObjectTypeLUNARG               objType,
+    uint64_t                                    object,
+    size_t                                      location,
+    int32_t                                     msgCode,
+    const char*                                 pLayerPrefix,
+    const char*                                 pMsg);

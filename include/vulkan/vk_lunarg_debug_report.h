@@ -138,6 +138,7 @@ typedef struct VkDebugReportCallbackCreateInfoLUNARG {
 
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackLUNARG* pCallback);
 typedef void (VKAPI_PTR *PFN_vkDestroyDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator);
+typedef void (VKAPI_PTR *PFN_vkDebugReportMessageLUNARG)(VkInstance instance, VkDebugReportFlagsLUNARG msgFlags, VkDebugReportObjectTypeLUNARG objType, uint64_t srcObject, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg);
 
 #ifdef VK_PROTOTYPES
 
@@ -152,6 +153,16 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
     VkInstance                                  instance,
     VkDebugReportCallbackLUNARG                 callback,
     const VkAllocationCallbacks*                pAllocator);
+
+VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportFlagsLUNARG                    flags,
+    VkDebugReportObjectTypeLUNARG               objType,
+    uint64_t                                    object,
+    size_t                                      location,
+    int32_t                                     msgCode,
+    const char*                                 pLayerPrefix,
+    const char*                                 pMsg);
 #endif // VK_PROTOTYPES
 
 #ifdef __cplusplus

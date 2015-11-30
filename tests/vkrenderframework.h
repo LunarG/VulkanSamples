@@ -142,6 +142,7 @@ protected:
     VkDepthStencilObj                  *m_depthStencil;
     PFN_vkCreateDebugReportCallbackLUNARG          m_CreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackLUNARG         m_DestroyDebugReportCallback;
+    PFN_vkDebugReportMessageLUNARG                 m_DebugReportMessage;
     VkDebugReportCallbackLUNARG                    m_globalMsgCallback;
     VkDebugReportCallbackLUNARG                    m_devMsgCallback;
 

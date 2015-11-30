@@ -338,3 +338,18 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
 
     icd_instance_destroy_logger(inst->icd, callback, pAllocator);
 }
+
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportFlagsLUNARG                    flags,
+    VkDebugReportObjectTypeLUNARG               objType,
+    uint64_t                                    object,
+    size_t                                      location,
+    int32_t                                     msgCode,
+    const char*                                 pLayerPrefix,
+    const char*                                 pMsg)
+{
+    // Intentionally does nothing.
+    // Loader will call registered callbacks after all
+    // ICDs have been notified.
+}
