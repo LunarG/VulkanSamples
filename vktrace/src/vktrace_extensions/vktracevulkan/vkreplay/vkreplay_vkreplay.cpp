@@ -1903,7 +1903,7 @@ VkResult vkReplay::manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfa
 }
 #endif
 
-#ifdef VK_USE_PLATFORM_Win32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
 VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket)
 {
     VkResult replayResult;
