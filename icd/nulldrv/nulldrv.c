@@ -42,14 +42,17 @@
     #define NULLDRV_LOG_FUNC do { } while (0)
 #endif
 
-// The null driver supports all WSI extenstions ... for now ...
-static const char * const nulldrv_gpu_exts[NULLDRV_EXT_COUNT] = {
-	[NULLDRV_EXT_KHR_SWAPCHAIN] = VK_KHR_SURFACE_EXTENSION_NAME,
-};
-static const VkExtensionProperties intel_gpu_exts[NULLDRV_EXT_COUNT] = {
+static const VkExtensionProperties nulldrv_instance_extensions[NULLDRV_EXT_COUNT] = {
     {
         .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_SURFACE_REVISION,
+    }
+};
+
+const VkExtensionProperties nulldrv_device_exts[1] = {
+    {
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
     }
 };
 
@@ -158,8 +161,8 @@ static enum nulldrv_ext_type nulldrv_gpu_lookup_extension(
 {
     enum nulldrv_ext_type type;
 
-    for (type = 0; type < ARRAY_SIZE(nulldrv_gpu_exts); type++) {
-        if (strcmp(nulldrv_gpu_exts[type], extensionName) == 0)
+    for (type = 0; type < ARRAY_SIZE(nulldrv_device_exts); type++) {
+        if (strcmp(nulldrv_device_exts[type].extensionName, extensionName) == 0)
             break;
     }
 
@@ -1404,7 +1407,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties
     }
 
     copy_size = *pPropertyCount < NULLDRV_EXT_COUNT ? *pPropertyCount : NULLDRV_EXT_COUNT;
-    memcpy(pProperties, intel_gpu_exts, copy_size * sizeof(VkExtensionProperties));
+    memcpy(pProperties, nulldrv_instance_extensions, copy_size * sizeof(VkExtensionProperties));
     *pPropertyCount = copy_size;
     if (copy_size < NULLDRV_EXT_COUNT) {
         return VK_INCOMPLETE;
@@ -1419,13 +1422,6 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
     return VK_SUCCESS;
 }
 
-const VkExtensionProperties nulldrv_phy_dev_gpu_exts[1] = {
-    {
-        .extensionName = VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_KHR_DISPLAY_SWAPCHAIN_REVISION,
-    }
-};
-
 VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
@@ -1433,7 +1429,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     VkExtensionProperties*                      pProperties)
 {
     uint32_t copy_size;
-    uint32_t extension_count = ARRAY_SIZE(nulldrv_phy_dev_gpu_exts);
+    uint32_t extension_count = ARRAY_SIZE(nulldrv_device_exts);
 
     if (pProperties == NULL) {
         *pPropertyCount = extension_count;
@@ -1441,7 +1437,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
     }
 
     copy_size = *pPropertyCount < extension_count ? *pPropertyCount : extension_count;
-    memcpy(pProperties, nulldrv_phy_dev_gpu_exts, copy_size * sizeof(VkExtensionProperties));
+    memcpy(pProperties, nulldrv_device_exts, copy_size * sizeof(VkExtensionProperties));
     *pPropertyCount = copy_size;
     if (copy_size < extension_count) {
         return VK_INCOMPLETE;
