@@ -122,7 +122,7 @@ class Subcommand(object):
         func_protos.append('#endif')
         func_protos.append('// Hooked function prototypes\n')
         for proto in self.protos:
-            if 'Dbg' not in proto.name:
+            if 'Dbg' not in proto.name and 'DebugReport' not in proto.name:
                 func_protos.append('VKTRACER_EXPORT %s;' % proto.c_func(prefix="__HOOKED_vk", attr="VKAPI"))
 
         func_protos.append('#ifdef __cplusplus')
@@ -285,7 +285,7 @@ class Subcommand(object):
             size_func_suffix = '_%s' % extensionName.lower()
         for p in params:
             #First handle custom cases
-            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocateInfo'] and 'khr' not in p.ty.lower():
+            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocateInfo'] and 'khr' not in p.ty.lower() and 'lunarg' not in p.ty.lower():
                 ps.append('get_struct_chain_size%s((void*)%s)' % (size_func_suffix, p.name))
                 skip_list.append(p.name)
             elif p.name in custom_size_dict:
@@ -417,7 +417,7 @@ class Subcommand(object):
                                 if 'pDataSize' in p.name:
                                     in_data_size = True;
                             elif 'pfnMsgCallback' == p.name:
-                                raw_packet_update_list.append('    PFN_vkDbgMsgCallback* pNonConstCallback = (PFN_vkDbgMsgCallback*)&pPacket->pfnMsgCallback;')
+                                raw_packet_update_list.append('    PFN_vkDebugReportCallbackLUNARG* pNonConstCallback = (PFN_vkDebugReportCallbackLUNARG*)&pPacket->pfnMsgCallback;')
                                 raw_packet_update_list.append('    *pNonConstCallback = pfnMsgCallback;')
                             elif '[' in p.ty:
                                 raw_packet_update_list.append('    memcpy((void *) pPacket->%s, %s, sizeof(pPacket->%s));' % (p.name, p.name, p.name))
@@ -531,7 +531,7 @@ class Subcommand(object):
         for proto in self.protos:
             interp_func_body.append('        case VKTRACE_TPI_VK_vk%s:\n        {' % proto.name)
             header_prefix = 'h'
-            if 'Dbg' in proto.name:
+            if 'Dbg' in proto.name or 'DebugReport' in proto.name:
                 header_prefix = 'pH'
             interp_func_body.append('            return interpret_body_as_vk%s(pHeader)->%seader;\n        }' % (proto.name, header_prefix))
         interp_func_body.append('        default:')
@@ -942,7 +942,7 @@ class Subcommand(object):
         if_body.append('    return pPacket;')
         if_body.append('}\n')
         for proto in self.protos:
-            if 'Dbg' not in proto.name:
+            if 'Dbg' not in proto.name and 'DebugReport' not in proto.name:
                 if 'UnmapMemory' == proto.name:
                     proto.params.append(vulkan.Param("void*", "pData"))
                 elif 'FlushMappedMemoryRanges' == proto.name:
@@ -1349,7 +1349,7 @@ class Subcommand(object):
         rif_body = []
         rif_body.append('void vkFuncs::init_funcs(void * handle)\n{\n    m_libHandle = handle;')
         for proto in self.protos:
-            if 'Dbg' not in proto.name:
+            if 'Dbg' not in proto.name and 'DebugReport' not in proto.name:
                 rif_body.append('    real_vk%s = (type_vk%s)(vktrace_platform_get_library_entrypoint(handle, "vk%s"));' % (proto.name, proto.name, proto.name))
             else: # These func ptrs get assigned at GetProcAddr time
                 rif_body.append('    real_vk%s = (type_vk%s)NULL;' % (proto.name, proto.name))
@@ -1494,8 +1494,8 @@ class Subcommand(object):
                                  'UnmapMemory',
                                  'UpdateDescriptorSets',
                                  'WaitForFences',
-                                 'DbgCreateMsgCallback',
-                                 'DbgDestroyMsgCallback',
+                                 'CreateDebugReportCallbackLUNARG',
+                                 'DestroyDebugReportCallbackLUNARG',
                                  'AllocateCommandBuffers',
                                  ]
 
@@ -1610,14 +1610,14 @@ class Subcommand(object):
                     last_name = p.name
 
                 if proto.name == 'DestroyInstance':
-                    rbody.append('            if (m_vkFuncs.real_vkDbgDestroyMsgCallback != NULL)')
+                    rbody.append('            if (m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG != NULL)')
                     rbody.append('            {')
-                    rbody.append('                m_vkFuncs.real_vkDbgDestroyMsgCallback(remappedinstance, m_dbgMsgCallbackObj);')
+                    rbody.append('                m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG(remappedinstance, m_dbgMsgCallbackObj, pPacket->pAllocator);')
                     rbody.append('            }')
                 # TODO: need a better way to indicate which extensions should be mapped to which Get*ProcAddr
                 elif proto.name == 'GetInstanceProcAddr':
                     for iProto in self.protos:
-                        if 'Dbg' in iProto.name:
+                        if 'Dbg' in iProto.name or 'DebugReport' in iProto.name:
                             rbody.append('            if (strcmp(pPacket->pName, "vk%s") == 0) {' % (iProto.name))
                             rbody.append('               m_vkFuncs.real_vk%s = (PFN_vk%s)vk%s(remappedinstance, pPacket->pName);' % (iProto.name, iProto.name, proto.name))
                             rbody.append('            }')
@@ -1908,7 +1908,6 @@ class VktraceReplayVkFuncPtrs(Subcommand):
         header_txt.append('#include <xcb/xcb.h>\n')
         header_txt.append('#endif')
         header_txt.append('#include "vulkan/vulkan.h"')
-        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
 
     def generate_body(self):

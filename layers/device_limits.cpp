@@ -114,12 +114,24 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
     {
         option_str = getLayerOption("DeviceLimitsLogFilename");
         log_output = getLayerLogOutput(option_str, "DeviceLimits");
-        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &callback);
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = log_callback;
+        dbgCreateInfo.pUserData = (void *) log_output;
+        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
         my_data->logging_callback.push_back(callback);
     }
 
     if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        layer_create_msg_callback(my_data->report_data, report_flags, win32_debug_output_msg, NULL, &callback);
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = win32_debug_output_msg;
+        dbgCreateInfo.pUserData = NULL;
+        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator, &callback);
         my_data->logging_callback.push_back(callback);
     }
 
@@ -191,7 +203,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
         VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
-        layer_destroy_msg_callback(my_data->report_data, callback);
+        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
         my_data->logging_callback.pop_back();
     }
 
@@ -550,29 +562,28 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
-    VkInstance                          instance,
-    VkFlags                             msgFlags,
-    const PFN_vkDbgMsgCallback          pfnMsgCallback,
-    void*                               pUserData,
-    VkDebugReportCallbackLUNARG*                   pMsgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
+        VkInstance                                  instance,
+        VkDebugReportCallbackCreateInfoLUNARG*      pCreateInfo,
+        const VkAllocationCallbacks*                pAllocator,
+        VkDebugReportCallbackLUNARG*                pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkResult res = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    VkResult res = my_data->instance_dispatch_table->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == res) {
-        res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+        res = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pMsgCallback);
     }
     return res;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
-    VkInstance                          instance,
-    VkDebugReportCallbackLUNARG                    msgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
+        VkInstance                                  instance,
+        VkDebugReportCallbackLUNARG                 msgCallback,
+        const VkAllocationCallbacks*                pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkResult res = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);
-    layer_destroy_msg_callback(my_data->report_data, msgCallback);
-    return res;
+    my_data->instance_dispatch_table->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);
+    layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)

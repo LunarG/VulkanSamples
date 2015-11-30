@@ -110,11 +110,12 @@ typedef enum _DEBUG_REPORT_ERROR
 
 #define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDebugReportObjectTypeLUNARG, 0)
 #define VK_ERROR_VALIDATION_FAILED VK_DEBUG_REPORT_ENUM_EXTEND(VkResult, 0)
+#define VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG VK_DEBUG_REPORT_ENUM_EXTEND(VkStructureType, 0)
 
 // ------------------------------------------------------------------------------------------------
 // Vulkan function pointers
 
-typedef VkBool32 (*PFN_vkDbgMsgCallback)(
+typedef VkBool32 (*PFN_vkDebugReportCallbackLUNARG)(
     VkFlags                             msgFlags,
     VkDebugReportObjectTypeLUNARG       objType,
     uint64_t                            srcObject,
@@ -124,26 +125,33 @@ typedef VkBool32 (*PFN_vkDbgMsgCallback)(
     const char*                         pMsg,
     const void*                         pUserData);
 
+typedef struct VkDebugReportCallbackCreateInfoLUNARG {
+    VkStructureType                     sType;
+    const void*                         pNext;
+    VkDebugReportFlagsLUNARG            flags;
+    PFN_vkDebugReportCallbackLUNARG     pfnCallback;
+    const void*                         pUserData;
+} VkDebugReportCallbackCreateInfoLUNARG;
+
 // ------------------------------------------------------------------------------------------------
 // API functions
 
-typedef VkResult (VKAPI_PTR *PFN_vkDbgCreateMsgCallback)(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDebugReportCallbackLUNARG* pMsgCallback);
-typedef VkResult (VKAPI_PTR *PFN_vkDbgDestroyMsgCallback)(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugReportCallbackLUNARG* pCallback);
+typedef VkResult (VKAPI_PTR *PFN_vkDestroyDebugReportCallbackLUNARG)(VkInstance instance, VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator);
 
 #ifdef VK_PROTOTYPES
 
 // DebugReport extension entrypoints
-VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
-    VkInstance                          instance,
-    VkFlags                             msgFlags,
-    const PFN_vkDbgMsgCallback          pfnMsgCallback,
-    void*                               pUserData,
-    VkDebugReportCallbackLUNARG*        pMsgCallback);
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportCallbackCreateInfoLUNARG*      pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDebugReportCallbackLUNARG*                pCallback);
 
-VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
-    VkInstance                          instance,
-    VkDebugReportCallbackLUNARG         msgCallback);
-
+VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportCallbackLUNARG                 callback,
+    const VkAllocationCallbacks*                pAllocator);
 #endif // VK_PROTOTYPES
 
 #ifdef __cplusplus

@@ -192,7 +192,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan/vulkan.h", "vk_lunarg_debug_report.h"],
+    headers=["vulkan/vulkan.h", "vulkan/vk_lunarg_debug_report.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -1124,16 +1124,16 @@ lunarg_debug_report = Extension(
         "VkDebugReportCallbackLUNARG",
     ],
     protos=[
-        Proto("VkResult", "DbgCreateMsgCallback",
+        Proto("VkResult", "CreateDebugReportCallbackLUNARG",
             [Param("VkInstance", "instance"),
-             Param("VkFlags", "msgFlags"),
-             Param("const PFN_vkDbgMsgCallback", "pfnMsgCallback"),
-             Param("void*", "pUserData"),
-             Param("VkDebugReportCallbackLUNARG*", "pMsgCallback")]),
+             Param("VkDebugReportCallbackCreateInfoLUNARG*", "pCreateInfo"),
+             Param("const VkAllocationCallbacks*", "pAllocator"),
+             Param("VkDebugReportCallbackLUNARG*", "pCallback")]),
 
-        Proto("VkResult", "DbgDestroyMsgCallback",
+        Proto("VkResult", "DestroyDebugReportCallbackLUNARG",
             [Param("VkInstance", "instance"),
-             Param("VkDebugReportCallbackLUNARG", "msgCallback")]),
+             Param("VkDebugReportCallbackLUNARG", "callback"),
+             Param("const VkAllocationCallbacks*", "pAllocator")]),
     ],
 )
 lunarg_debug_marker = Extension(
@@ -1269,7 +1269,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan/vulkan.h", "vk_lunarg_debug_report.h"],
+            headers=["vulkan/vulkan.h", "vulkan/vk_lunarg_debug_report.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))

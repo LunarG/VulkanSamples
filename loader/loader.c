@@ -114,8 +114,8 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .GetPhysicalDeviceSurfaceCapabilitiesKHR = loader_GetPhysicalDeviceSurfaceCapabilitiesKHR,
     .GetPhysicalDeviceSurfaceFormatsKHR = loader_GetPhysicalDeviceSurfaceFormatsKHR,
     .GetPhysicalDeviceSurfacePresentModesKHR = loader_GetPhysicalDeviceSurfacePresentModesKHR,
-    .DbgCreateMsgCallback = loader_DbgCreateMsgCallback,
-    .DbgDestroyMsgCallback = loader_DbgDestroyMsgCallback,
+    .CreateDebugReportCallbackLUNARG = loader_CreateDebugReportCallback,
+    .DestroyDebugReportCallbackLUNARG = loader_DestroyDebugReportCallback,
 #ifdef VK_USE_PLATFORM_MIR_KHR
     .CreateMirSurfaceKHR = loader_CreateMirSurfaceKHR,
     .GetPhysicalDeviceMirPresentationSupportKHR = loader_GetPhysicalDeviceMirPresentationSupportKHR,
@@ -1341,8 +1341,8 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
     LOOKUP_GIPA(GetPhysicalDeviceQueueFamilyProperties, true);
     LOOKUP_GIPA(EnumerateDeviceExtensionProperties, true);
     LOOKUP_GIPA(GetPhysicalDeviceSparseImageFormatProperties, true);
-    LOOKUP_GIPA(DbgCreateMsgCallback, false);
-    LOOKUP_GIPA(DbgDestroyMsgCallback, false);
+    LOOKUP_GIPA(CreateDebugReportCallbackLUNARG, false);
+    LOOKUP_GIPA(DestroyDebugReportCallbackLUNARG, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceSupportKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceCapabilitiesKHR, false);
     LOOKUP_GIPA(GetPhysicalDeviceSurfaceFormatsKHR, false);

@@ -37,8 +37,8 @@ void ext_init_create_instance(
 {
     PFN_vkGetInstanceProcAddr gpa = instData->instTable.GetInstanceProcAddr;
 
-    instData->instTable.DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
-    instData->instTable.DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
+    instData->instTable.CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
+    instData->instTable.DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
     instData->instTable.GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     instData->instTable.DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
     instData->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");

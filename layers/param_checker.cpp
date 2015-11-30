@@ -96,46 +96,58 @@ static void InitParamChecker(layer_data *data, const VkAllocationCallbacks *pAll
         FILE *log_output = NULL;
         const char* option_str = getLayerOption("ParamCheckerLogFilename");
         log_output = getLayerLogOutput(option_str, "ParamChecker");
-        layer_create_msg_callback(data->report_data, report_flags, log_callback, (void *) log_output, &callback);
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = log_callback;
+        dbgCreateInfo.pUserData = log_output;
+
+        layer_create_msg_callback(data->report_data, &dbgCreateInfo, pAllocator, &callback);
         data->logging_callback.push_back(callback);
     }
 
     if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        layer_create_msg_callback(data->report_data, report_flags, win32_debug_output_msg, NULL, &callback);
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = report_flags;
+        dbgCreateInfo.pfnCallback = win32_debug_output_msg;
+        dbgCreateInfo.pUserData = NULL;
+
+        layer_create_msg_callback(data->report_data, &dbgCreateInfo, pAllocator, &callback);
         data->logging_callback.push_back(callback);
     }
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
     VkInstance instance,
-    VkFlags msgFlags,
-    const PFN_vkDbgMsgCallback pfnMsgCallback,
-    void* pUserData,
+    VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
     VkDebugReportCallbackLUNARG* pMsgCallback)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    VkResult result =  pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    VkResult result =  pTable->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pMsgCallback);
 
     if (result == VK_SUCCESS)
     {
         layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-        result = layer_create_msg_callback(data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+        result = layer_create_msg_callback(data->report_data, pCreateInfo, pAllocator, pMsgCallback);
     }
 
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
     VkInstance instance,
-    VkDebugReportCallbackLUNARG msgCallback)
+    VkDebugReportCallbackLUNARG msgCallback,
+    const VkAllocationCallbacks *pAllocator)
 {
     VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
-    VkResult result =  pTable->DbgDestroyMsgCallback(instance, msgCallback);
+    pTable->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);
 
     layer_data *data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    layer_destroy_msg_callback(data->report_data, msgCallback);
-
-    return result;
+    layer_destroy_msg_callback(data->report_data, msgCallback, pAllocator);
 }
 
 static const VkLayerProperties pc_global_layers[] = {
@@ -1760,7 +1772,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     while (my_data->logging_callback.size() > 0) {
         VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
-        layer_destroy_msg_callback(my_data->report_data, callback);
+        layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
         my_data->logging_callback.pop_back();
     }
 

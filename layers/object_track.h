@@ -425,7 +425,13 @@ initObjectTracker(
     {
         option_str = getLayerOption("ObjectTrackerLogFilename");
         log_output = getLayerLogOutput(option_str, "ObjectTracker");
-        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &(my_data->logging_callback));
+        VkDebugReportCallbackCreateInfoLUNARG dbgInfo;
+        memset(&dbgInfo, 0, sizeof(dbgInfo));
+        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgInfo.pfnCallback = log_callback;
+        dbgInfo.pUserData = log_output;
+        dbgInfo.flags = report_flags;
+        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &my_data->logging_callback);
     }
 
     if (!objLockInitialized)

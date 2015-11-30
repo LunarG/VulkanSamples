@@ -121,9 +121,9 @@ FILE* getLayerLogOutput(const char *_option, const char *layerName)
     return log_output;
 }
 
-uint32_t getLayerOptionFlags(const char *_option, uint32_t optionDefault)
+VkDebugReportFlagsLUNARG getLayerOptionFlags(const char *_option, uint32_t optionDefault)
 {
-    uint32_t flags = optionDefault;
+    VkDebugReportFlagsLUNARG flags = optionDefault;
     const char *option = (g_configFileObj.getOption(_option));
 
     /* parse comma-separated options */

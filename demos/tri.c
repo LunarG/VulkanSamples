@@ -236,8 +236,8 @@ struct demo {
     VkPhysicalDeviceMemoryProperties memory_properties;
 
     bool validate;
-    PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
+    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallback;
     VkDebugReportCallbackLUNARG msg_callback;
 
     float depthStencil;
@@ -1946,26 +1946,32 @@ static void demo_init_vk(struct demo *demo)
     };
 
     if (demo->validate) {
-        demo->dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
-        if (!demo->dbgCreateMsgCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
+        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackLUNARG");
+        if (!demo->CreateDebugReportCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackLUNARG\n",
                      "vkGetProcAddr Failure");
         }
-        err = demo->dbgCreateMsgCallback(
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+        dbgCreateInfo.pfnCallback = (const void *) dbgFunc;
+        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.pNext = NULL;
+        err = demo->CreateDebugReportCallback(
                   demo->inst,
-                  VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT,
-                  dbgFunc, NULL,
+                  &dbgCreateInfo,
+                  NULL,
                   &demo->msg_callback);
         switch (err) {
         case VK_SUCCESS:
             break;
         case VK_ERROR_OUT_OF_HOST_MEMORY:
-            ERR_EXIT("dbgCreateMsgCallback: out of host memory\n",
-                     "dbgCreateMsgCallback Failure");
+            ERR_EXIT("CreateDebugReportCallback: out of host memory\n",
+                     "CreateDebugReportCallback Failure");
             break;
         default:
-            ERR_EXIT("dbgCreateMsgCallback: unknown failure\n",
-                     "dbgCreateMsgCallback Failure");
+            ERR_EXIT("CreateDebugReportCallback: unknown failure\n",
+                     "CreateDebugReportCallback Failure");
             break;
         }
     }

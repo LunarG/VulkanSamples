@@ -119,9 +119,8 @@ void icd_instance_destroy(struct icd_instance *instance)
 
 VkResult icd_instance_create_logger(
         struct icd_instance *instance,
-        VkFlags msg_flags,
-        PFN_vkDbgMsgCallback func,
-        void *user_data,
+        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
         VkDebugReportCallbackLUNARG *msg_obj)
 {
     struct icd_instance_logger *logger;
@@ -136,21 +135,22 @@ VkResult icd_instance_create_logger(
     if (!logger)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-    logger->func = func;
-    logger->flags = msg_flags;
+    logger->func = pCreateInfo->pfnCallback;
+    logger->flags = pCreateInfo->flags;
     logger->next = instance->loggers;
     instance->loggers = logger;
 
-    logger->user_data = (void *) user_data;
+    logger->user_data = pCreateInfo->pUserData;
 
     *( struct icd_instance_logger **)msg_obj = logger;
 
     return VK_SUCCESS;
 }
 
-VkResult icd_instance_destroy_logger(
+void icd_instance_destroy_logger(
         struct icd_instance *instance,
-        const VkDebugReportCallbackLUNARG msg_obj)
+        const VkDebugReportCallbackLUNARG msg_obj,
+        const VkAllocationCallbacks *pAllocator)
 {
     struct icd_instance_logger *logger, *prev;
     VkDebugReportCallbackLUNARG local_msg_obj = msg_obj;
@@ -171,15 +171,14 @@ VkResult icd_instance_destroy_logger(
         instance->loggers = logger->next;
 
     icd_instance_free(instance, logger);
-
-    return VK_SUCCESS;
 }
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,
                       VkDebugReportObjectTypeLUNARG obj_type,
                       uint64_t src_object,
-                      size_t location, int32_t msg_code,
+                      size_t location,
+                      int32_t msg_code,
                       const char *msg)
 {
     const struct icd_instance_logger *logger;

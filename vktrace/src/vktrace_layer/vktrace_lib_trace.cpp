@@ -1743,10 +1743,10 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
 
         if (instData->LunargDebugReportEnabled)
         {
-            if (!strcmp("vkDbgCreateMsgCallback", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkDbgCreateMsgCallback;
-            if (!strcmp("vkDbgDestroyMsgCallback", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkDbgDestroyMsgCallback;
+            if (!strcmp("vkCreateDebugReportCallbackLUNARG", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateDebugReportCallbackLUNARG;
+            if (!strcmp("vkDestroyDebugReportCallbackLUNARG", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDestroyDebugReportCallbackLUNARG;
 
         }
         if (instData->KHRSurfaceEnabled)

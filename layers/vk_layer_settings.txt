@@ -14,7 +14,7 @@
 #  VK_DBG_LAYER_ACTION_LOG_MSG - Log a txt message to stdout or to a log file
 #     specified via the <LayerName>LogFilename setting (see below)
 #  VK_DBG_LAYER_ACTION_CALLBACK - Call user defined callback function(s) that
-#     have been registered via the vkDbgCreateMsgCallback() extension. Since
+#     have been registered via the VK_EXT_LUNARG_debug_report extension. Since
 #     app must register callback, this is a NOOP for the settings file.
 #  VK_DBG_LAYER_ACTION_BREAK - Trigger a breakpoint.
 #

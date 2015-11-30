@@ -44,4 +44,4 @@ extern int VKTRACER_CDECL VkReplayDump();
 extern int VKTRACER_CDECL VkReplayGetFrameNumber();
 extern void VKTRACER_CDECL VkReplayResetFrameNumber();
 
-extern PFN_vkDbgMsgCallback g_fpDbgMsgCallback;
+extern PFN_vkDebugReportCallbackLUNARG g_fpDbgMsgCallback;

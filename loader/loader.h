@@ -188,8 +188,8 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkEnumerateDeviceExtensionProperties EnumerateDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
-    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
+    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;

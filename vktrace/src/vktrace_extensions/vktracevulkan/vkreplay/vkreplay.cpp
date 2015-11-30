@@ -34,7 +34,7 @@
 
 vkReplay* g_pReplayer = NULL;
 VKTRACE_CRITICAL_SECTION g_handlerLock;
-PFN_vkDbgMsgCallback g_fpDbgMsgCallback;
+PFN_vkDebugReportCallbackLUNARG g_fpDbgMsgCallback;
 vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
@@ -54,7 +54,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
     {
         vktrace_LogError("MsgFlags %d with object %#" PRIxLEAST64 ", location %u returned msgCode %d and msg %s",
                      msgFlags, srcObjectHandle, location, msgCode, (char *) pMsg);
-        g_pReplayer->push_validation_msg(msgFlags, objType, srcObjectHandle, location, msgCode, pLayerPrefix, (char *) pMsg, pUserData);
+        g_pReplayer->push_validation_msg(msgFlags, objType, srcObjectHandle, location, msgCode, pLayerPrefix, pMsg, pUserData);
         if (g_fpVktraceCallback != NULL)
         {
             g_fpVktraceCallback(vktrace_replay::VKTRACE_DBG_MSG_ERROR, pMsg);

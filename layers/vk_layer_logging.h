@@ -88,8 +88,8 @@ static inline debug_report_data *debug_report_create_instance(
     debug_report_data              *debug_data;
     PFN_vkGetInstanceProcAddr gpa = table->GetInstanceProcAddr;
 
-    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
-    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
+    table->CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
+    table->DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
 
     debug_data = (debug_report_data *) malloc(sizeof(debug_report_data));
     if (!debug_data) return NULL;
@@ -148,31 +148,31 @@ static inline void layer_debug_report_destroy_device(VkDevice device)
 }
 
 static inline VkResult layer_create_msg_callback(
-        debug_report_data              *debug_data,
-        VkFlags                         msgFlags,
-        const PFN_vkDbgMsgCallback      pfnMsgCallback,
-        void                           *pUserData,
-        VkDebugReportCallbackLUNARG               *pMsgCallback)
+        debug_report_data                     *debug_data,
+        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkAllocationCallbacks           *pAllocator,
+        VkDebugReportCallbackLUNARG           *pCallback)
 {
+    /* TODO: Use app allocator */
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode*)malloc(sizeof(VkLayerDbgFunctionNode));
     if (!pNewDbgFuncNode)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     // Handle of 0 is logging_callback so use allocated Node address as unique handle
-    if (!(*pMsgCallback))
-        *pMsgCallback = (VkDebugReportCallbackLUNARG) pNewDbgFuncNode;
-    pNewDbgFuncNode->msgCallback = *pMsgCallback;
-    pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-    pNewDbgFuncNode->msgFlags = msgFlags;
-    pNewDbgFuncNode->pUserData = pUserData;
+    if (!(*pCallback))
+        *pCallback = (VkDebugReportCallbackLUNARG) pNewDbgFuncNode;
+    pNewDbgFuncNode->msgCallback = *pCallback;
+    pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
+    pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
+    pNewDbgFuncNode->pUserData = pCreateInfo->pUserData;
     pNewDbgFuncNode->pNext = debug_data->g_pDbgFunctionHead;
 
     debug_data->g_pDbgFunctionHead = pNewDbgFuncNode;
-    debug_data->active_flags |= msgFlags;
+    debug_data->active_flags |= pCreateInfo->flags;
 
     debug_report_log_msg(
                 debug_data, VK_DEBUG_REPORT_DEBUG_BIT,
-                VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) *pMsgCallback,
+                VK_OBJECT_TYPE_MSG_CALLBACK, (uint64_t) *pCallback,
                 0, DEBUG_REPORT_CALLBACK_REF,
                 "DebugReport",
                 "Added callback");
@@ -181,7 +181,8 @@ static inline VkResult layer_create_msg_callback(
 
 static inline void layer_destroy_msg_callback(
         debug_report_data              *debug_data,
-        VkDebugReportCallbackLUNARG                msg_callback)
+        VkDebugReportCallbackLUNARG     callback,
+        const VkAllocationCallbacks    *pAllocator)
 {
     VkLayerDbgFunctionNode *pTrav = debug_data->g_pDbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
@@ -189,7 +190,7 @@ static inline void layer_destroy_msg_callback(
 
     debug_data->active_flags = 0;
     while (pTrav) {
-        if (pTrav->msgCallback == msg_callback) {
+        if (pTrav->msgCallback == callback) {
             matched = true;
             pPrev->pNext = pTrav->pNext;
             if (debug_data->g_pDbgFunctionHead == pTrav) {
@@ -208,6 +209,7 @@ static inline void layer_destroy_msg_callback(
         pPrev = pTrav;
         pTrav = pTrav->pNext;
         if (matched) {
+            /* TODO: Use pAllocator */
             free(pPrev);
         }
     }
@@ -221,11 +223,11 @@ static inline PFN_vkVoidFunction debug_report_get_instance_proc_addr(
         return NULL;
     }
 
-    if (!strcmp(funcName, "vkDbgCreateMsgCallback")) {
-        return (PFN_vkVoidFunction) vkDbgCreateMsgCallback;
+    if (!strcmp(funcName, "vkCreateDebugReportCallbackLUNARG")) {
+        return (PFN_vkVoidFunction) vkCreateDebugReportCallbackLUNARG;
     }
-    if (!strcmp(funcName, "vkDbgDestroyMsgCallback")) {
-        return (PFN_vkVoidFunction) vkDbgDestroyMsgCallback;
+    if (!strcmp(funcName, "vkDestroyDebugReportCallbackLUNARG")) {
+        return (PFN_vkVoidFunction) vkDestroyDebugReportCallbackLUNARG;
     }
 
     return NULL;
@@ -294,7 +296,7 @@ static inline VkBool32 log_msg(
 
 static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeLUNARG       objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -315,7 +317,7 @@ static inline VKAPI_ATTR VkBool32 VKAPI_CALL log_callback(
 
 static inline VKAPI_ATTR VkBool32 VKAPI_CALL win32_debug_output_msg(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeLUNARG       objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

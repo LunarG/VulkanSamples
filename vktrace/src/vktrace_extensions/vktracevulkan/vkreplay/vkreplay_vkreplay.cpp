@@ -433,9 +433,15 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
             return VK_ERROR_VALIDATION_FAILED;
 
         VkFlags reportFlags = VK_DEBUG_REPORT_INFO_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT | VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_DEBUG_BIT;
-        if (m_vkFuncs.real_vkDbgCreateMsgCallback != NULL)
+        if (m_vkFuncs.real_vkCreateDebugReportCallbackLUNARG != NULL)
         {
-            if (m_vkFuncs.real_vkDbgCreateMsgCallback(remappedInstance, reportFlags, g_fpDbgMsgCallback, NULL, &m_dbgMsgCallbackObj) != VK_SUCCESS)
+            VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+            memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+            dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+            dbgCreateInfo.flags = reportFlags;
+            dbgCreateInfo.pfnCallback = g_fpDbgMsgCallback;
+            dbgCreateInfo.pUserData = NULL;
+            if (m_vkFuncs.real_vkCreateDebugReportCallbackLUNARG(remappedInstance, &dbgCreateInfo, NULL, &m_dbgMsgCallbackObj) != VK_SUCCESS)
             {
                 vktrace_LogWarning("Failed to register vulkan callback for replayer error handling.");
             }
@@ -1935,7 +1941,7 @@ VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32S
 }
 #endif
 
-VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsgCallback* pPacket)
+VkResult  vkReplay::manually_replay_vkCreateDebugReportCallbackLUNARG(packet_vkCreateDebugReportCallbackLUNARG* pPacket)
 {
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
     VkDebugReportCallbackLUNARG local_msgCallback;
@@ -1949,27 +1955,33 @@ VkResult  vkReplay::manually_replay_vkDbgCreateMsgCallback(packet_vkDbgCreateMsg
         return VK_SUCCESS;
     } else
     {
-        replayResult = m_vkFuncs.real_vkDbgCreateMsgCallback(remappedInstance, pPacket->msgFlags, g_fpDbgMsgCallback, NULL, &local_msgCallback);
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.flags = pPacket->pCreateInfo->flags;
+        dbgCreateInfo.pfnCallback = g_fpDbgMsgCallback;
+        dbgCreateInfo.pUserData = NULL;
+        replayResult = m_vkFuncs.real_vkCreateDebugReportCallbackLUNARG(remappedInstance, &dbgCreateInfo, NULL, &local_msgCallback);
         if (replayResult == VK_SUCCESS)
         {
-                m_objMapper.add_to_debugreportcallbacklunargs_map(*(pPacket->pMsgCallback), local_msgCallback);
+                m_objMapper.add_to_debugreportcallbacklunargs_map(*(pPacket->pCallback), local_msgCallback);
         }
     }
     return replayResult;
 }
 
-VkResult vkReplay::manually_replay_vkDbgDestroyMsgCallback(packet_vkDbgDestroyMsgCallback* pPacket)
+VkResult vkReplay::manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket)
 {
     VkResult replayResult = VK_SUCCESS;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
     VkDebugReportCallbackLUNARG remappedMsgCallback;
-    remappedMsgCallback = m_objMapper.remap_debugreportcallbacklunargs(pPacket->msgCallback);
+    remappedMsgCallback = m_objMapper.remap_debugreportcallbacklunargs(pPacket->callback);
     if (!g_fpDbgMsgCallback) {
         // just eat this call as we don't have local call back function defined
         return VK_SUCCESS;
     } else
     {
-        replayResult = m_vkFuncs.real_vkDbgDestroyMsgCallback(remappedInstance, remappedMsgCallback);
+        replayResult = m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG(remappedInstance, remappedMsgCallback, NULL);
     }
 
     return replayResult;

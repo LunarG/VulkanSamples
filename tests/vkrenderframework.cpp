@@ -47,8 +47,8 @@ VkRenderFramework::VkRenderFramework() :
     m_depth_clear_color( 1.0 ),
     m_stencil_clear_color( 0 ),
     m_depthStencil( NULL ),
-    m_dbgCreateMsgCallback( VK_NULL_HANDLE ),
-    m_dbgDestroyMsgCallback( VK_NULL_HANDLE ),
+    m_CreateDebugReportCallback( VK_NULL_HANDLE ),
+    m_DestroyDebugReportCallback( VK_NULL_HANDLE ),
     m_globalMsgCallback( VK_NULL_HANDLE ),
     m_devMsgCallback( VK_NULL_HANDLE )
 {
@@ -86,7 +86,7 @@ void VkRenderFramework::InitFramework(
         std::vector<const char *> device_layer_names,
         std::vector<const char *> instance_extension_names,
         std::vector<const char *> device_extension_names,
-        PFN_vkDbgMsgCallback dbgFunction,
+        PFN_vkDebugReportCallbackLUNARG dbgFunction,
         void *userData)
 {
     VkInstanceCreateInfo instInfo = {};
@@ -113,18 +113,24 @@ void VkRenderFramework::InitFramework(
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, (uint32_t) 1) << "No GPU available";
     if (dbgFunction) {
-        m_dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(this->inst, "vkDbgCreateMsgCallback");
-        ASSERT_NE(m_dbgCreateMsgCallback, (PFN_vkDbgCreateMsgCallback) NULL) << "Did not get function pointer for DbgCreateMsgCallback";
-        if (m_dbgCreateMsgCallback) {
-            err = m_dbgCreateMsgCallback(this->inst,
-                                         VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT,
-                                         dbgFunction,
-                                         userData,
+        m_CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(this->inst, "vkCreateDebugReportCallbackLUNARG");
+        ASSERT_NE(m_CreateDebugReportCallback, (PFN_vkCreateDebugReportCallbackLUNARG) NULL) << "Did not get function pointer for CreateDebugReportCallback";
+        if (m_CreateDebugReportCallback) {
+            VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+            memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
+            dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+            dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT;
+            dbgCreateInfo.pfnCallback = dbgFunction;
+            dbgCreateInfo.pUserData = userData;
+
+            err = m_CreateDebugReportCallback(this->inst,
+                                         &dbgCreateInfo,
+                                         NULL,
                                          &m_globalMsgCallback);
             ASSERT_VK_SUCCESS(err);
 
-            m_dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(this->inst, "vkDbgDestroyMsgCallback");
-            ASSERT_NE(m_dbgDestroyMsgCallback, (PFN_vkDbgDestroyMsgCallback) NULL) << "Did not get function pointer for DbgDestroyMsgCallback";
+            m_DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackLUNARG) vkGetInstanceProcAddr(this->inst, "vkDestroyDebugReportCallbackLUNARG");
+            ASSERT_NE(m_DestroyDebugReportCallback, (PFN_vkDestroyDebugReportCallbackLUNARG) NULL) << "Did not get function pointer for DestroyDebugReportCallback";
         }
     }
 
@@ -133,11 +139,16 @@ void VkRenderFramework::InitFramework(
 
     /* Now register callback on device */
     if (0) {
-        if (m_dbgCreateMsgCallback) {
-            err = m_dbgCreateMsgCallback(this->inst,
-                                         VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT,
-                                         dbgFunction,
-                                         userData,
+        if (m_CreateDebugReportCallback) {
+            VkDebugReportCallbackCreateInfoLUNARG dbgInfo;
+            memset(&dbgInfo, 0, sizeof(dbgInfo));
+            dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+            dbgInfo.pfnCallback = dbgFunction;
+            dbgInfo.pUserData = userData;
+            dbgInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+            err = m_CreateDebugReportCallback(this->inst,
+                                         &dbgInfo,
+                                         NULL,
                                          &m_devMsgCallback);
             ASSERT_VK_SUCCESS(err);
         }
@@ -155,8 +166,8 @@ void VkRenderFramework::ShutdownFramework()
     if (m_framebuffer) vkDestroyFramebuffer(device(), m_framebuffer, NULL);
     if (m_renderPass) vkDestroyRenderPass(device(), m_renderPass, NULL);
 
-    if (m_globalMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_globalMsgCallback);
-    if (m_devMsgCallback) m_dbgDestroyMsgCallback(this->inst, m_devMsgCallback);
+    if (m_globalMsgCallback) m_DestroyDebugReportCallback(this->inst, m_globalMsgCallback, NULL);
+    if (m_devMsgCallback) m_DestroyDebugReportCallback(this->inst, m_devMsgCallback, NULL);
 
     while (!m_renderTargets.empty()) {
         vkDestroyImageView(device(), m_renderTargets.back()->targetView(m_render_target_fmt), NULL);

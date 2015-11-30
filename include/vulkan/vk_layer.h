@@ -174,8 +174,8 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
-    PFN_vkDbgCreateMsgCallback DbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback DbgDestroyMsgCallback;
+    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
+    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
 #ifdef VK_USE_PLATFORM_MIR_KHR
     PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;
@@ -205,7 +205,7 @@ typedef struct VkLayerInstanceDispatchTable_
 typedef struct VkLayerDbgFunctionNode_
 {
     VkDebugReportCallbackLUNARG msgCallback;
-    PFN_vkDbgMsgCallback pfnMsgCallback;
+    PFN_vkDebugReportCallbackLUNARG pfnMsgCallback;
     VkFlags msgFlags;
     const void *pUserData;
     struct VkLayerDbgFunctionNode_ *pNext;

@@ -227,22 +227,28 @@ class Subcommand(object):
     def _gen_create_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(VkInstance instance, VkFlags msgFlags, const PFN_vkDbgMsgCallback pfnMsgCallback, void* pUserData, VkDebugReportCallbackLUNARG* pMsgCallback)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(VkInstance instance,')
+        r_body.append('                                       VkDebugReportCallbackCreateInfoLUNARG*    pCreateInfo,')
+        r_body.append('                                       const VkAllocationCallbacks*              pAllocator,')
+        r_body.append('                                       VkDebugReportCallbackLUNARG*              pCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
-            r_body.append('    VkResult result = pInstanceTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('    VkResult result = pInstanceTable->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
             r_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
-            r_body.append('        result = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('        result = layer_create_msg_callback(my_data->report_data,')
+            r_body.append('                                           pCreateInfo,')
+            r_body.append('                                           pAllocator,')
+            r_body.append('                                           pCallback);')
             r_body.append('    }')
             r_body.append('    return result;')
         else:
-            r_body.append('    VkResult result = instance_dispatch_table(instance)->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('    VkResult result = instance_dispatch_table(instance)->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
             r_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
-            r_body.append('        result = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);')
+            r_body.append('        result = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    }')
             r_body.append('    return result;')
         r_body.append('}')
@@ -251,20 +257,16 @@ class Subcommand(object):
     def _gen_destroy_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback, const VkAllocationCallbacks *pAllocator)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
-            r_body.append('    VkResult result = pInstanceTable->DbgDestroyMsgCallback(instance, msgCallback);')
-            r_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
-            r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback);')
-            r_body.append('    return result;')
         else:
-            r_body.append('    VkResult result = instance_dispatch_table(instance)->DbgDestroyMsgCallback(instance, msgCallback);')
-            r_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
-            r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback);')
-            r_body.append('    return result;')
+            r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
+        r_body.append('    pInstanceTable->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);')
+        r_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
+        r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -339,9 +341,9 @@ class Subcommand(object):
                 intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
                     # fill in default intercept for certain entrypoints
-                    if 'DbgCreateMsgCallback' == proto.name:
+                    if 'CreateDebugReportCallbackLUNARG' == proto.name:
                         intercept = self._gen_layer_dbg_create_msg_callback()
-                    elif 'DbgDestroyMsgCallback' == proto.name:
+                    elif 'DestroyDebugReportCallbackLUNARG' == proto.name:
                         intercept = self._gen_layer_dbg_destroy_msg_callback()
                     elif 'CreateDevice' == proto.name:
                         funcs.append('/* CreateDevice HERE */')
@@ -626,8 +628,13 @@ class Subcommand(object):
             func_body.append('    {')
             func_body.append('        option_str = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        log_output = getLayerLogOutput(option_str,"%s");' % self.layer_name)
-            func_body.append('        layer_create_msg_callback(my_data->report_data, report_flags,')
-            func_body.append('                                  log_callback, (void *) log_output,')
+            func_body.append('        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;')
+            func_body.append('        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));')
+            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;')
+            func_body.append('        dbgCreateInfo.flags = report_flags;')
+            func_body.append('        dbgCreateInfo.pfnCallback = log_callback;')
+            func_body.append('        dbgCreateInfo.pUserData = NULL;')
+            func_body.append('        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator,')
             func_body.append('                                  &my_data->logging_callback);')
             func_body.append('    }')
             func_body.append('')
@@ -664,7 +671,14 @@ class Subcommand(object):
             func_body.append('    {')
             func_body.append('        strOpt = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        log_output = getLayerLogOutput(strOpt, "%s");' % self.layer_name)
-            func_body.append('        layer_create_msg_callback(my_data->report_data, report_flags, log_callback, (void *) log_output, &my_data->logging_callback);')
+            func_body.append('        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;')
+            func_body.append('        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));')
+            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;')
+            func_body.append('        dbgCreateInfo.flags = report_flags;')
+            func_body.append('        dbgCreateInfo.pfnCallback = log_callback;')
+            func_body.append('        dbgCreateInfo.pUserData = log_output;')
+            func_body.append('        layer_create_msg_callback(my_data->report_data, &dbgCreateInfo, pAllocator,')
+            func_body.append('                                  &my_data->logging_callback);')
             func_body.append('    }')
             func_body.append('')
         if lockname is not None:
@@ -769,7 +783,7 @@ class GenericLayerSubcommand(Subcommand):
                          '    // Clean up logging callback, if any\n'
                          '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);\n'
                          '    if (my_data->logging_callback) {\n'
-                         '        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);\n'
+                         '        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback, pAllocator);\n'
                          '    }\n\n'
                          '    layer_debug_report_destroy_instance(my_data->report_data);\n'
                          '    layer_data_map.erase(key);\n'
@@ -1493,7 +1507,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    // Clean up logging callback, if any')
         gedi_txt.append('    layer_data *my_data = get_my_data_ptr(key, layer_data_map);')
         gedi_txt.append('    if (my_data->logging_callback) {')
-        gedi_txt.append('        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);')
+        gedi_txt.append('        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback, pAllocator);')
         gedi_txt.append('    }')
         gedi_txt.append('')
         gedi_txt.append('    layer_debug_report_destroy_instance(mid(instance));')
@@ -1571,7 +1585,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(cbv_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgCreateMsgCallback', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
+        if proto.name in [ 'CreateDebugReportCallbackLUNARG', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
             # use default version
             return None
 
@@ -1961,7 +1975,7 @@ class ThreadingSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'DbgCreateMsgCallback' ]:
+        if proto.name in [ 'CreateDebugReportCallbackLUNARG' ]:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")
@@ -2055,7 +2069,7 @@ class ThreadingSubcommand(Subcommand):
                          '    // Clean up logging callback, if any\n'
                          '    layer_data *my_data = get_my_data_ptr(key, layer_data_map);\n'
                          '    if (my_data->logging_callback) {\n'
-                         '        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback);\n'
+                         '        layer_destroy_msg_callback(my_data->report_data, my_data->logging_callback, pAllocator);\n'
                          '    }\n'
                          '\n'
                          '    layer_debug_report_destroy_instance(my_data->report_data);\n'

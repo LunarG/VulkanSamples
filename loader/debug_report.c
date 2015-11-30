@@ -65,12 +65,11 @@ void debug_report_create_instance(
     }
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
+static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
         VkInstance instance,
-        VkFlags msgFlags,
-        const PFN_vkDbgMsgCallback pfnMsgCallback,
-        void* pUserData,
-        VkDebugReportCallbackLUNARG* pMsgCallback)
+        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        VkAllocationCallbacks *pAllocator,
+        VkDebugReportCallbackLUNARG* pCallback)
 {
     VkLayerDbgFunctionNode *pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc((struct loader_instance *)instance, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pNewDbgFuncNode)
@@ -78,12 +77,12 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
 
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
-    VkResult result = inst->disp->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    VkResult result = inst->disp->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);
     if (result == VK_SUCCESS) {
-        pNewDbgFuncNode->msgCallback = *pMsgCallback;
-        pNewDbgFuncNode->pfnMsgCallback = pfnMsgCallback;
-        pNewDbgFuncNode->msgFlags = msgFlags;
-        pNewDbgFuncNode->pUserData = pUserData;
+        pNewDbgFuncNode->msgCallback = *pCallback;
+        pNewDbgFuncNode->pfnMsgCallback = pCreateInfo->pfnCallback;
+        pNewDbgFuncNode->msgFlags = pCreateInfo->flags;
+        pNewDbgFuncNode->pUserData = pCreateInfo->pUserData;
         pNewDbgFuncNode->pNext = inst->DbgFunctionHead;
         inst->DbgFunctionHead = pNewDbgFuncNode;
     } else {
@@ -93,19 +92,20 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgCreateMsgCallback(
     return result;
 }
 
-static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgDestroyMsgCallback(
+static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DestroyDebugReportCallback(
         VkInstance instance,
-        VkDebugReportCallbackLUNARG msg_callback)
+        VkDebugReportCallbackLUNARG callback,
+        VkAllocationCallbacks *pAllocator)
 {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
     VkLayerDbgFunctionNode *pPrev = pTrav;
 
-    VkResult result = inst->disp->DbgDestroyMsgCallback(instance, msg_callback);
+    VkResult result = inst->disp->DestroyDebugReportCallbackLUNARG(instance, callback, pAllocator);
 
     while (pTrav) {
-        if (pTrav->msgCallback == msg_callback) {
+        if (pTrav->msgCallback == callback) {
             pPrev->pNext = pTrav->pNext;
             if (inst->DbgFunctionHead == pTrav)
                 inst->DbgFunctionHead = pTrav->pNext;
@@ -123,15 +123,14 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_DbgDestroyMsgCallback(
 
 /*
  * This is the instance chain terminator function
- * for DbgCreateMsgCallback
+ * for CreateDebugReportCallback
  */
 
-VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
-        VkInstance                          instance,
-        VkFlags                             msgFlags,
-        const PFN_vkDbgMsgCallback          pfnMsgCallback,
-        void*                               pUserData,
-        VkDebugReportCallbackLUNARG*                   pMsgCallback)
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
+        VkInstance                             instance,
+        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkAllocationCallbacks           *pAllocator,
+        VkDebugReportCallbackLUNARG           *pCallback)
 {
     VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
@@ -151,16 +150,15 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
 
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
-        if (!icd->DbgCreateMsgCallback) {
+        if (!icd->CreateDebugReportCallbackLUNARG) {
             continue;
         }
 
-        res = icd->DbgCreateMsgCallback(
-                  icd->instance,
-                  msgFlags,
-                  pfnMsgCallback,
-                  pUserData,
-                  &icd_info[storage_idx]);
+        res = icd->CreateDebugReportCallbackLUNARG(
+                    icd->instance,
+                    pCreateInfo,
+                    pAllocator,
+                    &icd_info[storage_idx]);
 
         if (res != VK_SUCCESS) {
             break;
@@ -173,9 +171,10 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
             if (icd_info[storage_idx]) {
-                icd->DbgDestroyMsgCallback(
+                icd->DestroyDebugReportCallbackLUNARG(
                       icd->instance,
-                      icd_info[storage_idx]);
+                      icd_info[storage_idx],
+                      pAllocator);
             }
             storage_idx++;
         }
@@ -183,18 +182,17 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgCreateMsgCallback(
         return res;
     }
 
-    *(VkDebugReportCallbackLUNARG **)pMsgCallback = icd_info;
+    *(VkDebugReportCallbackLUNARG **)pCallback = icd_info;
 
     return VK_SUCCESS;
 }
 
 /*
  * This is the instance chain terminator function
- * for DbgDestroyMsgCallback
+ * for DestroyDebugReportCallback
  */
-VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
-        VkInstance instance,
-        VkDebugReportCallbackLUNARG msgCallback)
+VKAPI_ATTR VkResult VKAPI_CALL loader_DestroyDebugReportCallback(VkInstance instance,
+        VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t storage_idx;
     VkDebugReportCallbackLUNARG *icd_info;
@@ -207,13 +205,14 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_DbgDestroyMsgCallback(
             break;
     }
 
-    icd_info = *(VkDebugReportCallbackLUNARG **) &msgCallback;
+    icd_info = *(VkDebugReportCallbackLUNARG **) &callback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
         if (icd_info[storage_idx]) {
-            icd->DbgDestroyMsgCallback(
+            icd->DestroyDebugReportCallbackLUNARG(
                   icd->instance,
-                  icd_info[storage_idx]);
+                  icd_info[storage_idx],
+                  pAllocator);
         }
         storage_idx++;
     }
@@ -229,12 +228,12 @@ bool debug_report_instance_gpa(
     // so always return the entry points if name matches and it's enabled
     *addr = NULL;
 
-    if (!strcmp("vkDbgCreateMsgCallback", name)) {
-        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgCreateMsgCallback : NULL;
+    if (!strcmp("vkCreateDebugReportCallbackLUNARG", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_CreateDebugReportCallback : NULL;
         return true;
     }
-    if (!strcmp("vkDbgDestroyMsgCallback", name)) {
-        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DbgDestroyMsgCallback : NULL;
+    if (!strcmp("vkDestroyDebugReportCallbackLUNARG", name)) {
+        *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DestroyDebugReportCallback : NULL;
         return true;
     }
     return false;

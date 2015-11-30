@@ -468,9 +468,9 @@ static inline void loader_init_instance_extension_dispatch_table(
         PFN_vkGetInstanceProcAddr gpa,
         VkInstance inst)
 {
-    table->DbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) gpa(inst, "vkDbgCreateMsgCallback");
-    table->DbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) gpa(inst, "vkDbgDestroyMsgCallback");
     table->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
+    table->CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
+    table->DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
     table->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
@@ -571,10 +571,10 @@ static inline void *loader_lookup_instance_dispatch_table(
     if (!strcmp(name, "GetPhysicalDeviceXlibPresentationSupportKHR"))
         return (void *) table->GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
-    if (!strcmp(name, "DbgCreateMsgCallback"))
-        return (void *) table->DbgCreateMsgCallback;
-    if (!strcmp(name, "DbgDestroyMsgCallback"))
-        return (void *) table->DbgDestroyMsgCallback;
+    if (!strcmp(name, "CreateDebugReportCallbackLUNARG"))
+        return (void *) table->CreateDebugReportCallbackLUNARG;
+    if (!strcmp(name, "DestroyDebugReportCallbackLUNARG"))
+        return (void *) table->DestroyDebugReportCallbackLUNARG;
 
     return NULL;
 }

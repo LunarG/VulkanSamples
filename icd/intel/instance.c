@@ -318,23 +318,23 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
-    VkInstance                          instance,
-    VkFlags                    msgFlags,
-    PFN_vkDbgMsgCallback                pfnMsgCallback,
-    void*                               pUserData,
-    VkDebugReportCallbackLUNARG*                   pMsgCallback)
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportCallbackCreateInfoLUNARG      *pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDebugReportCallbackLUNARG*                pCallback)
 {
     struct intel_instance *inst = intel_instance(instance);
 
-    return icd_instance_create_logger(inst->icd, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    return icd_instance_create_logger(inst->icd, pCreateInfo, pAllocator, pCallback);
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
-    VkInstance                          instance,
-    VkDebugReportCallbackLUNARG                    msgCallback)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
+    VkInstance                                  instance,
+    VkDebugReportCallbackLUNARG                 callback,
+    const VkAllocationCallbacks                *pAllocator)
 {
     struct intel_instance *inst = intel_instance(instance);
 
-    return icd_instance_destroy_logger(inst->icd, msgCallback);
+    icd_instance_destroy_logger(inst->icd, callback, pAllocator);
 }

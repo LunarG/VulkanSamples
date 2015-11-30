@@ -395,9 +395,9 @@ struct demo {
     int32_t frameCount;
     bool validate;
     bool use_break;
-    PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
-    PFN_vkDbgMsgCallback dbgBreakCallback;
+    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallback;
+    PFN_vkDebugReportCallbackLUNARG dbgBreakCallback;
     VkDebugReportCallbackLUNARG msg_callback;
 
     uint32_t current_buffer;
@@ -1785,7 +1785,7 @@ static void demo_cleanup(struct demo *demo)
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
     vkDestroyDevice(demo->device, NULL);
     if (demo->validate) {
-        demo->dbgDestroyMsgCallback(demo->inst, demo->msg_callback);
+        demo->DestroyDebugReportCallback(demo->inst, demo->msg_callback, NULL);
     }
     vkDestroySurfaceKHR(demo->inst, demo->surface, NULL);
     vkDestroyInstance(demo->inst, NULL);
@@ -2315,19 +2315,18 @@ static void demo_init_vk(struct demo *demo)
     }
 
     if (demo->validate) {
-        demo->dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgCreateMsgCallback");
-        demo->dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgDestroyMsgCallback");
-        if (!demo->dbgCreateMsgCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDbgCreateMsgCallback\n",
+        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackLUNARG");
+        demo->DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkDestroyDebugReportCallbackLUNARG");
+        if (!demo->CreateDebugReportCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackLUNARG\n",
                      "vkGetProcAddr Failure");
         }
-        if (!demo->dbgDestroyMsgCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDbgDestroyMsgCallback\n",
+        if (!demo->DestroyDebugReportCallback) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDestroyDebugReportCallbackLUNARG\n",
                      "vkGetProcAddr Failure");
         }
 
-
-        PFN_vkDbgMsgCallback callback;
+        PFN_vkDebugReportCallbackLUNARG callback;
 
         if (!demo->use_break) {
             callback = dbgFunc;
@@ -2336,21 +2335,27 @@ static void demo_init_vk(struct demo *demo)
             // TODO add a break callback defined locally since there is no longer
             // one included in the loader
         }
-        err = demo->dbgCreateMsgCallback(
+        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.pNext = NULL;
+        dbgCreateInfo.pfnCallback = callback;
+        dbgCreateInfo.pUserData = NULL;
+        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+        err = demo->CreateDebugReportCallback(
                   demo->inst,
-                  VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT,
-                  callback, NULL,
+                  &dbgCreateInfo,
+                  NULL,
                   &demo->msg_callback);
         switch (err) {
         case VK_SUCCESS:
             break;
         case VK_ERROR_OUT_OF_HOST_MEMORY:
-            ERR_EXIT("dbgCreateMsgCallback: out of host memory\n",
-                     "dbgCreateMsgCallback Failure");
+            ERR_EXIT("CreateDebugReportCallback: out of host memory\n",
+                     "CreateDebugReportCallback Failure");
             break;
         default:
-            ERR_EXIT("dbgCreateMsgCallback: unknown failure\n",
-                     "dbgCreateMsgCallback Failure");
+            ERR_EXIT("CreateDebugReportCallback: unknown failure\n",
+                     "CreateDebugReportCallback Failure");
             break;
         }
     }

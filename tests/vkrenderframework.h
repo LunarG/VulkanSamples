@@ -99,7 +99,7 @@ public:
             std::vector<const char *> device_layer_names,
             std::vector<const char *> instance_extension_names,
             std::vector<const char *> device_extension_names,
-            PFN_vkDbgMsgCallback=NULL,
+            PFN_vkDebugReportCallbackLUNARG=NULL,
             void *userData=NULL);
 
     void ShutdownFramework();
@@ -140,8 +140,8 @@ protected:
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
-    PFN_vkDbgCreateMsgCallback          m_dbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback         m_dbgDestroyMsgCallback;
+    PFN_vkCreateDebugReportCallbackLUNARG          m_CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackLUNARG         m_DestroyDebugReportCallback;
     VkDebugReportCallbackLUNARG                    m_globalMsgCallback;
     VkDebugReportCallbackLUNARG                    m_devMsgCallback;
 
