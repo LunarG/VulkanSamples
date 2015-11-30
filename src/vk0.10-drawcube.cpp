@@ -231,6 +231,9 @@ int main(int argc, char **argv)
     present.swapchainCount = 1;
     present.pSwapchains = &info.swap_chain;
     present.pImageIndices = &info.current_buffer;
+    present.pWaitSemaphores = NULL;
+    present.waitSemaphoreCount = 0;
+    present.pResults = NULL;
 
     /* Make sure command buffer is finished before presenting */
     res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
