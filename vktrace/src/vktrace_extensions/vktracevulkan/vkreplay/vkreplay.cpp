@@ -45,7 +45,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
                                 int32_t             msgCode,
                                 const char*         pLayerPrefix,
                                 const char*         pMsg,
-                                void*               pUserData)
+                                const void*         pUserData)
 {
     VkBool32 bail = false;
 

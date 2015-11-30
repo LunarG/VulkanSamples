@@ -263,7 +263,7 @@ VkBool32 dbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    void*                               pUserData)
+    const void*                         pUserData)
 {
     char *message = (char *) malloc(strlen(pMsg)+100);
 

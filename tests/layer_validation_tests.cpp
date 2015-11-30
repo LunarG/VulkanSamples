@@ -107,7 +107,7 @@ static VkBool32 myDbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    void*                               pUserData);
+    const void*                         pUserData);
 
 // ********************************************************
 // ErrorMonitor Usage:
@@ -210,7 +210,7 @@ static VkBool32 myDbgFunc(
     int32_t                    msgCode,
     const char*                pLayerPrefix,
     const char*                pMsg,
-    void*                      pUserData)
+    const void*                pUserData)
 {
     if (msgFlags & (VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT | VK_DEBUG_REPORT_ERROR_BIT)) {
         ErrorMonitor *errMonitor = (ErrorMonitor *)pUserData;

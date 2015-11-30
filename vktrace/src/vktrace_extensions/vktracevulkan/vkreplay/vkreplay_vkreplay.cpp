@@ -111,7 +111,7 @@ vktrace_replay::VKTRACE_REPLAY_RESULT vkReplay::handle_replay_errors(const char*
 #endif
     return res;
 }
-void vkReplay::push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeLUNARG objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, void* pUserData)
+void vkReplay::push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeLUNARG objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, const void* pUserData)
 {
     struct ValidationMsg msgObj;
     msgObj.msgFlags = msgFlags;
@@ -123,7 +123,7 @@ void vkReplay::push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeLUNA
     msgObj.msgCode = msgCode;
     strncpy(msgObj.msg, pMsg, 256);
     msgObj.msg[255] = '\0';
-    msgObj.pUserData = pUserData;
+    msgObj.pUserData = (void *) pUserData;
     m_validationMsgs.push_back(msgObj);
 }
 

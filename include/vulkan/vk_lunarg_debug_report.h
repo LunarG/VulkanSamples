@@ -122,7 +122,7 @@ typedef VkBool32 (*PFN_vkDbgMsgCallback)(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    void*                               pUserData);
+    const void*                         pUserData);
 
 // ------------------------------------------------------------------------------------------------
 // API functions
