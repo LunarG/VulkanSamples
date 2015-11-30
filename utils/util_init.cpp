@@ -821,6 +821,9 @@ void execute_present_image(struct sample_info &info)
     present.swapchainCount = 1;
     present.pSwapchains = &info.swap_chain;
     present.pImageIndices = &info.current_buffer;
+    present.pWaitSemaphores = NULL;
+    present.waitSemaphoreCount = 0;
+    present.pResults = NULL;
 
     res = info.fpQueuePresentKHR(info.queue, &present);
     // TODO: Deal with the VK_SUBOPTIMAL_WSI and VK_ERROR_OUT_OF_DATE_WSI

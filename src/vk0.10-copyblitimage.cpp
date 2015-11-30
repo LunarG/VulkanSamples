@@ -255,6 +255,9 @@ int main(int argc, char **argv)
     present.swapchainCount = 1;
     present.pSwapchains = &info.swap_chain;
     present.pImageIndices = &info.current_buffer;
+    present.pWaitSemaphores = NULL;
+    present.waitSemaphoreCount = 0;
+    present.pResults = NULL;
 
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
