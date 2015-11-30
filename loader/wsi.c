@@ -1056,6 +1056,7 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
     if (!strcmp("vkGetPhysicalDeviceXlibPresentationSupportKHR", name)) {
         *addr = ptr_instance->wsi_xlib_surface_enabled ? (void *) vkGetPhysicalDeviceXlibPresentationSupportKHR : NULL;
         return true;
+    }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 #endif // _WIN32
 
