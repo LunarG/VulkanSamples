@@ -1868,14 +1868,26 @@ VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* p
     }
     // TODO : Probably need some kind of remapping from image indices grabbed w/
     //   AcquireNextImageKHR call, and then the indicies that are passed in here
-
     VkPresentInfoKHR present;
     present.sType = pPacket->pPresentInfo->sType;
     present.pNext = pPacket->pPresentInfo->pNext;
     present.swapchainCount = pPacket->pPresentInfo->swapchainCount;
     present.pSwapchains = remappedswapchains;
     present.pImageIndices = pPacket->pPresentInfo->pImageIndices;
-
+    present.waitSemaphoreCount = pPacket->pPresentInfo->waitSemaphoreCount;
+    present.pWaitSemaphores = NULL;
+    if (present.waitSemaphoreCount != 0) {
+        VkSemaphore *pRemappedWaitSems = VKTRACE_NEW_ARRAY(VkSemaphore, pPacket->pPresentInfo->waitSemaphoreCount);
+        present.pWaitSemaphores = pRemappedWaitSems;
+        for (i = 0; i < pPacket->pPresentInfo->waitSemaphoreCount; i++) {
+            (*(pRemappedWaitSems + i)) = m_objMapper.remap_semaphores((*(pPacket->pPresentInfo->pWaitSemaphores + i)));
+            if (*(pRemappedWaitSems + i) == VK_NULL_HANDLE) {
+                VKTRACE_DELETE(pRemappedWaitSems);
+                return replayResult;
+            }
+        }
+        VKTRACE_DELETE(pRemappedWaitSems);
+    }
     replayResult = m_vkFuncs.real_vkQueuePresentKHR(remappedqueue, &present);
 
     m_frameNumber++;
