@@ -284,7 +284,7 @@ VkResult init_device(struct sample_info &info)
     assert(info.queue_count >= 1);
 
     bool found = false;
-    for (int i = 0; i < info.queue_count; i++)
+    for (unsigned int i = 0; i < info.queue_count; i++)
     {
         if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
