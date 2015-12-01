@@ -998,11 +998,8 @@ static void app_dump_extensions(
     for (i=0; i< extension_count; i++) {
         VkExtensionProperties const *ext_prop = &extension_properties[i];
 
-        if (i>0)
-            printf("\n"); // separator between extensions
-
         printf("%s\t", indent);
-        printf("%-32s: extension revision %2d",
+        printf("%-32s: extension revision %2d\n",
                        ext_prop->extensionName, ext_prop->specVersion);
     }
     printf("\n");
