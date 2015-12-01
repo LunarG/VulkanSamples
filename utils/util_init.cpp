@@ -2,6 +2,7 @@
  * Vulkan Samples Kit
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1598,11 +1599,35 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     assert(res == VK_SUCCESS);
 }
 
-void init_texture(struct sample_info &info, const char* textureName)
+void init_sampler(struct sample_info &info, VkSampler &sampler)
+{
+    VkResult U_ASSERT_ONLY res;
+
+    VkSamplerCreateInfo samplerCreateInfo = {};
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+    samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.mipLodBias = 0.0;
+    samplerCreateInfo.maxAnisotropy = 0;
+    samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
+    samplerCreateInfo.minLod = 0.0;
+    samplerCreateInfo.maxLod = 0.0;
+    samplerCreateInfo.compareEnable = VK_FALSE;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+    /* create sampler */
+    res = vkCreateSampler(info.device, &samplerCreateInfo, NULL, &sampler);
+    assert(res == VK_SUCCESS);
+}
+
+void init_image(struct sample_info &info, texture_object &texObj, const char* textureName)
 {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
-    struct texture_object texObj;
     std::string filename = get_base_data_dir();
 
     if (textureName == nullptr)
@@ -1820,26 +1845,7 @@ void init_texture(struct sample_info &info, const char* textureName)
         vkDestroyImage(info.device, mappableImage, NULL);
     }
 
-    VkSamplerCreateInfo samplerCreateInfo = {};
-    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-    samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_BASE;
-    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerCreateInfo.mipLodBias = 0.0;
-    samplerCreateInfo.maxAnisotropy = 0;
-    samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
-    samplerCreateInfo.minLod = 0.0;
-    samplerCreateInfo.maxLod = 0.0;
-    samplerCreateInfo.compareEnable = VK_FALSE;
-    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
-    /* create sampler */
-    res = vkCreateSampler(info.device, &samplerCreateInfo, NULL,
-            &texObj.sampler);
-    assert(res == VK_SUCCESS);
 
     VkImageViewCreateInfo view_info = {};
     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1862,6 +1868,18 @@ void init_texture(struct sample_info &info, const char* textureName)
     res = vkCreateImageView(info.device, &view_info, NULL,
             &texObj.view);
     assert(res == VK_SUCCESS);
+}
+
+
+void init_texture(struct sample_info &info, const char* textureName)
+{
+    struct texture_object texObj;
+
+    /* create image */
+    init_image(info, texObj, textureName);
+
+    /* create sampler */
+    init_sampler(info, texObj.sampler);
 
     info.textures.push_back(texObj);
 
@@ -1870,7 +1888,6 @@ void init_texture(struct sample_info &info, const char* textureName)
     info.texture_data.image_info.imageView = info.textures[0].view;
     info.texture_data.image_info.sampler = info.textures[0].sampler;
     info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
 }
 
 void destroy_pipeline(struct sample_info &info)
