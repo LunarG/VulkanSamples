@@ -150,12 +150,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
     layer_destroy_msg_callback(data->report_data, msgCallback, pAllocator);
 }
 
-static const VkLayerProperties pc_global_layers[] = {
+static const VkExtensionProperties instance_extensions[] = {
     {
-        "ParamChecker",
-        VK_API_VERSION,
-        VK_MAKE_VERSION(0, 1, 0),
-        "Validation layer: ParamChecker",
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION
     }
 };
 
@@ -164,9 +162,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
         uint32_t *pCount,
         VkExtensionProperties* pProperties)
 {
-    /* ParamChecker does not have any global extensions */
-    return util_GetExtensionProperties(0, NULL, pCount, pProperties);
+    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
 }
+
+static const VkLayerProperties pc_global_layers[] = {
+    {
+        "ParamChecker",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: ParamChecker",
+    }
+};
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
         uint32_t *pCount,

@@ -41,6 +41,39 @@ template layer_data *get_my_data_ptr<layer_data>(
         void *data_key,
         std::unordered_map<void *, layer_data *> &data_map);
 
+static const VkExtensionProperties instance_extensions[] = {
+    {
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION
+    }
+};
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
+        const char *pLayerName,
+        uint32_t *pCount,
+        VkExtensionProperties* pProperties)
+{
+    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);
+}
+
+static const VkLayerProperties swapchain_global_layers[] = {
+    {
+        "Swapchain",
+        VK_API_VERSION,
+        VK_MAKE_VERSION(0, 1, 0),
+        "Validation layer: Swapchain",
+    }
+};
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
+        uint32_t *pCount,
+        VkLayerProperties*    pProperties)
+{
+    return util_GetLayerProperties(ARRAY_SIZE(swapchain_global_layers),
+                                   swapchain_global_layers,
+                                   pCount, pProperties);
+}
+
 
 static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
@@ -1203,6 +1236,11 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
         layer_init_instance_dispatch_table(my_data->instance_dispatch_table, wrapped_inst);
         return (PFN_vkVoidFunction) vkGetInstanceProcAddr;
     }
+
+    if (!strcmp(funcName, "vkEnumerateInstanceLayerProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceLayerProperties;
+    if (!strcmp(funcName, "vkEnumerateInstanceExtensionProperties"))
+        return (PFN_vkVoidFunction) vkEnumerateInstanceExtensionProperties;
 
     addr = layer_intercept_instance_proc(funcName);
     if (addr)
