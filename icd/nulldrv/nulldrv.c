@@ -623,6 +623,8 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandPool(
     VkCommandPool*                                  pCommandPool)
 {
     NULLDRV_LOG_FUNC;
+    static VkCommandPool pool = (VkCommandPool)1;
+    *pCommandPool = pool;
     return VK_SUCCESS;
 }
 

@@ -1,5 +1,6 @@
 //
 //  Copyright (C) 2015 Valve Corporation
+//  Copyright (C) 2015 Google, Inc.
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a
 //  copy of this software and associated documentation files (the "Software"),
@@ -24,7 +25,7 @@
 // Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 // Author: Mark Lobodzinski <mark@lunarg.com>
 // Author: Mike Stroyan <mike@LunarG.com>
-// Author: Tobin Ehlis <tobin@lunarg.com>
+// Author: Tobin Ehlis <tobine@google.com>
 // Author: Tony Barbour <tony@LunarG.com>
 
 
@@ -40,7 +41,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #define MEM_TRACKER_TESTS 1
-
 #define OBJ_TRACKER_TESTS 1
 #define DRAW_STATE_TESTS 1
 #define THREADING_TESTS 1
@@ -463,6 +463,7 @@ void VkLayerTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkPi
 // ********************************************************************************************************************
 // ********************************************************************************************************************
 #if MEM_TRACKER_TESTS
+#if 0
 TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
 {
     vk_testing::Fence testFence;
@@ -564,7 +565,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
 
     }
 }
-
+#endif
 TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 {
     VkResult        err;
@@ -1849,13 +1850,10 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
-/*  WIP for Tobin's follow-on descriptor set validation efforts
 TEST_F(VkLayerTest, DescriptorSetCompatibility)
 {
     // Test various desriptorSet errors with bad binding combinations
     VkResult        err;
-    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
-        "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0. ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -1864,7 +1862,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     static const uint32_t NUM_DESCRIPTOR_TYPES = 5;
     VkDescriptorPoolSize ds_type_count[NUM_DESCRIPTOR_TYPES] = {};
         ds_type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        ds_type_count[0].descriptorCount = 5;
+        ds_type_count[0].descriptorCount = 10;
         ds_type_count[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         ds_type_count[1].descriptorCount = 2;
         ds_type_count[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1891,10 +1889,17 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     VkDescriptorSetLayoutBinding dsl_binding[MAX_DS_TYPES_IN_LAYOUT] = {};
         dsl_binding[0].binding = 0;
         dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dsl_binding[0].arraySize = 5;
+        dsl_binding[0].descriptorCount = 5;
         dsl_binding[0].stageFlags = VK_SHADER_STAGE_ALL;
         dsl_binding[0].pImmutableSamplers = NULL;
 
+    // Create layout identical to set0 layout but w/ different stageFlags
+    VkDescriptorSetLayoutBinding dsl_fs_stage_only = {};
+        dsl_fs_stage_only.binding = 0;
+        dsl_fs_stage_only.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dsl_fs_stage_only.descriptorCount = 5;
+        dsl_fs_stage_only.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // Different stageFlags to cause error at bind time
+        dsl_fs_stage_only.pImmutableSamplers = NULL;
     VkDescriptorSetLayoutCreateInfo ds_layout_ci = {};
         ds_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         ds_layout_ci.pNext = NULL;
@@ -1902,37 +1907,47 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
         ds_layout_ci.pBinding = dsl_binding;
     static const uint32_t NUM_LAYOUTS = 4;
     VkDescriptorSetLayout ds_layout[NUM_LAYOUTS] = {};
-    // Create 4 unique layouts
+    VkDescriptorSetLayout ds_layout_fs_only = {};
+    // Create 4 unique layouts for full pipelineLayout, and 1 special fs-only layout for error case
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[0]);
+    ASSERT_VK_SUCCESS(err);
+    ds_layout_ci.pBinding = &dsl_fs_stage_only;
+    err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout_fs_only);
     ASSERT_VK_SUCCESS(err);
     dsl_binding[0].binding = 0;
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-    dsl_binding[0].arraySize = 2;
+    dsl_binding[0].descriptorCount = 2;
     dsl_binding[0].binding = 1;
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    dsl_binding[0].arraySize = 2;
+    dsl_binding[0].descriptorCount = 2;
+    ds_layout_ci.pBinding = dsl_binding;
     ds_layout_ci.bindingCount = 2;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[1]);
     ASSERT_VK_SUCCESS(err);
     dsl_binding[0].binding = 0;
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-    dsl_binding[0].arraySize = 5;
+    dsl_binding[0].descriptorCount = 5;
     ds_layout_ci.bindingCount = 1;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[2]);
     ASSERT_VK_SUCCESS(err);
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-    dsl_binding[0].arraySize = 2;
+    dsl_binding[0].descriptorCount = 2;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[3]);
     ASSERT_VK_SUCCESS(err);
 
     static const uint32_t NUM_SETS = 4;
     VkDescriptorSet descriptorSet[NUM_SETS] = {};
     VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOC_INFO;
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.setLayoutCount = NUM_LAYOUTS;
     alloc_info.descriptorPool = ds_pool;
     alloc_info.pSetLayouts = ds_layout;
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, descriptorSet);
+    ASSERT_VK_SUCCESS(err);
+    VkDescriptorSet ds0_fs_only = {};
+    alloc_info.setLayoutCount = 1;
+    alloc_info.pSetLayouts = &ds_layout_fs_only;
+    err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &ds0_fs_only);
     ASSERT_VK_SUCCESS(err);
 
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {};
@@ -1943,6 +1958,35 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
 
     VkPipelineLayout pipeline_layout;
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
+    ASSERT_VK_SUCCESS(err);
+    // Create pipelineLayout with only one setLayout
+    pipeline_layout_ci.setLayoutCount = 1;
+    VkPipelineLayout single_pipe_layout;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &single_pipe_layout);
+    ASSERT_VK_SUCCESS(err);
+    // Create pipelineLayout with 2 descriptor setLayout at index 0
+    pipeline_layout_ci.pSetLayouts = &ds_layout[3];
+    VkPipelineLayout pipe_layout_one_desc;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipe_layout_one_desc);
+    ASSERT_VK_SUCCESS(err);
+    // Create pipelineLayout with 5 SAMPLER descriptor setLayout at index 0
+    pipeline_layout_ci.pSetLayouts = &ds_layout[2];
+    VkPipelineLayout pipe_layout_five_samp;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipe_layout_five_samp);
+    ASSERT_VK_SUCCESS(err);
+    // Create pipelineLayout with UB type, but stageFlags for FS only
+    pipeline_layout_ci.pSetLayouts = &ds_layout_fs_only;
+    VkPipelineLayout pipe_layout_fs_only;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipe_layout_fs_only);
+    ASSERT_VK_SUCCESS(err);
+    // Create pipelineLayout w/ incompatible set0 layout, but set1 is fine
+    VkDescriptorSetLayout pl_bad_s0[2] = {};
+    pl_bad_s0[0] = ds_layout_fs_only;
+    pl_bad_s0[1] = ds_layout[1];
+    pipeline_layout_ci.setLayoutCount = 2;
+    pipeline_layout_ci.pSetLayouts = pl_bad_s0;
+    VkPipelineLayout pipe_layout_bad_set0;
+    err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipe_layout_bad_set0);
     ASSERT_VK_SUCCESS(err);
 
     // Create a buffer to update the descriptor with
@@ -1965,17 +2009,68 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
         buffInfo[i].offset = 0;
         buffInfo[i].range = 1024;
     }
+    VkImage               image;
+    const VkFormat tex_format      = VK_FORMAT_B8G8R8A8_UNORM;
+    const int32_t  tex_width       = 32;
+    const int32_t  tex_height      = 32;
+    VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.pNext = NULL;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = tex_format;
+        image_create_info.extent.width = tex_width;
+        image_create_info.extent.height = tex_height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        image_create_info.flags = 0;
+    err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
+    ASSERT_VK_SUCCESS(err);
 
-    VkWriteDescriptorSet descriptor_write;
-    memset(&descriptor_write, 0, sizeof(descriptor_write));
-    descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptor_write.dstSet = descriptorSet[0];
-    descriptor_write.dstBinding = 0;
-    descriptor_write.descriptorCount = 5;
-    descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptor_write.pBufferInfo = buffInfo;
+    VkImageViewCreateInfo image_view_create_info = {};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_view_create_info.image = image;
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = tex_format;
+        image_view_create_info.subresourceRange.layerCount = 1;
+        image_view_create_info.subresourceRange.baseMipLevel = 0;
+        image_view_create_info.subresourceRange.levelCount = 1;
+        image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    vkUpdateDescriptorSets(m_device->device(), 1, &descriptor_write, 0, NULL);
+    VkImageView view;
+    err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
+    ASSERT_VK_SUCCESS(err);
+    VkDescriptorImageInfo imageInfo[2] = {};
+    imageInfo[0].imageView = view;
+    imageInfo[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[1].imageView = view;
+    imageInfo[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    static const uint32_t NUM_SET_UPDATES = 3;
+    VkWriteDescriptorSet descriptor_write[NUM_SET_UPDATES] = {};
+    descriptor_write[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write[0].dstSet = descriptorSet[0];
+    descriptor_write[0].dstBinding = 0;
+    descriptor_write[0].descriptorCount = 5;
+    descriptor_write[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptor_write[0].pBufferInfo = buffInfo;
+    descriptor_write[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write[1].dstSet = descriptorSet[1];
+    descriptor_write[1].dstBinding = 0;
+    descriptor_write[1].descriptorCount = 2;
+    descriptor_write[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    descriptor_write[1].pImageInfo = imageInfo;
+    descriptor_write[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptor_write[2].dstSet = descriptorSet[1];
+    descriptor_write[2].dstBinding = 1;
+    descriptor_write[2].descriptorCount = 2;
+    descriptor_write[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descriptor_write[2].pImageInfo = imageInfo;
+
+    vkUpdateDescriptorSets(m_device->device(), 3, descriptor_write, 0, NULL);
 
     VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
     VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
@@ -1993,17 +2088,75 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     // TODO : Want to cause various binding incompatibility issues here to test DrawState
     //  First cause various verify_layout_compatibility() fails
     //  Second disturb early and late sets and verify INFO msgs
-    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet[0], 0, NULL);
-
+    // verify_set_layout_compatibility fail cases:
+    // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " due to: invalid VkPipelineLayout ");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)0xbaadb1be, 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Error received was not 'Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0...'";
+        FAIL() << "Did not receive correct error msg when attempting to bind descriptorSets with invalid VkPipelineLayout.";
         m_errorMonitor->DumpFailureMsgs();
     }
-
+    // 2. layoutIndex exceeds # of layouts in layout
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " attempting to bind set to index 1");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, single_pipe_layout, 0, 2, &descriptorSet[0], 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempting to bind descriptorSet to index 1 when pipelineLayout only has index 0.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), single_pipe_layout, NULL);
+    // 3. Pipeline setLayout[0] has 2 descriptors, but set being bound has 5 descriptors
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, ", but corresponding set being bound has 5 descriptors.");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_one_desc, 0, 1, &descriptorSet[0], 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempting to bind descriptorSet w/ 5 descriptors to pipelineLayout with only 2 descriptors.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_one_desc, NULL);
+    // 4. same # of descriptors but mismatch in type
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " descriptor from pipelineLayout is type 'VK_DESCRIPTOR_TYPE_SAMPLER'");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_five_samp, 0, 1, &descriptorSet[0], 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempting to bind UNIFORM_BUFFER descriptorSet to pipelineLayout with overlapping SAMPLER type.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_five_samp, NULL);
+    // 5. same # of descriptors but mismatch in stageFlags
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " descriptor from pipelineLayout has stageFlags ");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &descriptorSet[0], 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempting to bind UNIFORM_BUFFER descriptorSet with ALL stageFlags to pipelineLayout with FS-only stageFlags.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Cause INFO messages due to disturbing previously bound Sets
+    // First bind sets 0 & 1
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
+    // 1. Disturb bound set0 by re-binding set1 w/ updated pipelineLayout
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT, " previously bound as set #0 was disturbed ");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1, &descriptorSet[1], 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct info msg when binding Set1 w/ pipelineLayout that should disturb Set0.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
+    // 2. Disturb set after last bound set
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_PERF_WARN_BIT, " newly bound as set #0 so set #1 and any subsequent sets were disturbed ");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &ds0_fs_only, 0, NULL);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct info msg when re-binding Set0 w/ pipelineLayout that should disturb Set1.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Remaining clean-up
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_fs_only, NULL);
+    for (uint32_t i=0; i<NUM_LAYOUTS; ++i) {
+        vkDestroyDescriptorSetLayout(m_device->device(), ds_layout[i], NULL);
+    }
+    vkDestroyDescriptorSetLayout(m_device->device(), ds_layout_fs_only, NULL);
+    vkFreeDescriptorSets(m_device->device(), ds_pool, 1, descriptorSet);
+    vkDestroyBuffer(m_device->device(), dyub, NULL);
     vkDestroyPipelineLayout(m_device->device(), pipeline_layout, NULL);
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
-*/
 
 TEST_F(VkLayerTest, NoBeginCommandBuffer)
 {

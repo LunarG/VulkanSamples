@@ -343,13 +343,16 @@ static VkBool32 validate_draw_state_flags(layer_data* my_data, GLOBAL_CB_NODE* p
 // For give SET_NODE, verify that its Set is compatible w/ the setLayout corresponding to pipelineLayout[layoutIndex]
 static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE* pSet, const VkPipelineLayout layout, const uint32_t layoutIndex, string& errorMsg)
 {
+    stringstream errorStr;
     if (my_data->pipelineLayoutMap.find(layout) == my_data->pipelineLayoutMap.end()) {
-        cout << errorMsg << "invalid VkPipelineLayout (" << layout << ")";
+        errorStr << "invalid VkPipelineLayout (" << layout << ")";
+        errorMsg = errorStr.str();
         return false;
     }
     PIPELINE_LAYOUT_NODE pl = my_data->pipelineLayoutMap[layout];
     if (layoutIndex >= pl.descriptorSetLayouts.size()) {
-        cout << errorMsg << "VkPipelineLayout (" << layout << ") only contains " << pl.descriptorSetLayouts.size() << " setLayouts corresponding to sets 0-" << pl.descriptorSetLayouts.size()-1 << ", but you're attempting to bind set to index " << layoutIndex;
+        errorStr << "VkPipelineLayout (" << layout << ") only contains " << pl.descriptorSetLayouts.size() << " setLayouts corresponding to sets 0-" << pl.descriptorSetLayouts.size()-1 << ", but you're attempting to bind set to index " << layoutIndex;
+        errorMsg = errorStr.str();
         return false;
     }
     // Get the specific setLayout from PipelineLayout that overlaps this set
@@ -359,7 +362,8 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
     }
     uint32_t descriptorCount = pLayoutNode->descriptorTypes.size();
     if (descriptorCount != pSet->pLayout->descriptorTypes.size()) {
-        cout << errorMsg << "setLayout " << layoutIndex << " from pipelineLayout " << layout << " has " << descriptorCount << " descriptors, but corresponding set being bound has " << pSet->pLayout->descriptorTypes.size() << " descriptors.";
+        errorStr << "setLayout " << layoutIndex << " from pipelineLayout " << layout << " has " << descriptorCount << " descriptors, but corresponding set being bound has " << pSet->pLayout->descriptorTypes.size() << " descriptors.";
+        errorMsg = errorStr.str();
         return false; // trivial fail case
     }
     // Now need to check set against corresponding pipelineLayout to verify compatibility
@@ -368,11 +372,13 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
         //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
         //    do we also need to check immutable samplers?
         if (pLayoutNode->descriptorTypes[i] != pSet->pLayout->descriptorTypes[i]) {
-            cout << errorMsg << "descriptor " << i << " for descriptorSet being bound is type '" << string_VkDescriptorType(pSet->pLayout->descriptorTypes[i]) << "' but corresponding descriptor from pipelineLayout is type '" << string_VkDescriptorType(pLayoutNode->descriptorTypes[i]) << "'";
+            errorStr << "descriptor " << i << " for descriptorSet being bound is type '" << string_VkDescriptorType(pSet->pLayout->descriptorTypes[i]) << "' but corresponding descriptor from pipelineLayout is type '" << string_VkDescriptorType(pLayoutNode->descriptorTypes[i]) << "'";
+            errorMsg = errorStr.str();
             return false;
         }
         if (pLayoutNode->stageFlags[i] != pSet->pLayout->stageFlags[i]) {
-            cout << errorMsg << "stageFlags " << i << " for descriptorSet being bound is " << pSet->pLayout->stageFlags[i] << "' but corresponding descriptor from pipelineLayout has stageFlags " << pLayoutNode->stageFlags[i];
+            errorStr << "stageFlags " << i << " for descriptorSet being bound is " << pSet->pLayout->stageFlags[i] << "' but corresponding descriptor from pipelineLayout has stageFlags " << pLayoutNode->stageFlags[i];
+            errorMsg = errorStr.str();
             return false;
         }
     }
@@ -930,7 +936,7 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
                     VkDescriptorImageInfo *info = new VkDescriptorImageInfo[pWDS->descriptorCount];
                     memcpy(info, pWDS->pImageInfo, pWDS->descriptorCount * sizeof(VkDescriptorImageInfo));
                     pWDS->pImageInfo = info;
-            }
+                }
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
@@ -1765,6 +1771,7 @@ static void init_draw_state(layer_data *my_data)
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
 {
+    // TODOSC : Shouldn't need any customization here
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
     VkResult result = pTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
@@ -1785,6 +1792,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstance
 /* hook DestroyInstance to remove tableInstanceMap entry */
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator)
 {
+    // TODOSC : Shouldn't need any customization here
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
     VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
@@ -1841,6 +1849,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    // TODOSC : shouldn't need any customization here
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         dev_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
@@ -1853,6 +1862,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
 static void deleteRenderPasses(layer_data*);
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, const VkAllocationCallbacks* pAllocator)
 {
+    // TODOSC : Shouldn't need any customization here
     dispatch_key key = get_dispatch_key(device);
     layer_data* dev_data = get_my_data_ptr(key, layer_data_map);
     // Free all the memory
@@ -2280,6 +2290,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
 
     for (i=0; i<count; i++) {
         pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i], NULL);
+        // TODOSC : merge in validate_graphics_pipeline() from ShaderChecker
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
 
@@ -2375,6 +2386,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreateDescriptorSetLayout(device, pCreateInfo, pAllocator, pSetLayout);
     if (VK_SUCCESS == result) {
+        // TODOSC : Capture layout bindings set
         LAYOUT_NODE* pNewNode = new LAYOUT_NODE;
         if (NULL == pNewNode) {
             if (log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (uint64_t) *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
@@ -2438,6 +2450,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkP
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->CreatePipelineLayout(device, pCreateInfo, pAllocator, pPipelineLayout);
     if (VK_SUCCESS == result) {
+        // TODOSC : Merge capture of the setLayouts per pipeline
         PIPELINE_LAYOUT_NODE& plNode = dev_data->pipelineLayoutMap[*pPipelineLayout];
         plNode.descriptorSetLayouts.resize(pCreateInfo->setLayoutCount);
         uint32_t i = 0;
@@ -2971,7 +2984,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 // Track total count of dynamic descriptor types to make sure we have an offset for each one
                 uint32_t totalDynamicDescriptors = 0;
                 string errorString = "";
-                uint32_t lastSetIndex = firstSet+setCount;
+                uint32_t lastSetIndex = firstSet+setCount-1;
                 if (lastSetIndex >= pCB->boundDescriptorSets.size())
                     pCB->boundDescriptorSets.resize(lastSetIndex+1);
                 VkDescriptorSet oldFinalBoundSet = pCB->boundDescriptorSets[lastSetIndex];
@@ -3005,8 +3018,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
                 if (firstSet > 0) { // Check set #s below the first bound set
                     for (uint32_t i=0; i<firstSet; ++i) {
-                        if (!verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
-                            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pCB->boundDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
+                        if (pCB->boundDescriptorSets[i] && !verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
+                            skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_PERF_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) pCB->boundDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
                                 "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u was disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) pCB->boundDescriptorSets[i], i, (uint64_t) layout);
                             pCB->boundDescriptorSets[i] = VK_NULL_HANDLE;
                         }
@@ -3014,9 +3027,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
                 }
                 // Check if newly last bound set invalidates any remaining bound sets
                 if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
-                    if (!verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
-                        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_INFO_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
-                            "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u and all subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) layout);
+                    if (oldFinalBoundSet && !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
+                        skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_PERF_WARN_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
+                            "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u is incompatible with set %#" PRIxLEAST64 " newly bound as set #%u so set #%u and any subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) pCB->boundDescriptorSets[lastSetIndex], lastSetIndex, lastSetIndex+1, (uint64_t) layout);
                         pCB->boundDescriptorSets.resize(lastSetIndex+1);
                     }
                 }
@@ -4103,6 +4116,7 @@ bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPas
     }
     return skip_call;
 }
+// TODOSC : Add intercept of vkCreateShaderModule
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
@@ -4120,6 +4134,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     }
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
+        // TODOSC : Merge in tracking of renderpass from ShaderChecker
         // Shadow create info and store in map
         VkRenderPassCreateInfo* localRPCI = new VkRenderPassCreateInfo(*pCreateInfo);
         if (pCreateInfo->pAttachments) {
@@ -4568,10 +4583,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgCreateMsgCallback(
     VkDbgMsgCallback*                   pMsgCallback)
 {
     layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult res = pTable->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
+    VkResult res = my_data->instance_dispatch_table->DbgCreateMsgCallback(instance, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     if (VK_SUCCESS == res) {
-        //layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
         res = layer_create_msg_callback(my_data->report_data, msgFlags, pfnMsgCallback, pUserData, pMsgCallback);
     }
     return res;
@@ -4582,8 +4595,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkDbgDestroyMsgCallback(
     VkDbgMsgCallback                    msgCallback)
 {
     layer_data* my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkLayerInstanceDispatchTable *pTable = my_data->instance_dispatch_table;
-    VkResult res = pTable->DbgDestroyMsgCallback(instance, msgCallback);
+    VkResult res = my_data->instance_dispatch_table->DbgDestroyMsgCallback(instance, msgCallback);
     layer_destroy_msg_callback(my_data->report_data, msgCallback);
     return res;
 }
