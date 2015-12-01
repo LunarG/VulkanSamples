@@ -2,6 +2,7 @@
  * Vulkan Samples Kit
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -70,6 +71,8 @@ void init_descriptor_set(struct sample_info &info, bool use_texture);
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
 void init_pipeline_cache(struct sample_info &info);
 void init_pipeline(struct sample_info &info, VkBool32 include_depth);
+void init_sampler(struct sample_info &info, VkSampler &sampler);
+void init_image(struct sample_info &info, texture_object &texObj, const char* textureName);
 void init_texture(struct sample_info &info,  const char* textureName = nullptr);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
