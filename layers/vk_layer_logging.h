@@ -90,6 +90,7 @@ static inline debug_report_data *debug_report_create_instance(
 
     table->CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
     table->DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
+    table->DebugReportMessageLUNARG = (PFN_vkDebugReportMessageLUNARG) gpa(inst, "vkDebugReportMessageLUNARG");
 
     debug_data = (debug_report_data *) malloc(sizeof(debug_report_data));
     if (!debug_data) return NULL;

@@ -270,15 +270,39 @@ class Subcommand(object):
         r_body.append('}')
         return "\n".join(r_body)
 
+    def _gen_debug_report_msg(self):
+        r_body = []
+        r_body.append('%s' % self.lineinfo.get())
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(VkInstance instance, VkDebugReportFlagsLUNARG    flags, VkDebugReportObjectTypeLUNARG objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
+        r_body.append('{')
+        # Switch to this code section for the new per-instance storage and debug callbacks
+        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+            r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
+        else:
+            r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
+        r_body.append('    pInstanceTable->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);')
+        r_body.append('}')
+        return "\n".join(r_body)
+
     def _gen_layer_get_global_extension_props(self, layer="Generic"):
         ggep_body = []
         # generated layers do not provide any global extensions
         ggep_body.append('%s' % self.lineinfo.get())
 
         ggep_body.append('')
+        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+            ggep_body.append('static const VkExtensionProperties instance_extensions[] = {')
+            ggep_body.append('    {')
+            ggep_body.append('        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,')
+            ggep_body.append('        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION')
+            ggep_body.append('    }')
+            ggep_body.append('};')
         ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
         ggep_body.append('{')
-        ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
+        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+          ggep_body.append('    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
+        else:
+          ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
@@ -345,6 +369,8 @@ class Subcommand(object):
                         intercept = self._gen_layer_dbg_create_msg_callback()
                     elif 'DestroyDebugReportCallbackLUNARG' == proto.name:
                         intercept = self._gen_layer_dbg_destroy_msg_callback()
+                    elif 'DebugReportMessageLUNARG' == proto.name:
+                        intercept = self._gen_debug_report_msg()
                     elif 'CreateDevice' == proto.name:
                         funcs.append('/* CreateDevice HERE */')
                     elif 'EnumerateInstanceExtensionProperties' == proto.name:
@@ -409,6 +435,7 @@ class Subcommand(object):
         exts.append('%s' % self.lineinfo.get())
         exts.append(self._gen_create_msg_callback())
         exts.append(self._gen_destroy_msg_callback())
+        exts.append(self._gen_debug_report_msg())
         return "\n".join(exts)
 
     def _generate_layer_gpa_function(self, extensions=[], instance_extensions=[]):
@@ -847,6 +874,7 @@ class GenericLayerSubcommand(Subcommand):
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._gen_create_msg_callback(),
                 self._gen_destroy_msg_callback(),
+                self._gen_debug_report_msg(),
                 self._generate_layer_gpa_function(extensions, instance_extensions)]
 
         return "\n\n".join(body)
@@ -2119,7 +2147,8 @@ class ThreadingSubcommand(Subcommand):
                 self._generate_layer_gpa_function(extensions=[],
                                                   instance_extensions=[('msg_callback_get_proc_addr', [])]),
                 self._gen_create_msg_callback(),
-                self._gen_destroy_msg_callback()]
+                self._gen_destroy_msg_callback(),
+                self._gen_debug_report_msg()]
         return "\n\n".join(body)
 
 def main():

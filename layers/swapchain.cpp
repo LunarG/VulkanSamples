@@ -1176,6 +1176,20 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(Vk
     layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+        VkInstance                                  instance,
+        VkDebugReportFlagsLUNARG                       flags,
+        VkDebugReportObjectTypeLUNARG               objType,
+        uint64_t                                    object,
+        size_t                                      location,
+        int32_t                                     msgCode,
+        const char*                                 pLayerPrefix,
+        const char*                                 pMsg)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+    my_data->instance_dispatch_table->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)
 {
     PFN_vkVoidFunction addr;

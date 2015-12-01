@@ -150,6 +150,20 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
     layer_destroy_msg_callback(data->report_data, msgCallback, pAllocator);
 }
 
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+        VkInstance                                  instance,
+        VkDebugReportFlagsLUNARG                    flags,
+        VkDebugReportObjectTypeLUNARG               objType,
+        uint64_t                                    object,
+        size_t                                      location,
+        int32_t                                     msgCode,
+        const char*                                 pLayerPrefix,
+        const char*                                 pMsg)
+{
+    VkLayerInstanceDispatchTable *pTable = get_dispatch_table(pc_instance_table_map, instance);
+    pTable->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+}
+
 static const VkExtensionProperties instance_extensions[] = {
     {
         VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
