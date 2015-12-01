@@ -959,12 +959,12 @@ static VkExtensionProperties *get_extension_property(
 }
 
 /*
- * For global exenstions implemented within the loader (i.e. DEBUG_REPORT
+ * For global extensions implemented within the loader (i.e. DEBUG_REPORT
  * the extension must provide two entry points for the loader to use:
  * - "trampoline" entry point - this is the address returned by GetProcAddr
  * and will always do what's necessary to support a global call.
  * - "terminator" function - this function will be put at the end of the
- * instance chain and will contain the necessary logica to call / process
+ * instance chain and will contain the necessary logic to call / process
  * the extension for the appropriate ICDs that are available.
  * There is no generic mechanism for including these functions, the references
  * must be placed into the appropriate loader entry points.
@@ -3332,6 +3332,11 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     /* finally can call down the chain */
     res = dev->loader_dispatch.core_dispatch.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
 
+    /* initialize WSI device extensions as part of core dispatch since loader has
+     * dedicated trampoline code for these*/
+    loader_init_device_extension_dispatch_table(&dev->loader_dispatch,
+                                                dev->loader_dispatch.core_dispatch.GetDeviceProcAddr,
+                                                *pDevice);
     dev->loader_dispatch.core_dispatch.CreateDevice = icd->CreateDevice;
 
     return res;

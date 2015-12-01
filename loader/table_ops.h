@@ -169,9 +169,14 @@ static inline void loader_init_device_dispatch_table(struct loader_dev_dispatch_
     table->CmdNextSubpass = (PFN_vkCmdNextSubpass) gpa(dev, "vkCmdNextSubpass");
     table->CmdEndRenderPass = (PFN_vkCmdEndRenderPass) gpa(dev, "vkCmdEndRenderPass");
     table->CmdExecuteCommands = (PFN_vkCmdExecuteCommands) gpa(dev, "vkCmdExecuteCommands");
-//TODO move into it's own table
-//TODO also consider dropping trampoline code for these device level extensions entirely
-// then don't need loader to know about these at all but then not queryable via GIPA
+
+}
+
+static inline void loader_init_device_extension_dispatch_table(struct loader_dev_dispatch_table *dev_table,
+                                                    PFN_vkGetDeviceProcAddr gpa,
+                                                    VkDevice dev)
+{
+    VkLayerDispatchTable *table = &dev_table->core_dispatch;
     table->AcquireNextImageKHR = (PFN_vkAcquireNextImageKHR) gpa(dev, "vkAcquireNextImageKHR");
     table->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(dev, "vkCreateSwapchainKHR");
     table->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(dev, "vkDestroySwapchainKHR");
