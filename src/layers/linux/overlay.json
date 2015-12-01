@@ -1,0 +1,11 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "Overlay",
+        "type": "GLOBAL",
+        "library_path": "./libVKLayerOverlay.so",
+        "api_version": "0.210.0",
+        "implementation_version": "0",
+        "description": "Example Overlay Layer"
+    }
+}

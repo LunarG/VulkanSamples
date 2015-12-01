@@ -234,3 +234,4 @@ set(SAMPLE_GLSL_FRAG_SHADERS glslshader)
 set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 sampleExtGLSLShaders(useglslshader)
 
+add_subdirectory(layers)
