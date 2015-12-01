@@ -278,3 +278,4 @@ sampleWithSingleFile()
 # set(SAMPLE_GLSL_VERT_SHADERS glslshader)
 # sampleExtGLSLShaders()
 
+add_subdirectory(layers)
