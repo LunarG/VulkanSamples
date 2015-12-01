@@ -103,6 +103,7 @@ struct AssertTypeEq<T, T> {
 // template Types.  This allows us to simulate variadic templates
 // (e.g. Types<int>, Type<int, double>, and etc), which C++ doesn't
 // support directly.
+#undef None
 struct None {};
 
 // The following family of struct and struct templates are used to

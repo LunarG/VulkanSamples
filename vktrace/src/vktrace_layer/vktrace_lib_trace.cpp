@@ -1265,7 +1265,39 @@ VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceXcbPr
     return result;
 }
 #endif
-//TODO Wayland, Mir and Xlib support
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkCreateXlibSurfaceKHR(
+    VkInstance                                  instance,
+    Display*                                    dpy,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result;
+
+    // TODO: Implement.
+
+    result = mid(instance)->instTable.CreateXlibSurfaceKHR(instance, dpy, window, pAllocator, pSurface);
+
+    return result;
+}
+
+VKTRACER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL __HOOKED_vkGetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID)
+{
+    VkBool32 result;
+
+    // TODO: Implement.
+
+    result = mid(physicalDevice)->instTable.GetPhysicalDeviceXlibPresentationSupportKHR(physicalDevice, queueFamilyIndex, dpy, visualID);
+
+    return result;
+}
+#endif
+//TODO Wayland and Mir support
 
 /* TODO: Probably want to make this manual to get the result of the boolean and then check it on replay
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetPhysicalDeviceSurfaceSupportKHR(

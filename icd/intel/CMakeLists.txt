@@ -54,6 +54,13 @@ find_package(XCB COMPONENTS xcb xcb-dri3 xcb-present)
 if(XCB_FOUND)
     list(APPEND include_dirs ${XCB_INCLUDE_DIRS})
     list(APPEND libraries ${XCB_LIBRARIES})
+
+    find_package(X11_XCB COMPONENTS X11-xcb)
+    if(X11_XCB_FOUND)
+        # No include directories by purpose.
+        list(APPEND libraries ${X11_XCB_LIBRARIES})
+    endif()    
+
     list(APPEND sources wsi_x11.c)
 
     set_source_files_properties(wsi_x11.c PROPERTIES COMPILE_FLAGS "-I${PROJECT_SOURCE_DIR}/icd/intel/kmd/libdrm/include/drm")

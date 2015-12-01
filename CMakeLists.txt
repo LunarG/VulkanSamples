@@ -15,6 +15,7 @@ if(WIN32)
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
 else()
     add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")

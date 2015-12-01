@@ -25,6 +25,8 @@
  * Author: Ian Elliott <ian@LunarG.com>
  * Author: Ian Elliott <ianelliott@google.com>
  * Author: Mike Stroyan <mike@LunarG.com>
+ * Author: Norbert Nopper <Norbert.Nopper@freescale.com> (xlib port)
+ *
  */
 
 #define _GNU_SOURCE 1
@@ -37,6 +39,8 @@
 #include <xcb/xcb.h>
 #include <xcb/dri3.h>
 #include <xcb/present.h>
+
+#include <X11/Xlib-xcb.h>
 
 #include "kmd/winsys.h"
 #include "kmd/libdrm/xf86drmMode.h"
@@ -127,7 +131,7 @@ static const VkFormat x11_presentable_formats[] = {
 // directly, without the common Vulkan loader:
 //
 // Create a VkSurfaceKHR object for XCB window connections:
-static VkResult x11_surface_create(struct intel_instance *instance,
+static VkResult x11_xcb_surface_create(struct intel_instance *instance,
                                    xcb_connection_t* connection,
                                    xcb_window_t window,
                                    VkIcdSurfaceXcb **pSurface)
@@ -151,16 +155,59 @@ static VkResult x11_surface_create(struct intel_instance *instance,
     return VK_SUCCESS;
 }
 
+// Note: The following function is only needed if an application uses this ICD
+// directly, without the common Vulkan loader:
+//
+// Create a VkSurfaceKHR object for XLIB window connections:
+static VkResult x11_xlib_surface_create(struct intel_instance *instance,
+                                   Display* dpy,
+                                   Window window,
+                                   VkIcdSurfaceXlib **pSurface)
+{
+    VkIcdSurfaceXlib *surface;
+
+    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    if (!surface)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    memset(surface, 0, sizeof(*surface));
+// TBD: Do we need to do this (it doesn't fit with what we want for the API)?
+//    intel_handle_init(&surface, VK_OBJECT_TYPE_SURFACE_KHR, instance);
+
+    surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
+    surface->dpy = dpy;
+    surface->window = window;
+
+    *pSurface = surface;
+
+    return VK_SUCCESS;
+}
+
 static void x11_surface_destroy(VkSurfaceKHR surface)
 {
     intel_free(surface, surface);
 }
 
-static inline VkIcdSurfaceXcb *xcb_surface(VkSurfaceKHR surface)
+static inline VkIcdSurfaceXcb *x11_xcb_surface(VkSurfaceKHR surface)
 {
     VkIcdSurfaceXcb *pSurface = (VkIcdSurfaceXcb *) surface;
-    assert(pSurface->base.platform == VK_ICD_WSI_PLATFORM_XCB);
-    return pSurface;
+    if (pSurface->base.platform == VK_ICD_WSI_PLATFORM_XCB)
+    {
+        return pSurface;
+    }
+
+    return 0;
+}
+
+static inline VkIcdSurfaceXlib *x11_xlib_surface(VkSurfaceKHR surface)
+{
+    VkIcdSurfaceXlib *pSurface = (VkIcdSurfaceXlib *) surface;
+    if (pSurface->base.platform == VK_ICD_WSI_PLATFORM_XLIB)
+    {
+        return pSurface;
+    }
+
+    return 0;
 }
 
 static inline struct intel_x11_swap_chain *x11_swap_chain(VkSwapchainKHR sc)
@@ -263,9 +310,23 @@ static VkResult x11_get_surface_capabilities(
     VkSurfaceKHR surface,
     VkSurfaceCapabilitiesKHR *pSurfaceProperties)
 {
-    const VkIcdSurfaceXcb *s = xcb_surface(surface);
-    xcb_connection_t *c = s->connection;
-    xcb_window_t window = s->window;
+    const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(surface);
+    const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(surface);
+    assert(s_xcb || s_xlib);
+
+    xcb_connection_t *c = 0;
+    xcb_window_t window = 0;
+    if (s_xcb)
+    {
+        c = s_xcb->connection;
+        window = s_xcb->window;
+    }
+    else if (s_xlib)
+    {
+        c = XGetXCBConnection(s_xlib->dpy);
+        window = (xcb_window_t)s_xlib->window;
+    }
+
     xcb_get_geometry_cookie_t cookie;
     xcb_get_geometry_reply_t *reply;
 
@@ -788,9 +849,23 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 {
     const xcb_randr_provider_t provider = 0;
 
-    const VkIcdSurfaceXcb *s = xcb_surface(info->surface);
-    xcb_connection_t *c = s->connection;
-    xcb_window_t window = s->window;
+    const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(info->surface);
+    const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(info->surface);
+    assert(s_xcb || s_xlib);
+
+    xcb_connection_t *c = 0;
+    xcb_window_t window = 0;
+    if (s_xcb)
+    {
+        c = s_xcb->connection;
+        window = s_xcb->window;
+    }
+    else if (s_xlib)
+    {
+        c = XGetXCBConnection(s_xlib->dpy);
+        window = (xcb_window_t)s_xlib->window;
+    }
+
     struct intel_x11_swap_chain *sc;
     int fd;
 
@@ -959,12 +1034,11 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     const VkAllocationCallbacks*            pAllocator,
     VkSurfaceKHR*                           pSurface)
 {
-    return x11_surface_create((struct intel_instance *) instance,
+    return x11_xcb_surface_create((struct intel_instance *) instance,
                               connection, window,
                               (VkIcdSurfaceXcb **) pSurface);
 }
 
-#ifdef VK_USE_PLATFORM_XCB_KHR
 ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
@@ -978,7 +1052,36 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupp
         return VK_FALSE;
     }
 }
-#endif
+
+// Note: The following function is only needed if an application uses this ICD
+// directly, without the common Vulkan loader:
+//
+// Create a VkSurfaceKHR object for XLIB window connections:
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
+    VkInstance                              instance,
+    Display*                                dpy,
+    Window                                  window,
+    const VkAllocationCallbacks*            pAllocator,
+    VkSurfaceKHR*                           pSurface)
+{
+    return x11_xlib_surface_create((struct intel_instance *) instance,
+                              dpy, window,
+                              (VkIcdSurfaceXlib **) pSurface);
+}
+
+ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    Display*                                    dpy,
+    VisualID                                    visualID)
+{
+    // Just make sure we have a non-zero display:
+    if (dpy) {
+        return VK_TRUE;
+    } else {
+        return VK_FALSE;
+    }
+}
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkInstance                               instance,
@@ -994,13 +1097,22 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkSurfaceKHR                            surface,
     VkBool32*                               pSupported)
 {
-    const VkIcdSurfaceXcb *s = xcb_surface(surface);
+    const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(surface);
+    const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(surface);
+    assert(s_xcb || s_xlib);
 
-    // Just make sure we have a non-zero connection:
-    if (s->connection) {
-        *pSupported = true;
-    } else {
-        *pSupported = false;
+    *pSupported = false;
+
+    if (s_xcb) {
+        // Just make sure we have a non-zero connection:
+        if (s_xcb->connection) {
+            *pSupported = true;
+        }
+    } else if (s_xlib) {
+        // Just make sure we have a non-zero display:
+        if (s_xlib->dpy) {
+            *pSupported = true;
+        }
     }
 
     return VK_SUCCESS;
