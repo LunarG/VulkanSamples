@@ -49,8 +49,8 @@ For complete details of current validation layers, including all of the validati
 ### Print Object Stats
 (build dir)/layers/object_track.cpp (name=VK_LAYER_LUNARG_ObjectTracker) - Track object creation, use, and destruction. As objects are created, they're stored in a map. As objects are used, the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed, they're removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed, they are reported as leaked objects. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
-### Validate Draw State
-layers/draw\_state.cpp (name=VK_LAYER_LUNARG_DrawState) - DrawState tracks the Descriptor Set, Pipeline State, and dynamic state performing some point validation as states are created and used, and further validation at each Draw call. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+### Validate Draw State and Shaders
+layers/draw\_state.cpp (name=VK_LAYER_LUNARG_DrawState) - DrawState tracks the Descriptor Set, Pipeline State, Shaders, and dynamic state performing some point validation as states are created and used, and further validation at each Draw call. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. Additionally DrawState include sharder validation (formerly separate ShaderChecker layer) that inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time. It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks depends on the pair of pipeline stages involved. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Track GPU Memory
 layers/mem\_tracker.cpp (name=VK_LAYER_LUNARG_MemTracker) - The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
@@ -66,9 +66,6 @@ layers/image.cpp (name=VK_LAYER_LUNARG_Image) - The Image layer is intended to v
 
 ### Swapchain
 <build dir>/layer/swapchain.cpp (name=VK_LAYER_LUNARG_Swapchain) - Check that WSI extensions are being used correctly.
-
-### Validate Shaders
-<build dir>/layers/shader_checker.cpp (name=VK_LAYER_LUNARG_ShaderChecker) - The ShaderChecker layer inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time. It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks depends on the pair of pipeline stages involved. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Device Limitations
 layers/device_limits.cpp (name=VK_LAYER_LUNARG_DeviceLimits) - This layer is intended to capture underlying device features and limitations and then flag errors if an app makes requests for unsupported features or exceeding limitations. This layer is a work in progress and currently only flags some high-level errors without flagging errors on specific feature and limitation. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.

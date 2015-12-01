@@ -262,7 +262,6 @@ protected:
         instance_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
-        instance_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
         instance_layer_names.push_back("VK_LAYER_LUNARG_DeviceLimits");
         instance_layer_names.push_back("VK_LAYER_LUNARG_Image");
 
@@ -270,7 +269,6 @@ protected:
         device_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
         device_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
         device_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
-        device_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
         device_layer_names.push_back("VK_LAYER_LUNARG_DeviceLimits");
         device_layer_names.push_back("VK_LAYER_LUNARG_Image");
 

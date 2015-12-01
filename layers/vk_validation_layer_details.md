@@ -6,7 +6,7 @@
 
 ### DrawState Overview
 
-The DrawState layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, and descriptor set state. DrawState validates the consistency and correctness between and within these states.
+The DrawState layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, shaders, and descriptor set state. DrawState validates the consistency and correctness between and within these states. DrawState also includes SPIR-V validation which functionality is recorded under the ShaderChecker section below.
 
 ### DrawState Details Table
 
@@ -90,6 +90,34 @@ Additional checks to be added to DrawState
  31. Error if a cmdbuffer is submitted on a queue whose family doesn't match the family of the pool from which it was created.
  32. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
  33. Add validation for Pipeline Derivatives (see Pipeline Derivatives) section of the spec
+
+## ShaderChecker
+
+### ShaderChecker Overview
+
+The ShaderChecker functionality is part of DrawState layer and it inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time.
+It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks
+depends on the pair of pipeline stages involved.
+
+### ShaderChecker Details Table
+
+| Check | Overview | ENUM SHADER_CHECKER_* | Relevant API | Testname | Notes/TODO |
+| ----- | -------- | ---------------- | ------------ | -------- | ---------- |
+| Not consumed | Flag warning if a location is not consumed (useless work) | OUTPUT_NOT_CONSUMED | vkCreateGraphicsPipelines | CreatePipeline*NotConsumed | NA |
+| Not produced | Flag error if a location is not produced (consumer reads garbage) | INPUT_NOT_PRODUCED | vkCreateGraphicsPipelines | CreatePipeline*NotProvided | NA |
+| Type mismatch | Flag error if a location has inconsistent types | INTERFACE_TYPE_MISMATCH | vkCreateGraphicsPipelines | CreatePipeline*TypeMismatch | Between shader stages, an exact structural type match is required. Between VI and VS, or between FS and CB, only the basic component type must match (float for UNORM/SNORM/FLOAT, int for SINT, uint for UINT) as the VI and CB stages perform conversions to the exact format. |
+| Inconsistent shader | Flag error if an inconsistent SPIR-V image is detected. Possible cases include broken type definitions which the layer fails to walk. | INCONSISTENT_SPIRV | vkCreateGraphicsPipelines | TODO | All current tests use the reference compiler to produce valid SPIRV images from GLSL. |
+| Non-SPIRV shader | Flag warning if a non-SPIR-V shader image is detected. This can occur if early drivers are ingesting GLSL. ShaderChecker cannot analyze non-SPIRV shaders, so this suppresses most other checks. | NON_SPIRV_SHADER | vkCreateGraphicsPipelines | TODO | NA |
+| FS mixed broadcast | Flag error if the fragment shader writes both the legacy gl_FragCoord (which broadcasts to all CBs) and custom FS outputs. | FS_MIXED_BROADCAST | vkCreateGraphicsPipelines | TODO | Reference compiler refuses to compile shaders which do this |
+| VI Binding Descriptions | Validate that there is a single vertex input binding description for each binding | INCONSISTENT_VI | vkCreateGraphicsPipelines | CreatePipelineAttribBindingConflict | NA |
+| Shader Stage Check | Warns if shader stage is unsupported | UNKNOWN_STAGE | vkCreateGraphicsPipelines | TBD | NA |
+| Missing Descriptor | Flags error if shader attempts to use a descriptor binding not declared in the layout | MISSING_DESCRIPTOR | vkCreateGraphicsPipelines | CreatePipelineUniformBlockNotProvided | NA |
+| NA | Enum used for informational messages | NONE | | NA | None |
+
+### ShaderChecker Pending Work
+- Additional test cases for variously broken SPIRV images
+- Validation of a single SPIRV image in isolation (the spec describes many constraints)
+- Validation of SPIRV use of descriptors against the declared descriptor set layout
 
 ## ParamChecker
 
@@ -190,35 +218,6 @@ The MemTracker layer tracks memory objects and references and validates that the
 11. Warn on image/buffer deletion if USAGE bits were set that were not needed
 12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 13. Report destroy or modify of resources in use on queues and not cleared by fence or WaitIdle. Could be fence, semaphore, or objects used by submitted CommandBuffers.
-
-
-## ShaderChecker
-
-### ShaderChecker Overview
-
-The ShaderChecker layer inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time.
-It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks
-depends on the pair of pipeline stages involved.
-
-### ShaderChecker Details Table
-
-| Check | Overview | ENUM SHADER_CHECKER_* | Relevant API | Testname | Notes/TODO |
-| ----- | -------- | ---------------- | ------------ | -------- | ---------- |
-| Not consumed | Flag warning if a location is not consumed (useless work) | OUTPUT_NOT_CONSUMED | vkCreateGraphicsPipelines | CreatePipeline*NotConsumed | NA |
-| Not produced | Flag error if a location is not produced (consumer reads garbage) | INPUT_NOT_PRODUCED | vkCreateGraphicsPipelines | CreatePipeline*NotProvided | NA |
-| Type mismatch | Flag error if a location has inconsistent types | INTERFACE_TYPE_MISMATCH | vkCreateGraphicsPipelines | CreatePipeline*TypeMismatch | Between shader stages, an exact structural type match is required. Between VI and VS, or between FS and CB, only the basic component type must match (float for UNORM/SNORM/FLOAT, int for SINT, uint for UINT) as the VI and CB stages perform conversions to the exact format. |
-| Inconsistent shader | Flag error if an inconsistent SPIR-V image is detected. Possible cases include broken type definitions which the layer fails to walk. | INCONSISTENT_SPIRV | vkCreateGraphicsPipelines | TODO | All current tests use the reference compiler to produce valid SPIRV images from GLSL. |
-| Non-SPIRV shader | Flag warning if a non-SPIR-V shader image is detected. This can occur if early drivers are ingesting GLSL. ShaderChecker cannot analyze non-SPIRV shaders, so this suppresses most other checks. | NON_SPIRV_SHADER | vkCreateGraphicsPipelines | TODO | NA |
-| FS mixed broadcast | Flag error if the fragment shader writes both the legacy gl_FragCoord (which broadcasts to all CBs) and custom FS outputs. | FS_MIXED_BROADCAST | vkCreateGraphicsPipelines | TODO | Reference compiler refuses to compile shaders which do this |
-| VI Binding Descriptions | Validate that there is a single vertex input binding description for each binding | INCONSISTENT_VI | vkCreateGraphicsPipelines | CreatePipelineAttribBindingConflict | NA |
-| Shader Stage Check | Warns if shader stage is unsupported | UNKNOWN_STAGE | vkCreateGraphicsPipelines | TBD | NA |
-| Missing Descriptor | Flags error if shader attempts to use a descriptor binding not declared in the layout | MISSING_DESCRIPTOR | vkCreateGraphicsPipelines | CreatePipelineUniformBlockNotProvided | NA |
-| NA | Enum used for informational messages | NONE | | NA | None |
-
-### ShaderChecker Pending Work
-- Additional test cases for variously broken SPIRV images
-- Validation of a single SPIRV image in isolation (the spec describes many constraints)
-- Validation of SPIRV use of descriptors against the declared descriptor set layout
 
 ## ObjectTracker
 

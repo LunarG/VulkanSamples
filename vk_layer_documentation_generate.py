@@ -61,8 +61,8 @@ layer_inputs = { 'draw_state' : {'header' : 'layers/draw_state.h',
                                   'source' : 'layers/mem_tracker.cpp',
                                   'generated' : False,
                                   'error_enum' : 'MEM_TRACK_ERROR'},
-                 'shader_checker' : {'header' : 'layers/shader_checker.h',
-                                  'source' : 'layers/shader_checker.cpp',
+                 'shader_checker' : {'header' : 'layers/draw_state.h',
+                                  'source' : 'layers/draw_state.cpp',
                                   'generated' : False,
                                   'error_enum' : 'SHADER_CHECKER_ERROR'},
                  'threading' : {'header' : 'layers/threading.h',
@@ -137,8 +137,8 @@ class LayerParser:
         # For each header file, parse details into dicts
         # TODO : Should have a global dict element to track overall list of checks
         store_enum = False
-        for hf in self.header_files:
-            layer_name = os.path.basename(hf).split('.')[0]
+        for layer_name in layer_inputs:
+            hf = layer_inputs[layer_name]['header']
             self.layer_dict[layer_name] = {} # initialize a new dict for this layer
             self.layer_dict[layer_name]['CHECKS'] = [] # enum of checks is stored in a list
             #print('Parsing header file %s as layer name %s' % (hf, layer_name))
