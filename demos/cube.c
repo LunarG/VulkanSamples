@@ -31,6 +31,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <signal.h>
 
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
@@ -257,7 +258,7 @@ void dumpVec4(const char *note, vec4 vector)
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeLUNARG       objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -296,6 +297,25 @@ VkBool32 dbgFunc(
      * That's what would happen without validation layers, so we'll
      * keep that behavior here.
      */
+    return false;
+}
+
+VkBool32 BreakCallback(
+    VkFlags                             msgFlags,
+    VkDebugReportObjectTypeLUNARG       objType,
+    uint64_t                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    const void*                         pUserData)
+{
+#ifndef WIN32
+    raise(SIGTRAP);
+#else
+    DebugBreak();
+#endif
+
     return false;
 }
 
@@ -397,8 +417,8 @@ struct demo {
     bool use_break;
     PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallback;
-    PFN_vkDebugReportCallbackLUNARG dbgBreakCallback;
     VkDebugReportCallbackLUNARG msg_callback;
+    PFN_vkDebugReportMessageLUNARG DebugReportMessage;
 
     uint32_t current_buffer;
     uint32_t queue_count;
@@ -2323,6 +2343,11 @@ static void demo_init_vk(struct demo *demo)
         }
         if (!demo->DestroyDebugReportCallback) {
             ERR_EXIT("GetProcAddr: Unable to find vkDestroyDebugReportCallbackLUNARG\n",
+                     "vkGetProcAddr Failure");
+        }
+        demo->DebugReportMessage = (PFN_vkDebugReportMessageLUNARG) vkGetInstanceProcAddr(demo->inst, "vkDebugReportMessageLUNARG");
+        if (!demo->DebugReportMessage) {
+            ERR_EXIT("GetProcAddr: Unable to find vkDebugReportMessageLUNARG\n",
                      "vkGetProcAddr Failure");
         }
 
