@@ -41,9 +41,35 @@
 #include "vk_layer_extension_utils.h"
 
 
+struct WsiImageData {
+    VkImage image;
+
+    void Cleanup(VkDevice dev);
+};
+
+
+struct SwapChainData {
+    unsigned width, height;
+    VkFormat format;
+
+    std::vector<WsiImageData *> presentableImages;
+
+    void Cleanup(VkDevice dev);
+};
+
+
 struct layer_data {
+    PFN_vkCreateSwapchainKHR pfnCreateSwapchainKHR;
+    PFN_vkGetSwapchainImagesKHR pfnGetSwapchainImagesKHR;
+    PFN_vkQueuePresentKHR pfnQueuePresentKHR;
+    PFN_vkDestroySwapchainKHR pfnDestroySwapchainKHR;
+
     VkPhysicalDevice gpu;
     VkDevice dev;
+
+    std::unordered_map<VkSwapchainKHR, SwapChainData*>* swapChains;
+
+    void Cleanup();
 };
 
 static std::unordered_map<void *, layer_data *> layer_data_map;
@@ -77,11 +103,34 @@ init_overlay(layer_data *my_data)
     }
 }
 
+
+static void
+after_device_create(VkPhysicalDevice gpu, VkDevice device, VkLayerDispatchTable *pTable, layer_data *data)
+{
+    VkResult U_ASSERT_ONLY err;
+
+    data->gpu = gpu;
+    data->dev = device;
+
+    /* Get our WSI hooks in. */
+    data->pfnCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)pTable->GetDeviceProcAddr(device, "vkCreateSwapchainKHR");
+    data->pfnGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)pTable->GetDeviceProcAddr(device, "vkGetSwapchainImagesKHR");
+    data->pfnQueuePresentKHR = (PFN_vkQueuePresentKHR)pTable->GetDeviceProcAddr(device, "vkQueuePresentKHR");
+    data->pfnDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)pTable->GetDeviceProcAddr(device, "vkDestroySwapchainKHR");
+    data->swapChains = new std::unordered_map<VkSwapchainKHR, SwapChainData*>;
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
         const VkAllocationCallbacks *pAllocator, VkDevice* pDevice)
 {
     VkLayerDispatchTable *pDeviceTable = get_dispatch_table(overlay_device_table_map, *pDevice);
     VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
+    if (result == VK_SUCCESS) {
+        VkLayerDispatchTable *pTable = get_dispatch_table(overlay_device_table_map, *pDevice);
+        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+
+        after_device_create(gpu, *pDevice, pTable, my_device_data);
+    }
     return result;
 }
 
@@ -91,6 +140,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     dispatch_key key = get_dispatch_key(device);
 
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
+    my_data->Cleanup();
+
     VkLayerDispatchTable *pDisp =  get_dispatch_table(overlay_device_table_map, device);
     pDisp->DestroyDevice(device, pAllocator);
     overlay_device_table_map.erase(key);
@@ -124,6 +175,135 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 }
 
 
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
+    VkDevice                                 device,
+    const VkSwapchainCreateInfoKHR*          pCreateInfo,
+    const VkAllocationCallbacks*             pAllocator,
+    VkSwapchainKHR*                          pSwapChain)
+{
+    VkLayerDispatchTable *pTable = get_dispatch_table(overlay_device_table_map, device);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->pfnCreateSwapchainKHR(device, pCreateInfo, pAllocator, pSwapChain);
+
+    if (result == VK_SUCCESS) {
+        auto & data = (*my_data->swapChains)[*pSwapChain];
+        data = new SwapChainData;
+        data->width = pCreateInfo->imageExtent.width;
+        data->height = pCreateInfo->imageExtent.height;
+        data->format = pCreateInfo->imageFormat;
+
+#ifdef OVERLAY_DEBUG
+        printf("Creating resources for scribbling on swapchain format %u width %u height %u\n",
+                data->format, data->width, data->height);
+#endif
+    }
+
+    return result;
+}
+
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
+    VkDevice device,
+    VkSwapchainKHR swapChain,
+    uint32_t *pCount,
+    VkImage *pImages)
+{
+    VkLayerDispatchTable *pTable = get_dispatch_table(overlay_device_table_map, device);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = my_data->pfnGetSwapchainImagesKHR(device, swapChain, pCount, pImages);
+    VkResult U_ASSERT_ONLY err;
+
+    /* GetSwapChainImagesWSI may be called without an images buffer, in which case it
+     * just returns the count to the caller. We're only interested in acting on the
+     * /actual/ fetch of the images.
+     */
+    if (pImages) {
+        auto data = (*my_data->swapChains)[swapChain];
+
+        for (int i = 0; i < *pCount; i++) {
+
+
+            auto imageData = new WsiImageData;
+            imageData->image = pImages[i];
+
+            data->presentableImages.push_back(imageData);
+        }
+    }
+    return result;
+}
+
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
+    VkQueue                                     queue,
+    uint32_t                                    submitCount,
+    const VkSubmitInfo*                         pSubmits,
+    VkFence                                     fence)
+{
+    VkLayerDispatchTable *pTable = get_dispatch_table(overlay_device_table_map, queue);
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+
+    return pTable->QueueSubmit(queue, submitCount, pSubmits, fence);
+}
+
+
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR *pPresentInfo)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+
+    for (int i = 0; i < pPresentInfo->swapchainCount; i++) {
+
+        auto data = my_data->swapChains->find(pPresentInfo->pSwapchains[i]);
+        assert(data != my_data->swapChains->end());
+
+        /* TODO: scribble here */
+    }
+
+    VkResult result = my_data->pfnQueuePresentKHR(queue, pPresentInfo);
+    return result;
+}
+
+
+void WsiImageData::Cleanup(VkDevice dev)
+{
+    VkLayerDispatchTable *pTable = get_dispatch_table(overlay_device_table_map, dev);
+}
+
+
+void SwapChainData::Cleanup(VkDevice dev)
+{
+    for (int i = 0; i < presentableImages.size(); i++) {
+        presentableImages[i]->Cleanup(dev);
+        delete presentableImages[i];
+    }
+
+    presentableImages.clear();
+}
+
+
+void layer_data::Cleanup()
+{
+}
+
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
+    VkDevice                                 device,
+    VkSwapchainKHR                           swapchain,
+    const VkAllocationCallbacks*             pAllocator)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    /* Clean up our resources associated with this swapchain */
+    auto it = my_data->swapChains->find(swapchain);
+    assert(it != my_data->swapChains->end());
+
+    it->second->Cleanup(device);
+    delete it->second;
+    my_data->swapChains->erase(it->first);
+
+    my_data->pfnDestroySwapchainKHR(device, swapchain, pAllocator);
+}
+
+
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)
 {
     if (dev == NULL)
@@ -141,6 +321,11 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
 
     ADD_HOOK(vkCreateDevice);
     ADD_HOOK(vkDestroyDevice);
+    ADD_HOOK(vkCreateSwapchainKHR);
+    ADD_HOOK(vkGetSwapchainImagesKHR);
+    ADD_HOOK(vkQueuePresentKHR);
+    ADD_HOOK(vkDestroySwapchainKHR);
+    ADD_HOOK(vkQueueSubmit);
 #undef ADD_HOOK
 
     VkLayerDispatchTable* pTable = get_dispatch_table(overlay_device_table_map, dev);
