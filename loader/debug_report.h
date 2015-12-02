@@ -123,3 +123,24 @@ VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
     int32_t                                     msgCode,
     const char*                                 pLayerPrefix,
     const char*                                 pMsg);
+
+VkResult util_CreateDebugReportCallback(
+        struct loader_instance *inst,
+        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkAllocationCallbacks *pAllocator,
+        VkDebugReportCallbackLUNARG callback);
+
+void util_DestroyDebugReportCallback(
+        struct loader_instance *inst,
+        VkDebugReportCallbackLUNARG callback,
+        const VkAllocationCallbacks *pAllocator);
+
+VkBool32 util_DebugReportMessage(
+    const struct loader_instance*       inst,
+    VkFlags                             msgFlags,
+    VkDebugReportObjectTypeLUNARG       objectType,
+    uint64_t                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg);
