@@ -242,7 +242,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     copyblitimage template separate_image_sampler
     occlusion_query pipeline_cache pipeline_derivative
     immutable_sampler push_constants drawsubpasses secondarycmd
-    spirv_assembly spirv_specialization)
+    spirv_assembly spirv_specialization membarriers)
 sampleWithSingleFile()
 
 add_subdirectory(utils)
