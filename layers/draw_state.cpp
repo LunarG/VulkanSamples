@@ -79,7 +79,7 @@ struct shader_module;
 struct render_pass;
 
 struct layer_data {
-    debug_report_data *report_data;
+    debug_report_data* report_data;
     // TODO: put instance data here
     std::vector<VkDbgMsgCallback> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
@@ -95,7 +95,7 @@ struct layer_data {
     unordered_map<VkCommandPool,         list<VkCommandBuffer>>              commandPoolMap;
     unordered_map<VkDescriptorPool,      DESCRIPTOR_POOL_NODE*>              descriptorPoolMap;
     unordered_map<VkDescriptorSet,       SET_NODE*>                          setMap;
-    unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>                       layoutMap;
+    unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>                       descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout,      PIPELINE_LAYOUT_NODE>               pipelineLayoutMap;
     unordered_map<VkDeviceMemory,        VkImage>                            memImageMap;
     // Map for layout chains
@@ -103,11 +103,7 @@ struct layer_data {
     unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
     unordered_map<VkImage,               IMAGE_NODE*>                        imageLayoutMap;
     unordered_map<VkRenderPass,          RENDER_PASS_NODE*>                  renderPassMap;
-    // Data structs from shaderChecker TODO : Merge 3 duplicate maps with one above
-    unordered_map<VkShaderModule, shader_module *> shader_module_map;
-    unordered_map<VkDescriptorSetLayout, std::unordered_set<uint32_t>*> descriptor_set_layout_map;
-    unordered_map<VkPipelineLayout, std::vector<std::unordered_set<uint32_t>*>*> pipeline_layout_map;
-    unordered_map<VkRenderPass, render_pass *> render_pass_map;
+    unordered_map<VkShaderModule, shader_module*>                            shaderModuleMap;
     // Current render pass
     VkRenderPassBeginInfo renderPassBeginInfo;
     uint32_t currentSubpass;
@@ -139,34 +135,8 @@ struct shader_module {
     }
 };
 
-struct render_pass {
-    vector<std::vector<VkFormat>> subpass_color_formats;
-
-    render_pass(VkRenderPassCreateInfo const *pCreateInfo)
-    {
-        uint32_t i;
-
-        subpass_color_formats.reserve(pCreateInfo->subpassCount);
-        for (i = 0; i < pCreateInfo->subpassCount; i++) {
-            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
-            vector<VkFormat> color_formats;
-            uint32_t j;
-
-            color_formats.reserve(subpass->colorAttachmentCount);
-            for (j = 0; j < subpass->colorAttachmentCount; j++) {
-                const uint32_t att = subpass->pColorAttachments[j].attachment;
-                const VkFormat format = pCreateInfo->pAttachments[att].format;
-
-                color_formats.push_back(pCreateInfo->pAttachments[att].format);
-            }
-
-            subpass_color_formats.push_back(color_formats);
-        }
-    }
-};
-
 // TODO : Do we need to guard access to layer_data_map w/ lock?
-static unordered_map<void *, layer_data *> layer_data_map;
+static unordered_map<void*, layer_data*> layer_data_map;
 
 static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(g_initOnce);
 // TODO : This can be much smarter, using separate locks for separate global data
@@ -934,9 +904,9 @@ validate_vi_against_vs_inputs(layer_data *my_data, VkDevice dev, VkPipelineVerte
 }
 
 static bool
-validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, render_pass const *rp, uint32_t subpass)
+validate_fs_outputs_against_render_pass(layer_data *my_data, VkDevice dev, shader_module const *fs, RENDER_PASS_NODE const *rp, uint32_t subpass)
 {
-    const std::vector<VkFormat> &color_formats = rp->subpass_color_formats[subpass];
+    const std::vector<VkFormat> &color_formats = rp->subpassColorFormats[subpass];
     std::map<uint32_t, interface_var> outputs;
     std::map<uint32_t, interface_var> builtin_outputs;
     bool pass = true;
@@ -1008,20 +978,22 @@ shader_stage_attribs[] = {
     { "fragment shader", false },
 };
 
-
+// For given pipelineLayout verify that the setLayout at slot.first
+//  has the requested binding at slot.second
 static bool
-has_descriptor_binding(std::vector<std::unordered_set<uint32_t>*>* layout,
+has_descriptor_binding(layer_data* my_data,
+                       vector<VkDescriptorSetLayout>* pipelineLayout,
                        std::pair<unsigned, unsigned> slot)
 {
-    if (!layout)
+    if (!pipelineLayout)
         return false;
 
-    if (slot.first >= layout->size())
+    if (slot.first >= pipelineLayout->size())
         return false;
 
-    auto set = (*layout)[slot.first];
+    auto set = my_data->descriptorSetLayoutMap[(*pipelineLayout)[slot.first]]->bindings;
 
-    return (set->find(slot.second) != set->end());
+    return (set.find(slot.second) != set.end());
 }
 
 static uint32_t get_shader_stage_id(VkShaderStageFlagBits stage)
@@ -1126,7 +1098,7 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
         return false;
     }
     // Get the specific setLayout from PipelineLayout that overlaps this set
-    LAYOUT_NODE* pLayoutNode = my_data->layoutMap[pl.descriptorSetLayouts[layoutIndex]];
+    LAYOUT_NODE* pLayoutNode = my_data->descriptorSetLayoutMap[pl.descriptorSetLayouts[layoutIndex]];
     if (pLayoutNode->layout == pSet->pLayout->layout) { // trivial pass case
         return true;
     }
@@ -1191,8 +1163,8 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
 //    // Now check each matching layout to confirm compatibility
 //    LAYOUT_NODE *pPSOLayout, *pDSLayout;
 //    for (uint32_t i=0; i<numDescriptorSets; ++i) {
-//        pPSOLayout = my_data->layoutMap[psoPL.descriptorSetLayouts[i]];
-//        pDSLayout = my_data->layoutMap[dsPL.descriptorSetLayouts[i]];
+//        pPSOLayout = my_data->descriptorSetLayoutMap[psoPL.descriptorSetLayouts[i]];
+//        pDSLayout = my_data->descriptorSetLayoutMap[dsPL.descriptorSetLayouts[i]];
 //        if (pPSOLayout == pDSLayout)
 //            continue;
 //        if (pPSOLayout->descriptorTypes.size() != pDSLayout->descriptorTypes.size()) {
@@ -1212,7 +1184,7 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
 //    return skipCall;
 //}
 static bool
-validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
+validate_pipeline_shaders(layer_data *my_data, VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
 {
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
@@ -1222,7 +1194,7 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
 
     shader_module **shaders = new shader_module*[fragment_stage + 1];  /* exclude CS */
     memset(shaders, 0, sizeof(shader_module *) * (fragment_stage +1));
-    render_pass const *rp = 0;
+    RENDER_PASS_NODE const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
     bool pass = true;
 
@@ -1238,7 +1210,7 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
                 }
             }
             else {
-                shader_module *module = my_data->shader_module_map[pStage->module];
+                shader_module *module = my_data->shaderModuleMap[pStage->module];
                 shaders[get_shader_stage_id(pStage->stage)] = module;
 
                 /* validate descriptor set layout against what the spirv module actually uses */
@@ -1246,13 +1218,13 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
                 collect_interface_by_descriptor_slot(my_data, dev, module, spv::StorageClassUniform,
                         descriptor_uses);
 
-                auto layout = pCreateInfo->layout != VK_NULL_HANDLE ?
-                    my_data->pipeline_layout_map[pCreateInfo->layout] : nullptr;
+                auto layouts = pCreateInfo->layout != VK_NULL_HANDLE ?
+                    &(my_data->pipelineLayoutMap[pCreateInfo->layout].descriptorSetLayouts) : nullptr;
 
                 for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
 
                     /* find the matching binding */
-                    auto found = has_descriptor_binding(layout, it->first);
+                    auto found = has_descriptor_binding(my_data, layouts, it->first);
 
                     if (!found) {
                         char type_name[1024];
@@ -1270,7 +1242,7 @@ validate_graphics_pipeline(layer_data *my_data, VkDevice dev, VkGraphicsPipeline
     }
 
     if (pCreateInfo->renderPass != VK_NULL_HANDLE)
-        rp = my_data->render_pass_map[pCreateInfo->renderPass];
+        rp = my_data->renderPassMap[pCreateInfo->renderPass];
 
     vi = pCreateInfo->pVertexInputState;
 
@@ -1362,6 +1334,9 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
 static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, const PIPELINE_NODE* pPipeline)
 {
     VkBool32 skipCall = VK_FALSE;
+    if (!validate_pipeline_shaders(my_data, device, &(pPipeline->graphicsPipelineCI))) {
+        skipCall = VK_TRUE;
+    }
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
         skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
@@ -1595,7 +1570,7 @@ static VkBool32 validatePipelineState(layer_data* my_data, const GLOBAL_CB_NODE*
         // Verify that any MSAA request in PSO matches sample# in bound FB
         VkSampleCountFlagBits psoNumSamples = getNumSamples(my_data, pipeline);
         if (pCB->activeRenderPass) {
-            const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->createInfo;
+            const VkRenderPassCreateInfo* pRPCI = my_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
             const VkSubpassDescription* pSD = &pRPCI->pSubpasses[pCB->activeSubpass];
             VkSampleCountFlagBits subpassNumSamples = (VkSampleCountFlagBits) 0;
             uint32_t i;
@@ -1666,12 +1641,12 @@ static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
 
 static LAYOUT_NODE* getLayoutNode(layer_data* my_data, const VkDescriptorSetLayout layout) {
     loader_platform_thread_lock_mutex(&globalLock);
-    if (my_data->layoutMap.find(layout) == my_data->layoutMap.end()) {
+    if (my_data->descriptorSetLayoutMap.find(layout) == my_data->descriptorSetLayoutMap.end()) {
         loader_platform_thread_unlock_mutex(&globalLock);
         return NULL;
     }
     loader_platform_thread_unlock_mutex(&globalLock);
-    return my_data->layoutMap[layout];
+    return my_data->descriptorSetLayoutMap[layout];
 }
 
 // Return VK_FALSE if update struct is of valid type, otherwise flag error and return code from callback
@@ -2256,9 +2231,9 @@ static void deletePools(layer_data* my_data)
 // NOTE : Calls to this function should be wrapped in mutex
 static void deleteLayouts(layer_data* my_data)
 {
-    if (my_data->layoutMap.size() <= 0)
+    if (my_data->descriptorSetLayoutMap.size() <= 0)
         return;
-    for (auto ii=my_data->layoutMap.begin(); ii!=my_data->layoutMap.end(); ++ii) {
+    for (auto ii=my_data->descriptorSetLayoutMap.begin(); ii!=my_data->descriptorSetLayoutMap.end(); ++ii) {
         LAYOUT_NODE* pLayout = (*ii).second;
         if (pLayout->createInfo.pBinding) {
             for (uint32_t i=0; i<pLayout->createInfo.bindingCount; i++) {
@@ -2269,7 +2244,7 @@ static void deleteLayouts(layer_data* my_data)
         }
         delete pLayout;
     }
-    my_data->layoutMap.clear();
+    my_data->descriptorSetLayoutMap.clear();
 }
 
 // Currently clearing a set is removing all previous updates to that set
@@ -3157,17 +3132,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
     uint32_t i=0;
     loader_platform_thread_lock_mutex(&globalLock);
 
-    bool pass = true;
     for (i=0; i<count; i++) {
         pPipeNode[i] = initGraphicsPipeline(dev_data, &pCreateInfos[i], NULL);
-        // TODOSC : Merge SC validate* func w/ verifyPipelineCS func
-        pass = validate_graphics_pipeline(dev_data, device, &pCreateInfos[i]) && pass;
         skipCall |= verifyPipelineCreateState(dev_data, device, pPipeNode[i]);
     }
 
     loader_platform_thread_unlock_mutex(&globalLock);
 
-    if ((VK_FALSE == skipCall) && pass) {
+    if (VK_FALSE == skipCall) {
         result = dev_data->device_dispatch_table->CreateGraphicsPipelines(device,
             pipelineCache, count, pCreateInfos, pAllocator, pPipelines);
         loader_platform_thread_lock_mutex(&globalLock);
@@ -3311,14 +3283,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
         assert(pNewNode->endIndex >= pNewNode->startIndex);
         // Put new node at Head of global Layer list
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->layoutMap[*pSetLayout] = pNewNode;
-        // TODOSC : Currently duplicating data struct here, need to unify
-        auto& bindings = dev_data->descriptor_set_layout_map[*pSetLayout];
-        bindings = new std::unordered_set<uint32_t>();
-        bindings->reserve(pCreateInfo->bindingCount);
-        for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++)
-            bindings->insert(pCreateInfo->pBinding[i].binding);
-
+        dev_data->descriptorSetLayoutMap[*pSetLayout] = pNewNode;
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -3340,15 +3305,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineLayout(VkDevice device, const VkP
         for (i=0; i<pCreateInfo->pushConstantRangeCount; ++i) {
             plNode.pushConstantRanges[i] = pCreateInfo->pPushConstantRanges[i];
         }
-        // TODOSC : Code merged from SC duplicates data structs, need to unify
-        loader_platform_thread_lock_mutex(&globalLock);
-        auto& layouts = dev_data->pipeline_layout_map[*pPipelineLayout];
-        layouts = new vector<unordered_set<uint32_t>*>();
-        layouts->reserve(pCreateInfo->setLayoutCount);
-        for (unsigned i = 0; i < pCreateInfo->setLayoutCount; i++) {
-            layouts->push_back(dev_data->descriptor_set_layout_map[pCreateInfo->pSetLayouts[i]]);
-        }
-        loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
 }
@@ -4340,7 +4296,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
 
     // Validate that attachment is in reference list of active subpass
     if (pCB->activeRenderPass) {
-        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass]->createInfo;
+        const VkRenderPassCreateInfo *pRPCI = dev_data->renderPassMap[pCB->activeRenderPass]->pCreateInfo;
         const VkSubpassDescription   *pSD   = &pRPCI->pSubpasses[pCB->activeSubpass];
 
         for (uint32_t attachment_idx = 0; attachment_idx < attachmentCount; attachment_idx++) {
@@ -4984,7 +4940,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
 
     if (res == VK_SUCCESS) {
         loader_platform_thread_lock_mutex(&globalLock);
-        my_data->shader_module_map[*pShaderModule] = new shader_module(pCreateInfo);
+        my_data->shaderModuleMap[*pShaderModule] = new shader_module(pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return res;
@@ -5058,11 +5014,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
             memcpy((void*)localRPCI->pDependencies, pCreateInfo->pDependencies, localRPCI->dependencyCount*sizeof(VkSubpassDependency));
         }
         loader_platform_thread_lock_mutex(&globalLock);
-        dev_data->renderPassMap[*pRenderPass] = new RENDER_PASS_NODE();
+        dev_data->renderPassMap[*pRenderPass] = new RENDER_PASS_NODE(localRPCI);
         dev_data->renderPassMap[*pRenderPass]->hasSelfDependency = has_self_dependency;
-        dev_data->renderPassMap[*pRenderPass]->createInfo = localRPCI;
-        // TODOSC : Duplicate data struct here, need to unify
-        dev_data->render_pass_map[*pRenderPass] = new render_pass(pCreateInfo);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -5073,7 +5026,7 @@ static void deleteRenderPasses(layer_data* my_data)
     if (my_data->renderPassMap.size() <= 0)
         return;
     for (auto ii=my_data->renderPassMap.begin(); ii!=my_data->renderPassMap.end(); ++ii) {
-        const VkRenderPassCreateInfo* pRenderPassInfo = (*ii).second->createInfo;
+        const VkRenderPassCreateInfo* pRenderPassInfo = (*ii).second->pCreateInfo;
         if (pRenderPassInfo->pAttachments) {
             delete[] pRenderPassInfo->pAttachments;
         }
@@ -5096,6 +5049,7 @@ static void deleteRenderPasses(layer_data* my_data)
         if (pRenderPassInfo->pDependencies) {
             delete[] pRenderPassInfo->pDependencies;
         }
+        delete pRenderPassInfo;
         delete (*ii).second;
     }
     my_data->renderPassMap.clear();
@@ -5105,7 +5059,7 @@ bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRe
     bool skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
-    const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->createInfo;
+    const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->pCreateInfo;
     const VkFramebufferCreateInfo* pFramebufferInfo = dev_data->frameBufferMap[pRenderPassBegin->framebuffer];
     if (pRenderPassInfo->attachmentCount != pFramebufferInfo->attachmentCount) {
         skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
@@ -5133,7 +5087,7 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
     if (render_pass_data == dev_data->renderPassMap.end()) {
         return;
     }
-    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->createInfo;
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->pCreateInfo;
     auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;
@@ -5189,7 +5143,7 @@ void TransitionFinalSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPass
     if (render_pass_data == dev_data->renderPassMap.end()) {
         return;
     }
-    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->createInfo;
+    const VkRenderPassCreateInfo* pRenderPassInfo = render_pass_data->second->pCreateInfo;
     auto framebuffer_data = dev_data->frameBufferMap.find(pRenderPassBegin->framebuffer);
     if (framebuffer_data == dev_data->frameBufferMap.end()) {
         return;

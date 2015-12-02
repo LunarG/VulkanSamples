@@ -173,8 +173,31 @@ typedef struct _IMAGE_CMD_BUF_NODE {
 } IMAGE_CMD_BUF_NODE;
 
 typedef struct _RENDER_PASS_NODE {
-    VkRenderPassCreateInfo* createInfo;
+    VkRenderPassCreateInfo const* pCreateInfo;
     std::vector<bool> hasSelfDependency;
+    vector<std::vector<VkFormat>> subpassColorFormats;
+
+    _RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo)
+    {
+        uint32_t i;
+
+        subpassColorFormats.reserve(pCreateInfo->subpassCount);
+        for (i = 0; i < pCreateInfo->subpassCount; i++) {
+            const VkSubpassDescription *subpass = &pCreateInfo->pSubpasses[i];
+            vector<VkFormat> color_formats;
+            uint32_t j;
+
+            color_formats.reserve(subpass->colorAttachmentCount);
+            for (j = 0; j < subpass->colorAttachmentCount; j++) {
+                const uint32_t att = subpass->pColorAttachments[j].attachment;
+                const VkFormat format = pCreateInfo->pAttachments[att].format;
+
+                color_formats.push_back(pCreateInfo->pAttachments[att].format);
+            }
+
+            subpassColorFormats.push_back(color_formats);
+        }
+    }
 } RENDER_PASS_NODE;
 
 // Descriptor Data structures
