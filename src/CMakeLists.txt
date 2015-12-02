@@ -218,7 +218,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     instance_layer_properties instance_extension_properties
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback multiple_sets
-    copyblitimage template)
+    copyblitimage template separate_image_sampler)
 sampleWithSingleFile()
 
 # targets that use spv shaders
