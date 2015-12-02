@@ -1843,9 +1843,6 @@ static void demo_resize(struct demo *demo)
     vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
     free(demo->buffers);
 
-    vkDestroyCommandPool(demo->device, demo->cmd_pool, NULL);
-
-
     // Second, re-perform the demo_prepare() function, which will re-create the
     // swapchain:
     demo_prepare(demo);
