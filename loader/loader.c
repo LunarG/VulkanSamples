@@ -527,7 +527,7 @@ void loader_delete_layer_properties(
 
 }
 
-static void loader_add_global_extensions(
+static void loader_add_instance_extensions(
         const struct loader_instance *inst,
         const PFN_vkEnumerateInstanceExtensionProperties fp_get_props,
         const char *lib_name,
@@ -544,7 +544,7 @@ static void loader_add_global_extensions(
 
     res = fp_get_props(NULL, &count, NULL);
     if (res != VK_SUCCESS) {
-        loader_log(VK_DEBUG_REPORT_WARN_BIT, 0, "Error getting global extension count from %s", lib_name);
+        loader_log(VK_DEBUG_REPORT_WARN_BIT, 0, "Error getting Instance extension count from %s", lib_name);
         return;
     }
 
@@ -557,7 +557,7 @@ static void loader_add_global_extensions(
 
     res = fp_get_props(NULL, &count, ext_props);
     if (res != VK_SUCCESS) {
-        loader_log(VK_DEBUG_REPORT_WARN_BIT, 0, "Error getting global extensions from %s", lib_name);
+        loader_log(VK_DEBUG_REPORT_WARN_BIT, 0, "Error getting Instance extensions from %s", lib_name);
         return;
     }
 
@@ -569,7 +569,7 @@ static void loader_add_global_extensions(
                  VK_MINOR(ext_props[i].specVersion),
                  VK_PATCH(ext_props[i].specVersion));
         loader_log(VK_DEBUG_REPORT_DEBUG_BIT, 0,
-                   "Global Extension: %s (%s) version %s",
+                   "Instance Extension: %s (%s) version %s",
                    ext_props[i].extensionName, lib_name, spec_version);
         loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
     }
@@ -581,7 +581,7 @@ static void loader_add_global_extensions(
  * Initialize ext_list with the physical device extensions.
  * The extension properties are passed as inputs in count and ext_props.
  */
-static VkResult loader_init_physical_device_extensions(
+static VkResult loader_init_device_extensions(
         const struct loader_instance *inst,
         struct loader_physical_device *phys_dev,
         uint32_t count,
@@ -604,7 +604,7 @@ static VkResult loader_init_physical_device_extensions(
                 VK_MINOR(ext_props[i].specVersion),
                 VK_PATCH(ext_props[i].specVersion));
         loader_log(VK_DEBUG_REPORT_DEBUG_BIT, 0,
-                "PhysicalDevice Extension: %s (%s) version %s",
+                "Device Extension: %s (%s) version %s",
                 ext_props[i].extensionName, phys_dev->this_icd->this_icd_lib->lib_name, spec_version);
         res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
         if (res != VK_SUCCESS)
@@ -614,7 +614,7 @@ static VkResult loader_init_physical_device_extensions(
     return VK_SUCCESS;
 }
 
-static VkResult loader_add_physical_device_extensions(
+static VkResult loader_add_device_extensions(
         const struct loader_instance *inst,
         VkPhysicalDevice physical_device,
         const char *lib_name,
@@ -640,7 +640,7 @@ static VkResult loader_add_physical_device_extensions(
                     VK_MINOR(ext_props[i].specVersion),
                     VK_PATCH(ext_props[i].specVersion));
             loader_log(VK_DEBUG_REPORT_DEBUG_BIT, 0,
-                    "PhysicalDevice Extension: %s (%s) version %s",
+                    "Device Extension: %s (%s) version %s",
                     ext_props[i].extensionName, lib_name, spec_version);
             res = loader_add_to_ext_list(inst, ext_list, 1, &ext_props[i]);
             if (res != VK_SUCCESS)
@@ -1048,7 +1048,7 @@ static VkExtensionProperties *get_dev_extension_property(
 }
 
 /*
- * For global extensions implemented within the loader (i.e. DEBUG_REPORT
+ * For Instance extensions implemented within the loader (i.e. DEBUG_REPORT
  * the extension must provide two entry points for the loader to use:
  * - "trampoline" entry point - this is the address returned by GetProcAddr
  * and will always do what's necessary to support a global call.
@@ -1076,7 +1076,7 @@ void loader_get_icd_loader_instance_extensions(
     for (uint32_t i = 0; i < icd_libs->count; i++) {
         loader_init_generic_list(inst, (struct loader_generic_list *) &icd_exts,
                                  sizeof(VkExtensionProperties));
-        loader_add_global_extensions(inst, icd_libs->list[i].EnumerateInstanceExtensionProperties,
+        loader_add_instance_extensions(inst, icd_libs->list[i].EnumerateInstanceExtensionProperties,
                                      icd_libs->list[i].lib_name,
                                      &icd_exts);
         loader_add_to_ext_list(inst, inst_exts,
@@ -3442,7 +3442,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
                                       sizeof(VkExtensionProperties))) {
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
-        res = loader_add_physical_device_extensions(
+        res = loader_add_device_extensions(
                             inst, physicalDevice,
                             phys_dev->this_icd->this_icd_lib->lib_name,
                             &phys_dev->device_extension_cache);
@@ -3736,7 +3736,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties(
         res = icd->EnumerateDeviceExtensionProperties(phys_dev->phys_dev, NULL, pPropertyCount, pProperties);
         if (pProperties != NULL  && res == VK_SUCCESS) {
             /* initialize dev_extension list within the physicalDevice object */
-            res = loader_init_physical_device_extensions(phys_dev->this_instance,
+            res = loader_init_device_extensions(phys_dev->this_instance,
                                phys_dev, *pPropertyCount, pProperties,
                                &phys_dev->device_extension_cache);
         }
