@@ -25,7 +25,7 @@ ICD shared library (".so") file.  For example:
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "path to ICD library",
-        "api_version": "1.0.0"
+        "api_version": "0.210.0"
     }
 }
 
@@ -198,7 +198,7 @@ For example:
          "name": "OverlayLayer",
          "type": "DEVICE",
          "library_path": "libvkOverlayLayer.so",
-         "api_version" : "1.0.0",
+         "api_version" : "0.210.0",
          "implementation_version" : "2",
          "description" : "LunarG HUD layer",
          "functions": {

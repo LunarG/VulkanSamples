@@ -33,53 +33,54 @@
 #
 # Example of actual settings for each layer
 #
-# DeviceLimits Settings
+# VK_LUNARG_LAYER_DeviceLimits Settings
 DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DeviceLimitsReportFlags = error,warn,perf
 DeviceLimitsLogFilename = stdout
 
-# DrawState Settings
+# VK_LUNARG_LAYER_DrawState Settings
 DrawStateDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DrawStateReportFlags = error,warn,perf
 DrawStateLogFilename = stdout
 
-# Image Settings
+# VK_LUNARG_LAYER_Image Settings
 ImageDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ImageReportFlags = error,warn,perf
 ImageLogFilename = stdout
 
-# MemTracker Settings
+# VK_LUNARG_LAYER_MemTracker Settings
 MemTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 MemTrackerReportFlags = error,warn,perf
 MemTrackerLogFilename = stdout
 
-# ObjectTracker Settings
+# VK_LUNARG_LAYER_ObjectTracker Settings
 ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ObjectTrackerReportFlags = error,warn,perf
 ObjectTrackerLogFilename = stdout
 
-# ParamChecker Settings
+# VK_LUNARG_LAYER_ParamChecker Settings
 ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ParamCheckerReportFlags = error,warn,perf
 ParamCheckerLogFilename = stdout
 
-# ShaderChecker Settings
+# VK_LUNARG_LAYER_ShaderChecker Settings
 ShaderCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ShaderCheckerReportFlags = error,warn,perf
 ShaderCheckerLogFilename = stdout
 
-# Swapchain Settings
+# VK_LUNARG_LAYER_Swapchain Settings
 SwapchainDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 SwapchainReportFlags = error,warn,perf
 SwapchainLogFilename = stdout
 
-# Threading Settings
+# VK_LUNARG_LAYER_Threading Settings
 ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ThreadingReportFlags = error,warn,perf
 ThreadingLogFilename = stdout
 
-# APIDump Settings - NOTE that APIDump is not a validation layer and the
-#  common settings for ReportFlags and DebugAction do not apply
+# VK_LUNARG_LAYER_APIDump Settings - NOTE that VK_LUNARG_LAYER_APIDump is
+# not a validation layer and the common settings for ReportFlags and
+# DebugAction do not apply
 # Detailed TRUE causes parameter details to be dumped in addition to API calls
 APIDumpDetailed = TRUE
 # NoAddr TRUE causes "address" to be dumped in place of hex addresses
