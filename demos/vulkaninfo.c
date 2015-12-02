@@ -1065,8 +1065,7 @@ static void app_gpu_dump(const struct app_gpu *gpu)
 
         extract_version(layer_info->layer_properties.specVersion, &major, &minor, &patch);
         snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        extract_version(layer_info->layer_properties.implementationVersion, &major, &minor, &patch);
-        snprintf(layer_version, sizeof(layer_version), "%d.%d.%d", major, minor, patch);
+        snprintf(layer_version, sizeof(layer_version), "%d", layer_info->layer_properties.implementationVersion);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
                layer_info->layer_properties.layerName,
                (char*) layer_info->layer_properties.description,
@@ -1121,8 +1120,7 @@ int main(int argc, char **argv)
 
         extract_version(layer_prop->specVersion, &major, &minor, &patch);
         snprintf(spec_version, sizeof(spec_version), "%d.%d.%d", major, minor, patch);
-        extract_version(layer_prop->implementationVersion, &major, &minor, &patch);
-        snprintf(layer_version, sizeof(layer_version), "%d.%d.%d", major, minor, patch);
+        snprintf(layer_version, sizeof(layer_version), "%d", layer_prop->implementationVersion);
         printf("\t%s (%s) Vulkan version %s, layer version %s\n",
                layer_prop->layerName, (char*) layer_prop->description, spec_version, layer_version);
 
