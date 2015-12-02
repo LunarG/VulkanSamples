@@ -1605,7 +1605,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
 
         char *fullpath = props->lib_name;
         char *rel_base;
-        if (loader_platform_is_path(filename)) {
+        if (loader_platform_is_path(library_path)) {
             // a relative or absolute path
             char *name_copy = loader_stack_alloc(strlen(filename) + 1);
             strcpy(name_copy, filename);
