@@ -809,7 +809,7 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     prePresentBarrier.pNext = NULL;
     prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    prePresentBarrier.dstAccessMask = 0;
+    prePresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;

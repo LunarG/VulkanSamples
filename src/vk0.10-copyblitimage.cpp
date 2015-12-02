@@ -210,7 +210,7 @@ int main(int argc, char **argv)
     prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     prePresentBarrier.pNext = NULL;
     prePresentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    prePresentBarrier.dstAccessMask = 0;
+    prePresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
