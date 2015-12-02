@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -73,8 +74,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     memset(&ptr_instance->instance_layer_list, 0, sizeof(ptr_instance->instance_layer_list));
     memset(&ptr_instance->device_layer_list, 0, sizeof(ptr_instance->device_layer_list));
     loader_layer_scan(ptr_instance,
-
-
                       &ptr_instance->instance_layer_list,
                       &ptr_instance->device_layer_list);
 
