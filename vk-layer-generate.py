@@ -1006,7 +1006,7 @@ class APIDumpSubcommand(Subcommand):
             (pft, pfi) = self._get_printf_params(p.ty, p.name, cp, cpp=True)
             if p.name == "pSwapchain" or p.name == "pSwapchainImages":
                 log_func += '%s = " << %s << ", ' % (p.name, p.name)
-            elif p.name == "swapchain":
+            elif p.name == "swapchain" or p.name == "visual_id":
                 log_func += '%s = " << %s << ", ' % (p.name, p.name)
             else:
                 log_func += '%s = " << %s << ", ' % (p.name, pfi)
