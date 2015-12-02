@@ -1421,8 +1421,8 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
 
 const VkExtensionProperties nulldrv_phy_dev_gpu_exts[1] = {
     {
-        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
+        .extensionName = VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = VK_KHR_DISPLAY_SWAPCHAIN_REVISION,
     }
 };
 
