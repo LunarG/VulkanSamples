@@ -39,6 +39,7 @@
 
 
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_lunarg_debug_report.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
     __FILE__, __LINE__, vk_result_string(err));
@@ -127,6 +128,48 @@ struct app_gpu {
 
     struct app_dev dev;
 };
+
+VkBool32 dbg_callback(
+    VkFlags                             msgFlags,
+    VkDebugReportObjectTypeLUNARG       objType,
+    uint64_t                            srcObject,
+    size_t                              location,
+    int32_t                             msgCode,
+    const char*                         pLayerPrefix,
+    const char*                         pMsg,
+    const void*                         pUserData)
+{
+    char *message = (char *) malloc(strlen(pMsg)+100);
+
+    assert (message);
+
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
+        sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
+        sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT) {
+        sprintf(message,"INFO: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT) {
+        sprintf(message,"DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
+    }
+
+#ifdef _WIN32
+    MessageBox(NULL, message, "Alert", MB_OK);
+#else
+    printf("%s\n",message);
+    fflush(stdout);
+#endif
+    free(message);
+
+    /*
+     * false indicates that layer should not bail-out of an
+     * API call that had validation failures. This may mean that the
+     * app dies inside the driver due to invalid parameter(s).
+     * That's what would happen without validation layers, so we'll
+     * keep that behavior here.
+     */
+    return false;
+}
 
 static const char *vk_result_string(VkResult err)
 {
@@ -643,6 +686,13 @@ static void app_create_instance(struct app_instance *inst)
 
     inst_info.enabledExtensionNameCount = global_extension_count;
     inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
+
+    VkDebugReportCallbackCreateInfoLUNARG dbg_info;
+    memset(&dbg_info, 0, sizeof(dbg_info));
+    dbg_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+    dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_INFO_BIT;
+    dbg_info.pfnCallback = dbg_callback;
+    inst_info.pNext = &dbg_info;
 
     err = vkCreateInstance(&inst_info, NULL, &inst->instance);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
