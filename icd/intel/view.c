@@ -452,15 +452,15 @@ static void surface_state_tex_gen7(const struct intel_gpu *gpu,
 
    if (intel_gpu_gen(gpu) >= INTEL_GEN(7.5)) {
       dw[7] |=
-          channel_swizzle_to_scs(swizzles.r) << GEN75_SURFACE_DW7_SCS_R__SHIFT |
-          channel_swizzle_to_scs(swizzles.g) << GEN75_SURFACE_DW7_SCS_G__SHIFT |
-          channel_swizzle_to_scs(swizzles.b) << GEN75_SURFACE_DW7_SCS_B__SHIFT |
-          channel_swizzle_to_scs(swizzles.a) << GEN75_SURFACE_DW7_SCS_A__SHIFT;
+         channel_swizzle_to_scs((swizzles.r == VK_COMPONENT_SWIZZLE_IDENTITY) ? VK_COMPONENT_SWIZZLE_R : swizzles.r) << GEN75_SURFACE_DW7_SCS_R__SHIFT |
+         channel_swizzle_to_scs((swizzles.g == VK_COMPONENT_SWIZZLE_IDENTITY) ? VK_COMPONENT_SWIZZLE_G : swizzles.g) << GEN75_SURFACE_DW7_SCS_G__SHIFT |
+         channel_swizzle_to_scs((swizzles.b == VK_COMPONENT_SWIZZLE_IDENTITY) ? VK_COMPONENT_SWIZZLE_B : swizzles.b) << GEN75_SURFACE_DW7_SCS_B__SHIFT |
+         channel_swizzle_to_scs((swizzles.a == VK_COMPONENT_SWIZZLE_IDENTITY) ? VK_COMPONENT_SWIZZLE_A : swizzles.a) << GEN75_SURFACE_DW7_SCS_A__SHIFT;
    } else {
-        assert(swizzles.r == VK_COMPONENT_SWIZZLE_R &&
-               swizzles.g == VK_COMPONENT_SWIZZLE_G &&
-               swizzles.b == VK_COMPONENT_SWIZZLE_B &&
-               swizzles.a == VK_COMPONENT_SWIZZLE_A);
+         assert(((swizzles.r == VK_COMPONENT_SWIZZLE_R) || (swizzles.r == VK_COMPONENT_SWIZZLE_IDENTITY)) &&
+                ((swizzles.g == VK_COMPONENT_SWIZZLE_G) || (swizzles.g == VK_COMPONENT_SWIZZLE_IDENTITY)) &&
+                ((swizzles.b == VK_COMPONENT_SWIZZLE_B) || (swizzles.b == VK_COMPONENT_SWIZZLE_IDENTITY)) &&
+                ((swizzles.a == VK_COMPONENT_SWIZZLE_A) || (swizzles.a == VK_COMPONENT_SWIZZLE_IDENTITY)));
    }
 }
 
