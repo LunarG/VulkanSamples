@@ -3,6 +3,7 @@
 # VK
 #
 # Copyright (C) 2015 Valve Corporation
+# Copyright (C) 2015 Google Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -430,8 +431,12 @@ class Subcommand(object):
                             func_body.append('    {')
                             extra_space = "    "
                             for ext_name in ext_list:
+                                if 'Xcb' in ext_name:
+                                    func_body.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
                                 func_body.append('    %sif (!strcmp("%s", funcName))\n'
                                                  '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
+                                if 'Xcb' in ext_name:
+                                    func_body.append("#endif //VK_USE_PLATFORM_XCB_KHR")
                             if 0 != len(ext_enable):
                                func_body.append('    }\n')
 
@@ -536,8 +541,12 @@ class Subcommand(object):
                             func_body.append('    {')
                             extra_space = "    "
                             for ext_name in ext_list:
+                                if 'Xcb' in ext_name:
+                                    func_body.append('#ifdef VK_USE_PLATFORM_XCB_KHR')
                                 func_body.append('    %sif (!strcmp("%s", funcName))\n'
                                          '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
+                                if 'Xcb' in ext_name:
+                                    func_body.append('#endif //VK_USE_PLATFORM_XCB_KHR')
                             if 0 != len(ext_enable):
                                 func_body.append('    }\n')
 
@@ -739,6 +748,8 @@ class GenericLayerSubcommand(Subcommand):
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
         else:
+            if 'Xcb' in proto.name:
+              funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
             funcs.append('%s' % self.lineinfo.get())
             dispatch_param = proto.params[0].name
             # Must use 'instance' table for these APIs, 'device' table otherwise
@@ -752,6 +763,8 @@ class GenericLayerSubcommand(Subcommand):
                      '    %s%s_dispatch_table(%s)->%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), stmt))
+            if 'Xcb' in proto.name:
+              funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1159,6 +1172,8 @@ class APIDumpSubcommand(Subcommand):
                  '%s'
                  '}' % (qual, decl, table_type, dispatch_param, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
+            if 'Xcb' in decl:
+                funcs.append('#ifdef VK_USE_PLATFORM_XCB_KHR')
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -1166,6 +1181,8 @@ class APIDumpSubcommand(Subcommand):
                      '    %s%s%s\n'
                      '%s'
                      '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
+            if 'Xcb' in decl:
+                funcs.append('#endif //VK_USE_PLATFORM_XCB_KHR')
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1707,6 +1724,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 table_type = "instance"
             else:
                 table_type = "device"
+            if 'Xcb' in proto.name:
+                funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1715,6 +1734,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '%s'
                      '}' % (qual, decl, using_line, destroy_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, stmt))
+            if 'Xcb' in proto.name:
+                funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
         return "\n\n".join(funcs)
 
     def generate_body(self):
