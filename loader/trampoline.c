@@ -70,15 +70,20 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         ptr_instance->alloc_callbacks = *pAllocator;
     }
 
-    while (!pNext) {
+    /*
+     * Look for a debug report create info structure
+     * and setup a callback if found.
+     */
+    while (pNext) {
         if (((VkInstanceCreateInfo *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG) {
             instance_callback = (VkDebugReportCallbackLUNARG) ptr_instance;
             if (util_CreateDebugReportCallback(ptr_instance, pNext, pAllocator, instance_callback)) {
-                free(ptr_instance);
+                loader_heap_free(ptr_instance, ptr_instance);
                 loader_platform_thread_unlock_mutex(&loader_lock);
                 return VK_ERROR_OUT_OF_HOST_MEMORY;
             }
         }
+        pNext = (void *) ((VkInstanceCreateInfo *)pNext)->pNext;
     }
 
     /* Due to implicit layers need to get layer list even if
@@ -96,6 +101,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                      pCreateInfo->ppEnabledLayerNames,
                                      &ptr_instance->instance_layer_list);
         if (res != VK_SUCCESS) {
+            util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+            loader_heap_free(ptr_instance, ptr_instance);
             loader_platform_thread_unlock_mutex(&loader_lock);
             return res;
         }
@@ -120,6 +127,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                     &ptr_instance->ext_list);
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
@@ -138,6 +146,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                  &ptr_instance->icd_libs);
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -160,6 +169,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
+        util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance->disp);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -183,6 +193,9 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
      */
     loader_activate_instance_layer_extensions(ptr_instance);
 
+    /* Remove temporary debug_report callback */
+    util_DestroyDebugReportCallback(ptr_instance, instance_callback, pAllocator);
+
     loader_platform_thread_unlock_mutex(&loader_lock);
     return res;
 }
@@ -196,6 +209,8 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     disp = loader_get_instance_dispatch(instance);
 
     loader_platform_thread_lock_mutex(&loader_lock);
+
+    /* TODO: Do we need a temporary callback here to catch cleanup issues? */
 
     ptr_instance = loader_get_instance(instance);
     disp->DestroyInstance(instance, pAllocator);
