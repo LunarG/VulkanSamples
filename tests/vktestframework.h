@@ -85,7 +85,6 @@ public:
 
     static bool optionMatch(const char* option, char* optionLine);
     static void InitArgs(int *argc, char *argv[]);
-    static void InitWindow();
     static void Finish();
 
     void WritePPM( const char *basename, VkImageObj *image );
@@ -93,6 +92,7 @@ public:
     void Compare(const char *comment, VkImageObj *image);
     void RecordImage(VkImageObj * image);
     void RecordImages(vector<VkImageObj *> image);
+    VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);

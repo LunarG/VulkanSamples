@@ -104,6 +104,8 @@ public:
     void Run();
     void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn, VkInstance inst);
     void CreateMyWindow();
+    VkFormat GetPresentFormat();
+    void DestroyWindow();
     void CreateSwapchain();
     void SetImageLayout(VkImage image, VkImageAspectFlags aspectMask,
                         VkImageLayout old_image_layout, VkImageLayout new_image_layout);
@@ -144,6 +146,7 @@ private:
     PFN_vkGetSwapchainImagesKHR             m_fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR               m_fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR                   m_fpQueuePresentKHR;
+    PFN_vkDestroySurfaceKHR                 m_fpDestroySurfaceKHR;
     uint32_t                                m_swapchainImageCount;
     VkSwapchainKHR                          m_swap_chain;
     SwapchainBuffers                       *m_buffers;
@@ -299,6 +302,46 @@ void VkTestFramework::InitArgs(int *argc, char *argv[])
 
         argv[n] = argv[i];
         n++;
+    }
+}
+
+VkFormat VkTestFramework::GetFormat(VkInstance instance, vk_testing::Device *device)
+{
+    VkFormatProperties format_props;
+    if (!m_show_images)
+    {
+        vkGetPhysicalDeviceFormatProperties(device->phy().handle(), VK_FORMAT_B8G8R8A8_UNORM, &format_props);
+        if (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
+            format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+        {
+            return VK_FORMAT_B8G8R8A8_UNORM;
+        }
+        vkGetPhysicalDeviceFormatProperties(device->phy().handle(), VK_FORMAT_R8G8B8A8_UNORM, &format_props);
+        if (format_props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ||
+            format_props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+        {
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        }
+        printf("Error - device does not support VK_FORMAT_B8G8R8A8_UNORM nor VK_FORMAT_R8G8B8A8_UNORM - exiting\n");
+        exit(0);
+    }
+    else
+    {
+        /* To find which formats are presentable, you have to provide a surface to vkGetPhysicalDeviceSurfaceFormatsKHR */
+        /* To create a surface, you need a window.  Use the present object to create a window, use that to create a     */
+        /* KHR surface, and then find out what formats are presentable                                                  */
+        VkFormat presentFormat;
+        std::list<VkTestImageRecord> list;
+        VkTestImageRecord placeholder;
+        /* Use a dummy image record with non-zero area so the window will create on Windows */
+        placeholder.m_width = placeholder.m_height = 20;
+        list.push_back(placeholder);
+        TestFrameworkVkPresent vkPresent(*device);
+        vkPresent.InitPresentFramework(list, instance);
+        vkPresent.CreateMyWindow();
+        presentFormat = vkPresent.GetPresentFormat();
+        vkPresent.DestroyWindow();
+        return presentFormat;
     }
 }
 
@@ -503,6 +546,40 @@ TestFrameworkVkPresent::TestFrameworkVkPresent(vk_testing::Device &device) :
     m_pause = false;
     m_width = 0;
     m_height = 0;
+}
+
+VkFormat TestFrameworkVkPresent::GetPresentFormat()
+{
+    uint32_t formatCount;
+    VkResult U_ASSERT_ONLY res;
+    VkSurfaceKHR surface;
+    VkFormat returnFormat;
+
+#ifdef _WIN32
+    res = vkCreateWin32SurfaceKHR(m_instance, m_connection, m_window,
+                                  NULL, &surface);
+#else  // _WIN32
+    res = vkCreateXcbSurfaceKHR(m_instance, m_connection, m_window,
+                                NULL, &surface);
+#endif // _WIN32
+    assert(res == VK_SUCCESS);
+
+    m_fpGetPhysicalDeviceSurfaceFormatsKHR(
+                                    m_device.phy().handle(),
+                                    surface,
+                                    &formatCount, NULL);
+    VkSurfaceFormatKHR *surfFormats =
+        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+    m_fpGetPhysicalDeviceSurfaceFormatsKHR(
+                                    m_device.phy().handle(),
+                                    surface,
+                                    &formatCount, surfFormats);
+
+    m_fpDestroySurfaceKHR(m_instance, surface, NULL);
+
+    returnFormat = surfFormats[0].format;
+    free(surfFormats);
+    return returnFormat;
 }
 
 void  TestFrameworkVkPresent::Display()
@@ -1059,6 +1136,7 @@ void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord> 
     GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
     GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfaceFormatsKHR);
     GET_INSTANCE_PROC_ADDR(inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(inst, DestroySurfaceKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(m_device.handle(), DestroySwapchainKHR);
@@ -1200,6 +1278,16 @@ void TestFrameworkVkPresent::TearDown()
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);
+#endif
+}
+
+void TestFrameworkVkPresent::DestroyWindow()
+{
+#ifndef _WIN32
+    xcb_destroy_window(m_connection, m_window);
+    xcb_disconnect(m_connection);
+#else
+    DestroyWindow(m_window);
 #endif
 }
 

@@ -74,6 +74,8 @@ void VkRenderFramework::InitFramework()
     std::vector<const char*> device_layer_names;
     std::vector<const char*> instance_extension_names;
     std::vector<const char*> device_extension_names;
+    instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     InitFramework(
                 instance_layer_names, device_layer_names,
                 instance_extension_names, device_extension_names);
@@ -174,44 +176,7 @@ void VkRenderFramework::InitState()
 {
     VkResult err;
 
-// FIXME/TODO: The following code needs to be modified.  It was
-// written in a broken manner, when that was easier to do.  It
-// did/does not pass valid surface info to the
-// vkGetPhysicalDeviceSurfaceFormatsKHR() function.  This worked for
-// the early Vulkan ICDs, and it may work for some production ICDs;
-// but it is not valid.  The vkGetPhysicalDeviceSurfaceFormatsKHR()
-// function can only be called with a VkSurfaceKHR object, which means
-// that a window must have been created.  Perhaps there's a
-// chicken-and-egg problem with the API, where the test framework
-// wants to find out what VkFormat(s) it can use before creating a
-// window, but a window is needed in order to call the
-// vkGetPhysicalDeviceSurfaceFormatsKHR() function.  If so, let's
-// figure this out quickly!
-    
-    // Get the list of VkFormat's that are supported:
-    PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-    uint32_t formatCount;
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-#ifdef _WIN32
-    // FIXME/TODO: Call vkCreateWin32SurfaceKHR()
-#else // _WIN32
-    // FIXME/TODO: Call vkCreateXcbSurfaceKHR()
-#endif // _WIN32
-    GET_DEVICE_PROC_ADDR(device(), GetPhysicalDeviceSurfaceFormatsKHR);
-    err = fpGetPhysicalDeviceSurfaceFormatsKHR(
-                                    m_device->phy().handle(),
-                                    surface,
-                                    &formatCount, NULL);
-    ASSERT_VK_SUCCESS(err);
-    VkSurfaceFormatKHR *surfFormats =
-        (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-    err = fpGetPhysicalDeviceSurfaceFormatsKHR(
-                                    m_device->phy().handle(),
-                                    surface,
-                                    &formatCount, surfFormats);
-    ASSERT_VK_SUCCESS(err);
-    m_render_target_fmt = surfFormats[0].format;
-    free(surfFormats);
+    m_render_target_fmt = VkTestFramework::GetFormat(inst, m_device);
 
     m_lineWidth = 1.0f;
 
