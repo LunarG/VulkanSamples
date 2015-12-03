@@ -1,8 +1,6 @@
 #ifndef VKICD_H
 #define VKICD_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "vk_platform.h"
 #include "vk_sdk_platform.h"
 
