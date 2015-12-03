@@ -91,6 +91,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
     DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED,       // DescriptorSet bound but it was never updated. This is a warning code.
+    DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND,         // DescriptorSet used by pipeline at draw time is not bound, or has been disturbed (which would have flagged previous warning)
     DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with different number of dynamic descriptors that were included in dynamicOffsetCount
     DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
     DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
@@ -147,6 +148,8 @@ typedef struct _PIPELINE_NODE {
     VkComputePipelineCreateInfo          computePipelineCI;
     // Flag of which shader stages are active for this pipeline
     uint32_t                             active_shaders;
+    // Capture which sets are actually used by the shaders of this pipeline
+    std::set<unsigned>                   active_sets;
     // Vtx input info (if any)
     uint32_t                             vtxBindingCount;   // number of bindings
     VkVertexInputBindingDescription*     pVertexBindingDescriptions;

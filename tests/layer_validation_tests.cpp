@@ -2070,15 +2070,35 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
 
     vkUpdateDescriptorSets(m_device->device(), 3, descriptor_write, 0, NULL);
 
-    VkShaderObj vs(m_device, bindStateVertShaderText, VK_SHADER_STAGE_VERTEX_BIT, this);
-    VkShaderObj fs(m_device, bindStateFragShaderText, VK_SHADER_STAGE_FRAGMENT_BIT, this); //  TODO - We shouldn't need a fragment shader
-                                                                                       // but add it to be able to run on more devices
+    // Create PSO to be used for draw-time errors below
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
+        "void main(){\n"
+        "   x = vec4(bar.y);\n"
+        "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
     VkPipelineObj pipe(m_device);
     pipe.AddShader(&vs);
     pipe.AddShader(&fs);
-    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+    pipe.AddColorAttachment();
+    pipe.CreateVKPipeline(pipe_layout_fs_only, renderPass());
 
     BeginCommandBuffer();
+
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
     // NOTE : I believe LunarG ilo driver has bug (LX#189) that requires binding of PSO
     //  here before binding DSs. Otherwise we assert in cmd_copy_dset_data() of cmd_pipeline.c
@@ -2142,6 +2162,25 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_fs_only, 0, 1, &ds0_fs_only, 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct info msg when re-binding Set0 w/ pipelineLayout that should disturb Set1.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+
+    // Cause draw-time errors due to PSO incompatibilities
+    // 1. Error due to not binding required set (we actually use same code as above to disturb set0)
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_layout_bad_set0, 1, 1, &descriptorSet[1], 0, NULL);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " uses set #0 but that set is not bound.");
+    Draw(1, 0, 0, 0);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempting draw requiring Set0 but Set0 is not bound.";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // 2. Error due to bound set not being compatible with PSO's VkPipelineLayout (diff stageFlags in this case)
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " bound as set #0 is not compatible with ");
+    Draw(1, 0, 0, 0);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive correct error msg when attempted draw where bound Set0 layout is not compatible PSO Set0 layout.";
         m_errorMonitor->DumpFailureMsgs();
     }
     // Remaining clean-up

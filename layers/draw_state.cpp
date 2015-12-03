@@ -21,10 +21,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Author: Cody Northrop <cody@lunarg.com>
+ * Author: Cody Northrop <cnorthrop@google.com>
  * Author: Michael Lentine <mlentine@google.com>
- * Author: Tobin Ehlis <tobin@lunarg.com>
- * Author: Chia-I Wu <olv@lunarg.com>
+ * Author: Tobin Ehlis <tobine@google.com>
+ * Author: Chia-I Wu <olv@google.com>
  * Author: Chris Forbes <chrisf@ijw.co.nz>
  */
 
@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <list>
 #include <spirv.hpp>
+#include <set>
 
 #include "vk_loader_platform.h"
 #include "vk_dispatch_table_helper.h"
@@ -80,7 +81,6 @@ struct render_pass;
 
 struct layer_data {
     debug_report_data* report_data;
-    // TODO: put instance data here
     std::vector<VkDbgMsgCallback> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
@@ -1127,65 +1127,12 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
     return true;
 }
 
-// Check if given pipeline layouts are compatible from set 0 up through descriptorSet numDescriptorSets-1
-//static VkBool32 validate_pipeline_layout_compatibility(layer_data* my_data, const VkPipelineLayout psoLayout, const VkPipelineLayout dsLayout, const uint32_t numDescriptorSets)
-//{
-//    VkBool32 skipCall = VK_FALSE;
-//    // Handle trivial case of same pipeline layouts, which are obviously compatible
-//    if (psoLayout == dsLayout)
-//        return skipCall;
-//    // Check for trivial fail cases
-//    if (my_data->pipelineLayoutMap.find(psoLayout) == my_data->pipelineLayoutMap.end()) {
-//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) psoLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
-//            "PSO bound invalid pipelineLayout object %#" PRIxLEAST64, (uint64_t) psoLayout);
-////        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, psoLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
-////            "Created Descriptor Pool %#" PRIxLEAST64, (uint64_t) psoLayout);
-//            //"PSO bound invalid pipelineLayout object %#" PRIxLEAST64, (uint64_t) psoLayout);
-//    }
-//    if (my_data->pipelineLayoutMap.find(dsLayout) == my_data->pipelineLayoutMap.end()) {
-//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) dsLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
-//            "Invalid pipelineLayout object (%#" PRIxLEAST64 ") bound at last vkCmdBindDescriptorSets() call.", (uint64_t) dsLayout);
-//    }
-//    if (skipCall) // If we hit fail case above, return early to avoid crash
-//        return skipCall;
-//    // Two pipeline layouts are defined to be "compatible for set N" if they were created with matching
-//    //  (the same, or identically defined) descriptor set layouts for sets zero through N.
-//    PIPELINE_LAYOUT_NODE psoPL = my_data->pipelineLayoutMap[psoLayout];
-//    PIPELINE_LAYOUT_NODE dsPL = my_data->pipelineLayoutMap[dsLayout];
-//    // If either pipelineLayout doesn't have enough layouts, they can't be compatible
-//    if (numDescriptorSets > psoPL.descriptorSetLayouts.size()) {
-//        skipCall |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t) dsLayout, 0, DRAWSTATE_INVALID_PIPELINE_LAYOUT, "DS",
-//            "Invalid pipelineLayout object (%#" PRIxLEAST64 ") bound at last vkCmdBindDescriptorSets() call.", (uint64_t) dsLayout);
-//    }
-//    if (numDescriptorSets > dsPL.descriptorSetLayouts.size()) {
-//        // Not enough layouts, can't be compatible
-//    }
-//    // Now check each matching layout to confirm compatibility
-//    LAYOUT_NODE *pPSOLayout, *pDSLayout;
-//    for (uint32_t i=0; i<numDescriptorSets; ++i) {
-//        pPSOLayout = my_data->descriptorSetLayoutMap[psoPL.descriptorSetLayouts[i]];
-//        pDSLayout = my_data->descriptorSetLayoutMap[dsPL.descriptorSetLayouts[i]];
-//        if (pPSOLayout == pDSLayout)
-//            continue;
-//        if (pPSOLayout->descriptorTypes.size() != pDSLayout->descriptorTypes.size()) {
-//            // ERROR : different sizes in layouts
-//        }
-//        // Need to verify that layouts are identically defined
-//        //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
-//        for (uint32_t j=0; j<pPSOLayout->descriptorTypes.size(); ++j) {
-//            if (pPSOLayout->descriptorTypes[j] != pDSLayout->descriptorTypes[j]) {
-//                // ERROR : Report type mismatch
-//            }
-//            if (pPSOLayout->stageFlags[j] != pDSLayout->stageFlags[j]) {
-//                // ERROR : Report flags mismatch
-//            }
-//        }
-//    }
-//    return skipCall;
-//}
+// Validate that the shaders used by the given pipeline
+//  As a side effect this function also records the sets that are actually used by the pipeline
 static bool
-validate_pipeline_shaders(layer_data *my_data, VkDevice dev, VkGraphicsPipelineCreateInfo const *pCreateInfo)
+validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPipeline)
 {
+    VkGraphicsPipelineCreateInfo const *pCreateInfo = &pPipeline->graphicsPipelineCI;
     /* We seem to allow pipeline stages to be specified out of order, so collect and identify them
      * before trying to do anything more: */
     int vertex_stage = get_shader_stage_id(VK_SHADER_STAGE_VERTEX_BIT);
@@ -1222,6 +1169,8 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, VkGraphicsPipelineC
                     &(my_data->pipelineLayoutMap[pCreateInfo->layout].descriptorSetLayouts) : nullptr;
 
                 for (auto it = descriptor_uses.begin(); it != descriptor_uses.end(); it++) {
+                    // As a side-effect of this function, capture which sets are used by the pipeline
+                    pPipeline->active_sets.insert(it->first.first);
 
                     /* find the matching binding */
                     auto found = has_descriptor_binding(my_data, layouts, it->first);
@@ -1294,8 +1243,19 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
     //  We should have that check separately and then gate this check based on that check
     if (pPipe && (pCB->lastBoundPipelineLayout)) {
-        // TODO : For all sets used by the PSO, need to make sure that something is bound AND that PSO pipelineLayout is compatible with each bound set
-        //   first trick is how to get the sets used by PSO. ShaderChecker does this so perhaps move that code to utils
+        string errorString;
+        for (auto setIndex : pPipe->active_sets) {
+            // If valid set is not bound throw an error
+            if ((pCB->boundDescriptorSets.size() <= setIndex) || (!pCB->boundDescriptorSets[setIndex])) {
+                result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, 0, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND, "DS",
+                        "VkPipeline %#" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline, setIndex);
+            } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[pCB->boundDescriptorSets[setIndex]], pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
+                // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
+                VkDescriptorSet setHandle = my_data->setMap[pCB->boundDescriptorSets[setIndex]]->set;
+                result |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)setHandle, 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s", (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+            }
+        }
     }
     // Verify Vtx binding
     if (MAX_BINDING != pCB->lastVtxBinding) {
@@ -1331,10 +1291,11 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
 }
 
 // Verify that create state for a pipeline is valid
-static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, const PIPELINE_NODE* pPipeline)
+static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice device, PIPELINE_NODE* pPipeline)
 {
     VkBool32 skipCall = VK_FALSE;
-    if (!validate_pipeline_shaders(my_data, device, &(pPipeline->graphicsPipelineCI))) {
+    //if (!validate_pipeline_shaders(my_data, device, &(pPipeline->graphicsPipelineCI))) {
+    if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
     // VS is required
@@ -1406,6 +1367,7 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 
 // Init the pipeline mapping info based on pipeline create info LL tree
 //  Threading note : Calls to this function should wrapped in mutex
+// TODO : this should really just be in the constructor for PIPELINE_NODE
 static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
 {
     PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
@@ -1523,7 +1485,7 @@ static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphic
         }
         pPipeline->graphicsPipelineCI.pDynamicState = &pPipeline->dynStateCI;
     }
-
+    pPipeline->active_sets.clear();
     return pPipeline;
 }
 
