@@ -3727,9 +3727,6 @@ bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const
         }
     }
 
-/***********************************************************************************************************
-// Disable this validation until an optimal version is agreed upon
-
     for (uint32_t i = 0; i < memBarrierCount; ++i) {
         auto mem_barrier = reinterpret_cast<const VkMemoryBarrier*>(ppMemBarriers[i]);
         if (mem_barrier && mem_barrier->sType == VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER) {
@@ -3738,7 +3735,7 @@ bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const
             skip_call |= ValidateMaskBitsFromLayouts(dev_data, cmdBuffer, image_mem_barrier->dstAccessMask, image_mem_barrier->newLayout);
         }
     }
-******************************************************************************************************************/
+
     return skip_call;
 }
 
