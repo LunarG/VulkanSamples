@@ -75,13 +75,8 @@ int main(int argc, char **argv)
     const bool depthPresent = true;
 
     init_global_layer_properties(info);
-    info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-#ifdef _WIN32
-    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#else
-    info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#endif
-    info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    init_instance_extension_names(info);
+    init_device_extension_names(info);
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
