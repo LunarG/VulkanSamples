@@ -27,6 +27,8 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Draw Textured Cube
 */
 
+/* This is part of the draw cube progression */
+
 #include <util_init.hpp>
 #include <assert.h>
 #include <string.h>

@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-create and destroy Vulkan instance
+Provide a callback routine to be called when debug or error messages are reported
 */
 
 #include <iostream>
@@ -34,7 +34,7 @@ create and destroy Vulkan instance
 #include <string.h>
 #include "util.hpp"
 
-#define APP_SHORT_NAME "vulkansamples_instance"
+#define APP_SHORT_NAME "Debug Message Callback"
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,

@@ -27,6 +27,8 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Create Vulkan command buffer
 */
 
+/* This is part of the draw cube progression */
+
 #include <util_init.hpp>
 #include <assert.h>
 #include <cstdlib>

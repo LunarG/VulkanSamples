@@ -27,6 +27,8 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 create and destroy a Vulkan physical device
 */
 
+/* This is part of the draw cube progression */
+
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
