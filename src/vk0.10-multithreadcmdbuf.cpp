@@ -36,7 +36,6 @@ Use per-thread command buffers to draw 3 triangles
 #include <cstdlib>
 #include <samples_platform.h>
 
-#define DEPTH_PRESENT false
 struct Vertex
 {
     float posX, posY, posZ, posW;    // Position data
@@ -98,6 +97,7 @@ int main(int argc, char **argv)
     VkResult U_ASSERT_ONLY res;
 
     char sample_title[] = "MT Cmd Buffer Sample";
+    const bool depthPresent = false;
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -132,9 +132,9 @@ int main(int argc, char **argv)
                                  &pPipelineLayoutCreateInfo, NULL,
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
-    init_renderpass(info, DEPTH_PRESENT, false); // Can't clear in renderpass load because we re-use pipeline
+    init_renderpass(info, depthPresent, false); // Can't clear in renderpass load because we re-use pipeline
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info, DEPTH_PRESENT);
+    init_framebuffers(info, depthPresent);
 
     /* The binding and attributes should be the same for all 3 vertex buffers, so init here */
     info.vi_binding.binding = 0;
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
     info.vi_attribs[1].offset = 16;
 
     init_pipeline_cache(info);
-    init_pipeline(info, DEPTH_PRESENT);
+    init_pipeline(info, depthPresent);
 
     VkImageSubresourceRange srRange = {};
     srRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

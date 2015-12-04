@@ -32,8 +32,6 @@ Use a texel buffer to draw a magenta triangle
 #include <string.h>
 #include <cstdlib>
 
-#define DEPTH_PRESENT false
-
 /* For this sample, we'll start with GLSL so the shader function is plain */
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
 /* the driver.  We do this for clarity rather than using pre-compiled     */
@@ -77,6 +75,7 @@ int main(int argc, char **argv)
     struct sample_info info = {};
     char sample_title[] = "Texel Buffer Sample";
     float texels[] = {1.0, 0.0, 1.0};
+    const bool depthPresent = false;
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -206,9 +205,9 @@ int main(int argc, char **argv)
                                  &info.pipeline_layout);
     assert(res == VK_SUCCESS);
 
-    init_renderpass(info, DEPTH_PRESENT);
+    init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info, DEPTH_PRESENT);
+    init_framebuffers(info, depthPresent);
 
     VkDescriptorPoolSize type_count[1];
     type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
@@ -253,7 +252,7 @@ int main(int argc, char **argv)
 
 
     init_pipeline_cache(info);
-    init_pipeline(info, DEPTH_PRESENT);
+    init_pipeline(info, depthPresent);
 
     /* VULKAN_KEY_START */
 
