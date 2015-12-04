@@ -40,7 +40,9 @@ VkResult init_device_extension_properties(
         layer_properties &layer_props);
 VkResult init_device_layer_properties(struct sample_info &info);
 
+void init_instance_extension_names(struct sample_info &info);
 VkResult init_instance(struct sample_info &info, char const*const app_short_name);
+void init_device_extension_names(struct sample_info &info);
 VkResult init_device(struct sample_info &info);
 VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count = 1);
 VkBool32 demo_check_layers(

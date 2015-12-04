@@ -229,6 +229,16 @@ VkBool32 demo_check_layers(
     return 1;
 }
 
+void init_instance_extension_names(struct sample_info &info)
+{
+    info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+#ifdef _WIN32
+    info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
+    info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
+}
+
 VkResult init_instance(struct sample_info &info, char const*const app_short_name)
 {
     VkApplicationInfo app_info = {};
@@ -254,6 +264,11 @@ VkResult init_instance(struct sample_info &info, char const*const app_short_name
     assert(res == VK_SUCCESS);
 
     return res;
+}
+
+void init_device_extension_names(struct sample_info &info)
+{
+    info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 }
 
 VkResult init_device(struct sample_info &info)
