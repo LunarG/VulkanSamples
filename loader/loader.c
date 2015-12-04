@@ -2914,11 +2914,10 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
     VkResult res = VK_SUCCESS;
     bool success = false;
 
-    icd_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    memcpy(&icd_create_info, pCreateInfo, sizeof(icd_create_info));
+
     icd_create_info.enabledLayerNameCount = 0;
     icd_create_info.ppEnabledLayerNames = NULL;
-    icd_create_info.pApplicationInfo = pCreateInfo->pApplicationInfo;
-    icd_create_info.pNext = pCreateInfo->pNext;
 
     /*
      * NOTE: Need to filter the extensions to only those
