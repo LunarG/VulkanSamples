@@ -33,8 +33,6 @@ Draw Textured Cube
 #include <cstdlib>
 #include "cube_data.h"
 
-#define DEPTH_PRESENT true
-
 /* For this sample, we'll start with GLSL so the shader function is plain */
 /* and then use the glslang GLSLtoSPV utility to convert it to SPIR-V for */
 /* the driver.  We do this for clarity rather than using pre-compiled     */
@@ -75,6 +73,7 @@ int main(int argc, char **argv)
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
     char sample_title[] = "Draw Textured Cube";
+    const bool depthPresent = true;
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -100,15 +99,15 @@ int main(int argc, char **argv)
     init_texture(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
-    init_renderpass(info, DEPTH_PRESENT);
+    init_renderpass(info, depthPresent);
     init_shaders(info, vertShaderText, fragShaderText);
-    init_framebuffers(info, DEPTH_PRESENT);
+    init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
     init_pipeline_cache(info);
-    init_pipeline(info, DEPTH_PRESENT);
+    init_pipeline(info, depthPresent);
 
     /* VULKAN_KEY_START */
 

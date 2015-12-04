@@ -33,14 +33,13 @@ Create Vertex Buffer
 #include <cstdlib>
 #include "cube_data.h"
 
-#define DEPTH_PRESENT true
-
 int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
     struct sample_info info = {};
     char sample_title[] = "Vertex Buffer Sample";
+    const bool depthPresent = true;
 
     init_global_layer_properties(info);
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -63,8 +62,8 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    init_renderpass(info, DEPTH_PRESENT);
-    init_framebuffers(info, DEPTH_PRESENT);
+    init_renderpass(info, depthPresent);
+    init_framebuffers(info, depthPresent);
 
     /* VULKAN_KEY_START */
     /*
