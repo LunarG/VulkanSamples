@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-create and destroy a Vulkan physical device
+Show how to enable validation layers and provide callback
 */
 
 #include <iostream>

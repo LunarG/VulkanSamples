@@ -27,6 +27,8 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 create and destroy Vulkan instance
 */
 
+/* This is part of the draw cube progression */
+
 #include <iostream>
 #include <cstdlib>
 #include "util.hpp"

@@ -27,6 +27,8 @@ VULKAN_SAMPLE_SHORT_DESCRIPTION
 Allocate Descriptor Set
 */
 
+/* This is part of the draw cube progression */
+
 #include <util_init.hpp>
 #include <stdio.h>
 #include <assert.h>
