@@ -25,7 +25,6 @@ set(LAYER_JSON_FILES
     object_tracker
     param_checker
     screenshot
-    shader_checker
     swapchain
     threading
     device_limits

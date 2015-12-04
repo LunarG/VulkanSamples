@@ -59,17 +59,6 @@ LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := VKLayerShaderCheker
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/shader_checker.cpp
-LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
-LOCAL_C_INCLUDES += $(SRC_DIR)/include \
-                    $(SRC_DIR)/buildAndroid/generated \
-                    $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
-LOCAL_LDLIBS    := -llog
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
 LOCAL_MODULE := VKLayerImage
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/image.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
