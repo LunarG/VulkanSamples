@@ -25,15 +25,14 @@
 
 #include "vktestframework.h"
 #include "vkrenderframework.h"
+//TODO FIXME remove this once glslang doesn't define this
+#undef BadValue
 #include "SPIRV/GlslangToSpv.h"
 #include "SPIRV/SPVRemapper.h"
 #include <limits.h>
 #include <math.h>
 #include <wand/MagickWand.h>
-// FIXME: CAN PROBABLY GET RID OF THE FOLLOWING #include
-#ifndef _WIN32
-#include <xcb/xcb.h>
-#endif
+
 
 #if defined(PATH_MAX) && !defined(MAX_PATH)
 #define MAX_PATH PATH_MAX
