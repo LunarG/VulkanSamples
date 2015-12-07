@@ -1958,6 +1958,16 @@ void init_present_info(struct sample_info &info, VkPresentInfoKHR &present)
     present.pResults = NULL;
 }
 
+void init_clear_color_and_depth(struct sample_info &info, VkClearValue* clear_values)
+{
+    clear_values[0].color.float32[0] = 0.2f;
+    clear_values[0].color.float32[1] = 0.2f;
+    clear_values[0].color.float32[2] = 0.2f;
+    clear_values[0].color.float32[3] = 0.2f;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
