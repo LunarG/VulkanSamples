@@ -105,7 +105,7 @@ public:
     void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn, VkInstance inst);
     void CreateMyWindow();
     VkFormat GetPresentFormat();
-    void DestroyWindow();
+    void DestroyMyWindow();
     void CreateSwapchain();
     void SetImageLayout(VkImage image, VkImageAspectFlags aspectMask,
                         VkImageLayout old_image_layout, VkImageLayout new_image_layout);
@@ -340,7 +340,7 @@ VkFormat VkTestFramework::GetFormat(VkInstance instance, vk_testing::Device *dev
         vkPresent.InitPresentFramework(list, instance);
         vkPresent.CreateMyWindow();
         presentFormat = vkPresent.GetPresentFormat();
-        vkPresent.DestroyWindow();
+        vkPresent.DestroyMyWindow();
         return presentFormat;
     }
 }
@@ -1281,7 +1281,7 @@ void TestFrameworkVkPresent::TearDown()
 #endif
 }
 
-void TestFrameworkVkPresent::DestroyWindow()
+void TestFrameworkVkPresent::DestroyMyWindow()
 {
 #ifndef _WIN32
     xcb_destroy_window(m_connection, m_window);
