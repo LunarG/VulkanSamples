@@ -1948,6 +1948,18 @@ void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info)
     submit_info.pSignalSemaphores = NULL;
 }
 
+void init_present_info(struct sample_info &info, VkPresentInfoKHR &present)
+{
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = NULL;
+    present.swapchainCount = 1;
+    present.pSwapchains = &info.swap_chain;
+    present.pImageIndices = &info.current_buffer;
+    present.pWaitSemaphores = NULL;
+    present.waitSemaphoreCount = 0;
+    present.pResults = NULL;
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
