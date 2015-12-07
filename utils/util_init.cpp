@@ -1934,6 +1934,18 @@ void init_fence(struct sample_info &info, VkFence &fence)
     vkCreateFence(info.device, &fenceInfo, NULL, &fence);
 }
 
+void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info)
+{
+    submit_info.pNext = NULL;
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &info.cmd;
+    submit_info.signalSemaphoreCount = 0;
+    submit_info.pSignalSemaphores = NULL;
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
