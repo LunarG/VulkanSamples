@@ -82,6 +82,7 @@ void init_fence(struct sample_info &info, VkFence &fence);
 void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info);
 void init_present_info(struct sample_info &info, VkPresentInfoKHR &present);
 void init_clear_color_and_depth(struct sample_info &info, VkClearValue* clear_values);
+void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);
