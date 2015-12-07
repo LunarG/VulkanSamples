@@ -78,6 +78,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
 void init_texture(struct sample_info &info,  const char* textureName = nullptr);
 void init_viewports(struct sample_info &info);
 void init_scissors(struct sample_info &info);
+void init_fence(struct sample_info &info, VkFence &fence);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);

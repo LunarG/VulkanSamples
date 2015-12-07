@@ -1925,6 +1925,15 @@ void init_scissors(struct sample_info &info)
     vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
 }
 
+void init_fence(struct sample_info &info, VkFence &fence)
+{
+    VkFenceCreateInfo fenceInfo;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &fence);
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
