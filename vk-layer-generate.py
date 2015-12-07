@@ -1272,10 +1272,6 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
             else:
-                if o == "VkPipelineCache":
-                    procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
-                    procs_txt.append('    if (object == VK_NULL_HANDLE) return VK_TRUE;')
-                    procs_txt.append('')
                 if o == "VkImage":
                     procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
                     procs_txt.append('    if ((%sMap.find((uint64_t)object)        == %sMap.end()) &&' % (o, o))
@@ -1660,6 +1656,11 @@ class ObjectTrackerSubcommand(Subcommand):
                                     using_line += '    if (fence != VK_NULL_HANDLE) {\n'
                                     using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                                     using_line += '    }\n'
+                                elif ('CreateGraphicsPipelines' in proto.name or 'CreateComputePipelines' in proto.name) and 'pipelineCache' == opn:
+                                        using_line += '    // PipelineCache is optional, validate if present\n'
+                                        using_line += '    if (pipelineCache != VK_NULL_HANDLE) {\n'
+                                        using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
+                                        using_line += '    }\n'
                                 else:
                                     using_line += '    skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                     else:
