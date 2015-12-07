@@ -1905,6 +1905,26 @@ void init_texture(struct sample_info &info, const char* textureName)
     info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
+void init_viewports(struct sample_info &info)
+{
+    info.viewport.height = (float) info.height;
+    info.viewport.width = (float) info.width;
+    info.viewport.minDepth = (float) 0.0f;
+    info.viewport.maxDepth = (float) 1.0f;
+    info.viewport.x = 0;
+    info.viewport.y = 0;
+    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &info.viewport);
+}
+
+void init_scissors(struct sample_info &info)
+{
+    info.scissor.extent.width = info.width;
+    info.scissor.extent.height = info.height;
+    info.scissor.offset.x = 0;
+    info.scissor.offset.y = 0;
+    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
