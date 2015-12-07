@@ -232,6 +232,9 @@ struct sample_info {
 
     uint32_t current_buffer;
     uint32_t queue_count;
+
+    VkViewport viewport;
+    VkRect2D scissor;
 };
 
 bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
