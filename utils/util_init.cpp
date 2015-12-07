@@ -1970,6 +1970,20 @@ void init_clear_color_and_depth(struct sample_info &info, VkClearValue* clear_va
     clear_values[1].depthStencil.stencil = 0;
 }
 
+void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin)
+{
+    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rp_begin.pNext = NULL;
+    rp_begin.renderPass = info.render_pass;
+    rp_begin.framebuffer = info.framebuffers[info.current_buffer];
+    rp_begin.renderArea.offset.x = 0;
+    rp_begin.renderArea.offset.y = 0;
+    rp_begin.renderArea.extent.width = info.width;
+    rp_begin.renderArea.extent.height = info.height;
+    rp_begin.clearValueCount = 0;
+    rp_begin.pClearValues = nullptr;
+}
+
 void destroy_pipeline(struct sample_info &info)
 {
     vkDestroyPipeline(info.device, info.pipeline, NULL);
