@@ -157,21 +157,9 @@ int main(int argc, char **argv)
 
     const VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
-    VkViewport viewport;
-    viewport.height = (float) info.height;
-    viewport.width = (float) info.width;
-    viewport.minDepth = (float) 0.0f;
-    viewport.maxDepth = (float) 1.0f;
-    viewport.x = 0;
-    viewport.y = 0;
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
 
-    VkRect2D scissor;
-    scissor.extent.width = info.width;
-    scissor.extent.height = info.height;
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    init_viewports(info);
+    init_scissors(info);
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(info.cmd);

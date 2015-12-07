@@ -76,6 +76,8 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth);
 void init_sampler(struct sample_info &info, VkSampler &sampler);
 void init_image(struct sample_info &info, texture_object &texObj, const char* textureName);
 void init_texture(struct sample_info &info,  const char* textureName = nullptr);
+void init_viewports(struct sample_info &info);
+void init_scissors(struct sample_info &info);
 
 VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc);
 void destroy_debug_msg_callback(struct sample_info &info);
