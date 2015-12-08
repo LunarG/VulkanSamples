@@ -15,12 +15,10 @@ values in the following Windows registry key:
 HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\Drivers
 
 For each value in this key which has DWORD data set to 0, the loader opens the
-text information file (a.k.a. "manifest file"), that uses a JSON format (NOTE:
-The JSON in this version of the specification is for illustration purposes, and
-isn't completely valid yet), specified by the name of the value.  Each name
-must be a full pathname to the text info file.  The Vulkan loader will open
-each info file to obtain the name or pathname of an ICD shared library (".dll")
-file.  For example:
+JSON format text information file (a.k.a. "manifest file") specified by the
+name of the value.  Each name must be a full pathname to the text info file.
+The Vulkan loader will open each info file to obtain the name or pathname of
+an ICD shared library (".dll") file.  For example:
 
 {
     "file_format_version": "1.0.0",
@@ -123,7 +121,7 @@ so their info files contain more information than ICD info files.  For example,
 a layer shared library file may contain multiple layers/extensions (perhaps
 even an ICD).
 
-In order to find properly-installed ICDs, the Vulkan loader will scan the
+In order to find properly-installed layers, the Vulkan loader will scan the
 values in the following Windows registry keys:
 
 HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers
