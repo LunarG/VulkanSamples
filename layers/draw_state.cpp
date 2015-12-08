@@ -4242,8 +4242,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         if (pCB->state == CB_UPDATE_ACTIVE) {
-            // Warn if this is issued prior to Draw Cmd
-            if (!hasDrawCmd(pCB)) {
+            // Warn if this is issued prior to Draw Cmd and clearing the entire attachment
+            if (!hasDrawCmd(pCB)                                                                         &&
+                (pCB->activeRenderPassBeginInfo.renderArea.extent.width  == pRects[0].rect.extent.width) &&
+                (pCB->activeRenderPassBeginInfo.renderArea.extent.height == pRects[0].rect.extent.height)) {
                 // TODO : commandBuffer should be srcObj
                 skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_WARN_BIT, VK_OBJECT_TYPE_COMMAND_BUFFER, 0, 0, DRAWSTATE_CLEAR_CMD_BEFORE_DRAW, "DS",
                         "vkCmdClearAttachments() issued on CB object 0x%" PRIxLEAST64 " prior to any Draw Cmds."
