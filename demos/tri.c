@@ -1692,6 +1692,15 @@ static VkBool32 demo_check_layers(uint32_t check_count, char **check_names,
     }
     return 1;
 }
+VKAPI_ATTR void* VKAPI_CALL myrealloc(
+    void*                                       pUserData,
+    void*                                       pOriginal,
+    size_t                                      size,
+    size_t                                      alignment,
+    VkSystemAllocationScope                     allocationScope)
+{
+    return realloc(pOriginal, size);
+}
 
 VKAPI_ATTR void* VKAPI_CALL myalloc(
     void*                           pUserData,
@@ -1838,6 +1847,7 @@ static void demo_init_vk(struct demo *demo)
 
     demo->allocator.pfnAllocation = myalloc;
     demo->allocator.pfnFree = myfree;
+    demo->allocator.pfnReallocation = myrealloc;
 
     err = vkCreateInstance(&inst_info, &demo->allocator, &demo->inst);
     if (err == VK_ERROR_INCOMPATIBLE_DRIVER) {
