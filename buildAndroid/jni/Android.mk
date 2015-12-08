@@ -23,7 +23,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_extension_utils.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_utils.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include
 LOCAL_LDLIBS    := -llog
-include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := VKLayerBasic
@@ -31,7 +31,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/basic.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -43,7 +43,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -54,7 +54,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -65,7 +65,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -77,7 +77,7 @@ LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp
 LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -89,7 +89,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -101,7 +101,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -113,7 +113,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -125,7 +125,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/buildAndroid/generated \
                     $(SRC_DIR)/loader
-LOCAL_SHARED_LIBRARIES += layer_utils
+LOCAL_STATIC_LIBRARIES += layer_utils
 LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
@@ -139,8 +139,7 @@ LOCAL_C_INCLUDES += $(SRC_DIR)/include \
                     $(SRC_DIR)/layers \
                     $(SRC_DIR)/libs \
                     $(SRC_DIR)/icd/common
-LOCAL_SHARED_LIBRARIES += layer_utils
-LOCAL_STATIC_LIBRARIES := googletest_main
+LOCAL_STATIC_LIBRARIES := googletest_main layer_utils
 LOCAL_LDLIBS    := -lvulkan
 include $(BUILD_EXECUTABLE)
 
