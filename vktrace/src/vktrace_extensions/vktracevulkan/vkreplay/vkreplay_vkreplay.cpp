@@ -1734,13 +1734,13 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_v
     VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
-
+    VkSurfaceKHR remappedSurfaceKHR = m_objMapper.remap_surfacekhrs(pPacket->surface);
 //    if (pPacket->physicalDevice != VK_NULL_HANDLE && remappedphysicalDevice == VK_NULL_HANDLE)
 //    {
 //        return vktrace_replay::VKTRACE_REPLAY_ERROR;
 //    }
 
-    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceSupportKHR(remappedphysicalDevice, pPacket->queueFamilyIndex, m_display->get_surface(), pPacket->pSupported);
+    replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceSupportKHR(remappedphysicalDevice, pPacket->queueFamilyIndex, remappedSurfaceKHR, pPacket->pSupported);
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
 //        return VK_ERROR_VALIDATION_FAILED_EXT;
@@ -1809,7 +1809,7 @@ VkResult vkReplay::manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchain
     (*pSC) = m_objMapper.remap_swapchainkhrs(save_oldSwapchain);
     save_surface = pPacket->pCreateInfo->surface;
     VkSurfaceKHR *pSurf = (VkSurfaceKHR *) &(pPacket->pCreateInfo->surface);
-    *pSurf = m_display->get_surface();
+    *pSurf = m_objMapper.remap_surfacekhrs(*pSurf);
 
     // No need to remap pCreateInfo
     replayResult = m_vkFuncs.real_vkCreateSwapchainKHR(remappeddevice, pPacket->pCreateInfo, pPacket->pAllocator, &local_pSwapchain);

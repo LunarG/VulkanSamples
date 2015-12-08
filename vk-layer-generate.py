@@ -3,7 +3,7 @@
 # VK
 #
 # Copyright (C) 2015 Valve Corporation
-# Copyright (C) 2015 Google Inc.
+# Copyright (C) 2015 Google, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -23,12 +23,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+# Author: Tobin Ehlis <tobine@google.com>
+# Author: Courtney Goeltzenleuchter <courtneygo@google.com>
 # Author: Jon Ashburn <jon@lunarg.com>
 # Author: Mark Lobodzinski <mark@lunarg.com>
-# Author: Mike Stroyan <mike@LunarG.com>
+# Author: Mike Stroyan <stroyan@google.com>
 # Author: Tony Barbour <tony@LunarG.com>
-# Author: Chia-I Wu <olv@lunarg.com>
+# Author: Chia-I Wu <olv@google.com>
 
 import sys
 import os
@@ -139,6 +140,7 @@ class Subcommand(object):
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -158,10 +160,11 @@ class Subcommand(object):
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  *
- * Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
+ * Author: Tobin Ehlis <tobine@google.com>
+ * Author: Courtney Goeltzenleuchter <courtneygo@google.com>
  * Author: Jon Ashburn <jon@lunarg.com>
  * Author: Mark Lobodzinski <mark@lunarg.com>
- * Author: Mike Stroyan <mike@LunarG.com>
+ * Author: Mike Stroyan <stroyan@google.com>
  * Author: Tony Barbour <tony@LunarG.com>
  */"""
 
@@ -234,7 +237,7 @@ class Subcommand(object):
         r_body.append('        VkDebugReportCallbackEXT*                    pCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
-        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
+        if self.layer_name in ['object_tracker', 'threading', 'unique_objects']:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
             r_body.append('    VkResult result = pInstanceTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
@@ -261,7 +264,7 @@ class Subcommand(object):
         r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
-        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
+        if self.layer_name in ['object_tracker', 'threading', 'unique_objects']:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
         else:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
@@ -446,7 +449,7 @@ class Subcommand(object):
 #
 # New style of GPA Functions for the new layer_data/layer_logging changes
 #
-        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
+        if self.layer_name in ['object_tracker', 'threading', 'unique_objects']:
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
@@ -869,7 +872,7 @@ class GenericLayerSubcommand(Subcommand):
                       'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                       'vkGetPhysicalDeviceSurfaceFormatsKHR',
                       'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
-        extensions=[('wsi_enabled', 
+        extensions=[('wsi_enabled',
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
@@ -1391,6 +1394,10 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
             else:
+                if o == "VkPipelineCache":
+                    procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
+                    procs_txt.append('    if (object == VK_NULL_HANDLE) return VK_TRUE;')
+                    procs_txt.append('')
                 if o == "VkImage":
                     procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
                     procs_txt.append('    if ((%sMap.find((uint64_t)object)        == %sMap.end()) &&' % (o, o))
@@ -1654,6 +1661,7 @@ class ObjectTrackerSubcommand(Subcommand):
         create_line = ''
         destroy_line = ''
         # Dict below tracks params that are vk objects. Dict is "loop count"->["params w/ that loop count"] where '0' is params that aren't in an array
+        # TODO : Should integrate slightly better code for this purpose from unique_objects layer
         loop_params = defaultdict(list) # Dict uses loop count as key to make final code generation cleaner so params shared in single loop where needed
         loop_types = defaultdict(list)
         # TODO : For now skipping objs that can be NULL. Really should check these and have special case that allows them to be NULL
@@ -1775,11 +1783,6 @@ class ObjectTrackerSubcommand(Subcommand):
                                     using_line += '    if (fence != VK_NULL_HANDLE) {\n'
                                     using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                                     using_line += '    }\n'
-                                elif ('CreateGraphicsPipelines' in proto.name or 'CreateComputePipelines' in proto.name) and 'pipelineCache' == opn:
-                                        using_line += '    // PipelineCache is optional, validate if present\n'
-                                        using_line += '    if (pipelineCache != VK_NULL_HANDLE) {\n'
-                                        using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
-                                        using_line += '    }\n'
                                 else:
                                     using_line += '    skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
                     else:
@@ -1879,6 +1882,280 @@ class ObjectTrackerSubcommand(Subcommand):
                 self.generate_command_buffer_validates(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
+                self._generate_layer_gpa_function(extensions,
+                                                  instance_extensions)]
+        return "\n\n".join(body)
+
+class UniqueObjectsSubcommand(Subcommand):
+    def generate_header(self):
+        header_txt = []
+        header_txt.append('%s' % self.lineinfo.get())
+        header_txt.append('#include "unique_objects.h"')
+        header_txt.append('')
+        header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
+        return "\n".join(header_txt)
+
+    # Parse complete struct chain and add any new ndo_uses to the dict
+    def _gather_struct_ndos(self, name_prefix, struct_type, ndo_uses):
+        if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
+            struct_type = vk_helper.typedef_rev_dict[struct_type]
+        # Parse elements of this struct param to identify objects and/or arrays of objects
+        for m in sorted(vk_helper.struct_dict[struct_type]):
+            array_len = "%s" % (str(vk_helper.struct_dict[struct_type][m]['array_size']))
+            base_type = vk_helper.struct_dict[struct_type][m]['type']
+            struct_name = vk_helper.struct_dict[struct_type][m]['name']
+            if base_type in vulkan.object_non_dispatch_list:
+                if array_len not in ndo_uses:
+                    ndo_uses[array_len] = []
+                ndo_uses[array_len].append("%s%s,%s" % (name_prefix, struct_name, base_type))
+            elif vk_helper.is_type(base_type, 'struct'):
+                ndo_uses = self._gather_struct_ndos("%s%s[%s]->" % (name_prefix, struct_name, array_len), base_type, ndo_uses)
+        return ndo_uses
+
+    # Parse the given list of params and return true if any ndos
+    # TODO : This analysis could be done up-front at vk_helper time
+    def _get_ndo_uses(self, params):
+        ndo_uses = {}
+        param_count = 'NONE' # track params that give array sizes
+        for p in params:
+            base_type = p.ty.replace('const ', '').strip('*')
+            array_len = '0'
+            is_ptr = False
+            if 'count' in p.name.lower():
+                param_count = p.name
+            if '*' in p.ty:
+                is_ptr = True
+            if base_type in vulkan.object_non_dispatch_list:
+                if is_ptr and 'const' in p.ty and param_count != 'NONE':
+                    array_len = param_count
+                if array_len not in ndo_uses:
+                    ndo_uses[array_len] = []
+                ndo_uses[array_len].append("%s,%s" % (p.name, base_type))
+            elif vk_helper.is_type(base_type, 'struct'):
+                struct_name = p.name
+                if 'NONE' != param_count:
+                    struct_name = "%s[%s]" % (struct_name, param_count)
+                ndo_uses = self._gather_struct_ndos("%s->" % struct_name, base_type, ndo_uses)
+        return ndo_uses
+
+    def generate_intercept(self, proto, qual):
+        create_func = False
+        destroy_func = False
+        last_param_index = None #typcially we look at all params for ndos
+        pre_call_txt = '' # code prior to calling down chain such as unwrap uses of ndos
+        post_call_txt = '' # code following call down chain such to wrap newly created ndos, or destroy local wrap struct
+        funcs = []
+        indent = '    ' # indent level for generated code
+        decl = proto.c_func(prefix="vk", attr="VKAPI")
+        # TODO : A few API cases that will be manual code initially, could potentially move
+        #  them to generated code
+        # Also, here's generated functions that could be improved: vkAllocateDescriptorSets, vkCmdBeginRenderPass
+        explicit_object_tracker_functions = ['QueueSubmit',
+                                             'QueueBindSparse',
+                                             'CreateComputePipelines',
+                                             'CreateGraphicsPipelines',
+                                             'UpdateDescriptorSets',
+                                             'GetSwapchainImagesKHR',
+                                             'CreateInstance',
+                                             'CreateDevice',]
+        # Give special treatment to create functions that return multiple new objects
+        # This dict stores array name and size of array
+        custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->setLayoutCount'}
+        if proto.name in explicit_object_tracker_functions:
+            funcs.append('%s%s\n'
+                     '{\n'
+                     '    return explicit_%s;\n'
+                     '}' % (qual, decl, proto.c_call()))
+            return "".join(funcs)
+        if True in [create_txt in proto.name for create_txt in ['Create', 'Allocate']]:
+            create_func = True
+            last_param_index = -1 # For create funcs don't care if last param is ndo
+        if True in [destroy_txt in proto.name for destroy_txt in ['Destroy', 'Free']]:
+            destroy_obj_type = proto.params[-2].ty
+            if destroy_obj_type in vulkan.object_non_dispatch_list:
+                destroy_func = True
+
+        # First thing we need to do is update any uses for non-dispatchable-objects (ndos)
+        ndo_uses = self._get_ndo_uses(proto.params[1:last_param_index])
+        if len(ndo_uses) > 0:
+            pre_call_txt  = '// UNWRAP USES:\n'
+            for ndo in ndo_uses:
+                pre_call_txt += '//  %s : %s\n' % (ndo, ', '.join(ndo_uses[ndo]))
+                for member in ndo_uses[ndo]:
+                    # pairs of (m)ember (n)ames and (t)ypes
+                    mnt_array = member.split(',')
+                    has_ptr = False
+                    pname = mnt_array[0]
+                    if '->' in pname:
+                        has_ptr = True
+                        pname = mnt_array[0].split('->')[-1]
+                    if not has_ptr and '0' == ndo:
+                        if destroy_func:
+                            pre_call_txt += '%s%s local_%s = %s;\n' % (indent, mnt_array[1], pname, pname)
+                        pre_call_txt += '%s\n' % (self.lineinfo.get())
+                        pre_call_txt += '%sif (VK_NULL_HANDLE != %s) {\n' % (indent, mnt_array[0])
+                        indent += '    '
+                        pre_call_txt += '%s%s = (%s)((VkUniqueObject*)%s)->actualObject;\n' % (indent, pname, mnt_array[1], pname)
+                        indent = indent [4:]
+                        pre_call_txt += '%s}\n' % (indent)
+                    else: # ptr and/or loop case
+                        name_hier = mnt_array[0].split('->')
+                        last_seg = False # is this last seg of the name?
+                        prev_seg = ''
+                        loop_indicies = ['0'] # track all the loop indices
+                        loop_idx_num = 0
+                        loop_count = '' # Upper limit of current loop
+                        orig_indent = indent # store this so we can close out blocks at the end
+                        # Declare vector of ndos in order to restore them after call
+                        pre_call_txt += '%s\n' % (self.lineinfo.get())
+                        pre_call_txt += '%sstd::vector<%s> original_%s = {};\n' % (indent, mnt_array[1], name_hier[-1])
+                        for seg in name_hier:
+                            array = False
+                            if seg == name_hier[-1]:
+                                last_seg = True
+                            if '[' in seg or (last_seg and '0' != ndo): # array access, so store off array counter and update name
+                                array = True
+                                loop_indicies.append('index%s' % str(loop_idx_num))
+                                loop_idx_num += 1
+                                if '[' in seg: # explicit array case is not ndo
+                                    (seg, loop_count) = seg.split('[')
+                                    loop_count = loop_count.strip(']')
+                                else: # ndo case the loop_count is key
+                                    loop_count = ndo
+                            pre_call_txt += '%sif (%s%s) {\n' % (indent, prev_seg, seg)
+                            # We replicate the ndo update code after the call to restore original handle
+                            post_call_txt += '%sif (%s%s) {\n' % (indent, prev_seg, seg)
+                            indent += '    '
+                            if array:
+                                pre_call_txt += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, loop_indicies[-1], loop_indicies[-1], prev_seg, loop_count, loop_indicies[-1])
+                                post_call_txt += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, loop_indicies[-1], loop_indicies[-1], prev_seg, loop_count, loop_indicies[-1])
+                                indent += '    '
+                            if last_seg:
+                                p_name = 'p%s' % mnt_array[1][2:] # Used to allow overwriting of ndo object in const ptr chain
+                                # TODO - need type of element ABOVE NDO in this case, this is BROKEN right now
+                                ndo_ref_name = prev_seg.strip('->').strip('.')
+                                ndo_name = '%s%s' % (prev_seg, seg)
+                                if array:
+                                    ndo_ref_name = '%s%s' % (prev_seg, seg)
+                                    ndo_name = '%s[%s]' % (ndo_ref_name, loop_indicies[-1])
+                                pre_call_txt += '%s%s* %s = (%s*)&(%s);\n' % (indent, mnt_array[1], p_name, mnt_array[1], ndo_name)
+                                post_call_txt += '%s%s* %s = (%s*)&(%s);\n' % (indent, mnt_array[1], p_name, mnt_array[1], ndo_name)
+                                # Save off this object to restore it after the call
+                                pre_call_txt += '%soriginal_%s.push_back(%s);\n' % (indent, seg, ndo_name)
+                                pre_call_txt += '%s*(%s) = (%s)((VkUniqueObject*)%s)->actualObject;\n' % (indent, p_name, mnt_array[1], ndo_name)
+                                post_call_txt += '%s*(%s) = original_%s[%s];\n' % (indent, p_name, seg, loop_indicies[-1])
+                                indent = indent[4:]
+                            # Update prev segment to be used in next loop iteration
+                            if not array:
+                                prev_seg = '%s%s->' % (prev_seg, seg)
+                            else:
+                                prev_seg = '%s%s[%s].' % (prev_seg, seg, loop_indicies[-1])
+                        if indent != orig_indent:
+                            while indent != '    ': # close previous code blocks
+                                pre_call_txt += '%s}\n' % (indent)
+                                post_call_txt += '%s}\n' % (indent)
+                                indent = indent[4:]
+                            pre_call_txt += '%s}\n' % (indent)
+                            post_call_txt += '%s}\n' % (indent)
+        elif create_func:
+            base_type = proto.params[-1].ty.replace('const ', '').strip('*')
+            if base_type not in vulkan.object_non_dispatch_list:
+                return None
+        else:
+            return None
+
+        ret_val = ''
+        ret_stmt = ''
+        if proto.ret != "void":
+            ret_val = "%s result = " % proto.ret
+            ret_stmt = "    return result;\n"
+        dispatch_param = proto.params[0].name
+        if 'CreateInstance' in proto.name:
+           dispatch_param = '*' + proto.params[1].name
+        if create_func:
+            obj_type = proto.params[-1].ty.strip('*')
+            obj_name = proto.params[-1].name
+            if obj_type in vulkan.object_non_dispatch_list:
+                local_name = "unique%s" % obj_type[2:]
+                post_call_txt += '%sif (VK_SUCCESS == result) {\n' % (indent)
+                indent += '    '
+                if obj_name in custom_create_dict:
+                    post_call_txt += '%s\n' % (self.lineinfo.get())
+                    local_name = '%ss' % (local_name) # add 's' to end for vector of many
+                    post_call_txt += '%sstd::vector<VkUniqueObject*> %s = {};\n' % (indent, local_name)
+                    post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, custom_create_dict[obj_name])
+                    indent += '    '
+                    post_call_txt += '%s%s.push_back(new VkUniqueObject());\n' % (indent, local_name)
+                    post_call_txt += '%s%s[i]->actualObject = (uint64_t)%s[i];\n' % (indent, local_name, obj_name)
+                    post_call_txt += '%s%s[i] = (%s)%s[i];\n' % (indent, obj_name, obj_type, local_name)
+                    indent = indent[4:]
+                    post_call_txt += '%s}\n' % (indent)
+                else:
+                    post_call_txt += '%s\n' % (self.lineinfo.get())
+                    post_call_txt += '%sVkUniqueObject* %s = new VkUniqueObject();\n' % (indent, local_name)
+                    post_call_txt += '%s%s->actualObject = (uint64_t)*%s;\n' % (indent, local_name, obj_name)
+                    post_call_txt += '%s*%s = (%s)%s;\n' % (indent, obj_name, obj_type, local_name)
+                indent = indent[4:]
+                post_call_txt += '%s}\n' % (indent)
+        elif destroy_func:
+            del_obj = proto.params[-2].name
+            if 'count' in del_obj.lower():
+                post_call_txt += '%s\n' % (self.lineinfo.get())
+                post_call_txt += '%sfor (uint32_t i=0; i<%s; ++i) {\n' % (indent, del_obj)
+                del_obj = proto.params[-1].name
+                indent += '    '
+                post_call_txt += '%sdelete (VkUniqueObject*)%s[i];\n' % (indent, del_obj)
+                indent = indent[4:]
+                post_call_txt += '%s}\n' % (indent)
+            else:
+                post_call_txt += '%s\n' % (self.lineinfo.get())
+                post_call_txt = '%sdelete (VkUniqueObject*)local_%s;\n' % (indent, proto.params[-2].name)
+
+        call_sig = proto.c_call()
+        if proto_is_global(proto):
+            table_type = "instance"
+        else:
+            table_type = "device"
+        pre_call_txt += '%s\n' % (self.lineinfo.get())
+        funcs.append('%s%s\n'
+                     '{\n'
+                     '%s'
+                     '    %sget_dispatch_table(unique_objects_%s_table_map, %s)->%s;\n'
+                     '%s'
+                     '%s'
+                     '}' % (qual, decl, pre_call_txt, ret_val, table_type, dispatch_param, call_sig, post_call_txt, ret_stmt))
+        return "\n\n".join(funcs)
+
+    def generate_body(self):
+        self.layer_name = "unique_objects"
+        extensions=[('wsi_enabled',
+                     ['vkCreateSwapchainKHR',
+                      'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
+                      'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
+        if sys.platform.startswith('win32'):
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateWin32SurfaceKHR',
+                                   'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
+        elif sys.platform.startswith('linux'):
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR',
+                                   'vkCreateXcbSurfaceKHR',
+                                   'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+        # TODO: Add cases for Mir, Wayland and Xlib
+        else: # android
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
+        body = [self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions,
                                                   instance_extensions)]
         return "\n\n".join(body)
@@ -2161,6 +2438,7 @@ def main():
             "api_dump" : APIDumpSubcommand,
             "object_tracker" : ObjectTrackerSubcommand,
             "threading" : ThreadingSubcommand,
+            "unique_objects" : UniqueObjectsSubcommand,
     }
 
     if len(sys.argv) < 3 or sys.argv[1] not in subcommands or not os.path.exists(sys.argv[2]):

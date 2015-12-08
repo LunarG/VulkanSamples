@@ -23,6 +23,7 @@ set(LAYER_JSON_FILES
     VkLayer_mem_tracker
     VkLayer_multi
     VkLayer_object_tracker
+    VkLayer_unique_objects
     VkLayer_param_checker
     VkLayer_screenshot
     VkLayer_swapchain
@@ -129,6 +130,7 @@ run_vk_layer_generate(generic generic_layer.cpp)
 run_vk_layer_generate(api_dump api_dump.cpp)
 run_vk_layer_generate(object_tracker object_tracker.cpp)
 run_vk_layer_generate(threading threading.cpp)
+run_vk_layer_generate(unique_objects unique_objects.cpp)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 if (WIN32)
@@ -153,3 +155,4 @@ add_vk_layer(generic generic_layer.cpp vk_layer_table.cpp)
 add_vk_layer(api_dump api_dump.cpp vk_layer_table.cpp)
 add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
 add_vk_layer(threading threading.cpp vk_layer_table.cpp)
+add_vk_layer(unique_objects unique_objects.cpp vk_layer_table.cpp)
