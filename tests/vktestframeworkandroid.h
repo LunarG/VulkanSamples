@@ -47,6 +47,7 @@ public:
     static void InitArgs(int *argc, char *argv[]);
     static void Finish();
 
+    VkFormat GetFormat(VkInstance instance, vk_testing::Device *device);
     bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                    const char *pshader,
                    std::vector<unsigned int> &spv);
