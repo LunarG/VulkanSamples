@@ -192,7 +192,7 @@ class Extension(object):
 # VK core API
 core = Extension(
     name="VK_CORE",
-    headers=["vulkan/vulkan.h", "vulkan/vk_lunarg_debug_report.h"],
+    headers=["vulkan/vulkan.h", "vulkan/vk_ext_debug_report.h"],
     objects=[
         "VkInstance",
         "VkPhysicalDevice",
@@ -1118,27 +1118,27 @@ ext_khr_win32_surface = Extension(
     ],
 )
 lunarg_debug_report = Extension(
-    name="VK_LUNARG_DEBUG_REPORT",
-    headers=["vulkan/vk_lunarg_debug_report.h"],
+    name="VK_EXT_debug_report",
+    headers=["vulkan/vk_ext_debug_report.h"],
     objects=[
-        "VkDebugReportCallbackLUNARG",
+        "VkDebugReportCallbackEXT",
     ],
     protos=[
-        Proto("VkResult", "CreateDebugReportCallbackLUNARG",
+        Proto("VkResult", "CreateDebugReportCallbackEXT",
             [Param("VkInstance", "instance"),
-             Param("VkDebugReportCallbackCreateInfoLUNARG*", "pCreateInfo"),
+             Param("const VkDebugReportCallbackCreateInfoEXT*", "pCreateInfo"),
              Param("const VkAllocationCallbacks*", "pAllocator"),
-             Param("VkDebugReportCallbackLUNARG*", "pCallback")]),
+             Param("VkDebugReportCallbackEXT*", "pCallback")]),
 
-        Proto("void", "DestroyDebugReportCallbackLUNARG",
+        Proto("void", "DestroyDebugReportCallbackEXT",
             [Param("VkInstance", "instance"),
-             Param("VkDebugReportCallbackLUNARG", "callback"),
+             Param("VkDebugReportCallbackEXT", "callback"),
              Param("const VkAllocationCallbacks*", "pAllocator")]),
 
-        Proto("void", "DebugReportMessageLUNARG",
+        Proto("void", "DebugReportMessageEXT",
             [Param("VkInstance", "instance"),
-             Param("VkDebugReportFlagsLUNARG", "flags"),
-             Param("VkDebugReportObjectTypeLUNARG", "objType"),
+             Param("VkDebugReportFlagsEXT", "flags"),
+             Param("VkDebugReportObjectTypeEXT", "objType"),
              Param("uint64_t", "object"),
              Param("size_t", "location"),
              Param("int32_t", "msgCode"),
@@ -1160,14 +1160,14 @@ lunarg_debug_marker = Extension(
 
         Proto("VkResult", "DbgSetObjectTag",
             [Param("VkDevice", "device"),
-             Param("VkDebugReportObjectTypeLUNARG", "objType"),
+             Param("VkDebugReportObjectTypeEXT", "objType"),
              Param("uint64_t", "object"),
              Param("size_t", "tagSize"),
              Param("const void*", "pTag")]),
 
         Proto("VkResult", "DbgSetObjectName",
             [Param("VkDevice", "device"),
-             Param("VkDebugReportObjectTypeLUNARG", "objType"),
+             Param("VkDebugReportObjectTypeEXT", "objType"),
              Param("uint64_t", "object"),
              Param("size_t", "nameSize"),
              Param("const char*", "pName")]),
@@ -1213,7 +1213,7 @@ object_non_dispatch_list = [
     "VkFramebuffer",
     "VkSwapchainKHR",
     "VkSurfaceKHR",
-    "VkDebugReportCallbackLUNARG",
+    "VkDebugReportCallbackEXT",
 ]
 
 object_type_list = object_dispatch_list + object_non_dispatch_list
@@ -1279,7 +1279,7 @@ def parse_vk_h(filename):
 
     # make them an extension and print
     ext = Extension("VK_CORE",
-            headers=["vulkan/vulkan.h", "vulkan/vk_lunarg_debug_report.h"],
+            headers=["vulkan/vulkan.h", "vulkan/vk_ext_debug_report.h"],
             objects=object_lines,
             protos=protos)
     print("core =", str(ext))

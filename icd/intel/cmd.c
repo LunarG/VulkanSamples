@@ -278,7 +278,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
     }
 
     cmd = (struct intel_cmd *) intel_base_create(&dev->base.handle,
-            sizeof(*cmd), dev->base.dbg, VK_OBJECT_TYPE_COMMAND_BUFFER, info, 0);
+            sizeof(*cmd), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, info, 0);
     if (!cmd)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -447,7 +447,7 @@ VkResult intel_cmd_pool_create(struct intel_dev *dev,
     struct intel_cmd_pool *cmd_pool;
 
     cmd_pool = (struct intel_cmd_pool *) intel_base_create(&dev->base.handle,
-            sizeof(*cmd_pool), dev->base.dbg, VK_OBJECT_TYPE_COMMAND_POOL, info, 0);
+            sizeof(*cmd_pool), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT, info, 0);
     if (!cmd_pool)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

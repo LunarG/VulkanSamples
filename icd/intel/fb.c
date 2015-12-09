@@ -49,7 +49,7 @@ VkResult intel_fb_create(struct intel_dev *dev,
     uint32_t width, height, array_size, i;
 
     fb = (struct intel_fb *) intel_base_create(&dev->base.handle,
-            sizeof(*fb), dev->base.dbg, VK_OBJECT_TYPE_FRAMEBUFFER, info, 0);
+            sizeof(*fb), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, info, 0);
     if (!fb)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -112,7 +112,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
     assert(!(info->dependencyCount) && "No ICD support for subpass dependencies");
 
     rp = (struct intel_render_pass *) intel_base_create(&dev->base.handle,
-            sizeof(*rp), dev->base.dbg, VK_OBJECT_TYPE_RENDER_PASS, info, 0);
+            sizeof(*rp), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, info, 0);
     if (!rp)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

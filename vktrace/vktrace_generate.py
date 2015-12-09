@@ -285,7 +285,7 @@ class Subcommand(object):
             size_func_suffix = '_%s' % extensionName.lower()
         for p in params:
             #First handle custom cases
-            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocateInfo'] and 'khr' not in p.ty.lower() and 'lunarg' not in p.ty.lower():
+            if p.name in ['pCreateInfo', 'pSetLayoutInfoList', 'pBeginInfo', 'pAllocateInfo'] and 'khr' not in p.ty.lower() and 'lunarg' not in p.ty.lower() and 'ext' not in p.ty.lower():
                 ps.append('get_struct_chain_size%s((void*)%s)' % (size_func_suffix, p.name))
                 skip_list.append(p.name)
             elif p.name in custom_size_dict:
@@ -417,7 +417,7 @@ class Subcommand(object):
                                 if 'pDataSize' in p.name:
                                     in_data_size = True;
                             elif 'pfnMsgCallback' == p.name:
-                                raw_packet_update_list.append('    PFN_vkDebugReportCallbackLUNARG* pNonConstCallback = (PFN_vkDebugReportCallbackLUNARG*)&pPacket->pfnMsgCallback;')
+                                raw_packet_update_list.append('    PFN_vkDebugReportCallbackEXT* pNonConstCallback = (PFN_vkDebugReportCallbackEXT*)&pPacket->pfnMsgCallback;')
                                 raw_packet_update_list.append('    *pNonConstCallback = pfnMsgCallback;')
                             elif '[' in p.ty:
                                 raw_packet_update_list.append('    memcpy((void *) pPacket->%s, %s, sizeof(pPacket->%s));' % (p.name, p.name, p.name))
@@ -533,6 +533,7 @@ class Subcommand(object):
             header_prefix = 'h'
             if 'Dbg' in proto.name or 'DebugReport' in proto.name:
                 header_prefix = 'pH'
+            interp_func_body.append('%s' % self.lineinfo.get())
             interp_func_body.append('            return interpret_body_as_vk%s(pHeader)->%seader;\n        }' % (proto.name, header_prefix))
         interp_func_body.append('        default:')
         interp_func_body.append('            return NULL;')
@@ -1139,7 +1140,7 @@ class Subcommand(object):
             mem_var = 'm_%s%ss' % (mem_var_list[0], "".join([m.title() for m in mem_var_list[1:]]))
             obj_map_dict[mem_var] = obj
         rc_body = []
-        rc_body.append('#define VKTRACE_VK_OBJECT_TYPE_UNKNOWN (VkObjectType)-1')
+        rc_body.append('#define VKTRACE_VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN (VkObjectType)-1')
         rc_body.append('')
         rc_body.append('typedef struct _VKAllocInfo {')
         rc_body.append('    VkDeviceSize size;')
@@ -1215,9 +1216,9 @@ class Subcommand(object):
         rc_body.append('')
         rc_body.append(' bool m_adjustForGPU; // true if replay adjusts behavior based on GPU')
         # Code for memory objects for handling replay GPU != trace GPU object memory requirements
-        rc_body.append('void init_objMemCount(const uint64_t handle, const VkDebugReportObjectTypeLUNARG objectType, const uint32_t &num)\n {')
+        rc_body.append('void init_objMemCount(const uint64_t handle, const VkDebugReportObjectTypeEXT objectType, const uint32_t &num)\n {')
         rc_body.append('    switch (objectType) {')
-        rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
+        rc_body.append('        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:')
         rc_body.append('        {')
         rc_body.append('            std::map<VkBuffer, bufferObj>::iterator it = m_buffers.find((VkBuffer) handle);')
         rc_body.append('            if (it != m_buffers.end()) {')
@@ -1227,7 +1228,7 @@ class Subcommand(object):
         rc_body.append('            }')
         rc_body.append('            break;')
         rc_body.append('        }')
-        rc_body.append('        case VK_OBJECT_TYPE_IMAGE:')
+        rc_body.append('        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:')
         rc_body.append('        {')
         rc_body.append('            std::map<VkImage, imageObj>::iterator it = m_images.find((VkImage) handle);')
         rc_body.append('            if (it != m_images.end()) {')
@@ -1242,9 +1243,9 @@ class Subcommand(object):
         rc_body.append('    }')
         rc_body.append('    return;')
         rc_body.append('}\n')
-        rc_body.append('void init_objMemReqs(const uint64_t handle, const VkDebugReportObjectTypeLUNARG objectType, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
+        rc_body.append('void init_objMemReqs(const uint64_t handle, const VkDebugReportObjectTypeEXT objectType, const VkMemoryRequirements *pMemReqs, const unsigned int num)\n    {')
         rc_body.append('    switch (objectType) {')
-        rc_body.append('        case VK_OBJECT_TYPE_BUFFER:')
+        rc_body.append('        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:')
         rc_body.append('        {')
         rc_body.append('            std::map<VkBuffer, bufferObj>::iterator it = m_buffers.find((VkBuffer) handle);')
         rc_body.append('            if (it != m_buffers.end()) {')
@@ -1254,7 +1255,7 @@ class Subcommand(object):
         rc_body.append('            }')
         rc_body.append('            break;')
         rc_body.append('        }')
-        rc_body.append('        case VK_OBJECT_TYPE_IMAGE:')
+        rc_body.append('        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:')
         rc_body.append('        {')
         rc_body.append('            std::map<VkImage, imageObj>::iterator it = m_images.find((VkImage) handle);')
         rc_body.append('            if (it != m_images.end()) {')
@@ -1368,7 +1369,7 @@ class Subcommand(object):
                     objectTypeRemapParam = ', pPacket->stateBindPoint'
                 elif 'object' == paramName:
                     if 'DbgSetObjectTag' == funcName:
-                        objectTypeRemapParam = ', VKTRACE_VK_OBJECT_TYPE_UNKNOWN'
+                        objectTypeRemapParam = ', VKTRACE_VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN'
                     else:
                         objectTypeRemapParam = ', pPacket->objType'
                 elif 'srcObject' == paramName and 'Callback' in funcName:
@@ -1416,7 +1417,7 @@ class Subcommand(object):
                 objectTypeRemapParam = ''
                 if 'object' == paramName:
                     if 'DbgSetObjectTag' == funcName:
-                        objectTypeRemapParam = ', VKTRACE_VK_OBJECT_TYPE_UNKNOWN'
+                        objectTypeRemapParam = ', VKTRACE_VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN'
                     else:
                         objectTypeRemapParam = ', pPacket->objType'
                 return 'remapped%s' % (paramName)
@@ -1494,8 +1495,8 @@ class Subcommand(object):
                                  'UnmapMemory',
                                  'UpdateDescriptorSets',
                                  'WaitForFences',
-                                 'CreateDebugReportCallbackLUNARG',
-                                 'DestroyDebugReportCallbackLUNARG',
+                                 'CreateDebugReportCallbackEXT',
+                                 'DestroyDebugReportCallbackEXT',
                                  'AllocateCommandBuffers',
                                  ]
 
@@ -1610,9 +1611,9 @@ class Subcommand(object):
                     last_name = p.name
 
                 if proto.name == 'DestroyInstance':
-                    rbody.append('            if (m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG != NULL)')
+                    rbody.append('            if (m_vkFuncs.real_vkDestroyDebugReportCallbackEXT != NULL)')
                     rbody.append('            {')
-                    rbody.append('                m_vkFuncs.real_vkDestroyDebugReportCallbackLUNARG(remappedinstance, m_dbgMsgCallbackObj, pPacket->pAllocator);')
+                    rbody.append('                m_vkFuncs.real_vkDestroyDebugReportCallbackEXT(remappedinstance, m_dbgMsgCallbackObj, pPacket->pAllocator);')
                     rbody.append('            }')
                 # TODO: need a better way to indicate which extensions should be mapped to which Get*ProcAddr
                 elif proto.name == 'GetInstanceProcAddr':
@@ -1774,7 +1775,7 @@ class VktraceTraceC(Subcommand):
         header_txt.append('#include "vktrace_common.h"')
         header_txt.append('#include "vktrace_lib_helpers.h"')
         header_txt.append('#include "vktrace_vk_vk.h"')
-        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vktrace_vk_vk_ext_debug_report.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
         header_txt.append('#include "vktrace_filelike.h"')
@@ -1806,7 +1807,7 @@ class VktracePacketID(Subcommand):
         header_txt.append('#include "vktrace_trace_packet_utils.h"')
         header_txt.append('#include "vktrace_trace_packet_identifiers.h"')
         header_txt.append('#include "vktrace_interconnect.h"')
-        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_ext_debug_report_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"')
         header_txt.append('#ifndef _WIN32')
@@ -1923,7 +1924,7 @@ class VktraceReplayObjMapperHeader(Subcommand):
         header_txt.append('#include <vector>')
         header_txt.append('#include <string>')
         header_txt.append('#include "vulkan/vulkan.h"')
-        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vulkan/vk_ext_debug_report.h"')
         header_txt.append('#include "vulkan/vk_lunarg_debug_marker.h"')
         return "\n".join(header_txt)
 
@@ -1942,7 +1943,7 @@ class VktraceReplayC(Subcommand):
         header_txt.append('\n')
         header_txt.append('extern "C" {')
         header_txt.append('#include "vktrace_vk_vk_packets.h"')
-        header_txt.append('#include "vktrace_vk_vk_lunarg_debug_report_packets.h"')
+        header_txt.append('#include "vktrace_vk_vk_ext_debug_report_packets.h"')
         header_txt.append('#include "vktrace_vk_vk_lunarg_debug_marker_packets.h"')
         header_txt.append('#include "vktrace_vk_packet_id.h"')
         #header_txt.append('#include "vk_enum_string_helper.h"\n}\n')

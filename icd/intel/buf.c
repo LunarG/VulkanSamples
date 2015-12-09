@@ -68,7 +68,7 @@ VkResult intel_buf_create(struct intel_dev *dev,
     struct intel_buf *buf;
 
     buf = (struct intel_buf *) intel_base_create(&dev->base.handle,
-            sizeof(*buf), dev->base.dbg, VK_OBJECT_TYPE_BUFFER, info, 0);
+            sizeof(*buf), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, info, 0);
     if (!buf)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

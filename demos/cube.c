@@ -40,7 +40,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -257,7 +257,7 @@ void dumpVec4(const char *note, vec4 vector)
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objType,
+    VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -269,9 +269,9 @@ VkBool32 dbgFunc(
 
     assert (message);
 
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
         // We know that we're submitting queues without fences, ignore this warning
         if (strstr(pMsg, "vkQueueSubmit parameter, VkFence fence, is null pointer")){
             return false;
@@ -301,7 +301,7 @@ VkBool32 dbgFunc(
 
 VkBool32 BreakCallback(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objType,
+    VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -414,10 +414,10 @@ struct demo {
     int32_t frameCount;
     bool validate;
     bool use_break;
-    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallback;
-    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallback;
-    VkDebugReportCallbackLUNARG msg_callback;
-    PFN_vkDebugReportMessageLUNARG DebugReportMessage;
+    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
+    VkDebugReportCallbackEXT msg_callback;
+    PFN_vkDebugReportMessageEXT DebugReportMessage;
 
     uint32_t current_buffer;
     uint32_t queue_count;
@@ -2196,9 +2196,9 @@ static void demo_init_vk(struct demo *demo)
             extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
         }
 #endif // _WIN32
-        if (!strcmp(VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+        if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
-                extension_names[enabled_extension_count++] = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME;
+                extension_names[enabled_extension_count++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
             }
         }
         assert(enabled_extension_count < 64);
@@ -2334,23 +2334,23 @@ static void demo_init_vk(struct demo *demo)
     }
 
     if (demo->validate) {
-        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackLUNARG");
-        demo->DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkDestroyDebugReportCallbackLUNARG");
+        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackEXT");
+        demo->DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(demo->inst, "vkDestroyDebugReportCallbackEXT");
         if (!demo->CreateDebugReportCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackLUNARG\n",
+            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackEXT\n",
                      "vkGetProcAddr Failure");
         }
         if (!demo->DestroyDebugReportCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDestroyDebugReportCallbackLUNARG\n",
+            ERR_EXIT("GetProcAddr: Unable to find vkDestroyDebugReportCallbackEXT\n",
                      "vkGetProcAddr Failure");
         }
-        demo->DebugReportMessage = (PFN_vkDebugReportMessageLUNARG) vkGetInstanceProcAddr(demo->inst, "vkDebugReportMessageLUNARG");
+        demo->DebugReportMessage = (PFN_vkDebugReportMessageEXT) vkGetInstanceProcAddr(demo->inst, "vkDebugReportMessageEXT");
         if (!demo->DebugReportMessage) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDebugReportMessageLUNARG\n",
+            ERR_EXIT("GetProcAddr: Unable to find vkDebugReportMessageEXT\n",
                      "vkGetProcAddr Failure");
         }
 
-        PFN_vkDebugReportCallbackLUNARG callback;
+        PFN_vkDebugReportCallbackEXT callback;
 
         if (!demo->use_break) {
             callback = dbgFunc;
@@ -2359,12 +2359,12 @@ static void demo_init_vk(struct demo *demo)
             // TODO add a break callback defined locally since there is no longer
             // one included in the loader
         }
-        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.pNext = NULL;
         dbgCreateInfo.pfnCallback = callback;
         dbgCreateInfo.pUserData = NULL;
-        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
         err = demo->CreateDebugReportCallback(
                   demo->inst,
                   &dbgCreateInfo,

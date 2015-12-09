@@ -9,7 +9,7 @@
         "description": "LunarG Validation Layer",
         "instance_extensions": [
              {
-                 "name": "VK_EXT_LUNARG_debug_report",
+                 "name": "VK_EXT_debug_report",
                  "spec_version": "1"
              }
          ]

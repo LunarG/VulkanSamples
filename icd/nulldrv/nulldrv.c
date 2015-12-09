@@ -64,7 +64,7 @@ static struct nulldrv_base *nulldrv_base(void* base)
 static struct nulldrv_base *nulldrv_base_create(
         struct nulldrv_dev *dev,
         size_t obj_size,
-        VkDebugReportObjectTypeLUNARG type)
+        VkDebugReportObjectTypeEXT type)
 {
     struct nulldrv_base *base;
 
@@ -121,7 +121,7 @@ static VkResult nulldrv_queue_create(struct nulldrv_dev *dev,
     struct nulldrv_queue *queue;
 
     queue = (struct nulldrv_queue *) nulldrv_base_create(dev, sizeof(*queue),
-            VK_OBJECT_TYPE_QUEUE);
+            VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT);
     if (!queue)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -199,7 +199,7 @@ static VkResult nulldrv_dev_create(struct nulldrv_gpu *gpu,
     VkResult ret;
 
     dev = (struct nulldrv_dev *) nulldrv_base_create(NULL, sizeof(*dev),
-            VK_OBJECT_TYPE_DEVICE);
+            VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -242,7 +242,7 @@ static VkResult nulldrv_fence_create(struct nulldrv_dev *dev,
     struct nulldrv_fence *fence;
 
     fence = (struct nulldrv_fence *) nulldrv_base_create(dev, sizeof(*fence),
-            VK_OBJECT_TYPE_FENCE);
+            VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT);
     if (!fence)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -282,7 +282,7 @@ static VkResult nulldrv_img_create(struct nulldrv_dev *dev,
     struct nulldrv_img *img;
 
     img = (struct nulldrv_img *) nulldrv_base_create(dev, sizeof(*img),
-            VK_OBJECT_TYPE_IMAGE);
+            VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
     if (!img)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -312,7 +312,7 @@ static VkResult nulldrv_mem_alloc(struct nulldrv_dev *dev,
     struct nulldrv_mem *mem;
 
     mem = (struct nulldrv_mem *) nulldrv_base_create(dev, sizeof(*mem),
-            VK_OBJECT_TYPE_DEVICE_MEMORY);
+            VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT);
     if (!mem)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -335,7 +335,7 @@ static VkResult nulldrv_sampler_create(struct nulldrv_dev *dev,
     struct nulldrv_sampler *sampler;
 
     sampler = (struct nulldrv_sampler *) nulldrv_base_create(dev,
-            sizeof(*sampler), VK_OBJECT_TYPE_SAMPLER);
+            sizeof(*sampler), VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT);
     if (!sampler)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -352,7 +352,7 @@ static VkResult nulldrv_img_view_create(struct nulldrv_dev *dev,
     struct nulldrv_img_view *view;
 
     view = (struct nulldrv_img_view *) nulldrv_base_create(dev, sizeof(*view),
-            VK_OBJECT_TYPE_IMAGE_VIEW);
+            VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -401,7 +401,7 @@ static VkResult nulldrv_buf_create(struct nulldrv_dev *dev,
     struct nulldrv_buf *buf;
 
     buf = (struct nulldrv_buf *) nulldrv_base_create(dev, sizeof(*buf),
-            VK_OBJECT_TYPE_BUFFER);
+            VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
     if (!buf)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -423,7 +423,7 @@ static VkResult nulldrv_desc_layout_create(struct nulldrv_dev *dev,
 
     layout = (struct nulldrv_desc_layout *)
         nulldrv_base_create(dev, sizeof(*layout),
-                VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT);
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT);
     if (!layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -440,7 +440,7 @@ static VkResult nulldrv_pipeline_layout_create(struct nulldrv_dev *dev,
 
     pipeline_layout = (struct nulldrv_pipeline_layout *)
         nulldrv_base_create(dev, sizeof(*pipeline_layout),
-                VK_OBJECT_TYPE_PIPELINE_LAYOUT);
+                VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT);
     if (!pipeline_layout)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -462,7 +462,7 @@ static VkResult graphics_pipeline_create(struct nulldrv_dev *dev,
 
     pipeline = (struct nulldrv_pipeline *)
         nulldrv_base_create(dev, sizeof(*pipeline), 
-                VK_OBJECT_TYPE_PIPELINE);
+                VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT);
     if (!pipeline)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -480,7 +480,7 @@ static VkResult nulldrv_cmd_create(struct nulldrv_dev *dev,
 
     for (uint32_t i = 0; i < info->bufferCount; i++) {
         cmd = (struct nulldrv_cmd *) nulldrv_base_create(dev, sizeof(*cmd),
-                VK_OBJECT_TYPE_COMMAND_BUFFER);
+                VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
         if (!cmd) {
             for (uint32_t j = 0; j < num_allocated; j++) {
                 free(cmd_ret[j]);
@@ -502,7 +502,7 @@ static VkResult nulldrv_desc_pool_create(struct nulldrv_dev *dev,
 
     pool = (struct nulldrv_desc_pool *)
         nulldrv_base_create(dev, sizeof(*pool),
-                VK_OBJECT_TYPE_DESCRIPTOR_POOL);
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT);
     if (!pool)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -522,7 +522,7 @@ static VkResult nulldrv_desc_set_create(struct nulldrv_dev *dev,
 
     set = (struct nulldrv_desc_set *)
         nulldrv_base_create(dev, sizeof(*set), 
-                VK_OBJECT_TYPE_DESCRIPTOR_SET);
+                VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT);
     if (!set)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -545,7 +545,7 @@ static VkResult nulldrv_fb_create(struct nulldrv_dev *dev,
 
     struct nulldrv_framebuffer *fb;
     fb = (struct nulldrv_framebuffer *) nulldrv_base_create(dev, sizeof(*fb),
-            VK_OBJECT_TYPE_FRAMEBUFFER);
+            VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT);
     if (!fb)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -561,7 +561,7 @@ static VkResult nulldrv_render_pass_create(struct nulldrv_dev *dev,
 {
     struct nulldrv_render_pass *rp;
     rp = (struct nulldrv_render_pass *) nulldrv_base_create(dev, sizeof(*rp),
-            VK_OBJECT_TYPE_RENDER_PASS);
+            VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT);
     if (!rp)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -583,7 +583,7 @@ static VkResult nulldrv_buf_view_create(struct nulldrv_dev *dev,
     struct nulldrv_buf_view *view;
 
     view = (struct nulldrv_buf_view *) nulldrv_base_create(dev, sizeof(*view),
-            VK_OBJECT_TYPE_BUFFER_VIEW);
+            VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -761,7 +761,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     struct nulldrv_swap_chain *sc;
 
     sc = (struct nulldrv_swap_chain *) nulldrv_base_create(dev, sizeof(*sc),
-            VK_OBJECT_TYPE_SWAPCHAIN_KHR);
+            VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT);
     if (!sc) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
@@ -802,7 +802,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
 
                 img = (struct nulldrv_img *) nulldrv_base_create(dev,
                         sizeof(*img),
-                        VK_OBJECT_TYPE_IMAGE);
+                        VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
                 if (!img)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
             pSwapchainImages[i] = (VkImage) img;
@@ -1559,7 +1559,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     struct nulldrv_instance *inst;
 
     inst = (struct nulldrv_instance *) nulldrv_base_create(NULL, sizeof(*inst),
-                VK_OBJECT_TYPE_INSTANCE);
+                VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT);
     if (!inst)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

@@ -39,7 +39,7 @@ VkResult intel_mem_alloc(struct intel_dev *dev,
     /* ignore any IMAGE_INFO and BUFFER_INFO usage: they don't alter allocations */
 
     mem = (struct intel_mem *) intel_base_create(&dev->base.handle,
-            sizeof(*mem), dev->base.dbg, VK_OBJECT_TYPE_DEVICE_MEMORY, info, 0);
+            sizeof(*mem), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT, info, 0);
     if (!mem)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

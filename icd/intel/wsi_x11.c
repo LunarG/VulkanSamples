@@ -144,7 +144,7 @@ static VkResult x11_xcb_surface_create(struct intel_instance *instance,
 
     memset(surface, 0, sizeof(*surface));
 // TBD: Do we need to do this (it doesn't fit with what we want for the API)?
-//    intel_handle_init(&surface, VK_OBJECT_TYPE_SURFACE_KHR, instance);
+//    intel_handle_init(&surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, instance);
 
     surface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
     surface->connection = connection;
@@ -173,7 +173,7 @@ static VkResult x11_xlib_surface_create(struct intel_instance *instance,
 
     memset(surface, 0, sizeof(*surface));
 // TBD: Do we need to do this (it doesn't fit with what we want for the API)?
-//    intel_handle_init(&surface, VK_OBJECT_TYPE_SURFACE_KHR, instance);
+//    intel_handle_init(&surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, instance);
 
     surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
     surface->dpy = dpy;
@@ -884,7 +884,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 
     /* TODOVV: Add test to validation layer */
     if (!x11_is_format_presentable(dev, info->imageFormat)) {
-        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT,
+        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                       VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
 //        return VK_ERROR_INVALID_VALUE;
         return VK_ERROR_VALIDATION_FAILED;
@@ -912,7 +912,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     memset(sc, 0, sizeof(*sc));
-    intel_handle_init(&sc->handle, VK_OBJECT_TYPE_SWAPCHAIN_KHR, dev->base.handle.instance);
+    intel_handle_init(&sc->handle, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, dev->base.handle.instance);
 
     sc->c = c;
     sc->window = window;

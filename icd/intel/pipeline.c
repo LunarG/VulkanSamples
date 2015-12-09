@@ -1345,7 +1345,7 @@ static VkResult graphics_pipeline_create(struct intel_dev *dev,
 
     pipeline = (struct intel_pipeline *) intel_base_create(&dev->base.handle,
                         sizeof (*pipeline), dev->base.dbg,
-                        VK_OBJECT_TYPE_PIPELINE, info_, 0);
+                        VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, info_, 0);
     if (!pipeline)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

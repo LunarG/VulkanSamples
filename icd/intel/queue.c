@@ -46,7 +46,7 @@ VkResult intel_semaphore_create(struct intel_dev *dev,
 {
     struct intel_semaphore *semaphore;
     semaphore = (struct intel_semaphore *) intel_base_create(&dev->base.handle,
-            sizeof(*semaphore), dev->base.dbg, VK_OBJECT_TYPE_SEMAPHORE, info, 0);
+            sizeof(*semaphore), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT, info, 0);
 
     if (!semaphore)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -70,7 +70,7 @@ static void queue_submit_hang(struct intel_queue *queue,
 {
     intel_cmd_decode(cmd, true);
 
-    intel_dev_log(queue->dev, VK_DEBUG_REPORT_ERROR_BIT,
+    intel_dev_log(queue->dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                   VK_NULL_HANDLE, 0, 0,
                   "GPU hanged with %d/%d active/pending command buffers lost",
                   active_lost, pending_lost);
@@ -220,7 +220,7 @@ static VkResult queue_submit_cmd_prepare(struct intel_queue *queue,
                                            struct intel_cmd *cmd)
 {
     if (unlikely(cmd->result != VK_SUCCESS || !cmd->primary)) {
-        intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT,
+        intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                       &cmd->obj.base, 0, 0,
                       "invalid command buffer submitted");
     }
@@ -297,7 +297,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
         ring = INTEL_RING_RENDER;
         break;
     default:
-        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT,
+        intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                       &dev->base, 0, 0,
                       "invalid engine type");
         return VK_ERROR_VALIDATION_FAILED;
@@ -305,7 +305,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
     }
 
     queue = (struct intel_queue *) intel_base_create(&dev->base.handle,
-            sizeof(*queue), dev->base.dbg, VK_OBJECT_TYPE_QUEUE, NULL, 0);
+            sizeof(*queue), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT, NULL, 0);
     if (!queue)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

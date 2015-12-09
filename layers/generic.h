@@ -36,7 +36,7 @@
 // The following is for logging error messages:
 struct layer_data {
     debug_report_data *report_data;
-    VkDebugReportCallbackLUNARG logging_callback;
+    VkDebugReportCallbackEXT logging_callback;
 
     layer_data() :
         report_data(nullptr),

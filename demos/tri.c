@@ -45,7 +45,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0
@@ -107,7 +107,7 @@ struct texture_object {
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objType,
+    VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -119,9 +119,9 @@ VkBool32 dbgFunc(
 
     assert (message);
 
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
         sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     } else {
         return false;
@@ -234,9 +234,9 @@ struct demo {
     VkPhysicalDeviceMemoryProperties memory_properties;
 
     bool validate;
-    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallback;
-    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallback;
-    VkDebugReportCallbackLUNARG msg_callback;
+    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
+    VkDebugReportCallbackEXT msg_callback;
 
     float depthStencil;
     float depthIncrement;
@@ -1784,9 +1784,9 @@ static void demo_init_vk(struct demo *demo)
             extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
         }
 #endif // _WIN32
-        if (!strcmp(VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
+        if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, instance_extensions[i].extensionName)) {
             if (demo->validate) {
-                extension_names[enabled_extension_count++] = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME;
+                extension_names[enabled_extension_count++] = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
             }
         }
         assert(enabled_extension_count < 64);
@@ -1944,14 +1944,14 @@ static void demo_init_vk(struct demo *demo)
     };
 
     if (demo->validate) {
-        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackLUNARG");
+        demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(demo->inst, "vkCreateDebugReportCallbackEXT");
         if (!demo->CreateDebugReportCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackLUNARG\n",
+            ERR_EXIT("GetProcAddr: Unable to find vkCreateDebugReportCallbackEXT\n",
                      "vkGetProcAddr Failure");
         }
-        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
-        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+        dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
         dbgCreateInfo.pfnCallback = (const void *) dbgFunc;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.pNext = NULL;

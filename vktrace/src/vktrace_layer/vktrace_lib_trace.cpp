@@ -35,7 +35,7 @@
 #include "vktrace_common.h"
 #include "vktrace_lib_helpers.h"
 
-#include "vktrace_vk_vk_lunarg_debug_report.h"
+#include "vktrace_vk_vk_ext_debug_report.h"
 #include "vktrace_vk_vk_lunarg_debug_marker.h"
 
 #include "vktrace_interconnect.h"
@@ -1743,10 +1743,10 @@ VKTRACER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL __HOOKED_vkGetInstanceP
 
         if (instData->LunargDebugReportEnabled)
         {
-            if (!strcmp("vkCreateDebugReportCallbackLUNARG", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkCreateDebugReportCallbackLUNARG;
-            if (!strcmp("vkDestroyDebugReportCallbackLUNARG", funcName))
-                return (PFN_vkVoidFunction) __HOOKED_vkDestroyDebugReportCallbackLUNARG;
+            if (!strcmp("vkCreateDebugReportCallbackEXT", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkCreateDebugReportCallbackEXT;
+            if (!strcmp("vkDestroyDebugReportCallbackEXT", funcName))
+                return (PFN_vkVoidFunction) __HOOKED_vkDestroyDebugReportCallbackEXT;
 
         }
         if (instData->KHRSurfaceEnabled)

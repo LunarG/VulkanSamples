@@ -381,7 +381,7 @@ VkResult intel_sampler_create(struct intel_dev *dev,
     struct intel_sampler *sampler;
 
     sampler = (struct intel_sampler *) intel_base_create(&dev->base.handle,
-            sizeof(*sampler), dev->base.dbg, VK_OBJECT_TYPE_SAMPLER, info, 0);
+            sizeof(*sampler), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, info, 0);
     if (!sampler)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

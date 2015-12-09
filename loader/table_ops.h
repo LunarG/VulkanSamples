@@ -469,9 +469,9 @@ static inline void loader_init_instance_extension_dispatch_table(
         VkInstance inst)
 {
     table->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
-    table->CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
-    table->DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
-    table->DebugReportMessageLUNARG = (PFN_vkDebugReportMessageLUNARG) gpa(inst, "vkDebugReportMessageLUNARG");
+    table->CreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT) gpa(inst, "vkCreateDebugReportCallbackEXT");
+    table->DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT) gpa(inst, "vkDestroyDebugReportCallbackEXT");
+    table->DebugReportMessageEXT = (PFN_vkDebugReportMessageEXT) gpa(inst, "vkDebugReportMessageEXT");
     table->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     table->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     table->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceFormatsKHR");
@@ -572,12 +572,12 @@ static inline void *loader_lookup_instance_dispatch_table(
     if (!strcmp(name, "GetPhysicalDeviceXlibPresentationSupportKHR"))
         return (void *) table->GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
-    if (!strcmp(name, "CreateDebugReportCallbackLUNARG"))
-        return (void *) table->CreateDebugReportCallbackLUNARG;
-    if (!strcmp(name, "DestroyDebugReportCallbackLUNARG"))
-        return (void *) table->DestroyDebugReportCallbackLUNARG;
-    if (!strcmp(name, "DebugReportMessageLUNARG"))
-        return (void *) table->DebugReportMessageLUNARG;
+    if (!strcmp(name, "CreateDebugReportCallbackEXT"))
+        return (void *) table->CreateDebugReportCallbackEXT;
+    if (!strcmp(name, "DestroyDebugReportCallbackEXT"))
+        return (void *) table->DestroyDebugReportCallbackEXT;
+    if (!strcmp(name, "DebugReportMessageEXT"))
+        return (void *) table->DebugReportMessageEXT;
 
     return NULL;
 }

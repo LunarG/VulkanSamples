@@ -34,12 +34,12 @@
 
 vkReplay* g_pReplayer = NULL;
 VKTRACE_CRITICAL_SECTION g_handlerLock;
-PFN_vkDebugReportCallbackLUNARG g_fpDbgMsgCallback;
+PFN_vkDebugReportCallbackEXT g_fpDbgMsgCallback;
 vktrace_replay::VKTRACE_DBG_MSG_CALLBACK_FUNCTION g_fpVktraceCallback = NULL;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
                                 VkFlags             msgFlags,
-                                VkDebugReportObjectTypeLUNARG     objType,
+                                VkDebugReportObjectTypeEXT     objType,
                                 uint64_t            srcObjectHandle,
                                 size_t              location,
                                 int32_t             msgCode,
@@ -50,7 +50,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
     VkBool32 bail = false;
 
     vktrace_enter_critical_section(&g_handlerLock);
-    if ((msgFlags & VK_DEBUG_REPORT_ERROR_BIT) == VK_DEBUG_REPORT_ERROR_BIT)
+    if ((msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) == VK_DEBUG_REPORT_ERROR_BIT_EXT)
     {
         vktrace_LogError("MsgFlags %d with object %#" PRIxLEAST64 ", location %u returned msgCode %d and msg %s",
                      msgFlags, srcObjectHandle, location, msgCode, (char *) pMsg);
@@ -65,8 +65,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vkErrorHandler(
          */
         bail = true;
     }
-    else if ((msgFlags & VK_DEBUG_REPORT_WARN_BIT) == VK_DEBUG_REPORT_WARN_BIT ||
-             (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT) == VK_DEBUG_REPORT_PERF_WARN_BIT)
+    else if ((msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) == VK_DEBUG_REPORT_WARN_BIT_EXT ||
+             (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT_EXT) == VK_DEBUG_REPORT_PERF_WARN_BIT_EXT)
     {
         if (g_fpVktraceCallback != NULL)
         {

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "vulkan/vulkan.h"
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 #include "vulkan/vk_lunarg_debug_marker.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
@@ -174,9 +174,9 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR GetPhysicalDeviceSurfacePresentModesKHR;
-    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
-    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
-    PFN_vkDebugReportMessageLUNARG DebugReportMessageLUNARG;
+    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT;
+    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT;
+    PFN_vkDebugReportMessageEXT DebugReportMessageEXT;
 #ifdef VK_USE_PLATFORM_MIR_KHR
     PFN_vkCreateMirSurfaceKHR CreateMirSurfaceKHR;
     PFN_vkGetPhysicalDeviceMirPresentationSupportKHR GetPhysicalDeviceMirPresentationSupportKHR;
@@ -205,8 +205,8 @@ typedef struct VkLayerInstanceDispatchTable_
 // LL node for tree of dbg callback functions
 typedef struct VkLayerDbgFunctionNode_
 {
-    VkDebugReportCallbackLUNARG msgCallback;
-    PFN_vkDebugReportCallbackLUNARG pfnMsgCallback;
+    VkDebugReportCallbackEXT msgCallback;
+    PFN_vkDebugReportCallbackEXT pfnMsgCallback;
     VkFlags msgFlags;
     const void *pUserData;
     struct VkLayerDbgFunctionNode_ *pNext;

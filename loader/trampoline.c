@@ -44,7 +44,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
 {
     struct loader_instance *ptr_instance = NULL;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-    VkDebugReportCallbackLUNARG instance_callback = VK_NULL_HANDLE;
+    VkDebugReportCallbackEXT instance_callback = VK_NULL_HANDLE;
     void *pNext = (void *) pCreateInfo->pNext;
 
     loader_platform_thread_once(&once_init, loader_initialize);
@@ -75,8 +75,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
      * and setup a callback if found.
      */
     while (pNext) {
-        if (((VkInstanceCreateInfo *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG) {
-            instance_callback = (VkDebugReportCallbackLUNARG) ptr_instance;
+        if (((VkInstanceCreateInfo *)pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT) {
+            instance_callback = (VkDebugReportCallbackEXT) ptr_instance;
             if (util_CreateDebugReportCallback(ptr_instance, pNext, pAllocator, instance_callback)) {
                 loader_heap_free(ptr_instance, ptr_instance);
                 loader_platform_thread_unlock_mutex(&loader_lock);

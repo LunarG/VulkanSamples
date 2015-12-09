@@ -43,8 +43,8 @@ template layer_data *get_my_data_ptr<layer_data>(
 
 static const VkExtensionProperties instance_extensions[] = {
     {
-        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION
+        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_DEBUG_REPORT_REVISION
     }
 };
 
@@ -95,7 +95,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
         my_device_data->deviceMap[device].pPhysicalDevice = pPhysicalDevice;
         pPhysicalDevice->pDevice = &my_device_data->deviceMap[device];
     } else {
-        log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                 (uint64_t)physicalDevice , 0, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
                 "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
     }
@@ -148,7 +148,7 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    VkDebugReportCallbackLUNARG callback;
+    VkDebugReportCallbackEXT callback;
 
     // Initialize Swapchain options:
     report_flags = getLayerOptionFlags("SwapchainReportFlags", 0);
@@ -159,9 +159,9 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
         // Turn on logging, since it was requested:
         option_str = getLayerOption("SwapchainLogFilename");
         log_output = getLayerLogOutput(option_str, "Swapchain");
-        VkDebugReportCallbackCreateInfoLUNARG dbgInfo;
+        VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgInfo.pfnCallback = log_callback;
         dbgInfo.pUserData = log_output;
         dbgInfo.flags = report_flags;
@@ -172,9 +172,9 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
         my_data->logging_callback.push_back(callback);
     }
     if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoLUNARG dbgInfo;
+        VkDebugReportCallbackCreateInfoEXT dbgInfo;
         memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgInfo.pfnCallback = win32_debug_output_msg;
         dbgInfo.pUserData = log_output;
         dbgInfo.flags = report_flags;
@@ -244,7 +244,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -255,7 +255,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
         // Clean up logging callback, if any
         while (my_data->logging_callback.size() > 0) {
-            VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
+            VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
             layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
             my_data->logging_callback.pop_back();
         }
@@ -293,7 +293,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -337,7 +337,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
     // Validate that a valid VkPhysicalDevice was used:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice, "VkPhysicalDevice");
     }
 
@@ -365,7 +365,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     // Validate that a valid VkDevice was used:
     SwpDevice *pDevice = &my_data->deviceMap[device];
     if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                             device,
                                             "VkDevice");
     }
@@ -382,7 +382,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
             pDevice->pPhysicalDevice->pDevice = NULL;
         }
         if (!pDevice->swapchains.empty()) {
-            LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                       SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,
                       "%s() called before all of its associated "
                       "VkSwapchainKHRs were destroyed.",
@@ -415,11 +415,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
     } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
@@ -460,11 +460,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
     // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
     } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
@@ -502,11 +502,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
     // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
     } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
@@ -552,11 +552,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
     // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
     if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_PHYSICAL_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
     } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
@@ -604,13 +604,13 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
     if (!pDevice) {
-        return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        return LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                          SWAPCHAIN_INVALID_HANDLE,
                          "%s() called with a non-valid %s.",
                          fn, "VkDevice");
 
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
-        return LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        return LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                          SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                          "%s() called even though the %s extension was not enabled for this VkDevice.",
                          fn, VK_KHR_SWAPCHAIN_EXTENSION_NAME );
@@ -618,7 +618,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
 
     // Validate pCreateInfo with the results for previous queries:
     if (!pDevice->pPhysicalDevice && !pDevice->pPhysicalDevice->gotSurfaceCapabilities) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
@@ -630,7 +630,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         if ((pCreateInfo->minImageCount < pCapabilities->minImageCount) ||
             ((pCapabilities->maxImageCount > 0) &&
              (pCreateInfo->minImageCount > pCapabilities->maxImageCount))) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_MIN_IMG_COUNT,
                                   "%s() called with pCreateInfo->minImageCount "
                                   "= %d, which is outside the bounds returned "
@@ -648,7 +648,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
              (pCreateInfo->imageExtent.width > pCapabilities->maxImageExtent.width) ||
              (pCreateInfo->imageExtent.height < pCapabilities->minImageExtent.height) ||
              (pCreateInfo->imageExtent.height > pCapabilities->maxImageExtent.height))) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is outside the bounds "
@@ -668,7 +668,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         if ((pCapabilities->currentExtent.width != -1) &&
             ((pCreateInfo->imageExtent.width != pCapabilities->currentExtent.width) ||
              (pCreateInfo->imageExtent.height != pCapabilities->currentExtent.height))) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN,
                                   "%s() called with pCreateInfo->imageExtent = "
                                   "(%d,%d), which is not equal to the "
@@ -706,8 +706,8 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             }
             // Log the message that we've built up:
             skipCall |= debug_report_log_msg(my_data->report_data,
-                                             VK_DEBUG_REPORT_ERROR_BIT,
-                                             VK_OBJECT_TYPE_DEVICE,
+                                             VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              (uint64_t) device, 0,
                                              SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,
                                              LAYER_NAME,
@@ -716,7 +716,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         // Validate pCreateInfo->imageArraySize against
         // VkSurfaceCapabilitiesKHR::maxImageArraySize:
         if (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->imageArraySize (i.e. %d).  "
@@ -730,7 +730,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         if (pCreateInfo->imageUsage &&
             (pCreateInfo->imageUsage !=
              (pCreateInfo->imageUsage & pCapabilities->supportedUsageFlags))) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->imageUsage (i.e. 0x%08x)."
@@ -741,7 +741,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         }
     }
     if (!pDevice->pPhysicalDevice && !pDevice->pPhysicalDevice->surfaceFormatCount) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetPhysicalDeviceSurfaceFormatsKHR().",
@@ -770,7 +770,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         if (!foundMatch) {
             if (!foundFormat) {
                 if (!foundColorSpace) {
-                    skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device,
+                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device,
                                           "VkDevice",
                                           SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP,
                                           "%s() called with neither a "
@@ -782,7 +782,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                           pCreateInfo->imageFormat,
                                           pCreateInfo->imageColorSpace);
                 } else {
-                    skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device,
+                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device,
                                           "VkDevice",
                                           SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,
                                           "%s() called with a non-supported "
@@ -790,7 +790,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                           fn, pCreateInfo->imageFormat);
                 }
             } else if (!foundColorSpace) {
-                skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                       SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,
                                       "%s() called with a non-supported "
                                       "pCreateInfo->imageColorSpace (i.e. %d).",
@@ -799,7 +799,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         }
     }
     if (!pDevice->pPhysicalDevice && !pDevice->pPhysicalDevice->presentModeCount) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,
                               "%s() called before calling "
                               "vkGetPhysicalDeviceSurfacePresentModesKHR().",
@@ -815,7 +815,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             }
         }
         if (!foundMatch) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,
                                   "%s() called with a non-supported "
                                   "pCreateInfo->presentMode (i.e. %s).",
@@ -877,11 +877,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
     if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                             device,
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
                               __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -894,7 +894,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
         if (pSwapchain->pDevice) {
             pSwapchain->pDevice->swapchains.erase(swapchain);
             if (device != pSwapchain->pDevice->device) {
-                LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                           SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
                           "%s() called with a different VkDevice than the "
                           "VkSwapchainKHR was created with.",
@@ -906,7 +906,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
         }
         my_data->swapchainMap.erase(swapchain);
     } else {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                             swapchain,
                                             "VkSwapchainKHR");
     }
@@ -927,18 +927,18 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice 
     // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
     if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                             device,
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
                               __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (!pSwapchain) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                             swapchain.handle,
                                             "VkSwapchainKHR");
     }
@@ -987,11 +987,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
     if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_DEVICE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                             device,
                                             "VkDevice");
     } else if (!pDevice->deviceSwapchainExtensionEnabled) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
                               __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -999,7 +999,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     // Validate that a valid VkSwapchainKHR was used:
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
     if (!pSwapchain) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                             swapchain,
                                             "VkSwapchainKHR");
     } else {
@@ -1012,7 +1012,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
             }
         }
         if (imagesOwnedByApp >= (pSwapchain->imageCount - 1)) {
-            skipCall |= LOG_PERF_WARNING(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+            skipCall |= LOG_PERF_WARNING(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                          swapchain,
                                          "VkSwapchainKHR",
                                          SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,
@@ -1066,14 +1066,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
             &my_data->swapchainMap[pPresentInfo->pSwapchains[i]];
         if (pSwapchain) {
             if (!pSwapchain->pDevice->deviceSwapchainExtensionEnabled) {
-                skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE,
+                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                       pSwapchain->pDevice, "VkDevice",
                                       SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                                       "%s() called even though the %s extension was not enabled for this VkDevice.",
                                       __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
             if (index >= pSwapchain->imageCount) {
-                skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                       pPresentInfo->pSwapchains[i],
                                       "VkSwapchainKHR",
                                       SWAPCHAIN_INDEX_TOO_LARGE,
@@ -1084,7 +1084,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                                       pSwapchain->imageCount);
             } else {
                 if (!pSwapchain->images[index].ownedByApp) {
-                    skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                    skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                           pPresentInfo->pSwapchains[i],
                                           "VkSwapchainKHR",
                                           SWAPCHAIN_INDEX_NOT_IN_USE,
@@ -1095,7 +1095,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                 }
             }
         } else {
-            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                                 pPresentInfo->pSwapchains[i],
                                                 "VkSwapchainKHR");
         }
@@ -1159,27 +1159,31 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char *name)
     return NULL;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(VkInstance instance, VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackLUNARG* pMsgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
+        VkInstance                                      instance,
+        const VkDebugReportCallbackCreateInfoEXT*       pCreateInfo,
+        const VkAllocationCallbacks*                    pAllocator,
+        VkDebugReportCallbackEXT*                       pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkResult result = my_data->instance_dispatch_table->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pMsgCallback);
+    VkResult result = my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == result) {
         result = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pMsgCallback);
     }
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback, const VkAllocationCallbacks *pAllocator)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    my_data->instance_dispatch_table->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);
+    my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
         VkInstance                                  instance,
-        VkDebugReportFlagsLUNARG                       flags,
-        VkDebugReportObjectTypeLUNARG               objType,
+        VkDebugReportFlagsEXT                       flags,
+        VkDebugReportObjectTypeEXT                  objType,
         uint64_t                                    object,
         size_t                                      location,
         int32_t                                     msgCode,
@@ -1187,7 +1191,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
         const char*                                 pMsg)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    my_data->instance_dispatch_table->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+    my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)

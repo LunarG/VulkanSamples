@@ -25,7 +25,7 @@
  */
 #include "vktrace_lib_helpers.h"
 #include "vulkan/vk_lunarg_debug_marker.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 
 #include "vulkan/vk_layer.h"
 
@@ -37,9 +37,9 @@ void ext_init_create_instance(
 {
     PFN_vkGetInstanceProcAddr gpa = instData->instTable.GetInstanceProcAddr;
 
-    instData->instTable.CreateDebugReportCallbackLUNARG = (PFN_vkCreateDebugReportCallbackLUNARG) gpa(inst, "vkCreateDebugReportCallbackLUNARG");
-    instData->instTable.DestroyDebugReportCallbackLUNARG = (PFN_vkDestroyDebugReportCallbackLUNARG) gpa(inst, "vkDestroyDebugReportCallbackLUNARG");
-    instData->instTable.DebugReportMessageLUNARG = (PFN_vkDebugReportMessageLUNARG) gpa(inst, "vkDebugReportMessageLUNARG");
+    instData->instTable.CreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT) gpa(inst, "vkCreateDebugReportCallbackEXT");
+    instData->instTable.DestroyDebugReportCallbackEXT = (PFN_vkDestroyDebugReportCallbackEXT) gpa(inst, "vkDestroyDebugReportCallbackEXT");
+    instData->instTable.DebugReportMessageEXT = (PFN_vkDebugReportMessageEXT) gpa(inst, "vkDebugReportMessageEXT");
     instData->instTable.GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceSupportKHR");
     instData->instTable.DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(inst, "vkDestroySurfaceKHR");
     instData->instTable.GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(inst, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
@@ -73,7 +73,7 @@ void ext_init_create_instance(
     instData->KHRMirSurfaceEnabled = false;
     instData->KHRWin32SurfaceEnabled = false;
     for (uint32_t i = 0; i < extension_count; i++) {
-        if (strcmp(ppEnabledExtensions[i], VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(ppEnabledExtensions[i], VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             instData->LunargDebugReportEnabled = true;
         }
         if (strcmp(ppEnabledExtensions[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {

@@ -7,8 +7,8 @@ include("${SRC_DIR}/build_options.cmake")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-h     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-trace-c     vk_core OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk.cpp)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.h)
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_lunarg_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_report.cpp)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_ext_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_debug_report.h)
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_ext_debug_report OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_ext_debug_report.cpp)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-h vk_lunarg_debug_marker OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_marker.h)
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${VKTRACE_VULKAN_DIR}/vktrace_generate.py vktrace-ext-trace-c vk_lunarg_debug_marker OUTPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/codegen/vktrace_vk_vk_lunarg_debug_marker.cpp)
 
@@ -27,10 +27,10 @@ set(SRC_LIST
     vktrace_lib_trace.cpp
     vktrace_vk_exts.cpp
     codegen/vktrace_vk_vk.cpp
-    codegen/vktrace_vk_vk_lunarg_debug_report.cpp
+    codegen/vktrace_vk_vk_ext_debug_report.cpp
     codegen/vktrace_vk_vk_lunarg_debug_marker.cpp
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.c
-    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.c
+    ${CODEGEN_UTILS_DIR}/vk_ext_debug_report_struct_size_helper.c
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.c
 )
 
@@ -41,14 +41,14 @@ set (HDR_LIST
     vktrace_vk_exts.h
     vk_dispatch_table_helper.h
     codegen/vktrace_vk_vk.h
-    codegen/vktrace_vk_vk_lunarg_debug_report.h
+    codegen/vktrace_vk_vk_ext_debug_report.h
     codegen/vktrace_vk_vk_lunarg_debug_marker.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_packet_id.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_packets.h
-    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_report_packets.h
+    ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_ext_debug_report_packets.h
     ${CODEGEN_VKTRACE_DIR}/vktrace_vk_vk_lunarg_debug_marker_packets.h
     ${CODEGEN_UTILS_DIR}/vk_struct_size_helper.h
-    ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_report_struct_size_helper.h
+    ${CODEGEN_UTILS_DIR}/vk_ext_debug_report_struct_size_helper.h
     ${CODEGEN_UTILS_DIR}/vk_lunarg_debug_marker_struct_size_helper.h
 )
 

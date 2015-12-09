@@ -44,12 +44,12 @@
 extern "C" {
 #include "vktrace_vk_vk_packets.h"
 
-#include "vktrace_vk_vk_lunarg_debug_report_packets.h"
+#include "vktrace_vk_vk_ext_debug_report_packets.h"
 // TODO138 : Need to add packets files for new wsi headers
 }
 
 #include "vulkan/vulkan.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 
 #include "vkreplay_vkdisplay.h"
 #include "vkreplay_vk_func_ptrs.h"
@@ -67,7 +67,7 @@ public:
     vktrace_replay::VKTRACE_REPLAY_RESULT replay(vktrace_trace_packet_header *packet);
     vktrace_replay::VKTRACE_REPLAY_RESULT handle_replay_errors(const char* entrypointName, const VkResult resCall, const VkResult resTrace, const vktrace_replay::VKTRACE_REPLAY_RESULT resIn);
 
-    void push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeLUNARG objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, const void* pUserData);
+    void push_validation_msg(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObjectHandle, size_t location, int32_t msgCode, const char* pLayerPrefix, const char* pMsg, const void* pUserData);
     vktrace_replay::VKTRACE_REPLAY_RESULT pop_validation_msgs();
     int dump_validation_data();
     int get_frame_number() { return m_frameNumber; }
@@ -84,7 +84,7 @@ private:
 
     struct ValidationMsg {
         VkFlags msgFlags;
-        VkDebugReportObjectTypeLUNARG objType;
+        VkDebugReportObjectTypeEXT objType;
         uint64_t srcObjectHandle;
         size_t location;
         int32_t msgCode;
@@ -93,7 +93,7 @@ private:
         void* pUserData;
     };
 
-    VkDebugReportCallbackLUNARG m_dbgMsgCallbackObj;
+    VkDebugReportCallbackEXT m_dbgMsgCallbackObj;
 
     std::vector<struct ValidationMsg> m_validationMsgs;
     std::vector<int> m_screenshotFrames;
@@ -142,8 +142,8 @@ private:
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     VkResult manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32SurfaceKHR* pPacket);
 #endif
-    VkResult manually_replay_vkCreateDebugReportCallbackLUNARG(packet_vkCreateDebugReportCallbackLUNARG* pPacket);
-    void manually_replay_vkDestroyDebugReportCallbackLUNARG(packet_vkDestroyDebugReportCallbackLUNARG* pPacket);
+    VkResult manually_replay_vkCreateDebugReportCallbackEXT(packet_vkCreateDebugReportCallbackEXT* pPacket);
+    void manually_replay_vkDestroyDebugReportCallbackEXT(packet_vkDestroyDebugReportCallbackEXT* pPacket);
 
     void process_screenshot_list(const char *list)
     {

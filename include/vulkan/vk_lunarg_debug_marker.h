@@ -32,7 +32,7 @@
 #define __VK_DEBUG_MARKER_H__
 
 #include "vulkan/vulkan.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 
 #define VK_DEBUG_MARKER_EXTENSION_NUMBER 6
 #define VK_DEBUG_MARKER_EXTENSION_REVISION 1
@@ -62,8 +62,8 @@ extern "C"
 
 typedef void (VKAPI_PTR *PFN_vkCmdDbgMarkerBegin)(VkCommandBuffer commandBuffer, const char* pMarker);
 typedef void (VKAPI_PTR *PFN_vkCmdDbgMarkerEnd)(VkCommandBuffer commandBuffer);
-typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectTag)(VkDevice device, VkDebugReportObjectTypeLUNARG objType, uint64_t object, size_t tagSize, const void* pTag);
-typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectName)(VkDevice device, VkDebugReportObjectTypeLUNARG objType, uint64_t object, size_t nameSize, const char* pName);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectTag)(VkDevice device, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t tagSize, const void* pTag);
+typedef VkResult (VKAPI_PTR *PFN_vkDbgSetObjectName)(VkDevice device, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t nameSize, const char* pName);
 
 #ifdef VK_PROTOTYPES
 
@@ -77,14 +77,14 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDbgMarkerEnd(
 
 VKAPI_ATTR VkResult VKAPI_CALL vkDbgSetObjectTag(
     VkDevice                            device,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeEXT                     objType,
     uint64_t                            object,
     size_t                              tagSize,
     const void*                         pTag);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkDbgSetObjectName(
     VkDevice                            device,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeEXT                     objType,
     uint64_t                            object,
     size_t                              nameSize,
     const char*                         pName);

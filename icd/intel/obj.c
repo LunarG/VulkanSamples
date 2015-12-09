@@ -57,72 +57,72 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         return true;
 
     switch (dbg->type) {
-    case VK_OBJECT_TYPE_DEVICE:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
         break;
-    case VK_OBJECT_TYPE_DEVICE_MEMORY:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
         break;
-    case VK_OBJECT_TYPE_EVENT:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
         shallow_copy = sizeof(VkEventCreateInfo);
         break;
-    case VK_OBJECT_TYPE_FENCE:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
         shallow_copy = sizeof(VkFenceCreateInfo);
         break;
-    case VK_OBJECT_TYPE_QUERY_POOL:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkQueryPoolCreateInfo);
         break;
-    case VK_OBJECT_TYPE_BUFFER:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkBufferCreateInfo);
         break;
-    case VK_OBJECT_TYPE_BUFFER_VIEW:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkBufferViewCreateInfo);
         break;
-    case VK_OBJECT_TYPE_IMAGE:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
         shallow_copy = sizeof(VkImageCreateInfo);
         break;
-    case VK_OBJECT_TYPE_IMAGE_VIEW:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
         shallow_copy = sizeof(VkImageViewCreateInfo);
         break;
-    case VK_OBJECT_TYPE_SAMPLER:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
         shallow_copy = sizeof(VkSamplerCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
         /* no create info */
         break;
-    case VK_OBJECT_TYPE_COMMAND_POOL:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkCommandPoolCreateInfo);
         break;
-    case VK_OBJECT_TYPE_COMMAND_BUFFER:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO);
         shallow_copy = sizeof(VkCommandBufferAllocateInfo);
         break;
-    case VK_OBJECT_TYPE_PIPELINE:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
         assert(info.header->struct_type == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
         break;
-    case VK_OBJECT_TYPE_FRAMEBUFFER:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
         shallow_copy = sizeof(VkFramebufferCreateInfo);
         break;
-    case VK_OBJECT_TYPE_RENDER_PASS:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
         shallow_copy = sizeof(VkRenderPassCreateInfo);
         break;
-    case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
         /* TODO */
         shallow_copy = sizeof(VkDescriptorSetLayoutCreateInfo) * 0;
         break;
-    case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+    case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT:
         assert(info.header->struct_type ==  VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
         shallow_copy = sizeof(VkDescriptorPoolCreateInfo);
         break;
@@ -225,7 +225,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
  * size is allocated and zeroed.
  */
 struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
-                                             VkDebugReportObjectTypeLUNARG type,
+                                             VkDebugReportObjectTypeEXT type,
                                              const void *create_info,
                                              size_t dbg_size)
 {
@@ -270,7 +270,7 @@ void intel_base_dbg_destroy(const struct intel_handle *handle,
  */
 struct intel_base *intel_base_create(const struct intel_handle *handle,
                                      size_t obj_size, bool debug,
-                                     VkDebugReportObjectTypeLUNARG type,
+                                     VkDebugReportObjectTypeEXT type,
                                      const void *create_info,
                                      size_t dbg_size)
 {

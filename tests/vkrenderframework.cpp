@@ -86,7 +86,7 @@ void VkRenderFramework::InitFramework(
         std::vector<const char *> device_layer_names,
         std::vector<const char *> instance_extension_names,
         std::vector<const char *> device_extension_names,
-        PFN_vkDebugReportCallbackLUNARG dbgFunction,
+        PFN_vkDebugReportCallbackEXT dbgFunction,
         void *userData)
 {
     VkInstanceCreateInfo instInfo = {};
@@ -113,13 +113,13 @@ void VkRenderFramework::InitFramework(
     ASSERT_VK_SUCCESS(err);
     ASSERT_GE(this->gpu_count, (uint32_t) 1) << "No GPU available";
     if (dbgFunction) {
-        m_CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackLUNARG) vkGetInstanceProcAddr(this->inst, "vkCreateDebugReportCallbackLUNARG");
-        ASSERT_NE(m_CreateDebugReportCallback, (PFN_vkCreateDebugReportCallbackLUNARG) NULL) << "Did not get function pointer for CreateDebugReportCallback";
+        m_CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(this->inst, "vkCreateDebugReportCallbackEXT");
+        ASSERT_NE(m_CreateDebugReportCallback, (PFN_vkCreateDebugReportCallbackEXT) NULL) << "Did not get function pointer for CreateDebugReportCallback";
         if (m_CreateDebugReportCallback) {
-            VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+            VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
             memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-            dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
-            dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_PERF_WARN_BIT;
+            dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+            dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT;
             dbgCreateInfo.pfnCallback = dbgFunction;
             dbgCreateInfo.pUserData = userData;
 
@@ -129,10 +129,10 @@ void VkRenderFramework::InitFramework(
                                          &m_globalMsgCallback);
             ASSERT_VK_SUCCESS(err);
 
-            m_DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackLUNARG) vkGetInstanceProcAddr(this->inst, "vkDestroyDebugReportCallbackLUNARG");
-            ASSERT_NE(m_DestroyDebugReportCallback, (PFN_vkDestroyDebugReportCallbackLUNARG) NULL) << "Did not get function pointer for DestroyDebugReportCallback";
-            m_DebugReportMessage = (PFN_vkDebugReportMessageLUNARG) vkGetInstanceProcAddr(this->inst, "vkDebugReportMessageLUNARG");
-            ASSERT_NE(m_DebugReportMessage, (PFN_vkDebugReportMessageLUNARG) NULL) << "Did not get function pointer for DebugReportMessage";
+            m_DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(this->inst, "vkDestroyDebugReportCallbackEXT");
+            ASSERT_NE(m_DestroyDebugReportCallback, (PFN_vkDestroyDebugReportCallbackEXT) NULL) << "Did not get function pointer for DestroyDebugReportCallback";
+            m_DebugReportMessage = (PFN_vkDebugReportMessageEXT) vkGetInstanceProcAddr(this->inst, "vkDebugReportMessageEXT");
+            ASSERT_NE(m_DebugReportMessage, (PFN_vkDebugReportMessageEXT) NULL) << "Did not get function pointer for DebugReportMessage";
         }
     }
 
@@ -142,12 +142,12 @@ void VkRenderFramework::InitFramework(
     /* Now register callback on device */
     if (0) {
         if (m_CreateDebugReportCallback) {
-            VkDebugReportCallbackCreateInfoLUNARG dbgInfo;
+            VkDebugReportCallbackCreateInfoEXT dbgInfo;
             memset(&dbgInfo, 0, sizeof(dbgInfo));
-            dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+            dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
             dbgInfo.pfnCallback = dbgFunction;
             dbgInfo.pUserData = userData;
-            dbgInfo.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT;
+            dbgInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
             err = m_CreateDebugReportCallback(this->inst,
                                          &dbgInfo,
                                          NULL,

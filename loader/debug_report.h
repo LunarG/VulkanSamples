@@ -28,7 +28,7 @@
 
 #include "vk_loader_platform.h"
 #include "loader.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
     /*
      * CreateMsgCallback is global and needs to be
      * applied to all layers and ICDs.
@@ -104,20 +104,20 @@ bool debug_report_instance_gpa(
         void **addr);
 
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
-        VkInstance                             instance,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
-        const VkAllocationCallbacks           *pAllocator,
-        VkDebugReportCallbackLUNARG           *pCallback);
+        VkInstance                                      instance,
+        const VkDebugReportCallbackCreateInfoEXT       *pCreateInfo,
+        const VkAllocationCallbacks                    *pAllocator,
+        VkDebugReportCallbackEXT                       *pCallback);
 
 VKAPI_ATTR void VKAPI_CALL loader_DestroyDebugReportCallback(
     VkInstance                                 instance,
-    VkDebugReportCallbackLUNARG                callback,
+    VkDebugReportCallbackEXT                   callback,
     const VkAllocationCallbacks               *pAllocator);
 
 VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
     VkInstance                                  instance,
-    VkDebugReportFlagsLUNARG                       flags,
-    VkDebugReportObjectTypeLUNARG               objType,
+    VkDebugReportFlagsEXT                       flags,
+    VkDebugReportObjectTypeEXT                  objType,
     uint64_t                                    object,
     size_t                                      location,
     int32_t                                     msgCode,
@@ -126,19 +126,19 @@ VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
 
 VkResult util_CreateDebugReportCallback(
         struct loader_instance *inst,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
         const VkAllocationCallbacks *pAllocator,
-        VkDebugReportCallbackLUNARG callback);
+        VkDebugReportCallbackEXT callback);
 
 void util_DestroyDebugReportCallback(
         struct loader_instance *inst,
-        VkDebugReportCallbackLUNARG callback,
+        VkDebugReportCallbackEXT callback,
         const VkAllocationCallbacks *pAllocator);
 
 VkBool32 util_DebugReportMessage(
     const struct loader_instance*       inst,
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objectType,
+    VkDebugReportObjectTypeEXT          objectType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,

@@ -1207,7 +1207,7 @@ VkResult intel_buf_view_create(struct intel_dev *dev,
     struct intel_buf_view *view;
 
     view = (struct intel_buf_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_BUFFER_VIEW,
+            sizeof(*view), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,
             info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -1271,7 +1271,7 @@ void intel_img_view_init(struct intel_dev *dev,
             view->shader_swizzles.g != VK_COMPONENT_SWIZZLE_G ||
             view->shader_swizzles.b != VK_COMPONENT_SWIZZLE_B ||
             view->shader_swizzles.a != VK_COMPONENT_SWIZZLE_A) {
-            intel_dev_log(dev, VK_DEBUG_REPORT_WARN_BIT,
+            intel_dev_log(dev, VK_DEBUG_REPORT_WARN_BIT_EXT,
                           (struct intel_base*)view, 0, 0,
                           "image data swizzling is ignored");
         }
@@ -1299,7 +1299,7 @@ VkResult intel_img_view_create(struct intel_dev *dev,
     struct intel_img_view *view;
 
     view = (struct intel_img_view *) intel_base_create(&dev->base.handle,
-            sizeof(*view), dev->base.dbg, VK_OBJECT_TYPE_IMAGE_VIEW, info, 0);
+            sizeof(*view), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, info, 0);
     if (!view)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

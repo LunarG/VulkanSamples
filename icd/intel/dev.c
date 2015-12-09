@@ -108,7 +108,7 @@ VkResult intel_dev_create(struct intel_gpu *gpu,
 
     dev = (struct intel_dev *) intel_base_create(&gpu->handle,
             sizeof(*dev), false,
-            VK_OBJECT_TYPE_DEVICE, info, sizeof(struct intel_dev_dbg));
+            VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, info, sizeof(struct intel_dev_dbg));
     if (!dev)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

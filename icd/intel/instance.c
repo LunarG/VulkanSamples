@@ -49,7 +49,7 @@ void intel_free(const void *handle, void *ptr)
 
 void intel_logv(const void *handle,
                 VkFlags msg_flags,
-                VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
+                VkDebugReportObjectTypeEXT obj_type, uint64_t src_object,
                 size_t location, int32_t msg_code,
                 const char *format, va_list ap)
 {
@@ -166,7 +166,7 @@ static VkResult intel_instance_create(
     }
 
     memset(instance, 0, sizeof(*instance));
-    intel_handle_init(&instance->handle, VK_OBJECT_TYPE_INSTANCE, instance);
+    intel_handle_init(&instance->handle, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, instance);
 
     instance->icd = icd;
 
@@ -219,7 +219,7 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
     const VkInstanceCreateInfo*             pCreateInfo,
-    const VkAllocationCallbacks*                     pAllocator,
+    const VkAllocationCallbacks*            pAllocator,
     VkInstance*                             pInstance)
 {
     return intel_instance_create(pCreateInfo, pAllocator,
@@ -318,20 +318,20 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
     return VK_SUCCESS;
 }
 
-ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
+ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
     VkInstance                                  instance,
-    VkDebugReportCallbackCreateInfoLUNARG      *pCreateInfo,
+    const VkDebugReportCallbackCreateInfoEXT   *pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
-    VkDebugReportCallbackLUNARG*                pCallback)
+    VkDebugReportCallbackEXT*                   pCallback)
 {
     struct intel_instance *inst = intel_instance(instance);
 
     return icd_instance_create_logger(inst->icd, pCreateInfo, pAllocator, pCallback);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
     VkInstance                                  instance,
-    VkDebugReportCallbackLUNARG                 callback,
+    VkDebugReportCallbackEXT                    callback,
     const VkAllocationCallbacks                *pAllocator)
 {
     struct intel_instance *inst = intel_instance(instance);
@@ -339,10 +339,10 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
     icd_instance_destroy_logger(inst->icd, callback, pAllocator);
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
     VkInstance                                  instance,
-    VkDebugReportFlagsLUNARG                    flags,
-    VkDebugReportObjectTypeLUNARG               objType,
+    VkDebugReportFlagsEXT                       flags,
+    VkDebugReportObjectTypeEXT                  objType,
     uint64_t                                    object,
     size_t                                      location,
     int32_t                                     msgCode,

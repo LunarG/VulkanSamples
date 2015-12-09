@@ -39,7 +39,7 @@
 
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #define ERR(err) printf("%s:%d: failed with %s\n", \
     __FILE__, __LINE__, vk_result_string(err));
@@ -131,7 +131,7 @@ struct app_gpu {
 
 VkBool32 dbg_callback(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objType,
+    VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -143,13 +143,13 @@ VkBool32 dbg_callback(
 
     assert (message);
 
-    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         sprintf(message,"ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
         sprintf(message,"WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
         sprintf(message,"INFO: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
         sprintf(message,"DEBUG: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
     }
 
@@ -687,10 +687,10 @@ static void app_create_instance(struct app_instance *inst)
     inst_info.enabledExtensionNameCount = global_extension_count;
     inst_info.ppEnabledExtensionNames = (const char * const *) known_extensions;
 
-    VkDebugReportCallbackCreateInfoLUNARG dbg_info;
+    VkDebugReportCallbackCreateInfoEXT dbg_info;
     memset(&dbg_info, 0, sizeof(dbg_info));
-    dbg_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
-    dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT | VK_DEBUG_REPORT_WARN_BIT | VK_DEBUG_REPORT_INFO_BIT;
+    dbg_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    dbg_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_INFO_BIT_EXT;
     dbg_info.pfnCallback = dbg_callback;
     inst_info.pNext = &dbg_info;
 

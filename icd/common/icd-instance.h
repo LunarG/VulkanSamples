@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 struct icd_instance_logger {
-    PFN_vkDebugReportCallbackLUNARG func;
+    PFN_vkDebugReportCallbackEXT func;
     const void *user_data;
     VkFlags flags;
 
@@ -69,16 +69,16 @@ static inline void icd_instance_free(const struct icd_instance *instance,
 }
 
 VkResult icd_instance_create_logger(struct icd_instance *instance,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
         const VkAllocationCallbacks *pAllocator,
-        VkDebugReportCallbackLUNARG *msg_obj);
+        VkDebugReportCallbackEXT *msg_obj);
 
 void icd_instance_destroy_logger(struct icd_instance *instance,
-        const VkDebugReportCallbackLUNARG msg_obj, const VkAllocationCallbacks *pAllocator);
+        const VkDebugReportCallbackEXT msg_obj, const VkAllocationCallbacks *pAllocator);
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,
-                      VkDebugReportObjectTypeLUNARG obj_type,
+                      VkDebugReportObjectTypeEXT obj_type,
                       uint64_t src_object,
                       size_t location, int32_t msg_code,
                       const char *msg);

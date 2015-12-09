@@ -68,7 +68,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     struct intel_layout *layout;
 
     img = (struct intel_img *) intel_base_create(&dev->base.handle,
-            sizeof(*img), dev->base.dbg, VK_OBJECT_TYPE_IMAGE, info, 0);
+            sizeof(*img), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, info, 0);
     if (!img)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

@@ -227,15 +227,16 @@ class Subcommand(object):
     def _gen_create_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(VkInstance instance,')
-        r_body.append('                                       VkDebugReportCallbackCreateInfoLUNARG*    pCreateInfo,')
-        r_body.append('                                       const VkAllocationCallbacks*              pAllocator,')
-        r_body.append('                                       VkDebugReportCallbackLUNARG*              pCallback)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(')
+        r_body.append('        VkInstance                                   instance,')
+        r_body.append('        const VkDebugReportCallbackCreateInfoEXT*    pCreateInfo,')
+        r_body.append('        const VkAllocationCallbacks*                 pAllocator,')
+        r_body.append('        VkDebugReportCallbackEXT*                    pCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
-            r_body.append('    VkResult result = pInstanceTable->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);')
+            r_body.append('    VkResult result = pInstanceTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
             r_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
             r_body.append('        result = layer_create_msg_callback(my_data->report_data,')
@@ -245,7 +246,7 @@ class Subcommand(object):
             r_body.append('    }')
             r_body.append('    return result;')
         else:
-            r_body.append('    VkResult result = instance_dispatch_table(instance)->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);')
+            r_body.append('    VkResult result = instance_dispatch_table(instance)->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
             r_body.append('        layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
             r_body.append('        result = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pCallback);')
@@ -257,14 +258,14 @@ class Subcommand(object):
     def _gen_destroy_msg_callback(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(VkInstance instance, VkDebugReportCallbackLUNARG msgCallback, const VkAllocationCallbacks *pAllocator)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
         else:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
-        r_body.append('    pInstanceTable->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);')
+        r_body.append('    pInstanceTable->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);')
         r_body.append('    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);')
         r_body.append('    layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);')
         r_body.append('}')
@@ -273,14 +274,14 @@ class Subcommand(object):
     def _gen_debug_report_msg(self):
         r_body = []
         r_body.append('%s' % self.lineinfo.get())
-        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(VkInstance instance, VkDebugReportFlagsLUNARG    flags, VkDebugReportObjectTypeLUNARG objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
+        r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT    flags, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
         else:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
-        r_body.append('    pInstanceTable->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);')
+        r_body.append('    pInstanceTable->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);')
         r_body.append('}')
         return "\n".join(r_body)
 
@@ -293,8 +294,8 @@ class Subcommand(object):
         if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
             ggep_body.append('static const VkExtensionProperties instance_extensions[] = {')
             ggep_body.append('    {')
-            ggep_body.append('        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,')
-            ggep_body.append('        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION')
+            ggep_body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
+            ggep_body.append('        VK_EXT_DEBUG_REPORT_REVISION')
             ggep_body.append('    }')
             ggep_body.append('};')
         ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
@@ -365,11 +366,11 @@ class Subcommand(object):
                 intercept = self.generate_intercept(proto, qual)
                 if intercept is None:
                     # fill in default intercept for certain entrypoints
-                    if 'CreateDebugReportCallbackLUNARG' == proto.name:
+                    if 'CreateDebugReportCallbackEXT' == proto.name:
                         intercept = self._gen_layer_dbg_create_msg_callback()
-                    elif 'DestroyDebugReportCallbackLUNARG' == proto.name:
+                    elif 'DestroyDebugReportCallbackEXT' == proto.name:
                         intercept = self._gen_layer_dbg_destroy_msg_callback()
-                    elif 'DebugReportMessageLUNARG' == proto.name:
+                    elif 'DebugReportMessageEXT' == proto.name:
                         intercept = self._gen_debug_report_msg()
                     elif 'CreateDevice' == proto.name:
                         funcs.append('/* CreateDevice HERE */')
@@ -655,9 +656,9 @@ class Subcommand(object):
             func_body.append('    {')
             func_body.append('        option_str = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        log_output = getLayerLogOutput(option_str,"%s");' % self.layer_name)
-            func_body.append('        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;')
+            func_body.append('        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;')
             func_body.append('        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));')
-            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;')
+            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;')
             func_body.append('        dbgCreateInfo.flags = report_flags;')
             func_body.append('        dbgCreateInfo.pfnCallback = log_callback;')
             func_body.append('        dbgCreateInfo.pUserData = NULL;')
@@ -698,9 +699,9 @@ class Subcommand(object):
             func_body.append('    {')
             func_body.append('        strOpt = getLayerOption("%sLogFilename");' % self.layer_name)
             func_body.append('        log_output = getLayerLogOutput(strOpt, "%s");' % self.layer_name)
-            func_body.append('        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;')
+            func_body.append('        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;')
             func_body.append('        memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));')
-            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;')
+            func_body.append('        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;')
             func_body.append('        dbgCreateInfo.flags = report_flags;')
             func_body.append('        dbgCreateInfo.pfnCallback = log_callback;')
             func_body.append('        dbgCreateInfo.pUserData = log_output;')
@@ -779,7 +780,7 @@ class GenericLayerSubcommand(Subcommand):
                      '    char str[1024];\n'
                      '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    sprintf(str, "At start of Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE,'
+                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,'
                      '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
@@ -787,7 +788,7 @@ class GenericLayerSubcommand(Subcommand):
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
                      '    sprintf(str, "Completed Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
@@ -834,7 +835,7 @@ class GenericLayerSubcommand(Subcommand):
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
                          '        initGeneric(my_data, pAllocator);\n'
                          '        sprintf(str, "Completed Generic layered %s\\n");\n'
-                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT, VK_OBJECT_TYPE_INSTANCE, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
@@ -1327,7 +1328,7 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('using namespace std;')
         header_txt.append('#include "vulkan/vk_layer.h"')
         header_txt.append('#include "vk_layer_config.h"')
-        header_txt.append('#include "vulkan/vk_lunarg_debug_report.h"')
+        header_txt.append('#include "vulkan/vk_ext_debug_report.h"')
         header_txt.append('#include "vk_layer_table.h"')
         header_txt.append('#include "vk_layer_data.h"')
         header_txt.append('#include "vk_layer_logging.h"')
@@ -1353,12 +1354,12 @@ class ObjectTrackerSubcommand(Subcommand):
             name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
             if o in vulkan.object_dispatch_list:
-                procs_txt.append('static void create_%s(%s dispatchable_object, %s vkObj, VkDebugReportObjectTypeLUNARG objType)' % (name, o, o))
+                procs_txt.append('static void create_%s(%s dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o, o))
             else:
-                procs_txt.append('static void create_%s(VkDevice dispatchable_object, %s vkObj, VkDebugReportObjectTypeLUNARG objType)' % (name, o))
+                procs_txt.append('static void create_%s(VkDevice dispatchable_object, %s vkObj, VkDebugReportObjectTypeEXT objType)' % (name, o))
             procs_txt.append('{')
-            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
-            procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeLUNARG(objType),')
+            procs_txt.append('    log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, objType, reinterpret_cast<uint64_t>(vkObj), 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        "OBJ[%llu] : CREATE %s object 0x%" PRIxLEAST64 , object_track_index++, string_VkDebugReportObjectTypeEXT(objType),')
             procs_txt.append('        reinterpret_cast<uint64_t>(vkObj));')
             procs_txt.append('')
             procs_txt.append('    OBJTRACK_NODE* pNewObjNode = new OBJTRACK_NODE;')
@@ -1385,7 +1386,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('{')
             if o in vulkan.object_dispatch_list:
                 procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG ) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, reinterpret_cast<uint64_t>(object), 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
             else:
                 if o == "VkImage":
@@ -1394,7 +1395,7 @@ class ObjectTrackerSubcommand(Subcommand):
                     procs_txt.append('        (swapchainImageMap.find((uint64_t)object) == swapchainImageMap.end())) {')
                 else:
                     procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG ) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, (uint64_t) object, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
                 procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
@@ -1415,14 +1416,14 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        numTotalObjs--;')
             procs_txt.append('        assert(numObjs[objIndex] > 0);')
             procs_txt.append('        numObjs[objIndex]--;')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_INFO_BIT_EXT, pNode->objType, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('           "OBJ_STAT Destroy %s obj 0x%" PRIxLEAST64 " (%" PRIu64 " total objs remain & %" PRIu64 " %s objs).",')
-            procs_txt.append('            string_VkDebugReportObjectTypeLUNARG(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
-            procs_txt.append('            string_VkDebugReportObjectTypeLUNARG(pNode->objType));')
+            procs_txt.append('            string_VkDebugReportObjectTypeEXT(pNode->objType), reinterpret_cast<uint64_t>(object), numTotalObjs, numObjs[objIndex],')
+            procs_txt.append('            string_VkDebugReportObjectTypeEXT(pNode->objType));')
             procs_txt.append('        delete pNode;')
             procs_txt.append('        %sMap.erase(object_handle);' % (o))
             procs_txt.append('    } else {')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('            "Unable to remove obj 0x%" PRIxLEAST64 ". Was it created? Has it already been destroyed?",')
             procs_txt.append('           object_handle);')
             procs_txt.append('    }')
@@ -1430,9 +1431,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
-                procs_txt.append('static VkBool32 set_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag)' % (name, o, o))
+                procs_txt.append('static VkBool32 set_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o, o))
             else:
-                procs_txt.append('static VkBool32 set_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag)' % (name, o))
+                procs_txt.append('static VkBool32 set_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
             procs_txt.append('{')
             procs_txt.append('    if (object != VK_NULL_HANDLE) {')
             procs_txt.append('        uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
@@ -1442,9 +1443,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        }')
             procs_txt.append('        else {')
             procs_txt.append('            // If we do not find it print an error')
-            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
+            procs_txt.append('            return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, 0, OBJTRACK_NONE, "OBJTRACK",')
             procs_txt.append('                "Unable to set status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('                object_handle, string_VkDebugReportObjectTypeLUNARG(objType));')
+            procs_txt.append('                object_handle, string_VkDebugReportObjectTypeEXT(objType));')
             procs_txt.append('        }')
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
@@ -1456,7 +1457,7 @@ class ObjectTrackerSubcommand(Subcommand):
                 procs_txt.append('%s dispatchable_object, %s object,' % (o, o))
             else:
                 procs_txt.append('VkDevice dispatchable_object, %s object,' % (o))
-            procs_txt.append('    VkDebugReportObjectTypeLUNARG     objType,')
+            procs_txt.append('    VkDebugReportObjectTypeEXT     objType,')
             procs_txt.append('    ObjectStatusFlags   status_mask,')
             procs_txt.append('    ObjectStatusFlags   status_flag,')
             procs_txt.append('    VkFlags             msg_flags,')
@@ -1468,7 +1469,7 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('        OBJTRACK_NODE* pNode = %sMap[object_handle];' % (o))
             procs_txt.append('        if ((pNode->status & status_mask) != status_flag) {')
             procs_txt.append('            log_msg(mdd(dispatchable_object), msg_flags, pNode->objType, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
-            procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDebugReportObjectTypeLUNARG(objType),')
+            procs_txt.append('                "OBJECT VALIDATION WARNING: %s object 0x%" PRIxLEAST64 ": %s", string_VkDebugReportObjectTypeEXT(objType),')
             procs_txt.append('                 object_handle, fail_msg);')
             procs_txt.append('            return VK_FALSE;')
             procs_txt.append('        }')
@@ -1476,18 +1477,18 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDebugReportObjectTypeLUNARG) 0, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('        log_msg(mdd(dispatchable_object), msg_flags, (VkDebugReportObjectTypeEXT) 0, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Unable to obtain status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeLUNARG(objType));')
+            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeEXT(objType));')
             procs_txt.append('        return VK_FALSE;')
             procs_txt.append('    }')
             procs_txt.append('}')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
-                procs_txt.append('static VkBool32 reset_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag)' % (name, o, o))
+                procs_txt.append('static VkBool32 reset_%s_status(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o, o))
             else:
-                procs_txt.append('static VkBool32 reset_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeLUNARG objType, ObjectStatusFlags status_flag)' % (name, o))
+                procs_txt.append('static VkBool32 reset_%s_status(VkDevice dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, ObjectStatusFlags status_flag)' % (name, o))
             procs_txt.append('{')
             procs_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
             procs_txt.append('    if (%sMap.find(object_handle) != %sMap.end()) {' % (o, o))
@@ -1496,9 +1497,9 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    }')
             procs_txt.append('    else {')
             procs_txt.append('        // If we do not find it print an error')
-            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, objType, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
+            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, object_handle, 0, OBJTRACK_UNKNOWN_OBJECT, "OBJTRACK",')
             procs_txt.append('            "Unable to reset status for non-existent object 0x%" PRIxLEAST64 " of %s type",')
-            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeLUNARG(objType));')
+            procs_txt.append('            object_handle, string_VkDebugReportObjectTypeEXT(objType));')
             procs_txt.append('    }')
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
@@ -1522,8 +1523,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 continue
             gedi_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedi_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-            gedi_txt.append('        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
-            gedi_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDebugReportObjectTypeLUNARG(pNode->objType),')
+            gedi_txt.append('        log_msg(mid(instance), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedi_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDebugReportObjectTypeEXT(pNode->objType),')
             gedi_txt.append('                pNode->vkObj);')
             gedi_txt.append('    }')
             gedi_txt.append('    %sMap.clear();' % (o))
@@ -1572,8 +1573,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 continue
             gedd_txt.append('    for (auto it = %sMap.begin(); it != %sMap.end(); ++it) {' % (o, o))
             gedd_txt.append('        OBJTRACK_NODE* pNode = it->second;')
-            gedd_txt.append('        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
-            gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDebugReportObjectTypeLUNARG(pNode->objType),')
+            gedd_txt.append('        log_msg(mdd(device), VK_DEBUG_REPORT_ERROR_BIT_EXT, pNode->objType, pNode->vkObj, 0, OBJTRACK_OBJECT_LEAK, "OBJTRACK",')
+            gedd_txt.append('                "OBJ ERROR : %s object 0x%" PRIxLEAST64 " has not been destroyed.", string_VkDebugReportObjectTypeEXT(pNode->objType),')
             gedd_txt.append('                pNode->vkObj);')
             gedd_txt.append('    }')
             gedd_txt.append('    %sMap.clear();' % (o))
@@ -1604,7 +1605,7 @@ class ObjectTrackerSubcommand(Subcommand):
             cbv_txt.append('{')
             cbv_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
             cbv_txt.append('    if (%sMap.find(object_handle) == %sMap.end()) {' % (o, o))
-            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG ) 0, object_handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, 0, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
             cbv_txt.append('            "Invalid %s Object 0x%%" PRIx64, object_handle);' % (o))
             cbv_txt.append('    }')
             cbv_txt.append('    return VK_FALSE;')
@@ -1613,18 +1614,18 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n".join(cbv_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'CreateDebugReportCallbackLUNARG', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
+        if proto.name in [ 'CreateDebugReportCallbackEXT', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
             # use default version
             return None
 
         # Create map of object names to object type enums of the form VkName : VkObjectTypeName
-        obj_type_mapping = {base_t : base_t.replace("Vk", "VkObjectType") for base_t in vulkan.object_type_list}
+        obj_type_mapping = {base_t : base_t.replace("Vk", "VkDebugReportObjectType") for base_t in vulkan.object_type_list}
         # Convert object type enum names from UpperCamelCase to UPPER_CASE_WITH_UNDERSCORES
         for objectName, objectTypeEnum in obj_type_mapping.items():
-            obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum);
+            obj_type_mapping[objectName] = ucc_to_U_C_C(objectTypeEnum) + '_EXT';
         # Command Buffer Object doesn't follow the rule.
-        obj_type_mapping['VkCommandBuffer'] = "VK_OBJECT_TYPE_COMMAND_BUFFER"
-        obj_type_mapping['VkShaderModule'] = "VK_OBJECT_TYPE_SHADER_MODULE"
+        obj_type_mapping['VkCommandBuffer'] = "VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT"
+        obj_type_mapping['VkShaderModule'] = "VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT"
 
         explicit_object_tracker_functions = [
             "CreateInstance",
@@ -1894,32 +1895,32 @@ class ThreadingSubcommand(Subcommand):
         "VkSemaphore"
     ]
     thread_check_object_types = {
-        'VkInstance' : 'VK_OBJECT_TYPE_INSTANCE',
-        'VkPhysicalDevice' : 'VK_OBJECT_TYPE_PHYSICAL_DEVICE',
-        'VkDevice' : 'VK_OBJECT_TYPE_DEVICE',
-        'VkQueue' : 'VK_OBJECT_TYPE_QUEUE',
-        'VkCommandBuffer' : 'VK_OBJECT_TYPE_COMMAND_BUFFER',
-        'VkFence' : 'VK_OBJECT_TYPE_FENCE',
-        'VkDeviceMemory' : 'VK_OBJECT_TYPE_DEVICE_MEMORY',
-        'VkBuffer' : 'VK_OBJECT_TYPE_BUFFER',
-        'VkImage' : 'VK_OBJECT_TYPE_IMAGE',
-        'VkSemaphore' : 'VK_OBJECT_TYPE_SEMAPHORE',
-        'VkEvent' : 'VK_OBJECT_TYPE_EVENT',
-        'VkQueryPool' : 'VK_OBJECT_TYPE_QUERY_POOL',
-        'VkBufferView' : 'VK_OBJECT_TYPE_BUFFER_VIEW',
-        'VkImageView' : 'VK_OBJECT_TYPE_IMAGE_VIEW',
-        'VkShaderModule' : 'VK_OBJECT_TYPE_SHADER_MODULE',
-        'VkShader' : 'VK_OBJECT_TYPE_SHADER',
-        'VkPipelineCache' : 'VK_OBJECT_TYPE_PIPELINE_CACHE',
-        'VkPipelineLayout' : 'VK_OBJECT_TYPE_PIPELINE_LAYOUT',
-        'VkRenderPass' : 'VK_OBJECT_TYPE_RENDER_PASS',
-        'VkPipeline' : 'VK_OBJECT_TYPE_PIPELINE',
-        'VkDescriptorSetLayout' : 'VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT',
-        'VkSampler' : 'VK_OBJECT_TYPE_SAMPLER',
-        'VkDescriptorPool' : 'VK_OBJECT_TYPE_DESCRIPTOR_POOL',
-        'VkDescriptorSet' : 'VK_OBJECT_TYPE_DESCRIPTOR_SET',
-        'VkFramebuffer' : 'VK_OBJECT_TYPE_FRAMEBUFFER',
-        'VkCommandPool' : 'VK_OBJECT_TYPE_COMMAND_POOL',
+        'VkInstance' : 'VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT',
+        'VkPhysicalDevice' : 'VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT',
+        'VkDevice' : 'VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT',
+        'VkQueue' : 'VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT',
+        'VkCommandBuffer' : 'VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT',
+        'VkFence' : 'VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT',
+        'VkDeviceMemory' : 'VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT',
+        'VkBuffer' : 'VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT',
+        'VkImage' : 'VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT',
+        'VkSemaphore' : 'VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT',
+        'VkEvent' : 'VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT',
+        'VkQueryPool' : 'VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT',
+        'VkBufferView' : 'VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT',
+        'VkImageView' : 'VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT',
+        'VkShaderModule' : 'VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT',
+        'VkShader' : 'VK_DEBUG_REPORT_OBJECT_TYPE_SHADER',
+        'VkPipelineCache' : 'VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT',
+        'VkPipelineLayout' : 'VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT',
+        'VkRenderPass' : 'VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT',
+        'VkPipeline' : 'VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT',
+        'VkDescriptorSetLayout' : 'VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT',
+        'VkSampler' : 'VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT',
+        'VkDescriptorPool' : 'VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT',
+        'VkDescriptorSet' : 'VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT',
+        'VkFramebuffer' : 'VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT',
+        'VkCommandPool' : 'VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT',
     }
     def generate_useObject(self, ty):
         obj_type = self.thread_check_object_types[ty]
@@ -1935,7 +1936,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('        %sObjectsInUse[%s] = tid;' % (ty, key))
         header_txt.append('    } else {')
         header_txt.append('        if (%sObjectsInUse[%s] != tid) {' % (ty, key))
-        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
+        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, %s, %s,' % (obj_type, msg_object))
         header_txt.append('                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",')
         header_txt.append('                "THREADING ERROR : object of type %s is simultaneously used in thread %%ld and thread %%ld",' % (ty))
         header_txt.append('                %sObjectsInUse[%s], tid);' % (ty, key))
@@ -1945,7 +1946,7 @@ class ThreadingSubcommand(Subcommand):
         header_txt.append('            }')
         header_txt.append('            %sObjectsInUse[%s] = tid;' % (ty, key))
         header_txt.append('        } else {')
-        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT, %s, %s,' % (obj_type, msg_object))
+        header_txt.append('            log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, %s, %s,' % (obj_type, msg_object))
         header_txt.append('                /*location*/ 0, THREADING_CHECKER_MULTIPLE_THREADS, "THREADING",')
         header_txt.append('                "THREADING ERROR : object of type %s is recursively used in thread %%ld",' % (ty))
         header_txt.append('                tid);')
@@ -2003,7 +2004,7 @@ class ThreadingSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     def generate_intercept(self, proto, qual):
-        if proto.name in [ 'CreateDebugReportCallbackLUNARG' ]:
+        if proto.name in [ 'CreateDebugReportCallbackEXT' ]:
             # use default version
             return None
         decl = proto.c_func(prefix="vk", attr="VKAPI")

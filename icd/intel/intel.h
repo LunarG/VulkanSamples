@@ -40,7 +40,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #include "icd.h"
 #include "icd-spv.h"
@@ -88,7 +88,7 @@ extern int intel_debug;
 static const uint32_t intel_handle_magic = 0x494e544c;
 
 static inline void intel_handle_init(struct intel_handle *handle,
-                                     VkDebugReportObjectTypeLUNARG type,
+                                     VkDebugReportObjectTypeEXT type,
                                      const struct intel_instance *instance)
 {
     set_loader_magic_value((void *)handle);
@@ -108,7 +108,7 @@ static inline bool intel_handle_validate(const void *handle)
 //        ((const struct intel_handle *) handle)->magic - intel_handle_magic;
 
     /* TODO: this does not work for extensions, needs adjusting */
-//    return (handle_type <= VK_OBJECT_TYPE_END_RANGE);
+//    return (handle_type <= VK_DEBUG_REPORT_OBJECT_TYPE_END_RANGE);
     return true;
 }
 
@@ -118,7 +118,7 @@ static inline bool intel_handle_validate(const void *handle)
  * \see intel_handle_validate().
  */
 static inline bool intel_handle_validate_type(const void *handle,
-                                              VkDebugReportObjectTypeLUNARG type)
+                                              VkDebugReportObjectTypeEXT type)
 {
     const uint32_t handle_type =
         ((const struct intel_handle *) handle)->magic - intel_handle_magic;
@@ -134,13 +134,13 @@ void intel_free(const void *handle, void *ptr);
 
 void intel_logv(const void *handle,
                 VkFlags msg_flags,
-                VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
+                VkDebugReportObjectTypeEXT obj_type, uint64_t src_object,
                 size_t location, int32_t msg_code,
                 const char *format, va_list ap);
 
 static inline void intel_log(const void *handle,
                              VkFlags msg_flags,
-                             VkDebugReportObjectTypeLUNARG obj_type, uint64_t src_object,
+                             VkDebugReportObjectTypeEXT obj_type, uint64_t src_object,
                              size_t location, int32_t msg_code,
                              const char *format, ...)
 {

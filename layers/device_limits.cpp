@@ -58,7 +58,7 @@ struct devExts {
 // This struct will be stored in a map hashed by the dispatchable object
 struct layer_data {
     debug_report_data *report_data;
-    std::vector<VkDebugReportCallbackLUNARG> logging_callback;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     devExts device_extensions;
@@ -105,7 +105,7 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
     uint32_t debug_action = 0;
     FILE *log_output = NULL;
     const char *option_str;
-    VkDebugReportCallbackLUNARG callback;
+    VkDebugReportCallbackEXT callback;
     // initialize DeviceLimits options
     report_flags = getLayerOptionFlags("DeviceLimitsReportFlags", 0);
     getLayerOptionEnum("DeviceLimitsDebugAction", (uint32_t *) &debug_action);
@@ -114,9 +114,9 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
     {
         option_str = getLayerOption("DeviceLimitsLogFilename");
         log_output = getLayerLogOutput(option_str, "DeviceLimits");
-        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags = report_flags;
         dbgCreateInfo.pfnCallback = log_callback;
         dbgCreateInfo.pUserData = (void *) log_output;
@@ -125,9 +125,9 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
     }
 
     if (debug_action & VK_DBG_LAYER_ACTION_DEBUG_OUTPUT) {
-        VkDebugReportCallbackCreateInfoLUNARG dbgCreateInfo;
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         memset(&dbgCreateInfo, 0, sizeof(dbgCreateInfo));
-        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_LUNARG;
+        dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags = report_flags;
         dbgCreateInfo.pfnCallback = win32_debug_output_msg;
         dbgCreateInfo.pUserData = NULL;
@@ -149,8 +149,8 @@ static void init_device_limits(layer_data *my_data, const VkAllocationCallbacks 
 
 static const VkExtensionProperties instance_extensions[] = {
     {
-        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
-        VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION
+        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+        VK_EXT_DEBUG_REPORT_REVISION
     }
 };
 
@@ -209,7 +209,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
     // Clean up logging callback, if any
     while (my_data->logging_callback.size() > 0) {
-        VkDebugReportCallbackLUNARG callback = my_data->logging_callback.back();
+        VkDebugReportCallbackEXT callback = my_data->logging_callback.back();
         layer_destroy_msg_callback(my_data->report_data, callback, pAllocator);
         my_data->logging_callback.pop_back();
     }
@@ -235,11 +235,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
         } else {
             if (UNCALLED == my_data->instanceState->vkEnumeratePhysicalDevicesState) {
                 // Flag error here, shouldn't be calling this without having queried count
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_INSTANCE, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
                     "Invalid call sequence to vkEnumeratePhysicalDevices() w/ non-NULL pPhysicalDevices. You should first call vkEnumeratePhysicalDevices() w/ NULL pPhysicalDevices to query pPhysicalDeviceCount.");
             } // TODO : Could also flag a warning if re-calling this function in QUERY_DETAILS state
             else if (my_data->instanceState->physicalDevicesCount != *pPhysicalDeviceCount) {
-                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_COUNT_MISMATCH, "DL",
+                // TODO: Having actual count match count from app is not a requirement, so this can be a warning
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_COUNT_MISMATCH, "DL",
                     "Call to vkEnumeratePhysicalDevices() w/ pPhysicalDeviceCount value %u, but actual count supported by this instance is %u.", *pPhysicalDeviceCount, my_data->instanceState->physicalDevicesCount);
             }
             my_data->instanceState->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
@@ -260,7 +261,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
         }
         return result;
     } else {
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_INSTANCE, 0, 0, DEVLIMITS_INVALID_INSTANCE, "DL",
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, 0, DEVLIMITS_INVALID_INSTANCE, "DL",
             "Invalid instance (%#" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().", (uint64_t)instance);
     }
     return VK_ERROR_VALIDATION_FAILED;
@@ -300,12 +301,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyPropert
         } else {
             // Verify that for each physical device, this function is called first with NULL pQueueFamilyProperties ptr in order to get count
             if (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
                     "Invalid call sequence to vkGetPhysicalDeviceQueueFamilyProperties() w/ non-NULL pQueueFamilyProperties. You should first call vkGetPhysicalDeviceQueueFamilyProperties() w/ NULL pQueueFamilyProperties to query pCount.");
             }
             // Then verify that pCount that is passed in on second call matches what was returned
             if (phy_dev_data->physicalDeviceState->queueFamilyPropertiesCount != *pCount) {
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_COUNT_MISMATCH, "DL",
+
+                // TODO: this is not a requirement of the Valid Usage section for vkGetPhysicalDeviceQueueFamilyProperties, so provide as warning
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_COUNT_MISMATCH, "DL",
                     "Call to vkGetPhysicalDeviceQueueFamilyProperties() w/ pCount value %u, but actual count supported by this physicalDevice is %u.", *pCount, phy_dev_data->physicalDeviceState->queueFamilyPropertiesCount);
             }
             phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceQueueFamilyPropertiesState = QUERY_DETAILS;
@@ -323,7 +326,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyPropert
         }
         return;
     } else {
-        log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_PHYSICAL_DEVICE, "DL",
+        log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_PHYSICAL_DEVICE, "DL",
             "Invalid physicalDevice (%#" PRIxLEAST64 ") passed into vkGetPhysicalDeviceQueueFamilyProperties().", (uint64_t)physicalDevice);
     }
 }
@@ -396,14 +399,15 @@ static VkBool32 validate_features_request(layer_data *phy_dev_data)
     uint32_t totalBools = sizeof(VkPhysicalDeviceFeatures)/sizeof(VkBool32);
     for (uint32_t i = 0; i < totalBools; i++) {
         if (requested[i] > actual[i]) {
-            skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
+            skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
                 "While calling vkCreateDevice(), requesting feature #%u in VkPhysicalDeviceFeatures struct, which is not available on this device.", i);
             errors++;
         }
     }
     if (errors && (UNCALLED == phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceFeaturesState)) {
         // If user didn't request features, notify them that they should
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
+        // TODO: Verify this against the spec. I believe this is an invalid use of the API and should return an error
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_FEATURE_REQUESTED, "DL",
                 "You requested features that are unavailable on this device. You should first query feature availability by calling vkGetPhysicalDeviceFeatures().");
     }
     return skipCall;
@@ -415,20 +419,21 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     // First check is app has actually requested queueFamilyProperties
     if (!phy_dev_data->physicalDeviceState) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_MUST_QUERY_COUNT, "DL",
             "Invalid call to vkCreateDevice() w/o first calling vkEnumeratePhysicalDevices().");
     } else if (QUERY_DETAILS != phy_dev_data->physicalDeviceState->vkGetPhysicalDeviceQueueFamilyPropertiesState) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
-            "Invalid call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
+        // TODO: This is not called out as an invalid use in the spec so make more informative recommendation.
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+            "Call to vkCreateDevice() w/o first calling vkGetPhysicalDeviceQueueFamilyProperties().");
     } else {
         // Check that the requested queue properties are valid
         for (uint32_t i=0; i<pCreateInfo->queueCreateInfoCount; i++) {
             uint32_t requestedIndex = pCreateInfo->pQueueCreateInfos[i].queueFamilyIndex;
             if (phy_dev_data->queueFamilyProperties.size() <= requestedIndex) { // requested index is out of bounds for this physical device
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                     "Invalid queue create request in vkCreateDevice(). Invalid queueFamilyIndex %u requested.", requestedIndex);
             } else if (pCreateInfo->pQueueCreateInfos[i].queueCount > phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount) {
-                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+                skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
                     "Invalid queue create request in vkCreateDevice(). QueueFamilyIndex %u only has %u queues, but requested queueCount is %u.", requestedIndex, phy_dev_data->queueFamilyProperties[requestedIndex]->queueCount, pCreateInfo->pQueueCreateInfos[i].queueCount);
             }
         }
@@ -498,10 +503,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(VkDevice device, uin
     VkPhysicalDevice gpu = dev_data->physicalDevice;
     layer_data *phy_dev_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
     if (queueFamilyIndex >= phy_dev_data->queueFamilyProperties.size()) { // requested index is out of bounds for this physical device
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
             "Invalid queueFamilyIndex %u requested in vkGetDeviceQueue().", queueFamilyIndex);
     } else if (queueIndex >= phy_dev_data->queueFamilyProperties[queueFamilyIndex]->queueCount) {
-        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PHYSICAL_DEVICE, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
+        skipCall |= log_msg(phy_dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, 0, 0, DEVLIMITS_INVALID_QUEUE_CREATE_REQUEST, "DL",
             "Invalid queue request in vkGetDeviceQueue(). QueueFamilyIndex %u only has %u queues, but requested queueIndex is %u.", queueFamilyIndex, phy_dev_data->queueFamilyProperties[queueFamilyIndex]->queueCount, queueIndex);
     }
     if (skipCall)
@@ -521,7 +526,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     // dstOffset is the byte offset into the buffer to start updating and must be a multiple of 4.
     if (dstOffset & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, 1, "DL",
         "vkCmdUpdateBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
             return;
         }
@@ -530,7 +535,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     // dataSize is the number of bytes to update, which must be a multiple of 4.
     if (dataSize & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, 1, "DL",
         "vkCmdUpdateBuffer parameter, VkDeviceSize dataSize, is not a multiple of 4")) {
             return;
         }
@@ -551,7 +556,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     // dstOffset is the byte offset into the buffer to start filling and must be a multiple of 4.
     if (dstOffset & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, 1, "DL",
         "vkCmdFillBuffer parameter, VkDeviceSize dstOffset, is not a multiple of 4")) {
             return;
         }
@@ -560,7 +565,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     // size is the number of bytes to fill, which must be a multiple of 4.
     if (size & 3) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG)0, 0, 0, 1, "DL",
+        if (log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, 1, "DL",
         "vkCmdFillBuffer parameter, VkDeviceSize size, is not a multiple of 4")) {
             return;
         }
@@ -569,34 +574,34 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     dev_data->device_dispatch_table->CmdFillBuffer(commandBuffer, dstBuffer, dstOffset, size, data);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackLUNARG(
-        VkInstance                                  instance,
-        VkDebugReportCallbackCreateInfoLUNARG*      pCreateInfo,
-        const VkAllocationCallbacks*                pAllocator,
-        VkDebugReportCallbackLUNARG*                pMsgCallback)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
+        VkInstance                                      instance,
+        const VkDebugReportCallbackCreateInfoEXT*       pCreateInfo,
+        const VkAllocationCallbacks*                    pAllocator,
+        VkDebugReportCallbackEXT*                       pMsgCallback)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    VkResult res = my_data->instance_dispatch_table->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pMsgCallback);
+    VkResult res = my_data->instance_dispatch_table->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pMsgCallback);
     if (VK_SUCCESS == res) {
         res = layer_create_msg_callback(my_data->report_data, pCreateInfo, pAllocator, pMsgCallback);
     }
     return res;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackLUNARG(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
         VkInstance                                  instance,
-        VkDebugReportCallbackLUNARG                 msgCallback,
+        VkDebugReportCallbackEXT                 msgCallback,
         const VkAllocationCallbacks*                pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    my_data->instance_dispatch_table->DestroyDebugReportCallbackLUNARG(instance, msgCallback, pAllocator);
+    my_data->instance_dispatch_table->DestroyDebugReportCallbackEXT(instance, msgCallback, pAllocator);
     layer_destroy_msg_callback(my_data->report_data, msgCallback, pAllocator);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
         VkInstance                                  instance,
-        VkDebugReportFlagsLUNARG                    flags,
-        VkDebugReportObjectTypeLUNARG               objType,
+        VkDebugReportFlagsEXT                       flags,
+        VkDebugReportObjectTypeEXT               objType,
         uint64_t                                    object,
         size_t                                      location,
         int32_t                                     msgCode,
@@ -604,7 +609,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageLUNARG(
         const char*                                 pMsg)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-    my_data->instance_dispatch_table->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+    my_data->instance_dispatch_table->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice dev, const char* funcName)

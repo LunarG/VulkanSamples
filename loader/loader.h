@@ -36,7 +36,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_loader_platform.h>
 
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #include <vulkan/vk_layer.h>
 #include <vulkan/vk_icd.h>
@@ -189,9 +189,9 @@ struct loader_icd {
     PFN_vkGetPhysicalDeviceMemoryProperties GetPhysicalDeviceMemoryProperties;
     PFN_vkEnumerateDeviceExtensionProperties EnumerateDeviceExtensionProperties;
     PFN_vkGetPhysicalDeviceSparseImageFormatProperties GetPhysicalDeviceSparseImageFormatProperties;
-    PFN_vkCreateDebugReportCallbackLUNARG CreateDebugReportCallbackLUNARG;
-    PFN_vkDestroyDebugReportCallbackLUNARG DestroyDebugReportCallbackLUNARG;
-    PFN_vkDebugReportMessageLUNARG DebugReportMessageLUNARG;
+    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT;
+    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT;
+    PFN_vkDebugReportMessageEXT DebugReportMessageEXT;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR;
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR GetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR GetPhysicalDeviceSurfaceFormatsKHR;
@@ -343,8 +343,8 @@ extern loader_platform_thread_mutex loader_json_lock;
 extern const VkLayerInstanceDispatchTable instance_disp;
 
 struct loader_msg_callback_map_entry {
-    VkDebugReportCallbackLUNARG icd_obj;
-    VkDebugReportCallbackLUNARG loader_obj;
+    VkDebugReportCallbackEXT icd_obj;
+    VkDebugReportCallbackEXT loader_obj;
 };
 
 bool compare_vk_extension_properties(

@@ -26,7 +26,7 @@
 #pragma once
 #include <vector>
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,7 +99,7 @@ struct MemRange {
 // Simple struct to hold handle and type of object so they can be uniquely identified and looked up in appropriate map
 struct MT_OBJ_HANDLE_TYPE {
     uint64_t        handle;
-    VkDebugReportObjectTypeLUNARG type;
+    VkDebugReportObjectTypeEXT type;
 };
 
 // Data struct for tracking memory object

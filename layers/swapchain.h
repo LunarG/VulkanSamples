@@ -28,7 +28,7 @@
 #define SWAPCHAIN_H
 
 #include "vulkan/vk_layer.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 #include "vk_layer_config.h"
 #include "vk_layer_logging.h"
 #include <vector>
@@ -84,19 +84,19 @@ typedef enum _SWAPCHAIN_ERROR
 #define LAYER_NAME (char *) "Swapchain"
 #define LOG_ERROR_NON_VALID_OBJ(objType, type, obj)                     \
     (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (objType), \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME, \
                 "%s() called with a non-valid %s.", __FUNCTION__, (obj)) \
     : VK_FALSE
 
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
     (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (objType), \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
     : VK_FALSE
 #define LOG_PERF_WARNING(objType, type, obj, enm, fmt, ...)             \
     (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT, (objType), \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
     : VK_FALSE
 
@@ -210,7 +210,7 @@ struct _SwpSwapchain {
 
 struct layer_data {
     debug_report_data *report_data;
-    std::vector<VkDebugReportCallbackLUNARG> logging_callback;
+    std::vector<VkDebugReportCallbackEXT> logging_callback;
     VkLayerDispatchTable* device_dispatch_table;
     VkLayerInstanceDispatchTable* instance_dispatch_table;
     // NOTE: The following are for keeping track of info that is used for

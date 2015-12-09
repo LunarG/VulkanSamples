@@ -41,8 +41,8 @@
 typedef void (VKAPI_PTR *PFN_stringCallback)(char *message);
 
 static const VkExtensionProperties debug_report_extension_info = {
-        .extensionName = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME,
-        .specVersion = VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION,
+        .extensionName = VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+        .specVersion = VK_EXT_DEBUG_REPORT_REVISION,
 };
 
 void debug_report_add_instance_extensions(
@@ -59,7 +59,7 @@ void debug_report_create_instance(
     ptr_instance->debug_report_enabled = false;
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
-        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NAME) == 0) {
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_EXT_DEBUG_REPORT_EXTENSION_NAME) == 0) {
             ptr_instance->debug_report_enabled = true;
             return;
         }
@@ -68,9 +68,9 @@ void debug_report_create_instance(
 
 VkResult util_CreateDebugReportCallback(
         struct loader_instance *inst,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
         const VkAllocationCallbacks *pAllocator,
-        VkDebugReportCallbackLUNARG callback)
+        VkDebugReportCallbackEXT callback)
 {
     VkLayerDbgFunctionNode *pNewDbgFuncNode;
     if (pAllocator != NULL) {
@@ -93,13 +93,13 @@ VkResult util_CreateDebugReportCallback(
 
 static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
         VkInstance instance,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
         VkAllocationCallbacks *pAllocator,
-        VkDebugReportCallbackLUNARG* pCallback)
+        VkDebugReportCallbackEXT* pCallback)
 {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
-    VkResult result = inst->disp->CreateDebugReportCallbackLUNARG(instance, pCreateInfo, pAllocator, pCallback);
+    VkResult result = inst->disp->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pCallback);
     if (result == VK_SUCCESS) {
         result = util_CreateDebugReportCallback(inst, pCreateInfo, pAllocator, *pCallback);
     }
@@ -111,7 +111,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
 VkBool32 util_DebugReportMessage(
     const struct loader_instance*       inst,
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG       objectType,
+    VkDebugReportObjectTypeEXT          objectType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
@@ -140,7 +140,7 @@ VkBool32 util_DebugReportMessage(
 
 void util_DestroyDebugReportCallback(
         struct loader_instance *inst,
-        VkDebugReportCallbackLUNARG callback,
+        VkDebugReportCallbackEXT callback,
         const VkAllocationCallbacks *pAllocator)
 {
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
@@ -165,13 +165,13 @@ void util_DestroyDebugReportCallback(
 
 static VKAPI_ATTR void VKAPI_CALL debug_report_DestroyDebugReportCallback(
         VkInstance instance,
-        VkDebugReportCallbackLUNARG callback,
+        VkDebugReportCallbackEXT callback,
         VkAllocationCallbacks *pAllocator)
 {
     struct loader_instance *inst = loader_get_instance(instance);
     loader_platform_thread_lock_mutex(&loader_lock);
 
-    inst->disp->DestroyDebugReportCallbackLUNARG(instance, callback, pAllocator);
+    inst->disp->DestroyDebugReportCallbackEXT(instance, callback, pAllocator);
 
     util_DestroyDebugReportCallback(inst, callback, pAllocator);
 
@@ -180,8 +180,8 @@ static VKAPI_ATTR void VKAPI_CALL debug_report_DestroyDebugReportCallback(
 
 static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
         VkInstance                                  instance,
-        VkDebugReportFlagsLUNARG                    flags,
-        VkDebugReportObjectTypeLUNARG               objType,
+        VkDebugReportFlagsEXT                       flags,
+        VkDebugReportObjectTypeEXT                  objType,
         uint64_t                                    object,
         size_t                                      location,
         int32_t                                     msgCode,
@@ -190,7 +190,7 @@ static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
 {
     struct loader_instance *inst = loader_get_instance(instance);
 
-    inst->disp->DebugReportMessageLUNARG(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+    inst->disp->DebugReportMessageEXT(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 
 }
 
@@ -200,29 +200,29 @@ static VKAPI_ATTR void VKAPI_CALL debug_report_DebugReportMessage(
  */
 
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
-        VkInstance                             instance,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
-        const VkAllocationCallbacks           *pAllocator,
-        VkDebugReportCallbackLUNARG           *pCallback)
+        VkInstance                                      instance,
+        const VkDebugReportCallbackCreateInfoEXT        *pCreateInfo,
+        const VkAllocationCallbacks                     *pAllocator,
+        VkDebugReportCallbackEXT                        *pCallback)
 {
-    VkDebugReportCallbackLUNARG *icd_info;
+    VkDebugReportCallbackEXT *icd_info;
     const struct loader_icd *icd;
     struct loader_instance *inst = (struct loader_instance *) instance;
     VkResult res;
     uint32_t storage_idx;
 
-    icd_info = calloc(sizeof(VkDebugReportCallbackLUNARG), inst->total_icd_count);
+    icd_info = calloc(sizeof(VkDebugReportCallbackEXT), inst->total_icd_count);
     if (!icd_info) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
-        if (!icd->CreateDebugReportCallbackLUNARG) {
+        if (!icd->CreateDebugReportCallbackEXT) {
             continue;
         }
 
-        res = icd->CreateDebugReportCallbackLUNARG(
+        res = icd->CreateDebugReportCallbackEXT(
                     icd->instance,
                     pCreateInfo,
                     pAllocator,
@@ -239,7 +239,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
         storage_idx = 0;
         for (icd = inst->icds; icd; icd = icd->next) {
             if (icd_info[storage_idx]) {
-                icd->DestroyDebugReportCallbackLUNARG(
+                icd->DestroyDebugReportCallbackEXT(
                       icd->instance,
                       icd_info[storage_idx],
                       pAllocator);
@@ -250,7 +250,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
         return res;
     }
 
-    *(VkDebugReportCallbackLUNARG **)pCallback = icd_info;
+    *(VkDebugReportCallbackEXT **)pCallback = icd_info;
 
     return VK_SUCCESS;
 }
@@ -260,18 +260,18 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
  * for DestroyDebugReportCallback
  */
 VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
-        VkDebugReportCallbackLUNARG callback, const VkAllocationCallbacks *pAllocator)
+        VkDebugReportCallbackEXT callback, const VkAllocationCallbacks *pAllocator)
 {
     uint32_t storage_idx;
-    VkDebugReportCallbackLUNARG *icd_info;
+    VkDebugReportCallbackEXT *icd_info;
     const struct loader_icd *icd;
 
     struct loader_instance *inst = (struct loader_instance *) instance;
-    icd_info = *(VkDebugReportCallbackLUNARG **) &callback;
+    icd_info = *(VkDebugReportCallbackEXT **) &callback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
         if (icd_info[storage_idx]) {
-            icd->DestroyDebugReportCallbackLUNARG(
+            icd->DestroyDebugReportCallbackEXT(
                   icd->instance,
                   icd_info[storage_idx],
                   pAllocator);
@@ -287,8 +287,8 @@ VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
  */
 VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
         VkInstance                                  instance,
-        VkDebugReportFlagsLUNARG                    flags,
-        VkDebugReportObjectTypeLUNARG               objType,
+        VkDebugReportFlagsEXT                       flags,
+        VkDebugReportObjectTypeEXT                  objType,
         uint64_t                                    object,
         size_t                                      location,
         int32_t                                     msgCode,
@@ -302,8 +302,8 @@ VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
 
     loader_platform_thread_lock_mutex(&loader_lock);
     for (icd = inst->icds; icd; icd = icd->next) {
-        if (icd->DebugReportMessageLUNARG != NULL) {
-            icd->DebugReportMessageLUNARG(icd->instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+        if (icd->DebugReportMessageEXT != NULL) {
+            icd->DebugReportMessageEXT(icd->instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
         }
     }
 
@@ -326,15 +326,15 @@ bool debug_report_instance_gpa(
     // so always return the entry points if name matches and it's enabled
     *addr = NULL;
 
-    if (!strcmp("vkCreateDebugReportCallbackLUNARG", name)) {
+    if (!strcmp("vkCreateDebugReportCallbackEXT", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_CreateDebugReportCallback : NULL;
         return true;
     }
-    if (!strcmp("vkDestroyDebugReportCallbackLUNARG", name)) {
+    if (!strcmp("vkDestroyDebugReportCallbackEXT", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DestroyDebugReportCallback : NULL;
         return true;
     }
-    if (!strcmp("vkDebugReportMessageLUNARG", name)) {
+    if (!strcmp("vkDebugReportMessageEXT", name)) {
         *addr = ptr_instance->debug_report_enabled ? (void *) debug_report_DebugReportMessage : NULL;
         return true;
     }

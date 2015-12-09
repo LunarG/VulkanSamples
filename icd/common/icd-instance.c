@@ -119,9 +119,9 @@ void icd_instance_destroy(struct icd_instance *instance)
 
 VkResult icd_instance_create_logger(
         struct icd_instance *instance,
-        VkDebugReportCallbackCreateInfoLUNARG *pCreateInfo,
+        const VkDebugReportCallbackCreateInfoEXT *pCreateInfo,
         const VkAllocationCallbacks *pAllocator,
-        VkDebugReportCallbackLUNARG *msg_obj)
+        VkDebugReportCallbackEXT *msg_obj)
 {
     struct icd_instance_logger *logger;
 
@@ -149,11 +149,11 @@ VkResult icd_instance_create_logger(
 
 void icd_instance_destroy_logger(
         struct icd_instance *instance,
-        const VkDebugReportCallbackLUNARG msg_obj,
+        const VkDebugReportCallbackEXT msg_obj,
         const VkAllocationCallbacks *pAllocator)
 {
     struct icd_instance_logger *logger, *prev;
-    VkDebugReportCallbackLUNARG local_msg_obj = msg_obj;
+    VkDebugReportCallbackEXT local_msg_obj = msg_obj;
 
     for (prev = NULL, logger = instance->loggers; logger;
          prev = logger, logger = logger->next) {
@@ -175,7 +175,7 @@ void icd_instance_destroy_logger(
 
 void icd_instance_log(const struct icd_instance *instance,
                       VkFlags msg_flags,
-                      VkDebugReportObjectTypeLUNARG obj_type,
+                      VkDebugReportObjectTypeEXT obj_type,
                       uint64_t src_object,
                       size_t location,
                       int32_t msg_code,

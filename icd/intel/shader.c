@@ -95,7 +95,7 @@ static VkResult shader_module_create(struct intel_dev *dev,
     struct intel_shader_module *sm;
 
     sm = (struct intel_shader_module *) intel_base_create(&dev->base.handle,
-            sizeof(*sm), dev->base.dbg, VK_OBJECT_TYPE_SHADER_MODULE, info, 0);
+            sizeof(*sm), dev->base.dbg, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, info, 0);
     if (!sm)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

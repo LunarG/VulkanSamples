@@ -60,70 +60,70 @@ typedef enum _OBJECT_STATUS
     OBJSTATUS_GPU_MEM_MAPPED                    = 0x00000020, // Memory object is currently mapped
 } OBJECT_STATUS;
 
-static const char* string_VK_OBJECT_TYPE(VkDebugReportObjectTypeLUNARG type) {
+static const char* string_VK_OBJECT_TYPE(VkDebugReportObjectTypeEXT type) {
     switch ((unsigned int)type)
     {
-        case VK_OBJECT_TYPE_INSTANCE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT:
             return "INSTANCE";
-        case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT:
             return "PHYSICAL_DEVICE";
-        case VK_OBJECT_TYPE_DEVICE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT:
             return "DEVICE";
-        case VK_OBJECT_TYPE_QUEUE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT:
             return "QUEUE";
-        case VK_OBJECT_TYPE_COMMAND_BUFFER:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT:
             return "COMMAND_BUFFER";
-        case VK_OBJECT_TYPE_DEVICE_MEMORY:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT:
             return "DEVICE_MEMORY";
-        case VK_OBJECT_TYPE_BUFFER:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT:
             return "BUFFER";
-        case VK_OBJECT_TYPE_BUFFER_VIEW:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT:
             return "BUFFER_VIEW";
-        case VK_OBJECT_TYPE_IMAGE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT:
             return "IMAGE";
-        case VK_OBJECT_TYPE_IMAGE_VIEW:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT:
             return "IMAGE_VIEW";
-        case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_ATTACHMENT_VIEW_EXT:
             return "ATTACHMENT_VIEW";
-        case VK_OBJECT_TYPE_SHADER:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SHADER:
             return "SHADER";
-        case VK_OBJECT_TYPE_PIPELINE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT:
             return "PIPELINE";
-        case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT:
             return "PIPELINE_LAYOUT";
-        case VK_OBJECT_TYPE_SAMPLER:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT:
             return "SAMPLER";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT:
             return "DESCRIPTOR_SET";
-        case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT:
             return "DESCRIPTOR_SET_LAYOUT";
-        case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT:
             return "DESCRIPTOR_POOL";
-        case VK_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DYNAMIC_VIEWPORT_STATE:
             return "DYNAMIC_VIEWPORT_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_RASTER_STATE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DYNAMIC_RASTER_STATE:
             return "DYNAMIC_RASTER_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DYNAMIC_COLOR_BLEND_STATE:
             return "DYNAMIC_COLOR_BLEND_STATE";
-        case VK_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_DYNAMIC_DEPTH_STENCIL_STATE:
             return "DYNAMIC_DEPTH_STENCIL_STATE";
-        case VK_OBJECT_TYPE_FENCE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT:
             return "FENCE";
-        case VK_OBJECT_TYPE_SEMAPHORE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT:
             return "SEMAPHORE";
-        case VK_OBJECT_TYPE_EVENT:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT:
             return "EVENT";
-        case VK_OBJECT_TYPE_QUERY_POOL:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT:
             return "QUERY_POOL";
-        case VK_OBJECT_TYPE_FRAMEBUFFER:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT:
             return "FRAMEBUFFER";
-        case VK_OBJECT_TYPE_RENDER_PASS:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT:
             return "RENDER_PASS";
-        case VK_OBJECT_TYPE_PIPELINE_CACHE:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT:
             return "PIPELINE_CACHE";
-        case VK_OBJECT_TYPE_SWAP_CHAIN_WSI:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_SWAP_CHAIN_WSI:
             return "SWAP_CHAIN_WSI";
-        case VK_OBJECT_TYPE_COMMAND_POOL:
+        case VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT:
             return "COMMAND_POOL";
         default:
             return "UNKNOWN";

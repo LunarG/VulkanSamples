@@ -34,7 +34,7 @@ class VkImageObj;
 #else
 #include "vktestframework.h"
 #endif
-#include "vulkan/vk_lunarg_debug_report.h"
+#include "vulkan/vk_ext_debug_report.h"
 #include "vulkan/vk_lunarg_debug_marker.h"
 
 #include <vector>
@@ -99,7 +99,7 @@ public:
             std::vector<const char *> device_layer_names,
             std::vector<const char *> instance_extension_names,
             std::vector<const char *> device_extension_names,
-            PFN_vkDebugReportCallbackLUNARG=NULL,
+            PFN_vkDebugReportCallbackEXT=NULL,
             void *userData=NULL);
 
     void ShutdownFramework();
@@ -140,11 +140,11 @@ protected:
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
-    PFN_vkCreateDebugReportCallbackLUNARG          m_CreateDebugReportCallback;
-    PFN_vkDestroyDebugReportCallbackLUNARG         m_DestroyDebugReportCallback;
-    PFN_vkDebugReportMessageLUNARG                 m_DebugReportMessage;
-    VkDebugReportCallbackLUNARG                    m_globalMsgCallback;
-    VkDebugReportCallbackLUNARG                    m_devMsgCallback;
+    PFN_vkCreateDebugReportCallbackEXT          m_CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackEXT         m_DestroyDebugReportCallback;
+    PFN_vkDebugReportMessageEXT                 m_DebugReportMessage;
+    VkDebugReportCallbackEXT                    m_globalMsgCallback;
+    VkDebugReportCallbackEXT                    m_devMsgCallback;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
