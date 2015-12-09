@@ -14,18 +14,6 @@
 #else
 #  define VK_LAYER_EXPORT
 #endif
-#if defined(__ANDROID__)
-#define VK_USE_PLATFORM_ANDROID_KHR
-#elif defined(_WIN32)
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif defined(__unix__)
-#define VK_USE_PLATFORM_MIR_KHR
-#define VK_USE_PLATFORM_WAYLAND_KHR
-#define VK_USE_PLATFORM_XLIB_KHR
-#define VK_USE_PLATFORM_XCB_KHR
-#else
-#error "Unsupported Platform!"
-#endif
 
 typedef void * (VKAPI_PTR *PFN_vkGPA)(void* obj, const char * pName);
 typedef struct VkBaseLayerObject_
