@@ -84,8 +84,8 @@ int main(int argc, char **argv)
     init_enumerate_device(info);
     init_device(info);
 
-    if (info.gpu_props.limits.maxTexelBufferElements > 0) {
-        std::cout << "maxTexelBufferSize too small\n";
+    if (info.gpu_props.limits.maxTexelBufferElements < 4) {
+        std::cout << "maxTexelBufferElements too small\n";
         exit(-1);
     }
 
