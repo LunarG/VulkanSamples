@@ -2549,6 +2549,7 @@ static loader_platform_dl_handle loader_add_layer_lib(
             return NULL;
         }
         loader.loaded_layer_lib_capacity = new_alloc_size;
+        loader.loaded_layer_lib_list = new_layer_lib_list;
     } else
         new_layer_lib_list = loader.loaded_layer_lib_list;
     my_lib = &new_layer_lib_list[loader.loaded_layer_lib_count];
@@ -2568,7 +2569,6 @@ static loader_platform_dl_handle loader_add_layer_lib(
                    chain_type, layer_prop->lib_name);
     }
     loader.loaded_layer_lib_count++;
-    loader.loaded_layer_lib_list = new_layer_lib_list;
     my_lib->ref_count++;
 
     return my_lib->lib_handle;
