@@ -30,7 +30,7 @@
 
 
 #include <vulkan/vulkan.h>
-#include "vulkan/vk_lunarg_debug_report.h"
+#include <vulkan/vk_lunarg_debug_report.h>
 #include "test_common.h"
 #include "vkrenderframework.h"
 #include "vk_layer_config.h"

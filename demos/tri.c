@@ -45,9 +45,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-
-#include "vulkan/vk_lunarg_debug_report.h"
-
+#include <vulkan/vk_lunarg_debug_report.h>
 
 #define DEMO_TEXTURE_COUNT 1
 #define VERTEX_BUFFER_BIND_ID 0

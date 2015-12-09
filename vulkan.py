@@ -1119,7 +1119,7 @@ ext_khr_win32_surface = Extension(
 )
 lunarg_debug_report = Extension(
     name="VK_LUNARG_DEBUG_REPORT",
-    headers=["vk_lunarg_debug_report.h"],
+    headers=["vulkan/vk_lunarg_debug_report.h"],
     objects=[
         "VkDebugReportCallbackLUNARG",
     ],

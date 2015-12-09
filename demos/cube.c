@@ -40,9 +40,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-
-#include "vulkan/vk_lunarg_debug_report.h"
-
+#include <vulkan/vk_lunarg_debug_report.h>
 
 #include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"

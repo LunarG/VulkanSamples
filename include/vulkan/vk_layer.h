@@ -5,7 +5,7 @@
 #pragma once
 
 #include "vulkan/vulkan.h"
-#include "vulkan/vk_lunarg_debug_report.h"
+#include <vulkan/vk_lunarg_debug_report.h>
 #include "vulkan/vk_lunarg_debug_marker.h"
 #if defined(__GNUC__) && __GNUC__ >= 4
 #  define VK_LAYER_EXPORT __attribute__((visibility("default")))
