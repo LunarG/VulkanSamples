@@ -85,7 +85,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
 
     memset(instance, 0, sizeof(*instance));
 
-    name = (app_info->pApplicationName) ? app_info->pApplicationName : "unnamed";
+    name = (app_info && app_info->pApplicationName) ? app_info->pApplicationName : "unnamed";
     len = strlen(name);
     instance->name = alloc_cb->pfnAllocation(alloc_cb->pUserData, len + 1, 0,
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
