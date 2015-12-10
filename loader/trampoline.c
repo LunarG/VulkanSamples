@@ -106,7 +106,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         loader_delete_layer_properties(ptr_instance,
                                        &ptr_instance->instance_layer_list);
         loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
-        loader_destroy_ext_list(ptr_instance, &ptr_instance->ext_list);
+        loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
+                                    &ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
         return res;
@@ -123,7 +124,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                        &ptr_instance->instance_layer_list);
         loader_scanned_icd_clear(ptr_instance,
                                  &ptr_instance->icd_libs);
-        loader_destroy_ext_list(ptr_instance,
+        loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
         loader_platform_thread_unlock_mutex(&loader_lock);
         loader_heap_free(ptr_instance, ptr_instance);
@@ -144,7 +145,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
                                        &ptr_instance->instance_layer_list);
         loader_scanned_icd_clear(ptr_instance,
                                  &ptr_instance->icd_libs);
-        loader_destroy_ext_list(ptr_instance,
+        loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
                                 &ptr_instance->ext_list);
         loader.instances = ptr_instance->next;
         loader_platform_thread_unlock_mutex(&loader_lock);

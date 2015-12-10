@@ -63,6 +63,14 @@ enum layer_type {
     VK_LAYER_TYPE_GLOBAL_IMPLICIT = 0xc,   // both instance and device layer, bitwise
 };
 
+// form of all dynamic lists/arrays
+// only the list element should be changed
+struct loader_generic_list {
+    size_t capacity;
+    uint32_t count;
+    void *list;
+};
+
 struct loader_extension_list {
     size_t capacity;
     uint32_t count;
@@ -415,9 +423,9 @@ VkResult loader_add_to_ext_list(
         struct loader_extension_list *ext_list,
         uint32_t prop_list_count,
         const VkExtensionProperties *props);
-void loader_destroy_ext_list(
+void loader_destroy_generic_list(
         const struct loader_instance *inst,
-        struct loader_extension_list *ext_info);
+        struct loader_generic_list *list);
 void loader_delete_layer_properties(
         const struct loader_instance *inst,
         struct loader_layer_list *layer_list);

@@ -63,9 +63,10 @@ struct loader_struct loader = {0};
 // TLS for instance for alloc/free callbacks
 THREAD_LOCAL_DECL struct loader_instance *tls_instance;
 
-static bool loader_init_ext_list(
+static bool loader_init_generic_list(
         const struct loader_instance *inst,
-        struct loader_extension_list *ext_info);
+        struct loader_generic_list *list_info,
+        size_t element_size);
 
 static int loader_platform_combine_path(char *dest, int len, ...);
 
@@ -501,8 +502,10 @@ void loader_delete_layer_properties(
         return;
 
     for (i = 0; i < layer_list->count; i++) {
-        loader_destroy_ext_list(inst, &layer_list->list[i].instance_extension_list);
-        loader_destroy_ext_list(inst, &layer_list->list[i].device_extension_list);
+        loader_destroy_generic_list(inst, (struct loader_generic_list *)
+                                   &layer_list->list[i].instance_extension_list);
+        loader_destroy_generic_list(inst, (struct loader_generic_list *)
+                                   &layer_list->list[i].device_extension_list);
     }
     layer_list->count = 0;
 
@@ -577,7 +580,8 @@ static VkResult loader_init_physical_device_extensions(
     VkResult res;
     uint32_t i;
 
-    if (!loader_init_ext_list(inst, ext_list)) {
+    if (!loader_init_generic_list(inst, (struct loader_generic_list *) ext_list,
+                                  sizeof(VkExtensionProperties))) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -639,25 +643,26 @@ static VkResult loader_add_physical_device_extensions(
     return VK_SUCCESS;
 }
 
-static bool loader_init_ext_list(const struct loader_instance *inst,
-                                 struct loader_extension_list *ext_info)
+static bool loader_init_generic_list(const struct loader_instance *inst,
+                                     struct loader_generic_list *list_info,
+                                     size_t element_size)
 {
-    ext_info->capacity = 32 * sizeof(VkExtensionProperties);
-    ext_info->list = loader_heap_alloc(inst, ext_info->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    if (ext_info->list == NULL) {
+    list_info->capacity = 32 * element_size;
+    list_info->list = loader_heap_alloc(inst, list_info->capacity, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (list_info->list == NULL) {
         return false;
     }
-    memset(ext_info->list, 0, ext_info->capacity);
-    ext_info->count = 0;
+    memset(list_info->list, 0, list_info->capacity);
+    list_info->count = 0;
     return true;
 }
 
-void loader_destroy_ext_list(const struct loader_instance *inst,
-                             struct loader_extension_list *ext_info)
+void loader_destroy_generic_list(const struct loader_instance *inst,
+                                 struct loader_generic_list *list)
 {
-    loader_heap_free(inst, ext_info->list);
-    ext_info->count = 0;
-    ext_info->capacity = 0;
+    loader_heap_free(inst, list->list);
+    list->count = 0;
+    list->capacity = 0;
 }
 
 /*
@@ -676,7 +681,8 @@ VkResult loader_add_to_ext_list(
     const VkExtensionProperties *cur_ext;
 
     if (ext_list->list == NULL || ext_list->capacity == 0) {
-        loader_init_ext_list(inst, ext_list);
+        loader_init_generic_list(inst, (struct loader_generic_list *) ext_list,
+                                 sizeof(VkExtensionProperties));
     }
 
     if (ext_list->list == NULL)
@@ -985,14 +991,15 @@ void loader_get_icd_loader_instance_extensions(
     loader_log(VK_DBG_REPORT_DEBUG_BIT, 0, "Build ICD instance extension list");
     // traverse scanned icd list adding non-duplicate extensions to the list
     for (uint32_t i = 0; i < icd_libs->count; i++) {
-        loader_init_ext_list(inst, &icd_exts);
+        loader_init_generic_list(inst, (struct loader_generic_list *) &icd_exts,
+                                 sizeof(VkExtensionProperties));
         loader_add_global_extensions(inst, icd_libs->list[i].EnumerateInstanceExtensionProperties,
                                      icd_libs->list[i].lib_name,
                                      &icd_exts);
         loader_add_to_ext_list(inst, inst_exts,
                                icd_exts.count,
                                icd_exts.list);
-        loader_destroy_ext_list(inst, &icd_exts);
+        loader_destroy_generic_list(inst, (struct loader_generic_list *) &icd_exts);
     };
 
     // Traverse loader's extensions, adding non-duplicate extensions to the list
@@ -1667,8 +1674,8 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                 ext_item = cJSON_GetArrayItem(instance_extensions, i);
                 GET_JSON_ITEM(ext_item, name)
                 GET_JSON_ITEM(ext_item, spec_version)
-                strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
-                ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
+                    strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
+                    ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
                 ext_prop.specVersion = atoi(spec_version);
                 loader_add_to_ext_list(inst, &props->instance_extension_list, 1, &ext_prop);
             }
@@ -1680,12 +1687,12 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                 ext_item = cJSON_GetArrayItem(device_extensions, i);
                 GET_JSON_ITEM(ext_item, name);
                 GET_JSON_ITEM(ext_item, spec_version);
-                strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
-                ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
+                    strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
+                    ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
                 ext_prop.specVersion = atoi(spec_version);
                 loader_add_to_ext_list(inst, &props->device_extension_list, 1, &ext_prop);
-            }
-        }
+                    }
+                }
         if (is_implicit) {
             GET_JSON_OBJECT(layer_node, enable_environment)
             strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof (props->enable_env_var.name));
@@ -3018,9 +3025,11 @@ VKAPI_ATTR void VKAPI_CALL loader_DestroyInstance(
     loader_delete_layer_properties(ptr_instance, &ptr_instance->device_layer_list);
     loader_delete_layer_properties(ptr_instance, &ptr_instance->instance_layer_list);
     loader_scanned_icd_clear(ptr_instance, &ptr_instance->icd_libs);
-    loader_destroy_ext_list(ptr_instance, &ptr_instance->ext_list);
+    loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
+                                &ptr_instance->ext_list);
     for (uint32_t i = 0; i < ptr_instance->total_gpu_count; i++)
-        loader_destroy_ext_list(ptr_instance, &ptr_instance->phys_devs[i].device_extension_cache);
+        loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)
+                            &ptr_instance->phys_devs[i].device_extension_cache);
     loader_heap_free(ptr_instance, ptr_instance->phys_devs);
     loader_free_dev_ext_table(ptr_instance);
 }
@@ -3254,7 +3263,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
 
     /* Get the physical device extensions if they haven't been retrieved yet */
     if (phys_dev->device_extension_cache.capacity == 0) {
-        if (!loader_init_ext_list(inst, &phys_dev->device_extension_cache)) {
+        if (!loader_init_generic_list(inst, (struct loader_generic_list *)
+                                      &phys_dev->device_extension_cache,
+                                      sizeof(VkExtensionProperties))) {
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         res = loader_add_physical_device_extensions(
@@ -3461,7 +3472,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPropert
     if (pProperties == NULL) {
 	*pPropertyCount = global_ext_list->count;
 	loader_destroy_layer_list(NULL, &instance_layers);
-        loader_destroy_ext_list(NULL, &icd_extensions);
+        loader_destroy_generic_list(NULL, (struct loader_generic_list *)
+                                    &icd_extensions);
         return VK_SUCCESS;
     }
 
@@ -3472,7 +3484,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPropert
                sizeof(VkExtensionProperties));
     }
     *pPropertyCount = copy_size;
-    loader_destroy_ext_list(NULL, &icd_extensions);
+    loader_destroy_generic_list(NULL, (struct loader_generic_list *)
+                                &icd_extensions);
 
     if (copy_size < global_ext_list->count) {
 	loader_destroy_layer_list(NULL, &instance_layers);
