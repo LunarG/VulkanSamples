@@ -1805,7 +1805,7 @@ class ObjectTrackerSubcommand(Subcommand):
             if len(loop_params) > 0:
                 using_line += '    if (skipCall)\n'
                 if proto.ret != "void":
-                    using_line += '        return VK_ERROR_VALIDATION_FAILED;\n'
+                    using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
                 else:
                     using_line += '        return;\n'
             ret_val = ''

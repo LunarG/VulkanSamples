@@ -887,13 +887,13 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                       VK_NULL_HANDLE, 0, 0, "invalid presentable image format");
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     /* TODOVV: Can we add test to validation layer? */
     if (!x11_is_dri3_and_present_supported(c)) {
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     /* TODOVV: Can we add test to validation layer? */
@@ -902,7 +902,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         if (fd >= 0)
             close(fd);
 //        return VK_ERROR_INVALID_VALUE;
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     close(fd);
@@ -932,7 +932,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         !x11_swap_chain_create_persistent_images(sc, dev, info)) {
         x11_swap_chain_destroy_begin(sc);
         x11_swap_chain_destroy_end(sc);
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     *sc_ret = sc;
@@ -1233,7 +1233,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     // assume the correct data type, and not check):
     if (!pCount) {
 //        return VK_ERROR_INVALID_POINTER;
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     if (pSwapchainImages) {
@@ -1289,7 +1289,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     }
     // NOTE: Should never get here, but in case we do, do something:
     assert(0);
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 

@@ -299,7 +299,7 @@ static inline uint32_t validate_VkImageLayoutKHR(VkImageLayout input_value)
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImage(VkDevice device, const VkImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkImage* pImage)
 {
     VkBool32                skipCall              = VK_FALSE;
-    VkResult                result                = VK_ERROR_VALIDATION_FAILED;
+    VkResult                result                = VK_ERROR_VALIDATION_FAILED_EXT;
     VkImageFormatProperties ImageFormatProperties = {0};
 
     layer_data       *device_data    = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -469,7 +469,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
         }
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
 
@@ -576,7 +576,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateImageView(VkDevice device
     }
 
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = device_data->device_dispatch_table->CreateImageView(device, pCreateInfo, pAllocator, pView);
     return result;

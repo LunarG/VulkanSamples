@@ -1775,7 +1775,7 @@ static VkBool32 shadowUpdateNode(layer_data* my_data, const VkDevice device, GEN
                 }
                 break;
             default:
-                return VK_ERROR_VALIDATION_FAILED;
+                return VK_ERROR_VALIDATION_FAILED_EXT;
                 break;
             }
             break;
@@ -2843,14 +2843,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
                         "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
                 loader_platform_thread_unlock_mutex(&globalLock);
-                return VK_ERROR_VALIDATION_FAILED;
+                return VK_ERROR_VALIDATION_FAILED_EXT;
             }
             loader_platform_thread_unlock_mutex(&globalLock);
         }
     }
     if (VK_FALSE == skipCall)
         return dev_data->device_dispatch_table->QueueSubmit(queue, submitCount, pSubmits, fence);
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFence fence, const VkAllocationCallbacks* pAllocator)
@@ -3001,7 +3001,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkCommandPoolResetFlags flags)
 {
     layer_data *dev_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult    result                = VK_ERROR_VALIDATION_FAILED;
+    VkResult    result                = VK_ERROR_VALIDATION_FAILED_EXT;
 
     result = dev_data->device_dispatch_table->ResetCommandPool(device, commandPool, flags);
     // Reset all of the CBs allocated from this pool
@@ -3170,7 +3170,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
                 delete pPipeNode[i];
             }
         }
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     return result;
 }
@@ -3220,7 +3220,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
                 delete pPipeNode[i];
             }
         }
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     return result;
 }
@@ -3247,7 +3247,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
         if (NULL == pNewNode) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t) *pSetLayout, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                     "Out of memory while attempting to allocate LAYOUT_NODE in vkCreateDescriptorSetLayout()"))
-                return VK_ERROR_VALIDATION_FAILED;
+                return VK_ERROR_VALIDATION_FAILED_EXT;
         }
         memcpy((void*)&pNewNode->createInfo, pCreateInfo, sizeof(VkDescriptorSetLayoutCreateInfo));
         pNewNode->createInfo.pBinding = new VkDescriptorSetLayoutBinding[pCreateInfo->bindingCount];
@@ -3260,7 +3260,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorSetLayout(VkDev
             if (!pNewNode->bindings.insert(pCreateInfo->pBinding[i].binding).second) {
                 if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t) *pSetLayout, 0, DRAWSTATE_INVALID_LAYOUT, "DS",
                             "duplicated binding number in VkDescriptorSetLayoutBinding"))
-                    return VK_ERROR_VALIDATION_FAILED;
+                    return VK_ERROR_VALIDATION_FAILED_EXT;
             }
 
             totalCount += pCreateInfo->pBinding[i].descriptorCount;
@@ -3329,13 +3329,13 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice d
         // Insert this pool into Global Pool LL at head
         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, (uint64_t) *pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                 "Created Descriptor Pool %#" PRIxLEAST64, (uint64_t) *pDescriptorPool))
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
         loader_platform_thread_lock_mutex(&globalLock);
         DESCRIPTOR_POOL_NODE* pNewNode = new DESCRIPTOR_POOL_NODE(*pDescriptorPool, pCreateInfo);
         if (NULL == pNewNode) {
             if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT, (uint64_t) *pDescriptorPool, 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                     "Out of memory while attempting to allocate DESCRIPTOR_POOL_NODE in vkCreateDescriptorPool()"))
-                return VK_ERROR_VALIDATION_FAILED;
+                return VK_ERROR_VALIDATION_FAILED_EXT;
         } else {
             dev_data->descriptorPoolMap[*pDescriptorPool] = pNewNode;
         }
@@ -3369,7 +3369,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
         skipCall |= validate_descriptor_availability_in_pool(dev_data, pPoolNode, pAllocateInfo->setLayoutCount, pAllocateInfo->pSetLayouts);
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->AllocateDescriptorSets(device, pAllocateInfo, pDescriptorSets);
     if (VK_SUCCESS == result) {
         DESCRIPTOR_POOL_NODE *pPoolNode = getPoolNode(dev_data, pAllocateInfo->descriptorPool);
@@ -3386,7 +3386,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
                 if (NULL == pNewNode) {
                     if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_OUT_OF_MEMORY, "DS",
                             "Out of memory while attempting to allocate SET_NODE in vkAllocateDescriptorSets()"))
-                        return VK_ERROR_VALIDATION_FAILED;
+                        return VK_ERROR_VALIDATION_FAILED_EXT;
                 } else {
                     memset(pNewNode, 0, sizeof(SET_NODE));
                     // TODO : Pool should store a total count of each type of Descriptor available
@@ -3399,7 +3399,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateDescriptorSets(VkDevice
                     if (NULL == pLayout) {
                         if (log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, (uint64_t) pAllocateInfo->pSetLayouts[i], 0, DRAWSTATE_INVALID_LAYOUT, "DS",
                                 "Unable to find set layout node for layout %#" PRIxLEAST64 " specified in vkAllocateDescriptorSets() call", (uint64_t) pAllocateInfo->pSetLayouts[i]))
-                            return VK_ERROR_VALIDATION_FAILED;
+                            return VK_ERROR_VALIDATION_FAILED_EXT;
                     }
                     pNewNode->pLayout = pLayout;
                     pNewNode->pool = pAllocateInfo->descriptorPool;
@@ -3429,7 +3429,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice dev
                     "It is invalid to call vkFreeDescriptorSets() with a pool created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT.");
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
     if (VK_SUCCESS == result) {
         // For each freed descriptor add it back into the pool as available
@@ -3519,7 +3519,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
                 "In vkBeginCommandBuffer() and unable to find CommandBuffer Node for CB %p!", (void*)commandBuffer);
     }
     if (skipCall) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = dev_data->device_dispatch_table->BeginCommandBuffer(commandBuffer, pBeginInfo);
     if ((VK_SUCCESS == result) && (pCB != NULL)) {
@@ -3551,7 +3551,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEndCommandBuffer(VkCommandBuffe
             printCB(dev_data, commandBuffer);
         }
     } else {
-        result = VK_ERROR_VALIDATION_FAILED;
+        result = VK_ERROR_VALIDATION_FAILED_EXT;
     }
     return result;
 }
@@ -3569,7 +3569,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(VkCommandBuf
                         (uint64_t) commandBuffer, (uint64_t) cmdPool);
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = dev_data->device_dispatch_table->ResetCommandBuffer(commandBuffer, flags);
     if (VK_SUCCESS == result) {
         resetCB(dev_data, commandBuffer);
@@ -4971,7 +4971,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     }
 
     if (skip_call)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult res = my_data->device_dispatch_table->CreateShaderModule(device, pCreateInfo, pAllocator, pShaderModule);
 
@@ -4995,7 +4995,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice devic
     skip_call |= ValidateDependencies(dev_data, device, pCreateInfo, subpass_to_node);
     skip_call |= ValidateLayouts(dev_data, device, pCreateInfo);
     if (skip_call) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
     VkResult result = dev_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
     if (VK_SUCCESS == result) {
@@ -5326,7 +5326,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
     if (VK_FALSE == skip_call) {
         return dev_data->device_dispatch_table->MapMemory(device, mem, offset, size, flags, ppData);
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
@@ -5435,7 +5435,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
     if (VK_FALSE == skip_call)
         return dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(

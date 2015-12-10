@@ -300,7 +300,7 @@ VkResult intel_queue_create(struct intel_dev *dev,
         intel_dev_log(dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                       &dev->base, 0, 0,
                       "invalid engine type");
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
         break;
     }
 

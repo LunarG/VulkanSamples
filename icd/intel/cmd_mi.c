@@ -128,7 +128,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
         break;
     default:
         /* TODOVV: validate */
-        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED_EXT);
         break;
     }
 }
@@ -152,7 +152,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
         break;
     default:
         /* TODOVV: validate */
-        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED_EXT);
         break;
     }
 }

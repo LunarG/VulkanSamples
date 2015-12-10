@@ -1166,7 +1166,7 @@ static VkResult pipeline_build_all(struct intel_pipeline *pipeline,
      */
     if (info->vi.vertexBindingDescriptionCount > ARRAY_SIZE(pipeline->vb) ||
         info->vi.vertexAttributeDescriptionCount > ARRAY_SIZE(pipeline->vb)) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     pipeline->vb_count = info->vi.vertexBindingDescriptionCount;
@@ -1396,7 +1396,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
@@ -1405,7 +1405,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMergePipelineCaches(
     uint32_t                                    srcCacheCount,
     const VkPipelineCache*                      pSrcCaches)
 {
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateGraphicsPipelines(
@@ -1445,7 +1445,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateComputePipelines(
     const VkAllocationCallbacks*                     pAllocator,
     VkPipeline*                               pPipelines)
 {
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyPipeline(

@@ -736,7 +736,7 @@ VkResult intel_pipeline_shader_compile_meta(struct intel_pipeline_shader *sh,
     ralloc_free(brw->shader_prog);
     ralloc_free(brw);
 
-    return (sh->pCode) ? VK_SUCCESS : VK_ERROR_VALIDATION_FAILED;
+    return (sh->pCode) ? VK_SUCCESS : VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 } // extern "C"

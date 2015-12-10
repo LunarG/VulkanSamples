@@ -246,7 +246,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
             my_data->instanceState->vkEnumeratePhysicalDevicesState = QUERY_DETAILS;
         }
         if (skipCall)
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
         VkResult result = my_data->instance_dispatch_table->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
         if (NULL == pPhysicalDevices) {
             my_data->instanceState->physicalDevicesCount = *pPhysicalDeviceCount;
@@ -264,7 +264,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, 0, 0, DEVLIMITS_INVALID_INSTANCE, "DL",
             "Invalid instance (%#" PRIxLEAST64 ") passed into vkEnumeratePhysicalDevices().", (uint64_t)instance);
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures)
@@ -444,7 +444,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice g
         skipCall |= validate_features_request(phy_dev_data);
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     VkResult result = my_device_data->device_dispatch_table->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);

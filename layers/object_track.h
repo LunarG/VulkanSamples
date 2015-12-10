@@ -825,7 +825,7 @@ VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysi
     skipCall |= validate_instance(instance, instance);
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, instance)->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
     loader_platform_thread_lock_mutex(&objLock);
     if (result == VK_SUCCESS) {
@@ -873,7 +873,7 @@ explicit_MapMemory(
     skipCall |= validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall == VK_TRUE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
 
@@ -934,7 +934,7 @@ explicit_AllocateCommandBuffers(
     loader_platform_thread_unlock_mutex(&objLock);
 
     if (skipCall) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocateCommandBuffers(
@@ -964,7 +964,7 @@ explicit_AllocateDescriptorSets(
     }
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocateDescriptorSets(
         device, pAllocateInfo, pDescriptorSets);
@@ -1139,7 +1139,7 @@ explicit_GetSwapchainImagesKHR(
     skipCall |= validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 

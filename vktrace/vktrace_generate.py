@@ -1527,7 +1527,7 @@ class Subcommand(object):
         rbody.append('vktrace_replay::VKTRACE_REPLAY_RESULT vkReplay::replay(vktrace_trace_packet_header *packet)')
         rbody.append('{')
         rbody.append('    vktrace_replay::VKTRACE_REPLAY_RESULT returnValue = vktrace_replay::VKTRACE_REPLAY_SUCCESS;')
-        rbody.append('    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;')
+        rbody.append('    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;')
         rbody.append('    switch (packet->packet_id)')
         rbody.append('    {')
         rbody.append('        case VKTRACE_TPI_VK_vkApiVersion:')

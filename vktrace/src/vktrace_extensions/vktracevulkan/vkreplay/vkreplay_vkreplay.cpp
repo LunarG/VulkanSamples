@@ -151,7 +151,7 @@ int vkReplay::dump_validation_data()
 
 VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkInstanceCreateInfo *pCreateInfo;
     char **ppEnabledLayerNames = NULL, **saved_ppLayers;
     if (!m_display->m_initedVK)
@@ -319,7 +319,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
 
 VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     if (!m_display->m_initedVK)
     {
         VkDevice device;
@@ -328,7 +328,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         char **ppEnabledLayerNames = NULL, **saved_ppLayers;
         if (remappedPhysicalDevice == VK_NULL_HANDLE)
         {
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
         }
         const char strScreenShot[] = "VK_LAYER_LUNARG_ScreenShot";
         //char *strScreenShotEnv = vktrace_get_global_var("_VK_SCREENSHOT");
@@ -390,7 +390,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
 
 VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumeratePhysicalDevices* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     if (!m_display->m_initedVK)
     {
         uint32_t deviceCount = *(pPacket->pPhysicalDeviceCount);
@@ -398,7 +398,7 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 
         VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
         if (remappedInstance == VK_NULL_HANDLE)
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
         if (pPacket->pPhysicalDevices != NULL)
             pDevices = VKTRACE_NEW_ARRAY(VkPhysicalDevice, deviceCount);
         replayResult = m_vkFuncs.real_vkEnumeratePhysicalDevices(remappedInstance, &deviceCount, pDevices);
@@ -430,7 +430,7 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
     {
         VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
         if (remappedInstance == VK_NULL_HANDLE)
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
 
         VkFlags reportFlags = VK_DEBUG_REPORT_INFO_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT | VK_DEBUG_REPORT_PERF_WARN_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
         if (m_vkFuncs.real_vkCreateDebugReportCallbackEXT != NULL)
@@ -453,13 +453,13 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 // TODO138 : Some of these functions have been renamed/changed in v138, need to scrub them and update as appropriate
 //VkResult vkReplay::manually_replay_vkGetPhysicalDeviceInfo(packet_vkGetPhysicalDeviceInfo* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    if (!m_display->m_initedVK)
 //    {
 //        VkPhysicalDevice remappedPhysicalDevice = m_objMapper.remap(pPacket->physicalDevice);
 //        if (remappedPhysicalDevice == VK_NULL_HANDLE)
-//            return VK_ERROR_VALIDATION_FAILED;
+//            return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //        switch (pPacket->infoType) {
 //        case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
@@ -555,7 +555,7 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 
 //VkResult vkReplay::manually_replay_vkGetGlobalExtensionInfo(packet_vkGetGlobalExtensionInfo* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    if (!m_display->m_initedVK) {
 //        replayResult = m_vkFuncs.real_vkGetGlobalExtensionInfo(pPacket->infoType, pPacket->extensionIndex, pPacket->pDataSize, pPacket->pData);
@@ -582,12 +582,12 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 
 //VkResult vkReplay::manually_replay_vkGetPhysicalDeviceExtensionInfo(packet_vkGetPhysicalDeviceExtensionInfo* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    if (!m_display->m_initedVK) {
 //        VkPhysicalDevice remappedPhysicalDevice = m_objMapper.remap(pPacket->physicalDevice);
 //        if (remappedPhysicalDevice == VK_NULL_HANDLE)
-//            return VK_ERROR_VALIDATION_FAILED;
+//            return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //        replayResult = m_vkFuncs.real_vkGetPhysicalDeviceExtensionInfo(remappedPhysicalDevice, pPacket->infoType, pPacket->extensionIndex, pPacket->pDataSize, pPacket->pData);
 //// TODO: Confirm that replay'd properties match with traced properties to ensure compatibility.
@@ -613,13 +613,13 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 
 //VkResult vkReplay::manually_replay_vkGetSwapchainInfoWSI(packet_vkGetSwapchainInfoWSI* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    size_t dataSize = *pPacket->pDataSize;
 //    void* pData = vktrace_malloc(dataSize);
 //    VkSwapchainWSI remappedSwapchain = m_objMapper.remap_swapchainwsis(pPacket->swapchain);
 //    if (remappedSwapchain == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //    replayResult = m_vkFuncs.real_vkGetSwapchainInfoWSI(remappedSwapchain, pPacket->infoType, &dataSize, pData);
 //    if (replayResult == VK_SUCCESS)
 //    {
@@ -651,15 +651,15 @@ VkResult vkReplay::manually_replay_vkEnumeratePhysicalDevices(packet_vkEnumerate
 
 VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkQueue remappedQueue = m_objMapper.remap_queues(pPacket->queue);
     if (remappedQueue == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkFence remappedFence = m_objMapper.remap_fences(pPacket->fence);
     if (pPacket->fence != VK_NULL_HANDLE && remappedFence == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkSubmitInfo *remappedSubmits = NULL;
     remappedSubmits = VKTRACE_NEW_ARRAY( VkSubmitInfo, pPacket->submitCount);
@@ -725,15 +725,15 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
 
 //VkResult vkReplay::manually_replay_vkGetObjectInfo(packet_vkGetObjectInfo* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkObject remappedObject = m_objMapper.remap(pPacket->object, pPacket->objType);
 //    if (remappedObject == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    size_t size = 0;
 //    void* pData = NULL;
@@ -791,15 +791,15 @@ VkResult vkReplay::manually_replay_vkQueueSubmit(packet_vkQueueSubmit* pPacket)
 
 //VkResult vkReplay::manually_replay_vkGetImageSubresourceInfo(packet_vkGetImageSubresourceInfo* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkImage remappedImage = m_objMapper.remap(pPacket->image);
 //    if (remappedImage == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    size_t size = 0;
 //    void* pData = NULL;
@@ -992,11 +992,11 @@ void vkReplay::manually_replay_vkUpdateDescriptorSets(packet_vkUpdateDescriptorS
 
 VkResult vkReplay::manually_replay_vkCreateDescriptorSetLayout(packet_vkCreateDescriptorSetLayout* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     // TODO: Need to make a whole new CreateInfo struct so that we can remap pImmutableSamplers without affecting the packet.
     VkDescriptorSetLayoutCreateInfo *pInfo = (VkDescriptorSetLayoutCreateInfo*) pPacket->pCreateInfo;
@@ -1042,11 +1042,11 @@ void vkReplay::manually_replay_vkDestroyDescriptorSetLayout(packet_vkDestroyDesc
 
 VkResult vkReplay::manually_replay_vkAllocateDescriptorSets(packet_vkAllocateDescriptorSets* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     // VkDescriptorPool descriptorPool;
     // descriptorPool.handle = remap_descriptorpools(pPacket->descriptorPool.handle);
@@ -1068,11 +1068,11 @@ VkResult vkReplay::manually_replay_vkAllocateDescriptorSets(packet_vkAllocateDes
 
 VkResult vkReplay::manually_replay_vkFreeDescriptorSets(packet_vkFreeDescriptorSets* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDescriptorPool descriptorPool;
     descriptorPool = m_objMapper.remap_descriptorpools(pPacket->descriptorPool);
@@ -1160,12 +1160,12 @@ void vkReplay::manually_replay_vkCmdBindVertexBuffers(packet_vkCmdBindVertexBuff
 
 //VkResult vkReplay::manually_replay_vkCreateGraphicsPipeline(packet_vkCreateGraphicsPipeline* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
 //    {
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //    }
 //
 //    // remap shaders from each stage
@@ -1207,12 +1207,12 @@ void vkReplay::manually_replay_vkCmdBindVertexBuffers(packet_vkCmdBindVertexBuff
 
 VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGraphicsPipelines* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
     {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     // TODO : This is hacky, just correlating these remap values to 0,1,2 in array for now
@@ -1266,11 +1266,11 @@ VkResult vkReplay::manually_replay_vkCreateGraphicsPipelines(packet_vkCreateGrap
 
 VkResult vkReplay::manually_replay_vkCreatePipelineLayout(packet_vkCreatePipelineLayout* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     // array to store the original trace-time layouts, so that we can remap them inside the packet and then
     // restore them after replaying the API call.
@@ -1402,11 +1402,11 @@ void vkReplay::manually_replay_vkCmdPipelineBarrier(packet_vkCmdPipelineBarrier*
 
 VkResult vkReplay::manually_replay_vkCreateFramebuffer(packet_vkCreateFramebuffer* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkFramebufferCreateInfo *pInfo = (VkFramebufferCreateInfo *) pPacket->pCreateInfo;
     VkImageView *pAttachments, *pSavedAttachments = (VkImageView*)pInfo->pAttachments;
@@ -1442,11 +1442,11 @@ VkResult vkReplay::manually_replay_vkCreateFramebuffer(packet_vkCreateFramebuffe
 
 VkResult vkReplay::manually_replay_vkCreateRenderPass(packet_vkCreateRenderPass* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkRenderPass local_renderpass;
     replayResult = m_vkFuncs.real_vkCreateRenderPass(remappedDevice, pPacket->pCreateInfo, NULL, &local_renderpass);
@@ -1476,11 +1476,11 @@ void vkReplay::manually_replay_vkCmdBeginRenderPass(packet_vkCmdBeginRenderPass*
 
 VkResult vkReplay::manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuffer* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkCommandBuffer remappedCommandBuffer = m_objMapper.remap_commandbuffers(pPacket->commandBuffer);
     if (remappedCommandBuffer == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkCommandBufferBeginInfo* pInfo = (VkCommandBufferBeginInfo*)pPacket->pBeginInfo;
     // Save the original RP & FB, then overwrite packet with remapped values
@@ -1506,15 +1506,15 @@ VkResult vkReplay::manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuf
 // TODO138 : Can we kill this?
 //VkResult vkReplay::manually_replay_vkStorePipeline(packet_vkStorePipeline* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkPipeline remappedPipeline = m_objMapper.remap(pPacket->pipeline);
 //    if (remappedPipeline == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    size_t size = 0;
 //    void* pData = NULL;
@@ -1542,11 +1542,11 @@ VkResult vkReplay::manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuf
 // TODO138 : This needs to be broken out into separate functions for each non-disp object
 //VkResult vkReplay::manually_replay_vkDestroy<Object>(packet_vkDestroyObject* pPacket)
 //{
-//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+//    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    uint64_t remapHandle = m_objMapper.remap_<OBJECT_TYPE_HERE>(pPacket->object, pPacket->objType);
 //    <VkObject> object;
@@ -1560,12 +1560,12 @@ VkResult vkReplay::manually_replay_vkBeginCommandBuffer(packet_vkBeginCommandBuf
 
 VkResult vkReplay::manually_replay_vkWaitForFences(packet_vkWaitForFences* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     uint32_t i;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkFence *pFence = VKTRACE_NEW_ARRAY(VkFence, pPacket->fenceCount);
     for (i = 0; i < pPacket->fenceCount; i++)
@@ -1579,11 +1579,11 @@ VkResult vkReplay::manually_replay_vkWaitForFences(packet_vkWaitForFences* pPack
 
 VkResult vkReplay::manually_replay_vkAllocateMemory(packet_vkAllocateMemory* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     gpuMemObj local_mem;
 
@@ -1617,11 +1617,11 @@ void vkReplay::manually_replay_vkFreeMemory(packet_vkFreeMemory* pPacket)
 
 VkResult vkReplay::manually_replay_vkMapMemory(packet_vkMapMemory* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     gpuMemObj local_mem = m_objMapper.m_devicememorys.find(pPacket->memory)->second;
     void* pData;
@@ -1681,11 +1681,11 @@ void vkReplay::manually_replay_vkUnmapMemory(packet_vkUnmapMemory* pPacket)
 
 VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappedMemoryRanges* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
     if (remappedDevice == VK_NULL_HANDLE)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkMappedMemoryRange* localRanges = VKTRACE_NEW_ARRAY(VkMappedMemoryRange, pPacket->memoryRangeCount);
     memcpy(localRanges, pPacket->pMemoryRanges, sizeof(VkMappedMemoryRange) * (pPacket->memoryRangeCount));
@@ -1699,7 +1699,7 @@ VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappe
         {
             VKTRACE_DELETE(localRanges);
             VKTRACE_DELETE(pLocalMems);
-            return VK_ERROR_VALIDATION_FAILED;
+            return VK_ERROR_VALIDATION_FAILED_EXT;
         }
 
         if (!pLocalMems[i].pGpuMem->isPendingAlloc())
@@ -1731,7 +1731,7 @@ VkResult vkReplay::manually_replay_vkFlushMappedMemoryRanges(packet_vkFlushMappe
 
 VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_vkGetPhysicalDeviceSurfaceSupportKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
@@ -1743,7 +1743,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_v
     replayResult = m_vkFuncs.real_vkGetPhysicalDeviceSurfaceSupportKHR(remappedphysicalDevice, pPacket->queueFamilyIndex, m_display->get_surface(), pPacket->pSupported);
 //    VkDevice remappedDevice = m_objMapper.remap_devices(pPacket->device);
 //    if (remappedDevice == VK_NULL_HANDLE)
-//        return VK_ERROR_VALIDATION_FAILED;
+//        return VK_ERROR_VALIDATION_FAILED_EXT;
 //
 //    gpuMemObj local_mem;
 //
@@ -1761,7 +1761,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceSupportKHR(packet_v
 
 VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(packet_vkGetPhysicalDeviceSurfaceCapabilitiesKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
@@ -1772,7 +1772,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pac
 
 VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_vkGetPhysicalDeviceSurfaceFormatsKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
@@ -1783,7 +1783,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfaceFormatsKHR(packet_v
 
 VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfacePresentModesKHR(packet_vkGetPhysicalDeviceSurfacePresentModesKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
 
     VkPhysicalDevice remappedphysicalDevice = m_objMapper.remap_physicaldevices(pPacket->physicalDevice);
 
@@ -1794,7 +1794,7 @@ VkResult vkReplay::manually_replay_vkGetPhysicalDeviceSurfacePresentModesKHR(pac
 
 VkResult vkReplay::manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchainKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkSwapchainKHR local_pSwapchain;
     VkSwapchainKHR save_oldSwapchain, *pSC;
     VkSurfaceKHR save_surface;
@@ -1825,7 +1825,7 @@ VkResult vkReplay::manually_replay_vkCreateSwapchainKHR(packet_vkCreateSwapchain
 
 VkResult vkReplay::manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchainImagesKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
 //    if (pPacket->device != VK_NULL_HANDLE && remappeddevice == VK_NULL_HANDLE)
@@ -1864,7 +1864,7 @@ VkResult vkReplay::manually_replay_vkGetSwapchainImagesKHR(packet_vkGetSwapchain
 
 VkResult vkReplay::manually_replay_vkQueuePresentKHR(packet_vkQueuePresentKHR* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkQueue remappedqueue = m_objMapper.remap_queues(pPacket->queue);
 
     uint32_t i;
@@ -1909,7 +1909,7 @@ VkResult vkReplay::manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfa
     VkInstance remappedinstance = m_objMapper.remap_instances(pPacket->instance);
 
     if (pPacket->instance != VK_NULL_HANDLE && remappedinstance == VK_NULL_HANDLE) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     VkIcdSurfaceXcb *pSurf = (VkIcdSurfaceXcb *) m_display->get_surface();
@@ -1929,7 +1929,7 @@ VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32S
     VkInstance remappedinstance = m_objMapper.remap_instances(pPacket->instance);
 
     if (pPacket->instance != VK_NULL_HANDLE && remappedinstance == VK_NULL_HANDLE) {
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
     VkIcdSurfaceWin32 *pSurf = (VkIcdSurfaceWin32 *) m_display->get_surface();
@@ -1943,7 +1943,7 @@ VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32S
 
 VkResult  vkReplay::manually_replay_vkCreateDebugReportCallbackEXT(packet_vkCreateDebugReportCallbackEXT* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkDebugReportCallbackEXT local_msgCallback;
     VkInstance remappedInstance = m_objMapper.remap_instances(pPacket->instance);
 
@@ -1986,7 +1986,7 @@ void vkReplay::manually_replay_vkDestroyDebugReportCallbackEXT(packet_vkDestroyD
 
 VkResult vkReplay::manually_replay_vkAllocateCommandBuffers(packet_vkAllocateCommandBuffers* pPacket)
 {
-    VkResult replayResult = VK_ERROR_VALIDATION_FAILED;
+    VkResult replayResult = VK_ERROR_VALIDATION_FAILED_EXT;
     VkDevice remappeddevice = m_objMapper.remap_devices(pPacket->device);
 
 //    if (pPacket->device != VK_NULL_HANDLE && remappeddevice == VK_NULL_HANDLE)

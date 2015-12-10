@@ -446,7 +446,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
                 intel_dev_log(cmd->dev, VK_DEBUG_REPORT_ERROR_BIT_EXT,
                         &cmd->obj.base, 0, 0,
                         "unaligned vkCmdCopyBuffer unsupported");
-                cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
+                cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED_EXT);
                 continue;
             }
 

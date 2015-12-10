@@ -163,7 +163,7 @@ void cmd_writer_grow(struct intel_cmd *cmd,
     if (!new_ptr) {
         intel_bo_unref(new_bo);
         cmd_writer_discard(cmd, which);
-        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED);
+        cmd_fail(cmd, VK_ERROR_VALIDATION_FAILED_EXT);
         return;
     }
 
@@ -273,7 +273,7 @@ VkResult intel_cmd_create(struct intel_dev *dev,
     default:
         /* TODOVV: Add validation check for this */
         assert(0 && "icd: Invalid queue_family_index");
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
         break;
     }
 

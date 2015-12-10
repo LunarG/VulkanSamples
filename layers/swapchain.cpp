@@ -325,7 +325,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDevice* pDevice)
@@ -342,7 +342,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
     }
 
     if (VK_TRUE == skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
 
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
     // Call down the call chain:
@@ -444,7 +444,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -485,7 +485,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -535,7 +535,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -585,7 +585,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 // This function does the up-front validation work for vkCreateSwapchainKHR(),
@@ -862,7 +862,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
@@ -966,7 +966,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice 
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
@@ -1043,7 +1043,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
@@ -1121,7 +1121,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 
 static inline PFN_vkVoidFunction layer_intercept_proc(const char *name)

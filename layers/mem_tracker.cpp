@@ -1263,7 +1263,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkFence             fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
 
     loader_platform_thread_lock_mutex(&globalLock);
     // TODO : Need to track fence and clear mem references when fence clears
@@ -1481,7 +1481,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall   = VK_FALSE;
-    VkResult result     = VK_ERROR_VALIDATION_FAILED;
+    VkResult result     = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
 
     MT_MEM_OBJ_INFO *pMemObj = get_mem_obj_info(my_data, mem);
@@ -1573,7 +1573,7 @@ VK_LAYER_EXPORT VkResult vkFlushMappedMemoryRanges(
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
 {
-    VkResult    result    = VK_ERROR_VALIDATION_FAILED;
+    VkResult    result    = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall  = VK_FALSE;
     layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -1590,7 +1590,7 @@ VK_LAYER_EXPORT VkResult vkInvalidateMappedMemoryRanges(
     uint32_t                   memRangeCount,
     const VkMappedMemoryRange *pMemRanges)
 {
-    VkResult    result    = VK_ERROR_VALIDATION_FAILED;
+    VkResult    result    = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32    skipCall = VK_FALSE;
     layer_data *my_data   = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
@@ -1662,7 +1662,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDeviceSize   memoryOffset)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
@@ -1682,7 +1682,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkDeviceSize   memoryOffset)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
     VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
@@ -1724,7 +1724,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
     VkFence                 fence)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    VkResult result = VK_ERROR_VALIDATION_FAILED;
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall = VK_FALSE;
 
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1792,7 +1792,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetFences(
     const VkFence *pFences)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+    VkResult result   = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall = VK_FALSE;
 
     loader_platform_thread_lock_mutex(&globalLock);
@@ -1851,7 +1851,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetFenceStatus(
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32 skipCall = verifyFenceStatus(device, fence, "vkGetFenceStatus");
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = my_data->device_dispatch_table->GetFenceStatus(device, fence);
     if (VK_SUCCESS == result) {
         loader_platform_thread_lock_mutex(&globalLock);
@@ -1875,7 +1875,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
         skipCall |= verifyFenceStatus(device, pFences[i], "vkWaitForFences");
     }
     if (skipCall)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     VkResult result = my_data->device_dispatch_table->WaitForFences(device, fenceCount, pFences, waitAll, timeout);
     loader_platform_thread_lock_mutex(&globalLock);
 
@@ -2089,7 +2089,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     layer_data *my_data               = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkBool32    commandBufferComplete = VK_FALSE;
     VkBool32    skipCall              = VK_FALSE;
-    VkResult    result                = VK_ERROR_VALIDATION_FAILED;
+    VkResult    result                = VK_ERROR_VALIDATION_FAILED_EXT;
 
     auto it = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
     // Verify that CB's in pool are complete (not in-flight)
@@ -2120,7 +2120,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     const VkCommandBufferBeginInfo *pBeginInfo)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkResult result            = VK_ERROR_VALIDATION_FAILED;
+    VkResult result            = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 commandBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2157,7 +2157,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkCommandBufferResetFlags flags)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    VkResult result            = VK_ERROR_VALIDATION_FAILED;
+    VkResult result            = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 commandBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
@@ -2721,7 +2721,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     uint32_t       *pImageIndex)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkResult result   = VK_ERROR_VALIDATION_FAILED;
+    VkResult result   = VK_ERROR_VALIDATION_FAILED_EXT;
     VkBool32 skipCall = VK_FALSE;
 
     loader_platform_thread_lock_mutex(&globalLock);
