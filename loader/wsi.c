@@ -38,14 +38,13 @@ static const VkExtensionProperties wsi_surface_extension_info = {
         .specVersion = VK_KHR_SURFACE_REVISION,
 };
 
-#ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 static const VkExtensionProperties wsi_win32_surface_extension_info = {
         .extensionName = VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_WIN32_SURFACE_REVISION,
 };
-#endif/ VK_USE_PLATFORM_WIN32_KHR
-#else // _WIN32
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
 #ifdef VK_USE_PLATFORM_MIR_KHR
 static const VkExtensionProperties wsi_mir_surface_extension_info = {
         .extensionName = VK_KHR_MIR_SURFACE_EXTENSION_NAME,
@@ -73,18 +72,22 @@ static const VkExtensionProperties wsi_xlib_surface_extension_info = {
         .specVersion = VK_KHR_XLIB_SURFACE_REVISION,
 };
 #endif // VK_USE_PLATFORM_XLIB_KHR
-#endif // _WIN32
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+static const VkExtensionProperties wsi_android_surface_extension_info = {
+        .extensionName = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+        .specVersion = VK_KHR_ANDROID_SURFACE_REVISION,
+};
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 
 void wsi_add_instance_extensions(
         const struct loader_instance *inst,
         struct loader_extension_list *ext_list)
 {
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_surface_extension_info);
-#ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_win32_surface_extension_info);
-#endif/ VK_USE_PLATFORM_WIN32_KHR
-#else // _WIN32
+#endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_mir_surface_extension_info);
 #endif // VK_USE_PLATFORM_MIR_KHR
@@ -97,7 +100,9 @@ void wsi_add_instance_extensions(
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     loader_add_to_ext_list(inst, ext_list, 1, &wsi_xlib_surface_extension_info);
 #endif // VK_USE_PLATFORM_XLIB_KHR
-#endif // _WIN32
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    loader_add_to_ext_list(inst, ext_list, 1, &wsi_android_surface_extension_info);
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 }
 
 void wsi_create_instance(
@@ -105,28 +110,37 @@ void wsi_create_instance(
         const VkInstanceCreateInfo *pCreateInfo)
 {
     ptr_instance->wsi_surface_enabled = false;
-#ifdef _WIN32
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
     ptr_instance->wsi_win32_surface_enabled = true;
-#else // _WIN32
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
     ptr_instance->wsi_mir_surface_enabled = false;
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
     ptr_instance->wsi_wayland_surface_enabled = false;
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
     ptr_instance->wsi_xcb_surface_enabled = false;
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     ptr_instance->wsi_xlib_surface_enabled = false;
-#endif // _WIN32
+#endif // VK_USE_PLATFORM_XLIB_KHR
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    ptr_instance->wsi_android_surface_enabled = false;
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 
     for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_surface_enabled = true;
             continue;
         }
-#ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_win32_surface_enabled = true;
             continue;
         }
-#endif/ VK_USE_PLATFORM_WIN32_KHR
-#else // _WIN32
+#endif // VK_USE_PLATFORM_WIN32_KHR
 #ifdef VK_USE_PLATFORM_MIR_KHR
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0) {
             ptr_instance->wsi_mir_surface_enabled = true;
@@ -151,7 +165,12 @@ void wsi_create_instance(
             continue;
         }
 #endif // VK_USE_PLATFORM_XLIB_KHR
-#endif // _WIN32
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0) {
+            ptr_instance->wsi_android_surface_enabled = true;
+            continue;
+        }
+#endif // VK_USE_PLATFORM_ANDROID_KHR
     }
 }
 
@@ -454,8 +473,6 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 }
 
 
-#ifdef _WIN32
-
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 
 /*
@@ -544,9 +561,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWin32PresentationSupportK
     return icd->GetPhysicalDeviceWin32PresentationSupportKHR(phys_dev->phys_dev,
                                                 queueFamilyIndex);
 }
-#endif/ VK_USE_PLATFORM_WIN32_KHR
-
-#else // _WIN32 (i.e. Linux)
+#endif // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 
@@ -932,8 +947,60 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXlibPresentationSupportKH
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
-#endif // _WIN32
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
 
+/*
+ * Functions for the VK_KHR_android_surface extension:
+ */
+
+/*
+ * This is the trampoline entrypoint
+ * for CreateAndroidSurfaceKHR
+ */
+LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
+    VkInstance                                  instance,
+    ANativeWindow*                              window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    const VkLayerInstanceDispatchTable *disp;
+    disp = loader_get_instance_dispatch(instance);
+    VkResult res;
+
+    res = disp->CreateAndroidSurfaceKHR(instance, window, pAllocator, pSurface);
+    return res;
+}
+
+/*
+ * This is the instance chain terminator function
+ * for CreateAndroidSurfaceKHR
+ */
+VKAPI_ATTR VkResult VKAPI_CALL loader_CreateAndroidSurfaceKHR(
+    VkInstance                                  instance,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    struct loader_instance *ptr_instance = loader_get_instance(instance);
+    VkIcdSurfaceAndroid *pIcdSurface = NULL;
+
+    pIcdSurface = loader_heap_alloc(ptr_instance,
+                                    sizeof(VkIcdSurfaceAndroid),
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (pIcdSurface == NULL) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_ANDROID;
+    pIcdSurface->dpy = dpy;
+    pIcdSurface->window = window;
+
+    *pSurface = (VkSurfaceKHR) pIcdSurface;
+
+    return VK_SUCCESS;
+}
+
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
                                  const char* name, void **addr)
@@ -993,7 +1060,6 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 
-#ifdef _WIN32
 #ifdef VK_USE_PLATFORM_WIN32_KHR
     /*
      * Functions for the VK_KHR_win32_surface extension:
@@ -1007,7 +1073,6 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 #endif // VK_USE_PLATFORM_WIN32_KHR
-#else // _WIN32 (i.e. Linux)
 #ifdef VK_USE_PLATFORM_MIR_KHR
     /*
      * Functions for the VK_KHR_mir_surface extension:
@@ -1058,7 +1123,15 @@ bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance,
         return true;
     }
 #endif // VK_USE_PLATFORM_XLIB_KHR
-#endif // _WIN32
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    /*
+     * Functions for the VK_KHR_android_surface extension:
+     */
+    if (!strcmp("vkCreateAndroidSurfaceKHR", name)) {
+        *addr = ptr_instance->wsi_xlib_surface_enabled ? (void *) vkCreateAndroidSurfaceKHR : NULL;
+        return true;
+    }
+#endif // VK_USE_PLATFORM_ANDROID_KHR
 
     return false;
 }

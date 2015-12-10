@@ -205,7 +205,6 @@ struct loader_icd {
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
     PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR GetPhysicalDeviceXcbPresentationSupportKHR;
-    PFN_vkCreateXcbSurfaceKHR vkCreateXcbSurfaceKHR;
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR GetPhysicalDeviceXlibPresentationSupportKHR;
@@ -246,14 +245,24 @@ struct loader_instance {
     VkAllocationCallbacks alloc_callbacks;
 
     bool wsi_surface_enabled;
-#ifdef _WIN32
+#ifdef VK_USE_PLATFORM_WIN32_KHR
     bool wsi_win32_surface_enabled;
-#else // _WIN32
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
     bool wsi_mir_surface_enabled;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
     bool wsi_wayland_surface_enabled;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
     bool wsi_xcb_surface_enabled;
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     bool wsi_xlib_surface_enabled;
-#endif // _WIN32
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    bool wsi_android_surface_enabled;
+#endif
 };
 
 /* per enumerated PhysicalDevice structure */

@@ -40,10 +40,60 @@ from source_line_info import sourcelineinfo
 from collections import defaultdict
 
 def proto_is_global(proto):
-    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name == "CreateInstance" or proto.name == "EnumerateInstanceLayerProperties" or proto.name == "EnumerateInstanceExtensionProperties" or proto.name == "EnumerateDeviceLayerProperties" or proto.name == "EnumerateDeviceExtensionProperties" or proto.name == "CreateXcbSurfaceKHR" or proto.name == "vkGetPhysicalDeviceXcbPresentationSupportKHR"  or proto.name == "CreateWin32SurfaceKHR" or proto.name == "vkGetPhysicalDeviceWin32PresentationSupportKHR":
+    global_function_names = [
+        "CreateInstance",
+        "EnumerateInstanceLayerProperties",
+        "EnumerateInstanceExtensionProperties",
+        "EnumerateDeviceLayerProperties",
+        "EnumerateDeviceExtensionProperties",
+        "CreateXcbSurfaceKHR",
+        "vkGetPhysicalDeviceXcbPresentationSupportKHR",
+        "CreateXlibSurfaceKHR",
+        "vkGetPhysicalDeviceXlibPresentationSupportKHR",
+        "CreateWaylandSurfaceKHR",
+        "vkGetPhysicalDeviceWaylandPresentationSupportKHR",
+        "CreateMirSurfaceKHR",
+        "vkGetPhysicalDeviceMirPresentationSupportKHR",
+        "CreateAndroidSurfaceKHR",
+        "CreateWin32SurfaceKHR",
+        "vkGetPhysicalDeviceWin32PresentationSupportKHR"
+    ]
+    if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name in global_function_names:
        return True
     else:
        return False
+
+def wsi_name(ext_name):
+    wsi_prefix = ""
+    if 'Xcb' in ext_name:
+        wsi_prefix = 'XCB'
+    elif 'Xlib' in ext_name:
+        wsi_prefix = 'XLIB'
+    elif 'Win32' in ext_name:
+        wsi_prefix = 'WIN32'
+    elif 'Mir' in ext_name:
+        wsi_prefix = 'MIR'
+    elif 'Wayland' in ext_name:
+        wsi_prefix = 'WAYLAND'
+    elif 'Android' in ext_name:
+        wsi_prefix = 'ANDROID'
+    else:
+        wsi_prefix = ''
+    return wsi_prefix
+
+def wsi_ifdef(ext_name):
+    wsi_prefix = wsi_name(ext_name)
+    if not wsi_prefix:
+        return ''
+    else:
+        return "#ifdef VK_USE_PLATFORM_%s_KHR" % wsi_prefix
+
+def wsi_endif(ext_name):
+    wsi_prefix = wsi_name(ext_name)
+    if not wsi_prefix:
+        return ''
+    else:
+        return "#endif  // VK_USE_PLATFORM_%s_KHR" % wsi_prefix
 
 def generate_get_proc_addr_check(name):
     return "    if (!%s || %s[0] != 'v' || %s[1] != 'k')\n" \
@@ -431,12 +481,12 @@ class Subcommand(object):
                             func_body.append('    {')
                             extra_space = "    "
                             for ext_name in ext_list:
-                                if 'Xcb' in ext_name:
-                                    func_body.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
+                                if wsi_name(ext_name):
+                                    func_body.append('%s' % wsi_ifdef(ext_name))
                                 func_body.append('    %sif (!strcmp("%s", funcName))\n'
                                                  '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
-                                if 'Xcb' in ext_name:
-                                    func_body.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+                                if wsi_name(ext_name):
+                                    func_body.append('%s' % wsi_endif(ext_name))
                             if 0 != len(ext_enable):
                                func_body.append('    }\n')
 
@@ -541,12 +591,12 @@ class Subcommand(object):
                             func_body.append('    {')
                             extra_space = "    "
                             for ext_name in ext_list:
-                                if 'Xcb' in ext_name:
-                                    func_body.append('#ifdef VK_USE_PLATFORM_XCB_KHR')
+                                if wsi_name(ext_name):
+                                    func_body.append('%s' % wsi_ifdef(ext_name))
                                 func_body.append('    %sif (!strcmp("%s", funcName))\n'
                                          '            return reinterpret_cast<PFN_vkVoidFunction>(%s);' % (extra_space, ext_name, ext_name))
-                                if 'Xcb' in ext_name:
-                                    func_body.append('#endif //VK_USE_PLATFORM_XCB_KHR')
+                                if wsi_name(ext_name):
+                                    func_body.append('%s' % wsi_endif(ext_name))
                             if 0 != len(ext_enable):
                                 func_body.append('    }\n')
 
@@ -748,8 +798,8 @@ class GenericLayerSubcommand(Subcommand):
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
         else:
-            if 'Xcb' in proto.name:
-              funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
+            if wsi_name(proto.name):
+                funcs.append('%s' % wsi_ifdef(proto.name))
             funcs.append('%s' % self.lineinfo.get())
             dispatch_param = proto.params[0].name
             # Must use 'instance' table for these APIs, 'device' table otherwise
@@ -763,8 +813,8 @@ class GenericLayerSubcommand(Subcommand):
                      '    %s%s_dispatch_table(%s)->%s;\n'
                      '%s'
                      '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), stmt))
-            if 'Xcb' in proto.name:
-              funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+            if wsi_name(proto.name):
+                funcs.append('%s' % wsi_endif(proto.name))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1172,8 +1222,8 @@ class APIDumpSubcommand(Subcommand):
                  '%s'
                  '}' % (qual, decl, table_type, dispatch_param, ret_val, proto.c_call(), f_open, log_func, f_close, stmt))
         else:
-            if 'Xcb' in decl:
-                funcs.append('#ifdef VK_USE_PLATFORM_XCB_KHR')
+            if wsi_name(decl):
+                funcs.append('%s' % wsi_ifdef(decl))
             funcs.append('%s%s\n'
                      '{\n'
                      '    using namespace StreamControl;\n'
@@ -1181,13 +1231,13 @@ class APIDumpSubcommand(Subcommand):
                      '    %s%s%s\n'
                      '%s'
                      '}' % (qual, decl, ret_val, table_type, dispatch_param, proto.c_call(), f_open, log_func, f_close, stmt))
-            if 'Xcb' in decl:
-                funcs.append('#endif //VK_USE_PLATFORM_XCB_KHR')
+            if wsi_name(decl):
+                funcs.append('%s' % wsi_endif(decl))
         return "\n\n".join(funcs)
 
     def generate_body(self):
         self.layer_name = "APIDump"
-        if sys.platform == 'win32':
+        if sys.platform.startswith('win32'):
             instance_extensions=[('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
                                    'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
@@ -1195,7 +1245,7 @@ class APIDumpSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateWin32SurfaceKHR',
                                    'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
-        else:
+        elif sys.platform.startswith('linux'):
             instance_extensions=[('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
                                    'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
@@ -1203,6 +1253,13 @@ class APIDumpSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateXcbSurfaceKHR',
                                    'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+        # TODO: Add cases for Mir, Xlib, Wayland
+        else:
+            instance_extensions=[('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
         extensions=[('wsi_enabled',
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
@@ -1724,8 +1781,8 @@ class ObjectTrackerSubcommand(Subcommand):
                 table_type = "instance"
             else:
                 table_type = "device"
-            if 'Xcb' in proto.name:
-                funcs.append("#ifdef VK_USE_PLATFORM_XCB_KHR")
+            if wsi_name(proto.name):
+                funcs.append('%s' % wsi_ifdef(proto.name))
             funcs.append('%s%s\n'
                      '{\n'
                      '%s'
@@ -1734,8 +1791,8 @@ class ObjectTrackerSubcommand(Subcommand):
                      '%s'
                      '%s'
                      '}' % (qual, decl, using_line, destroy_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, stmt))
-            if 'Xcb' in proto.name:
-                funcs.append("#endif //VK_USE_PLATFORM_XCB_KHR")
+            if wsi_name(proto.name):
+                funcs.append('%s' % wsi_endif(proto.name))
         return "\n\n".join(funcs)
 
     def generate_body(self):
@@ -1744,7 +1801,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
                       'vkAcquireNextImageKHR', 'vkQueuePresentKHR'])]
-        if sys.platform == 'win32':
+        if sys.platform.startswith('win32'):
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
@@ -1753,7 +1810,7 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateWin32SurfaceKHR',
                                    'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
-        else:
+        elif sys.platform.startswith('linux'):
             instance_extensions=[('msg_callback_get_proc_addr', []),
                                   ('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
@@ -1762,6 +1819,14 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
                                    'vkCreateXcbSurfaceKHR',
                                    'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+        # TODO: Add cases for Mir, Wayland and Xlib
+        else: # android
+            instance_extensions=[('msg_callback_get_proc_addr', []),
+                                  ('wsi_enabled',
+                                  ['vkGetPhysicalDeviceSurfaceSupportKHR',
+                                   'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
+                                   'vkGetPhysicalDeviceSurfaceFormatsKHR',
+                                   'vkGetPhysicalDeviceSurfacePresentModesKHR'])]
         body = [self.generate_maps(),
                 self.generate_procs(),
                 self.generate_destroy_instance(),

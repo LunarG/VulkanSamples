@@ -196,6 +196,9 @@ typedef struct VkLayerInstanceDispatchTable_
     PFN_vkCreateXlibSurfaceKHR CreateXlibSurfaceKHR;
     PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR GetPhysicalDeviceXlibPresentationSupportKHR;
 #endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    PFN_vkCreateAndroidSurfaceKHR CreateAndroidSurfaceKHR;
+#endif
 } VkLayerInstanceDispatchTable;
 
 // LL node for tree of dbg callback functions

@@ -136,6 +136,9 @@ const VkLayerInstanceDispatchTable instance_disp = {
     .CreateXlibSurfaceKHR = loader_CreateXlibSurfaceKHR,
     .GetPhysicalDeviceXlibPresentationSupportKHR = loader_GetPhysicalDeviceXlibPresentationSupportKHR,
 #endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    .CreateAndroidSurfaceKHR = loader_CreateAndroidSurfaceKHR,
+#endif
 };
 
 LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
