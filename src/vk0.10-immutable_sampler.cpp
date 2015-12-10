@@ -144,7 +144,7 @@ int main(int argc, char **argv)
     resource_layout_info[0].bindingCount = resource_count;
     resource_layout_info[0].pBinding = resource_binding;
 
-    VkDescriptorSetLayout descriptor_layouts[0] = {};
+    VkDescriptorSetLayout descriptor_layouts[1] = {};
     res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL, &descriptor_layouts[0]);
     assert(res == VK_SUCCESS);
 
