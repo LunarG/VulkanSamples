@@ -93,15 +93,15 @@ const char *vertShaderText =
         "}\n";
 
 const char *fragShaderText=
-    "#version 140\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (binding = 1) uniform sampler2D tex;\n"
-    "layout (location = 0) in vec2 texcoord;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = textureLod(tex, texcoord, 0.0);\n"
-    "}\n";
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "layout (binding = 1) uniform sampler2D tex;\n"
+        "layout (location = 0) in vec2 texcoord;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "void main() {\n"
+        "   outColor = textureLod(tex, texcoord, 0.0);\n"
+        "}\n";
 
 // Some timing code to detect if our cache hits matter
 typedef unsigned long long timestamp_t;
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
     pipelineCache.initialDataSize = startCacheSize;
     pipelineCache.pInitialData = startCacheData;
     pipelineCache.flags = 0;
-    res = vkCreatePipelineCache(info.device, &pipelineCache, NULL, &info.pipelineCache);
+    res = vkCreatePipelineCache(info.device, &pipelineCache, nullptr, &info.pipelineCache);
     assert(res == VK_SUCCESS);
 
     // Free our initialData now that pipeline has been created
@@ -244,10 +244,15 @@ int main(int argc, char **argv)
 
     // End standard draw stuff
 
-    // Store away the cache that we've populated
-    //
-    // This could concievably happen earlier, depends on when the pipeline cache stops
-    // being populated internally.
+    // If we loaded a pipeline, let's try merging it with our current one.
+    if (startCacheData) {
+        // TODO: Create another pipeline, preferably different from the first one
+        //       and merge it here.  Then store the merged one.
+        // vkMergePipelineCaches()
+    }
+
+    // Store away the cache that we've populated.  This could concievably happen earlier,
+    // depends on when the pipeline cache stops being populated internally.
     size_t endCacheSize = 0;
     void*  endCacheData = {};
 
@@ -256,8 +261,8 @@ int main(int argc, char **argv)
 
     // Allocate memory to hold the initial cache data
     endCacheData = (char*) malloc (sizeof(char) * endCacheSize);
-    if (endCacheData == NULL) {
-        fputs ("Memory error",stderr);
+    if (!endCacheData) {
+        fputs ("Memory error", stderr);
         exit (2);
     }
 
@@ -270,7 +275,7 @@ int main(int argc, char **argv)
     pWriteFile = fopen (writeFileName, "wb");
     fwrite (endCacheData, sizeof(char), endCacheSize, pWriteFile);
     fclose (pWriteFile);
-    printf("  cacheData written to %s\n", writeFileName);
+    printf ("  cacheData written to %s\n", writeFileName);
 
     /* VULKAN_KEY_END */
 
