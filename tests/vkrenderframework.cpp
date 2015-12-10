@@ -700,6 +700,17 @@ void VkImageObj::init(uint32_t w, uint32_t h,
          ASSERT_TRUE(false) << "Error: Cannot find requested tiling configuration";
     }
 
+    VkImageFormatProperties imageFormatProperties = {0};
+    vkGetPhysicalDeviceImageFormatProperties(
+                m_device->phy().handle(), fmt, VK_IMAGE_TYPE_2D,
+                tiling,
+                usage,
+                0, // VkImageCreateFlags
+                &imageFormatProperties);
+    if (imageFormatProperties.maxMipLevels < mipCount) {
+        mipCount = imageFormatProperties.maxMipLevels;
+    }
+
     VkImageCreateInfo imageCreateInfo = vk_testing::Image::create_info();
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.format = fmt;
