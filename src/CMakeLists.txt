@@ -85,6 +85,7 @@ endif()
 find_library(VULKAN_LOADER NAMES vulkan-0 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Release"
+                   "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
                    "${PROJECT_SOURCE_DIR}\\..\\Bin\\Release" )
 
 find_program(GLSLANG_VALIDATOR NAMES glslangValidator
