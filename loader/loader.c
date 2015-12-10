@@ -1362,7 +1362,10 @@ static void loader_debug_init(void)
             len = strlen(env);
 
         if (len > 0) {
-            if (strncmp(env, "warn", len) == 0) {
+            if (strncmp(env, "all", len) == 0) {
+                g_loader_debug = ~0u;
+                g_loader_log_msgs = ~0u;
+            } else if (strncmp(env, "warn", len) == 0) {
                 g_loader_debug |= LOADER_WARN_BIT;
                 g_loader_log_msgs |= VK_DBG_REPORT_WARN_BIT;
             } else if (strncmp(env, "info", len) == 0) {
