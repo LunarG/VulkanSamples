@@ -36,18 +36,18 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
     },
     {
         .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_SURFACE_REVISION,
+        .specVersion = VK_KHR_SURFACE_SPEC_VERSION,
     },
 #ifdef VK_USE_PLATFORM_XCB_KHR
     {
         .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_XCB_SURFACE_REVISION,
+        .specVersion = VK_KHR_XCB_SURFACE_SPEC_VERSION,
     },
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     {
         .extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_XLIB_SURFACE_REVISION,
+        .specVersion = VK_KHR_XLIB_SURFACE_SPEC_VERSION,
     }
 #endif
 #ifdef VK_USE_PLATFORM_MIR_KHR
@@ -67,7 +67,7 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
 const VkExtensionProperties intel_phy_dev_gpu_exts[INTEL_PHY_DEV_EXT_COUNT] = {
     {
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
+        .specVersion = VK_KHR_SWAPCHAIN_SPEC_VERSION,
     }
 };
 

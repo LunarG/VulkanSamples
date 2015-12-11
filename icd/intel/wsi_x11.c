@@ -132,8 +132,7 @@ static const VkFormat x11_presentable_formats[] = {
 //
 // Create a VkSurfaceKHR object for XCB window connections:
 static VkResult x11_xcb_surface_create(struct intel_instance *instance,
-                                   xcb_connection_t* connection,
-                                   xcb_window_t window,
+                                   const VkXcbSurfaceCreateInfoKHR* pCreateInfo,
                                    VkIcdSurfaceXcb **pSurface)
 {
     VkIcdSurfaceXcb *surface;
@@ -147,8 +146,8 @@ static VkResult x11_xcb_surface_create(struct intel_instance *instance,
 //    intel_handle_init(&surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, instance);
 
     surface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
-    surface->connection = connection;
-    surface->window = window;
+    surface->connection = pCreateInfo->connection;
+    surface->window = pCreateInfo->window;
 
     *pSurface = surface;
 
@@ -161,8 +160,7 @@ static VkResult x11_xcb_surface_create(struct intel_instance *instance,
 //
 // Create a VkSurfaceKHR object for XLIB window connections:
 static VkResult x11_xlib_surface_create(struct intel_instance *instance,
-                                   Display* dpy,
-                                   Window window,
+                                   const VkXlibSurfaceCreateInfoKHR* pCreateInfo,
                                    VkIcdSurfaceXlib **pSurface)
 {
     VkIcdSurfaceXlib *surface;
@@ -176,8 +174,8 @@ static VkResult x11_xlib_surface_create(struct intel_instance *instance,
 //    intel_handle_init(&surface, VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, instance);
 
     surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
-    surface->dpy = dpy;
-    surface->window = window;
+    surface->dpy = pCreateInfo->dpy;
+    surface->window = pCreateInfo->window;
 
     *pSurface = surface;
 
@@ -362,8 +360,8 @@ static VkResult x11_get_surface_capabilities(
     pSurfaceProperties->maxImageExtent.height =
         pSurfaceProperties->currentExtent.height;
     pSurfaceProperties->maxImageArrayLayers = 1;
-    pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
-    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     pSurfaceProperties->supportedUsageFlags =
         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -1042,13 +1040,12 @@ VkResult intel_wsi_fence_wait(struct intel_fence *fence,
 // Create a VkSurfaceKHR object for XCB window connections:
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                              instance,
-    xcb_connection_t*                       connection,
-    xcb_window_t                            window,
+    const VkXcbSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*            pAllocator,
     VkSurfaceKHR*                           pSurface)
 {
     return x11_xcb_surface_create((struct intel_instance *) instance,
-                              connection, window,
+                              pCreateInfo,
                               (VkIcdSurfaceXcb **) pSurface);
 }
 
@@ -1073,13 +1070,12 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupp
 // Create a VkSurfaceKHR object for XLIB window connections:
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance                              instance,
-    Display*                                dpy,
-    Window                                  window,
+    const VkXlibSurfaceCreateInfoKHR*       pCreateInfo,
     const VkAllocationCallbacks*            pAllocator,
     VkSurfaceKHR*                           pSurface)
 {
     return x11_xlib_surface_create((struct intel_instance *) instance,
-                              dpy, window,
+                              pCreateInfo,
                               (VkIcdSurfaceXlib **) pSurface);
 }
 
