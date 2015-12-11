@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -46,7 +47,7 @@ struct layer_data {
 
 static const VkLayerProperties globalLayerProps[] = {
     {
-        "Generic",
+        "VK_LAYER_LUNARG_generic",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Generic",
@@ -55,7 +56,7 @@ static const VkLayerProperties globalLayerProps[] = {
 
 static const VkLayerProperties deviceLayerProps[] = {
     {
-        "Generic",
+        "VK_LAYER_LUNARG_generic",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Generic",

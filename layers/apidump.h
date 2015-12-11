@@ -36,7 +36,7 @@
 #define LAYER_PROPS_ARRAY_SIZE 1
 static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
     {
-        "Generic",
+        "VK_LAYER_LUNARG_api_dump",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: APIDump",
@@ -46,7 +46,7 @@ static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
 #define LAYER_DEV_PROPS_ARRAY_SIZE 1
 static const VkLayerProperties layerDevProps[LAYER_DEV_PROPS_ARRAY_SIZE] = {
     {
-        "Generic",
+        "VK_LAYER_LUNARG_api_dump",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: APIDump",

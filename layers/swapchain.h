@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,7 +37,7 @@
 
 static const VkLayerProperties globalLayerProps[] = {
     {
-        "Swapchain",
+        "VK_LAYER_LUNARG_swapchain",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Swapchain",
@@ -45,7 +46,7 @@ static const VkLayerProperties globalLayerProps[] = {
 
 static const VkLayerProperties deviceLayerProps[] = {
     {
-        "Swapchain",
+        "VK_LAYER_LUNARG_swapchain",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
         "layer: Swapchain",

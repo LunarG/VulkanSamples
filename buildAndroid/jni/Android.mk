@@ -63,6 +63,18 @@ LOCAL_LDLIBS    := -llog
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := VKLayerDeviceLimits
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/device_limits.cpp
+LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_debug_marker_table.cpp
+LOCAL_C_INCLUDES += $(SRC_DIR)/include \
+                    $(SRC_DIR)/buildAndroid/generated \
+                    $(SRC_DIR)/loader
+LOCAL_STATIC_LIBRARIES += layer_utils
+LOCAL_CPPFLAGS += -DVK_USE_PLATFORM_ANDROID_KHR
+LOCAL_LDLIBS    := -llog
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
 LOCAL_MODULE := VKLayerImage
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/image.cpp
 LOCAL_SRC_FILES += $(SRC_DIR)/layers/vk_layer_table.cpp

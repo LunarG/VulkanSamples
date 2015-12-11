@@ -313,10 +313,12 @@ class Subcommand(object):
             # Do nothing, extension definition part of generic.h
             ggep_body.append('%s' % self.lineinfo.get())
         else:
+            layer_name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', layer)
+            layer_name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', layer_name).lower()
             ggep_body.append('%s' % self.lineinfo.get())
             ggep_body.append('static const VkLayerProperties globalLayerProps[] = {')
             ggep_body.append('    {')
-            ggep_body.append('        "%s",' % layer)
+            ggep_body.append('        "VK_LAYER_LUNARG_%s",' % layer_name)
             ggep_body.append('        VK_API_VERSION, // specVersion')
             ggep_body.append('        VK_MAKE_VERSION(0, 1, 0), // implementationVersion')
             ggep_body.append('        "layer: %s",' % layer)

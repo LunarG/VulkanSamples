@@ -15,6 +15,6 @@
 APP_ABI := armeabi-v7a arm64-v8a x86 x86_64 mips mips64
 APP_PLATFORM := android-22
 APP_STL := gnustl_static
-APP_MODULES := layer_utils VKLayerBasic VKLayerDrawState VKLayerMemTracker VKLayerImage VKLayerParamChecker VKLayerGeneric VKLayerAPIDump VKLayerObjectTracker VKLayerThreading VKLayerValidationTests
+APP_MODULES := layer_utils VKLayerBasic VKLayerDrawState VKLayerMemTracker VKLayerDeviceLimits VKLayerImage VKLayerParamChecker VKLayerGeneric VKLayerAPIDump VKLayerObjectTracker VKLayerThreading VKLayerValidationTests
 APP_CPPFLAGS += -std=c++11 -DVK_PROTOTYPES
 NDK_TOOLCHAIN_VERSION := 4.8

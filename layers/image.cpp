@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -221,10 +222,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
 
 static const VkLayerProperties pc_global_layers[] = {
     {
-        "Image",
+        "VK_LAYER_LUNARG_image",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
-        "Validation layer: Image ParamChecker",
+        "Validation layer: Image",
     }
 };
 

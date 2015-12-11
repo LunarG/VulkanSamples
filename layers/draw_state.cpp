@@ -2884,7 +2884,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
 
 static const VkLayerProperties ds_global_layers[] = {
     {
-        "DrawState",
+        "VK_LAYER_LUNARG_draw_state",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
         "Validation layer: DrawState",

@@ -1,6 +1,7 @@
 /*
  *
  * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 Google Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,7 +44,7 @@
 #include "vk_struct_size_helper.h"
 #include "device_limits.h"
 #include "vk_layer_config.h"
-#include "vk_debug_marker_layer.h"
+#include "vulkan/vk_debug_marker_layer.h"
 #include "vk_layer_table.h"
 #include "vk_layer_debug_marker_table.h"
 #include "vk_layer_data.h"
@@ -164,7 +165,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionPrope
 
 static const VkLayerProperties dl_global_layers[] = {
     {
-        "DeviceLimits",
+        "VK_LAYER_LUNARG_device_limits",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
         "Validation layer: Device Limits",
