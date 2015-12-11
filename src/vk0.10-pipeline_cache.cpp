@@ -36,42 +36,9 @@ Create and use a pipeline cache accross runs.
 #include <sys/time.h>
 
 // This sample tries to save and reuse pipeline cache data betwee runs
-// On first run, no cache will be found, but it will be created and saved
+// On first run, no cache will be found, it will be created and saved
 // to disk. On later runs, the cache should be found, loaded, and used.
 // Hopefully a speedup will observed.
-
-// Design notes:
-//    VkPipelineCacheCreateInfo.pInitialData
-//        VkPipelineCacheCreateInfo.initialDataSize
-//        If either are NULL, the cache will be new and clean
-//        vkCreatePipelineCache ( VkPipelineCache )
-//
-//    Create a pipeline and use the pointer to cache when calling vkCreateGraphicsPipelines( VkPipelineCache )
-//        If pipelineCache created above had data worth using, hopefully we see a speedup, indicating a cache hit
-//        May need to create a complex pipeline to see speed up (complex shaders, etc.)
-//
-//
-//
-//    Extra credit:
-//        Look on disk for second cache name
-//            If found, load it into VkPipelineCacheCreateInfo.pInitialData
-//            Create a new cache with it using vkCreatePipelineCache ( )
-//            Merge with existing cache object, resulting in new cache object
-//
-//
-//    Store the cache to disk by:
-//        This is unclear to me.  Is the cache object populated automatically after vkCreateGraphicsPipelines uses it?
-//        Let's assume so for now.  That means we shouldn't extract cache data until after the pipeline is created.
-//        Pull data from cache with vkGetPipelineCacheData
-//        Write it to disk (pData)
-//
-//    Destroy the pipeline cache object we created using: vkDestroyPipelineCache( )
-//
-//    Add timing data for each step, so it is clear that loading from cache is faster than creating a new pipeline...
-//
-//    Possibly use the following allocation Scope for memory, if the opportunity arises:
-//        VK_SYSTEM_ALLOCATION_SCOPE_CACHE
-
 
 const char *vertShaderText =
         "#version 140\n"
@@ -102,15 +69,6 @@ const char *fragShaderText=
         "void main() {\n"
         "   outColor = textureLod(tex, texcoord, 0.0);\n"
         "}\n";
-
-// Some timing code to detect if our cache hits matter
-typedef unsigned long long timestamp_t;
-static timestamp_t get_timestamp ()
-{
-  struct timeval now;
-  gettimeofday (&now, NULL);
-  return  now.tv_usec + (timestamp_t)now.tv_sec * 1000000;
-}
 
 int main(int argc, char **argv)
 {
@@ -178,12 +136,11 @@ int main(int argc, char **argv)
         fclose (pReadFile);
         printf("  Pipeline cache HIT!\n");
         printf("  cacheData loaded from %s\n", readFileName);
-
     } else {
-
         printf("  Pipeline cache miss!\n");
     }
 
+    // Feed the initial cache data into pipeline creation
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipelineCache.pNext = NULL;
@@ -196,12 +153,11 @@ int main(int argc, char **argv)
     // Free our initialData now that pipeline has been created
     free (startCacheData);
 
-    // Time (roughly) the time taken to create the graphics pipeline
-    timestamp_t t0 = get_timestamp();
+    // Time (roughly) taken to create the graphics pipeline
+    timestamp_t start = get_milliseconds();
     init_pipeline(info, depthPresent);
-    timestamp_t t1 = get_timestamp();
-    double milliSeconds = (t1 - t0) / 1000.0L;
-    printf("  vkCreateGraphicsPipeline time: %f ms\n", milliSeconds);
+    timestamp_t elapsed = get_milliseconds() - start;
+    printf("  vkCreateGraphicsPipeline time: %0.f ms\n", (double)elapsed);
 
     // Begin standard draw stuff
 
