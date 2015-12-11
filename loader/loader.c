@@ -1086,6 +1086,21 @@ void loader_get_icd_loader_instance_extensions(
     debug_report_add_instance_extensions(inst, inst_exts);
 }
 
+struct loader_physical_device *loader_get_physical_device(const VkPhysicalDevice physdev)
+{
+    uint32_t i;
+    for (struct loader_instance *inst = loader.instances; inst; inst = inst->next) {
+        for (i = 0; i < inst->total_gpu_count; i++) {
+            //TODO this aliases physDevices within instances, need for this
+            // function to go away
+            if (inst->phys_devs[i].disp == loader_get_instance_dispatch(physdev)) {
+                return &inst->phys_devs[i];
+            }
+        }
+    }
+    return NULL;
+}
+
 struct loader_icd *loader_get_icd_and_device(const VkDevice device,
                                              struct loader_device **found_dev)
 {
@@ -3379,11 +3394,11 @@ VKAPI_ATTR void VKAPI_CALL loader_GetPhysicalDeviceSparseImageFormatProperties(
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
         VkPhysicalDevice                        physicalDevice,
         const VkDeviceCreateInfo*               pCreateInfo,
-        const VkAllocationCallbacks*                 pAllocator,
+        const VkAllocationCallbacks*            pAllocator,
         VkDevice*                               pDevice)
 {
-    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
-    struct loader_icd *icd = phys_dev->this_icd;
+    struct loader_physical_device *phys_dev;
+    struct loader_icd *icd;
     struct loader_device *dev;
     struct loader_instance *inst;
     VkDeviceCreateInfo device_create_info;
@@ -3392,6 +3407,11 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
 
     assert(pCreateInfo->queueCreateInfoCount >= 1);
 
+    //TODO this only works for one physical device per instance
+    // once CreateDevice layer bootstrapping is done via DeviceCreateInfo
+    // hopefully don't need this anymore in trampoline code
+    phys_dev = loader_get_physical_device(physicalDevice);
+    icd = phys_dev->this_icd;
     if (!icd)
         return VK_ERROR_INITIALIZATION_FAILED;
 
