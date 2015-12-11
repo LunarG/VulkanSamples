@@ -3506,11 +3506,11 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
     }
     loader_activate_device_layers(inst, dev, *pDevice);
 
-    /* initialize any device extension dispatch entry's from the instance list*/
-    loader_init_dispatch_dev_ext(inst, dev);
-
     /* finally can call down the chain */
     res = dev->loader_dispatch.core_dispatch.CreateDevice(physicalDevice, pCreateInfo, pAllocator, pDevice);
+
+    /* initialize any device extension dispatch entry's from the instance list*/
+    loader_init_dispatch_dev_ext(inst, dev);
 
     /* initialize WSI device extensions as part of core dispatch since loader has
      * dedicated trampoline code for these*/
