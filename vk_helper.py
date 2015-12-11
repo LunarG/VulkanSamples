@@ -815,8 +815,17 @@ class StructWrapperGen:
         # XXX - REMOVE this comment
         lineinfo = sourcelineinfo()
         sh_funcs.append('%s' % lineinfo.get())
+        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
+                               'VkMirSurfaceCreateInfoKHR',
+                               'VkWaylandSurfaceCreateInfoKHR',
+                               'VkXlibSurfaceCreateInfoKHR']
+        if sys.platform == 'win32':
+            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
+        else:
+            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
+            if (typedef_fwd_dict[s] not in exclude_struct_list):
+                sh_funcs.append('string %s(const %s* pStruct, const string prefix);' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
         sh_funcs.append('%s' % lineinfo.get())
         for s in sorted(self.struct_dict):
@@ -828,6 +837,8 @@ class StructWrapperGen:
                     # TODO: This is a tmp workaround
                     if 'ppActiveLayerNames' not in self.struct_dict[s][m]['name']:
                         stp_list.append(self.struct_dict[s][m])
+            if (typedef_fwd_dict[s] in exclude_struct_list):
+                continue
             sh_funcs.append('%s' % lineinfo.get())
             sh_funcs.append('string %s(const %s* pStruct, const string prefix)\n{' % (self._get_sh_func_name(s), typedef_fwd_dict[s]))
             sh_funcs.append('%s' % lineinfo.get())
@@ -1194,10 +1205,21 @@ class StructWrapperGen:
     def _generateValidateHelperFunctions(self):
         sh_funcs = []
         # We do two passes, first pass just generates prototypes for all the functsions
+        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
+                               'VkMirSurfaceCreateInfoKHR',
+                               'VkWaylandSurfaceCreateInfoKHR',
+                               'VkXlibSurfaceCreateInfoKHR']
+        if sys.platform == 'win32':
+            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
+        else:
+            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
+            if (typedef_fwd_dict[s] not in exclude_struct_list):
+                sh_funcs.append('uint32_t %s(const %s* pStruct);' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
         sh_funcs.append('\n')
         for s in sorted(self.struct_dict):
+            if (typedef_fwd_dict[s] in exclude_struct_list):
+                continue
             sh_funcs.append('uint32_t %s(const %s* pStruct)\n{' % (self._get_vh_func_name(s), typedef_fwd_dict[s]))
             for m in sorted(self.struct_dict[s]):
                 # TODO : Need to handle arrays of enums like in VkRenderPassCreateInfo struct
@@ -1226,8 +1248,17 @@ class StructWrapperGen:
     def _generateSizeHelperFunctions(self):
         sh_funcs = []
         # just generates prototypes for all the functions
+        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
+                               'VkMirSurfaceCreateInfoKHR',
+                               'VkWaylandSurfaceCreateInfoKHR',
+                               'VkXlibSurfaceCreateInfoKHR']
+        if sys.platform == 'win32':
+            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
+        else:
+            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
-            sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
+            if (typedef_fwd_dict[s] not in exclude_struct_list):
+                sh_funcs.append('size_t %s(const %s* pStruct);' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
         return "\n".join(sh_funcs)
 
 

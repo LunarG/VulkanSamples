@@ -1088,8 +1088,7 @@ ext_khr_xcb_surface = Extension(
     protos=[
         Proto("VkResult", "CreateXcbSurfaceKHR",
             [Param("VkInstance", "instance"),
-             Param("xcb_connection_t*", "connection"),
-             Param("xcb_window_t", "window"),
+             Param("const VkXcbSurfaceCreateInfoKHR*", "pCreateInfo"),
              Param("const VkAllocationCallbacks*", "pAllocator"),
              Param("VkSurfaceKHR*", "pSurface")]),
 
@@ -1107,8 +1106,7 @@ ext_khr_win32_surface = Extension(
     protos=[
         Proto("VkResult", "CreateWin32SurfaceKHR",
             [Param("VkInstance", "instance"),
-             Param("HINSTANCE", "hinstance"),
-             Param("HWND", "hwnd"),
+             Param("const VkWin32SurfaceCreateInfoKHR*", "pCreateInfo"),
              Param("const VkAllocationCallbacks*", "pAllocator"),
              Param("VkSurfaceKHR*", "pSurface")]),
 
