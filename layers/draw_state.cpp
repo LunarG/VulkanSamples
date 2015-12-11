@@ -1371,11 +1371,11 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 static PIPELINE_NODE* initGraphicsPipeline(layer_data* dev_data, const VkGraphicsPipelineCreateInfo* pCreateInfo, PIPELINE_NODE* pBasePipeline)
 {
     PIPELINE_NODE* pPipeline = new PIPELINE_NODE;
+
     if (pBasePipeline) {
-        memcpy((void*)pPipeline, (void*)pBasePipeline, sizeof(PIPELINE_NODE));
-    } else {
-        memset((void*)pPipeline, 0, sizeof(PIPELINE_NODE));
+        *pPipeline = *pBasePipeline;
     }
+
     // First init create info
     memcpy(&pPipeline->graphicsPipelineCI, pCreateInfo, sizeof(VkGraphicsPipelineCreateInfo));
 

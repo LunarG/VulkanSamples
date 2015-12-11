@@ -155,6 +155,32 @@ typedef struct _PIPELINE_NODE {
     VkVertexInputAttributeDescription*   pVertexAttributeDescriptions;
     uint32_t                             attachmentCount;   // number of CB attachments
     VkPipelineColorBlendAttachmentState* pAttachments;
+    // Default constructor
+    _PIPELINE_NODE():pipeline{},
+                     graphicsPipelineCI{},
+                     vertexInputCI{},
+                     iaStateCI{},
+                     tessStateCI{},
+                     vpStateCI{},
+                     rsStateCI{},
+                     msStateCI{},
+                     cbStateCI{},
+                     dsStateCI{},
+                     dynStateCI{},
+                     vsCI{},
+                     tcsCI{},
+                     tesCI{},
+                     gsCI{},
+                     fsCI{},
+                     computePipelineCI{},
+                     active_shaders(0),
+                     vtxBindingCount(0),
+                     pVertexBindingDescriptions(0),
+                     vtxAttributeCount(0),
+                     pVertexAttributeDescriptions(0),
+                     attachmentCount(0),
+                     pAttachments(0)
+                     {};
 } PIPELINE_NODE;
 
 typedef struct _SAMPLER_NODE {
@@ -213,7 +239,12 @@ typedef struct _LAYOUT_NODE {
     vector<VkShaderStageFlags>      stageFlags; // stageFlags per descriptor in this layout to verify correct updates
     unordered_set<uint32_t>         bindings;
     // Default constructor
-    _LAYOUT_NODE():layout{},createInfo{},startIndex(0),endIndex(0),dynamicDescriptorCount(0) {};
+    _LAYOUT_NODE():layout{},
+                   createInfo{},
+                   startIndex(0),
+                   endIndex(0),
+                   dynamicDescriptorCount(0)
+                   {};
 } LAYOUT_NODE;
 
 // Store layouts and pushconstants for PipelineLayout
