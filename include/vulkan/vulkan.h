@@ -125,11 +125,11 @@ typedef enum VkResult {
     VK_ERROR_INCOMPATIBLE_DRIVER = -9,
     VK_ERROR_TOO_MANY_OBJECTS = -10,
     VK_ERROR_FORMAT_NOT_SUPPORTED = -11,
-    VK_ERROR_SURFACE_LOST_KHR = 0xC0000400,
-    VK_SUBOPTIMAL_KHR = 0x40000403,
-    VK_ERROR_OUT_OF_DATE_KHR = 0xC0000804,
-    VK_ERROR_INCOMPATIBLE_DISPLAY_KHR = 0xC0001001,
-    VK_ERROR_NATIVE_WINDOW_IN_USE_KHR = 0xC0002400,
+    VK_ERROR_SURFACE_LOST_KHR = -1000000000,
+    VK_SUBOPTIMAL_KHR = 1000001003,
+    VK_ERROR_OUT_OF_DATE_KHR = -1000001004,
+    VK_ERROR_INCOMPATIBLE_DISPLAY_KHR = -1000003001,
+    VK_ERROR_NATIVE_WINDOW_IN_USE_KHR = -1000008000,
     VK_RESULT_BEGIN_RANGE = VK_ERROR_FORMAT_NOT_SUPPORTED,
     VK_RESULT_END_RANGE = VK_INCOMPLETE,
     VK_RESULT_RANGE_SIZE = (VK_INCOMPLETE - VK_ERROR_FORMAT_NOT_SUPPORTED + 1),
@@ -185,11 +185,17 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_MEMORY_BARRIER = 45,
     VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO = 46,
     VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO = 47,
-    VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR = 0xC0000800,
-    VK_STRUCTURE_TYPE_PRESENT_INFO_KHR = 0xC0000801,
-    VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR = 0xC0000C00,
-    VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR = 0xC0000C01,
-    VK_STRUCTURE_TYPE_DISPLAY_PRESENT_INFO_KHR = 0xC0001000,
+    VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR = 1000001000,
+    VK_STRUCTURE_TYPE_PRESENT_INFO_KHR = 1000001001,
+    VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR = 1000002000,
+    VK_STRUCTURE_TYPE_DISPLAY_SURFACE_CREATE_INFO_KHR = 1000002001,
+    VK_STRUCTURE_TYPE_DISPLAY_PRESENT_INFO_KHR = 1000003000,
+    VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR = 1000004000,
+    VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR = 1000005000,
+    VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR = 1000006000,
+    VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR = 1000007000,
+    VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR = 1000008000,
+    VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR = 1000009000,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO,
     VK_STRUCTURE_TYPE_RANGE_SIZE = (VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
@@ -468,7 +474,7 @@ typedef enum VkImageLayout {
     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL = 6,
     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL = 7,
     VK_IMAGE_LAYOUT_PREINITIALIZED = 8,
-    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR = 0xC0000802,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR = 1000001002,
     VK_IMAGE_LAYOUT_BEGIN_RANGE = VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_END_RANGE = VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_LAYOUT_RANGE_SIZE = (VK_IMAGE_LAYOUT_PREINITIALIZED - VK_IMAGE_LAYOUT_UNDEFINED + 1),
@@ -3097,8 +3103,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
 #define VK_KHR_surface 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSurfaceKHR)
 
-#define VK_KHR_SURFACE_REVISION           24
-#define VK_KHR_SURFACE_EXTENSION_NUMBER   1
+#define VK_KHR_SURFACE_SPEC_VERSION       24
 #define VK_KHR_SURFACE_EXTENSION_NAME     "VK_KHR_surface"
 
 
@@ -3123,7 +3128,7 @@ typedef enum VkPresentModeKHR {
 
 
 typedef enum VkSurfaceTransformFlagBitsKHR {
-    VK_SURFACE_TRANSFORM_NONE_BIT_KHR = 0x00000001,
+    VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR = 0x00000001,
     VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR = 0x00000002,
     VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR = 0x00000004,
     VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR = 0x00000008,
@@ -3162,7 +3167,7 @@ typedef struct VkSurfaceFormatKHR {
 } VkSurfaceFormatKHR;
 
 
-typedef void (VKAPI_PTR *PFN_vkDestroySurfaceKHR)(VkInstance  instance, VkSurfaceKHR  surface, const VkAllocationCallbacks* pAllocator);
+typedef void (VKAPI_PTR *PFN_vkDestroySurfaceKHR)(VkInstance instance, VkSurfaceKHR surface, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, VkSurfaceKHR surface, VkBool32* pSupported);
 typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
 typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, uint32_t* pSurfaceFormatCount, VkSurfaceFormatKHR* pSurfaceFormats);
@@ -3170,8 +3175,8 @@ typedef VkResult (VKAPI_PTR *PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)(VkPh
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
-    VkInstance                                   instance,
-    VkSurfaceKHR                                 surface,
+    VkInstance                                  instance,
+    VkSurfaceKHR                                surface,
     const VkAllocationCallbacks*                pAllocator);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -3201,8 +3206,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
 #define VK_KHR_swapchain 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSwapchainKHR)
 
-#define VK_KHR_SWAPCHAIN_REVISION         67
-#define VK_KHR_SWAPCHAIN_EXTENSION_NUMBER 2
+#define VK_KHR_SWAPCHAIN_SPEC_VERSION     67
 #define VK_KHR_SWAPCHAIN_EXTENSION_NAME   "VK_KHR_swapchain"
 
 typedef VkFlags VkSwapchainCreateFlagsKHR;
@@ -3240,49 +3244,48 @@ typedef struct VkPresentInfoKHR {
 } VkPresentInfoKHR;
 
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateSwapchainKHR)(VkDevice  device, const VkSwapchainCreateInfoKHR*  pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR*  pSwapchain);
-typedef void (VKAPI_PTR *PFN_vkDestroySwapchainKHR)(VkDevice  device, VkSwapchainKHR  swapchain, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI_PTR *PFN_vkGetSwapchainImagesKHR)(VkDevice  device, VkSwapchainKHR  swapchain, uint32_t*  pSwapchainImageCount, VkImage*  pSwapchainImages);
-typedef VkResult (VKAPI_PTR *PFN_vkAcquireNextImageKHR)(VkDevice  device, VkSwapchainKHR  swapchain, uint64_t  timeout, VkSemaphore  semaphore, VkFence  fence, uint32_t*  pImageIndex);
-typedef VkResult (VKAPI_PTR *PFN_vkQueuePresentKHR)(VkQueue  queue, const VkPresentInfoKHR*  pPresentInfo);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateSwapchainKHR)(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSwapchainKHR* pSwapchain);
+typedef void (VKAPI_PTR *PFN_vkDestroySwapchainKHR)(VkDevice device, VkSwapchainKHR swapchain, const VkAllocationCallbacks* pAllocator);
+typedef VkResult (VKAPI_PTR *PFN_vkGetSwapchainImagesKHR)(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages);
+typedef VkResult (VKAPI_PTR *PFN_vkAcquireNextImageKHR)(VkDevice device, VkSwapchainKHR swapchain, uint64_t timeout, VkSemaphore semaphore, VkFence fence, uint32_t* pImageIndex);
+typedef VkResult (VKAPI_PTR *PFN_vkQueuePresentKHR)(VkQueue queue, const VkPresentInfoKHR* pPresentInfo);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
-    VkDevice                                     device,
-    const VkSwapchainCreateInfoKHR*              pCreateInfo,
+    VkDevice                                    device,
+    const VkSwapchainCreateInfoKHR*             pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
-    VkSwapchainKHR*                              pSwapchain);
+    VkSwapchainKHR*                             pSwapchain);
 
 VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
-    VkDevice                                     device,
-    VkSwapchainKHR                               swapchain,
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
     const VkAllocationCallbacks*                pAllocator);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
-    VkDevice                                     device,
-    VkSwapchainKHR                               swapchain,
-    uint32_t*                                    pSwapchainImageCount,
-    VkImage*                                     pSwapchainImages);
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint32_t*                                   pSwapchainImageCount,
+    VkImage*                                    pSwapchainImages);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
-    VkDevice                                     device,
-    VkSwapchainKHR                               swapchain,
-    uint64_t                                     timeout,
-    VkSemaphore                                  semaphore,
-    VkFence                                      fence,
-    uint32_t*                                    pImageIndex);
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint64_t                                    timeout,
+    VkSemaphore                                 semaphore,
+    VkFence                                     fence,
+    uint32_t*                                   pImageIndex);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
-    VkQueue                                      queue,
-    const VkPresentInfoKHR*                      pPresentInfo);
+    VkQueue                                     queue,
+    const VkPresentInfoKHR*                     pPresentInfo);
 #endif
 
 #define VK_KHR_display 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayKHR)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDisplayModeKHR)
 
-#define VK_KHR_DISPLAY_REVISION           21
-#define VK_KHR_DISPLAY_EXTENSION_NUMBER   3
+#define VK_KHR_DISPLAY_SPEC_VERSION       21
 #define VK_KHR_DISPLAY_EXTENSION_NAME     "VK_KHR_display"
 
 
@@ -3405,8 +3408,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateDisplayPlaneSurfaceKHR(
 #endif
 
 #define VK_KHR_display_swapchain 1
-#define VK_KHR_DISPLAY_SWAPCHAIN_REVISION 9
-#define VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NUMBER 4
+#define VK_KHR_DISPLAY_SWAPCHAIN_SPEC_VERSION 9
 #define VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME "VK_KHR_display_swapchain"
 
 typedef struct VkDisplayPresentInfoKHR {
@@ -3433,18 +3435,27 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSharedSwapchainsKHR(
 #define VK_KHR_xlib_surface 1
 #include <X11/Xlib.h>
 
-#define VK_KHR_XLIB_SURFACE_REVISION      5
-#define VK_KHR_XLIB_SURFACE_EXTENSION_NUMBER 5
+#define VK_KHR_XLIB_SURFACE_SPEC_VERSION  6
 #define VK_KHR_XLIB_SURFACE_EXTENSION_NAME "VK_KHR_xlib_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, Display* dpy, Window window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
+
+typedef struct VkXlibSurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkXlibSurfaceCreateFlagsKHR                 flags;
+    Display*                                    dpy;
+    Window                                      window;
+} VkXlibSurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, const VkXlibSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceXlibPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, Display* dpy, VisualID visualID);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance                                  instance,
-    Display*                                    dpy,
-    Window                                      window,
+    const VkXlibSurfaceCreateInfoKHR*           pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 
@@ -3460,18 +3471,27 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSupportKHR(
 #define VK_KHR_xcb_surface 1
 #include <xcb/xcb.h>
 
-#define VK_KHR_XCB_SURFACE_REVISION       5
-#define VK_KHR_XCB_SURFACE_EXTENSION_NUMBER 6
+#define VK_KHR_XCB_SURFACE_SPEC_VERSION   6
 #define VK_KHR_XCB_SURFACE_EXTENSION_NAME "VK_KHR_xcb_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateXcbSurfaceKHR)(VkInstance instance, xcb_connection_t* connection, xcb_window_t window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
+
+typedef struct VkXcbSurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkXcbSurfaceCreateFlagsKHR                  flags;
+    xcb_connection_t*                           connection;
+    xcb_window_t                                window;
+} VkXcbSurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateXcbSurfaceKHR)(VkInstance instance, const VkXcbSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceXcbPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, xcb_connection_t* connection, xcb_visualid_t visual_id);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                                  instance,
-    xcb_connection_t*                           connection,
-    xcb_window_t                                window,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 
@@ -3487,18 +3507,27 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
 #define VK_KHR_wayland_surface 1
 #include <wayland-client.h>
 
-#define VK_KHR_WAYLAND_SURFACE_REVISION   4
-#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NUMBER 7
+#define VK_KHR_WAYLAND_SURFACE_SPEC_VERSION 5
 #define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, struct wl_display* display, struct wl_surface* surface, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkWaylandSurfaceCreateFlagsKHR;
+
+typedef struct VkWaylandSurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkWaylandSurfaceCreateFlagsKHR              flags;
+    struct wl_display*                          display;
+    struct wl_surface*                          surface;
+} VkWaylandSurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, struct wl_display* display);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     VkInstance                                  instance,
-    struct wl_display*                          display,
-    struct wl_surface*                          surface,
+    const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 
@@ -3513,18 +3542,27 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresentationSupportKHR(
 #define VK_KHR_mir_surface 1
 #include <mir_toolkit/client_types.h>
 
-#define VK_KHR_MIR_SURFACE_REVISION       4
-#define VK_KHR_MIR_SURFACE_EXTENSION_NUMBER 8
+#define VK_KHR_MIR_SURFACE_SPEC_VERSION   4
 #define VK_KHR_MIR_SURFACE_EXTENSION_NAME "VK_KHR_mir_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateMirSurfaceKHR)(VkInstance instance, MirConnection* connection, MirSurface* mirSurface, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkMirSurfaceCreateFlagsKHR;
+
+typedef struct VkMirSurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkMirSurfaceCreateFlagsKHR                  flags;
+    MirConnection*                              connection;
+    MirSurface*                                 mirSurface;
+} VkMirSurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateMirSurfaceKHR)(VkInstance instance, const VkMirSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceMirPresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, MirConnection* connection);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkInstance                                  instance,
-    MirConnection*                              connection,
-    MirSurface*                                 mirSurface,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 
@@ -3539,16 +3577,25 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentationSupportKHR(
 #define VK_KHR_android_surface 1
 #include <android/native_window.h>
 
-#define VK_KHR_ANDROID_SURFACE_REVISION   4
-#define VK_KHR_ANDROID_SURFACE_EXTENSION_NUMBER 9
+#define VK_KHR_ANDROID_SURFACE_SPEC_VERSION 5
 #define VK_KHR_ANDROID_SURFACE_EXTENSION_NAME "VK_KHR_android_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateAndroidSurfaceKHR)(VkInstance instance, ANativeWindow* window, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkAndroidSurfaceCreateFlagsKHR;
+
+typedef struct VkAndroidSurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkAndroidSurfaceCreateFlagsKHR              flags;
+    ANativeWindow*                              window;
+} VkAndroidSurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateAndroidSurfaceKHR)(VkInstance instance, const VkAndroidSurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkInstance                                  instance,
-    ANativeWindow*                              window,
+    const VkAndroidSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 #endif
@@ -3558,18 +3605,27 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
 #define VK_KHR_win32_surface 1
 #include <windows.h>
 
-#define VK_KHR_WIN32_SURFACE_REVISION     4
-#define VK_KHR_WIN32_SURFACE_EXTENSION_NUMBER 10
+#define VK_KHR_WIN32_SURFACE_SPEC_VERSION 5
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateWin32SurfaceKHR)(VkInstance instance, HINSTANCE hinstance, HWND hwnd, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+typedef VkFlags VkWin32SurfaceCreateFlagsKHR;
+
+typedef struct VkWin32SurfaceCreateInfoKHR {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkWin32SurfaceCreateFlagsKHR                flags;
+    HINSTANCE                                   hinstance;
+    HWND                                        hwnd;
+} VkWin32SurfaceCreateInfoKHR;
+
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateWin32SurfaceKHR)(VkInstance instance, const VkWin32SurfaceCreateInfoKHR* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
 typedef VkBool32 (VKAPI_PTR *PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkInstance                                  instance,
-    HINSTANCE                                   hinstance,
-    HWND                                        hwnd,
+    const VkWin32SurfaceCreateInfoKHR*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface);
 
