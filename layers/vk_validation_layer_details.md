@@ -86,7 +86,7 @@ Additional checks to be added to VK_LAYER_LUNARG_DrawState
 	 23. For ClearAttachments function, verify that the index of referenced attachment actually exists
  24. GetRenderAreaGranularity - The pname:renderPass parameter must be the same as the one given in the sname:VkRenderPassBeginInfo structure for which the render area is relevant.
  28. Verify that all relevent dynamic state objects are bound (See https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14323)
- 29. Flag an error if CommandBuffer has Begin called while it's being constructed - this is not a reset, this is a violation
+ 29. Flag an error if CommandBuffer has Begin called while it's being constructed - this is not a reset, this is a violation.
  30. At PSO creation time, there is no case when NOT including a FS should flag an error since there exist dynamic state configurations that can be set to cause a FS to not be required. Instead, in the case when no FS is in the PSO, validation should detect at runtime if dynamic state will require a FS, and in those case issue a runtime warning about undefined behavior. (see bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=14429)
  31. Error if a cmdbuffer is submitted on a queue whose family doesn't match the family of the pool from which it was created.
  32. Update Gfx Pipe Create Info shadowing to remove new/delete and instead use unique_ptrs for auto clean-up
@@ -118,7 +118,6 @@ depends on the pair of pipeline stages involved.
 ### VK_LAYER_LUNARG_ShaderChecker Pending Work
 - Additional test cases for variously broken SPIRV images
 - Validation of a single SPIRV image in isolation (the spec describes many constraints)
-- Validation of SPIRV use of descriptors against the declared descriptor set layout
 
 ## VK_LAYER_LUNARG_ParamChecker
 
@@ -139,7 +138,7 @@ Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
  2.  From AMD: we were using an image view with a swizzle of VK_COLOR_COMPONENT_FORMAT_A with a BC1_RGB texture, which is not valid because the texture does not have an alpha channel.  In general, should validate that the swizzles do not reference components not in the texture format.
- 3. When querying VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES must provide enough memory for a all the queues on the device (not just 1 when device has multiple queues).
+ 3. When querying VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES must provide enough memory for all the queues on the device (not just 1 when device has multiple queues).
  4. INT & FLOAT bordercolors. Border color int/float selection must match associated texture format.
  5. Flag error on VkBufferCreateInfo if buffer size is 0
  6. VkImageViewCreateInfo.format must be set
@@ -215,7 +214,6 @@ The VK_LAYER_LUNARG_MemTracker layer tracks memory objects and references and va
 7.  Add validation for having mapped objects in a command list - GPU writing to mapped object is warning
 8.  Add validation for maximum memory references, maximum object counts, and object leaks
 9. When performing clears on surfaces that have both Depth and Stencil, WARN user if subresource range for depth and stencil are not both set (see blit_tests.cpp VkCmdClearDepthStencilTest test).
-10.  Re-enable INFO messages that were disabled during v138 integration
 11. Warn on image/buffer deletion if USAGE bits were set that were not needed
 12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 13. Report destroy or modify of resources in use on queues and not cleared by fence or WaitIdle. Could be fence, semaphore, or objects used by submitted CommandBuffers.
