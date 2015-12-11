@@ -3,7 +3,7 @@
     "layer" : {
         "name": "VK_LAYER_LUNARG_DeviceLimits",
         "type": "GLOBAL",
-        "library_path": ".\\VKLayerDeviceLimits.",
+        "library_path": ".\\VKLayerDeviceLimits.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer"
