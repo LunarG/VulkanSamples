@@ -45,7 +45,7 @@
 static const VkExtensionProperties nulldrv_instance_extensions[NULLDRV_EXT_COUNT] = {
     {
         .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_SURFACE_REVISION,
+        .specVersion = VK_KHR_SURFACE_SPEC_VERSION,
     }
 };
 
