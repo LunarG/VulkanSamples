@@ -450,9 +450,13 @@ add_mem_obj_info(
     memcpy(&my_data->memObjMap[mem].allocInfo, pAllocateInfo, sizeof(VkMemoryAllocateInfo));
     // TODO:  Update for real hardware, actually process allocation info structures
     my_data->memObjMap[mem].allocInfo.pNext = NULL;
-    my_data->memObjMap[mem].object = object;
-    my_data->memObjMap[mem].refCount = 0;
-    my_data->memObjMap[mem].mem = mem;
+    my_data->memObjMap[mem].object          = object;
+    my_data->memObjMap[mem].refCount        = 0;
+    my_data->memObjMap[mem].mem             = mem;
+    my_data->memObjMap[mem].memRange.offset = 0;
+    my_data->memObjMap[mem].memRange.size   = 0;
+    my_data->memObjMap[mem].pData           = 0;
+    my_data->memObjMap[mem].pDriverData     = 0;
 }
 
 // Find CB Info and add mem reference to list container
