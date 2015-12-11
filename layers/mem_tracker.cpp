@@ -1371,10 +1371,18 @@ validateMemRange(
         }
 
         // Validate that offset + size is within object's allocationSize
-        if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
-            skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
-                MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
-                offset, size + offset, mem_element->second.allocInfo.allocationSize);
+        if (size == VK_WHOLE_SIZE) {
+            if (offset >= mem_element->second.allocInfo.allocationSize) {
+                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
+                    MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
+                    offset, mem_element->second.allocInfo.allocationSize, mem_element->second.allocInfo.allocationSize);
+            }
+        } else {
+            if ((offset + size) > mem_element->second.allocInfo.allocationSize) {
+                skipCall = log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DEVICE_MEMORY, (uint64_t)mem, 0,
+                    MEMTRACK_INVALID_MAP, "MEM", "Mapping Memory from %" PRIu64 " to %" PRIu64 " with total array size %" PRIu64,
+                    offset, size + offset, mem_element->second.allocInfo.allocationSize);
+            }
         }
     }
     return skipCall;
