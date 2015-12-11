@@ -91,7 +91,6 @@ int main(int argc, char **argv)
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
     info.instance_layer_names.push_back("VK_LAYER_LUNARG_ParamChecker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
 
     if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
         exit(1);
@@ -140,7 +139,6 @@ int main(int argc, char **argv)
     info.device_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
     info.device_layer_names.push_back("VK_LAYER_LUNARG_ParamChecker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_ShaderChecker");
 
     if (!demo_check_layers(info.device_layer_properties, info.device_layer_names)) {
         exit(1);
