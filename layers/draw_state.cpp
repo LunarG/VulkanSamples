@@ -2645,8 +2645,9 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
         }
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], DEBUG_MARKER_EXTENSION_NAME) == 0) {
             /* Found a matching extension name, mark it enabled and init dispatch table*/
-            initDebugMarkerTable(device);
             dev_data->device_extensions.debug_marker_enabled = true;
+            initDebugMarkerTable(device);
+
         }
     }
 }

@@ -47,7 +47,7 @@ extern "C"
 ***************************************************************************************************
 */
 
-#define DEBUG_MARKER_EXTENSION_NAME "DEBUG_MARKER"
+#define DEBUG_MARKER_EXTENSION_NAME "VK_LUNARG_DEBUG_MARKER"
 
 // ------------------------------------------------------------------------------------------------
 // Enumerations
