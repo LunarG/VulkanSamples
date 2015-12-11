@@ -556,11 +556,23 @@ VkFormat TestFrameworkVkPresent::GetPresentFormat()
     VkFormat returnFormat;
 
 #ifdef _WIN32
-    res = vkCreateWin32SurfaceKHR(m_instance, m_connection, m_window,
-                                  NULL, &surface);
+    VkWin32SurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = m_connection;
+    createInfo.window = m_window;
+
+    res = vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface);
 #else  // _WIN32
-    res = vkCreateXcbSurfaceKHR(m_instance, m_connection, m_window,
-                                NULL, &surface);
+    VkXcbSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = m_connection;
+    createInfo.window = m_window;
+
+    res = vkCreateXcbSurfaceKHR(m_instance, &createInfo, NULL, &surface);
 #endif // _WIN32
     assert(res == VK_SUCCESS);
 
@@ -862,11 +874,23 @@ void TestFrameworkVkPresent::CreateSwapchain()
 
     // Create the WSI surface:
 #ifdef _WIN32
-    err = vkCreateWin32SurfaceKHR(m_instance, m_connection,
-                                  m_window, NULL, &m_surface);
+    VkWin32SurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = m_connection;
+    createInfo.window = m_window;
+
+    err = vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &m_surface);
 #else  // _WIN32
-    err = vkCreateXcbSurfaceKHR(m_instance, m_connection,
-                                m_window, NULL, &m_surface);
+    VkXcbSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = m_connection;
+    createInfo.window = m_window;
+
+    err = vkCreateXcbSurfaceKHR(m_instance, &createInfo, NULL, &m_surface);
 #endif // _WIN32
     assert(!err);
 
@@ -978,8 +1002,8 @@ void TestFrameworkVkPresent::CreateSwapchain()
     }
 
     VkSurfaceTransformFlagsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
