@@ -34,6 +34,13 @@ samples utility functions
 #include "util.hpp"
 #include "SPIRV/GlslangToSpv.h"
 
+// For timestamp code (get_milliseconds)
+#ifdef WIN32
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
+
 using namespace std;
 
 void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch)
@@ -414,5 +421,24 @@ void wait_seconds(int seconds)
     Sleep(seconds * 1000);
 #else
     sleep(seconds);
+#endif
+}
+
+timestamp_t get_milliseconds()
+{
+#ifdef WIN32
+    LARGE_INTEGER frequency;
+    bool useQPC = QueryPerformanceFrequency(&frequency);
+    if (useQPC) {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        return (1000LL * now.QuadPart) / frequency.QuadPart;
+    } else {
+        return GetTickCount();
+    }
+#else
+    struct timeval now;
+    gettimeofday (&now, NULL);
+    return  (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
 #endif
 }
