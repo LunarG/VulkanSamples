@@ -143,7 +143,7 @@ LOADER_PLATFORM_THREAD_ONCE_DECLARATION(once_init);
 void* loader_heap_alloc(
     const struct loader_instance     *instance,
     size_t                            size,
-    VkSystemAllocationScope                alloc_scope)
+    VkSystemAllocationScope           alloc_scope)
 {
     if (instance && instance->alloc_callbacks.pfnAllocation) {
         /* TODO: What should default alignment be? 1, 4, 8, other? */
@@ -496,16 +496,23 @@ void loader_delete_layer_properties(
                         const struct loader_instance *inst,
                         struct loader_layer_list *layer_list)
 {
-    uint32_t i;
-
+    uint32_t i, j;
+    struct loader_device_extension_list *dev_ext_list;
     if (!layer_list)
         return;
 
     for (i = 0; i < layer_list->count; i++) {
         loader_destroy_generic_list(inst, (struct loader_generic_list *)
                                    &layer_list->list[i].instance_extension_list);
+        dev_ext_list = &layer_list->list[i].device_extension_list;
+        if (dev_ext_list->capacity > 0 && dev_ext_list->list->entrypoint_count > 0) {
+            for (j= 0; j < dev_ext_list->list->entrypoint_count; j++) {
+                loader_heap_free(inst, dev_ext_list->list->entrypoints[j]);
+            }
+            loader_heap_free(inst, dev_ext_list->list->entrypoints);
+        }
         loader_destroy_generic_list(inst, (struct loader_generic_list *)
-                                   &layer_list->list[i].device_extension_list);
+                                   dev_ext_list);
     }
     layer_list->count = 0;
 
@@ -717,6 +724,67 @@ VkResult loader_add_to_ext_list(
         memcpy(&ext_list->list[ext_list->count], cur_ext, sizeof(VkExtensionProperties));
         ext_list->count++;
     }
+    return VK_SUCCESS;
+}
+
+/*
+ * Append one extension property defined in props with entrypoints
+ * defined in entrys to the given ext_list.
+ * Return
+ *  Vk_SUCCESS on success
+ */
+VkResult loader_add_to_dev_ext_list(
+        const struct loader_instance *inst,
+        struct loader_device_extension_list *ext_list,
+        const VkExtensionProperties *props,
+        uint32_t entry_count,
+        char **entrys)
+{
+    uint32_t idx;
+    if (ext_list->list == NULL || ext_list->capacity == 0) {
+        loader_init_generic_list(inst, (struct loader_generic_list *) ext_list,
+                                 sizeof(struct loader_dev_ext_props));
+    }
+
+    if (ext_list->list == NULL)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    idx =ext_list->count;
+    // add to list at end
+    // check for enough capacity
+    if (idx * sizeof (struct loader_dev_ext_props)
+            >= ext_list->capacity) {
+
+        ext_list->list = loader_heap_realloc(inst,
+                ext_list->list,
+                ext_list->capacity,
+                ext_list->capacity * 2,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+
+        if (ext_list->list == NULL)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+        // double capacity
+        ext_list->capacity *= 2;
+    }
+
+    memcpy(&ext_list->list[idx].props, props, sizeof(struct loader_dev_ext_props));
+    ext_list->list[idx].entrypoint_count = entry_count;
+    ext_list->list[idx].entrypoints = loader_heap_alloc(inst,
+                                        sizeof(char *) * entry_count,
+                                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (ext_list->list[idx].entrypoints == NULL)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    for (uint32_t i = 0; i < entry_count; i++) {
+        ext_list->list[idx].entrypoints[i] = loader_heap_alloc(inst,
+                                            strlen(entrys[i]) + 1,
+                                            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        if (ext_list->list[idx].entrypoints[i] == NULL)
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        strcpy(ext_list->list[idx].entrypoints[i], entrys[i]);
+    }
+    ext_list->count++;
+
     return VK_SUCCESS;
 }
 
@@ -960,6 +1028,17 @@ static VkExtensionProperties *get_extension_property(
     for (uint32_t i = 0; i < list->count; i++) {
         if (strcmp(name, list->list[i].extensionName) == 0)
             return &list->list[i];
+    }
+    return NULL;
+}
+
+static VkExtensionProperties *get_dev_extension_property(
+        const char *name,
+        const struct loader_device_extension_list *list)
+{
+    for (uint32_t i = 0; i < list->count; i++) {
+        if (strcmp(name, list->list[i].props.extensionName) == 0)
+            return &list->list[i].props;
     }
     return NULL;
 }
@@ -1462,6 +1541,7 @@ static void loader_copy_layer_properties(
                             struct loader_layer_properties *dst,
                             struct loader_layer_properties *src)
 {
+    uint32_t cnt, i;
     memcpy(dst, src, sizeof (*src));
     dst->instance_extension_list.list = loader_heap_alloc(
                                         inst,
@@ -1474,13 +1554,30 @@ static void loader_copy_layer_properties(
                                         dst->instance_extension_list.capacity);
     dst->device_extension_list.list = loader_heap_alloc(
                                         inst,
-                                        sizeof(VkExtensionProperties) *
+                                        sizeof(struct loader_dev_ext_props) *
                                         src->device_extension_list.count,
                                         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-    dst->device_extension_list.capacity = sizeof(VkExtensionProperties) *
+
+    dst->device_extension_list.capacity = sizeof(struct loader_dev_ext_props) *
                                         src->device_extension_list.count;
     memcpy(dst->device_extension_list.list, src->device_extension_list.list,
                                         dst->device_extension_list.capacity);
+    if (src->device_extension_list.count > 0 &&
+                   src->device_extension_list.list->entrypoint_count > 0) {
+        cnt = src->device_extension_list.list->entrypoint_count;
+        dst->device_extension_list.list->entrypoints = loader_heap_alloc(
+                                        inst,
+                                        sizeof(char *) * cnt,
+                                        VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        for (i = 0; i < cnt; i++) {
+            dst->device_extension_list.list->entrypoints[i] =  loader_heap_alloc(
+                                    inst,
+                                    strlen(src->device_extension_list.list->entrypoints[i]) + 1,
+                                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+            strcpy(dst->device_extension_list.list->entrypoints[i],
+                   src->device_extension_list.list->entrypoints[i]);
+        }
+    }
 }
 
 /**
@@ -1520,7 +1617,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
     char *name, *type, *library_path, *api_version;
     char *implementation_version, *description;
     cJSON *disable_environment;
-    int i;
+    int i, j;
     VkExtensionProperties ext_prop;
     item = cJSON_GetObjectItem(json, "file_format_version");
     if (item == NULL) {
@@ -1639,6 +1736,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
          * instance_extensions
          * device_extensions
          * enable_environment (implicit layers only)
+         * disable_environment (implicit_layers_only)
          */
 #define GET_JSON_OBJECT(node, var) {                  \
         var = cJSON_GetObjectItem(node, #var);        \
@@ -1655,7 +1753,19 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         }
 
         cJSON *instance_extensions, *device_extensions, *functions, *enable_environment;
-        char *vkGetInstanceProcAddr = NULL, *vkGetDeviceProcAddr = NULL, *spec_version=NULL;
+        cJSON *entrypoints;
+        char *vkGetInstanceProcAddr, *vkGetDeviceProcAddr, *spec_version;
+        char **entry_array;
+        vkGetInstanceProcAddr = NULL;
+        vkGetDeviceProcAddr = NULL;
+        spec_version = NULL;
+        entrypoints = NULL;
+        entry_array = NULL;
+        /**
+         * functions
+         *     vkGetInstanceProcAddr
+         *     vkGetDeviceProcAddr
+         */
         GET_JSON_OBJECT(layer_node, functions)
         if (functions != NULL) {
             GET_JSON_ITEM(functions, vkGetInstanceProcAddr)
@@ -1667,6 +1777,12 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                 strncpy(props->functions.str_gdpa, vkGetDeviceProcAddr, sizeof (props->functions.str_gdpa));
             props->functions.str_gdpa[sizeof (props->functions.str_gdpa) - 1] = '\0';
         }
+        /**
+         * instance_extensions
+         * array of
+         *     name
+         *     spec_version
+         */
         GET_JSON_OBJECT(layer_node, instance_extensions)
         if (instance_extensions != NULL) {
             int count = cJSON_GetArraySize(instance_extensions);
@@ -1674,31 +1790,62 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
                 ext_item = cJSON_GetArrayItem(instance_extensions, i);
                 GET_JSON_ITEM(ext_item, name)
                 GET_JSON_ITEM(ext_item, spec_version)
+                if (name != NULL) {
                     strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
                     ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
+                }
                 ext_prop.specVersion = atoi(spec_version);
                 loader_add_to_ext_list(inst, &props->instance_extension_list, 1, &ext_prop);
             }
         }
+        /**
+         * device_extensions
+         * array of
+         *     name
+         *     spec_version
+         *     entrypoints
+         */
         GET_JSON_OBJECT(layer_node, device_extensions)
         if (device_extensions != NULL) {
             int count = cJSON_GetArraySize(device_extensions);
             for (i = 0; i < count; i++) {
                 ext_item = cJSON_GetArrayItem(device_extensions, i);
-                GET_JSON_ITEM(ext_item, name);
-                GET_JSON_ITEM(ext_item, spec_version);
+                GET_JSON_ITEM(ext_item, name)
+                GET_JSON_ITEM(ext_item, spec_version)
+                if (name != NULL) {
                     strncpy(ext_prop.extensionName, name, sizeof (ext_prop.extensionName));
                     ext_prop.extensionName[sizeof (ext_prop.extensionName) - 1] = '\0';
+                }
                 ext_prop.specVersion = atoi(spec_version);
-                loader_add_to_ext_list(inst, &props->device_extension_list, 1, &ext_prop);
+                //entrypoints = cJSON_GetObjectItem(ext_item, "entrypoints");
+                GET_JSON_OBJECT(ext_item, entrypoints)
+                int entry_count;
+                if (entrypoints == NULL)
+                    continue;
+                entry_count = cJSON_GetArraySize(entrypoints);
+                if (entry_count)
+                    entry_array = (char **) loader_stack_alloc(sizeof(char *) * entry_count);
+                for (j = 0; j < entry_count; j++) {
+                    ext_item = cJSON_GetArrayItem(entrypoints, j);
+                    if (ext_item != NULL) {
+                        temp = cJSON_Print(ext_item);
+                        temp[strlen(temp) - 1] = '\0';
+                        entry_array[j] = loader_stack_alloc(strlen(temp) + 1);
+                        strcpy(entry_array[j], &temp[1]);
+                        loader_tls_heap_free(temp);
                     }
                 }
+                loader_add_to_dev_ext_list(inst, &props->device_extension_list,
+                                       &ext_prop, entry_count, entry_array);
+            }
+        }
         if (is_implicit) {
             GET_JSON_OBJECT(layer_node, enable_environment)
             strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof (props->enable_env_var.name));
             props->enable_env_var.name[sizeof (props->enable_env_var.name) - 1] = '\0';
             strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof (props->enable_env_var.value));
             props->enable_env_var.value[sizeof (props->enable_env_var.value) - 1] = '\0';
+            //TODO add disable_environment for implicit layers
         }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
@@ -2892,7 +3039,7 @@ VkResult loader_validate_device_extensions(
                 continue;
             }
 
-            extension_prop = get_extension_property(extension_name,
+            extension_prop = get_dev_extension_property(extension_name,
                                           &layer_prop->device_extension_list);
             if (extension_prop) {
                 /* Found the extension in one of the layers enabled by the app. */
@@ -3542,7 +3689,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties(
     uint32_t copy_size;
 
     uint32_t count;
-    struct loader_extension_list *dev_ext_list=NULL;
+    struct loader_device_extension_list *dev_ext_list=NULL;
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
@@ -3576,7 +3723,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties(
     copy_size = *pPropertyCount < count ? *pPropertyCount : count;
     for (uint32_t i = 0; i < copy_size; i++) {
         memcpy(&pProperties[i],
-               &dev_ext_list->list[i],
+               &dev_ext_list->list[i].props,
                sizeof(VkExtensionProperties));
     }
     *pPropertyCount = copy_size;

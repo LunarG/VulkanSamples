@@ -77,6 +77,18 @@ struct loader_extension_list {
     VkExtensionProperties *list;
 };
 
+struct loader_dev_ext_props {
+    VkExtensionProperties props;
+    uint32_t entrypoint_count;
+    char **entrypoints;
+};
+
+struct loader_device_extension_list {
+    size_t capacity;
+    uint32_t count;
+    struct loader_dev_ext_props *list;
+};
+
 struct loader_name_value {
     char name[MAX_STRING_SIZE];
     char value[MAX_STRING_SIZE];
@@ -101,7 +113,7 @@ struct loader_layer_properties {
     char lib_name[MAX_STRING_SIZE];
     struct loader_layer_functions functions;
     struct loader_extension_list instance_extension_list;
-    struct loader_extension_list device_extension_list;
+    struct loader_device_extension_list device_extension_list;
     struct loader_name_value disable_env_var;
     struct loader_name_value enable_env_var;
 };
