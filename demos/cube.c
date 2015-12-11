@@ -816,8 +816,8 @@ static void demo_prepare_buffers(struct demo *demo)
     }
 
     VkSurfaceTransformFlagsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
@@ -2449,11 +2449,25 @@ static void demo_init_vk_swapchain(struct demo *demo)
 
     // Create a WSI surface for the window:
 #ifdef _WIN32
-    err = vkCreateWin32SurfaceKHR(demo->inst, demo->connection, demo->window,
+    VkWin32SurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = demo->connection;
+    createInfo.window = demo->window;
+
+    err = vkCreateWin32SurfaceKHR(demo->inst, &createInfo,
                                   NULL, &demo->surface);
 
 #else  // _WIN32
-    err = vkCreateXcbSurfaceKHR(demo->inst, demo->connection, demo->window,
+    VkXcbSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.flags = 0;
+    createInfo.connection = demo->connection;
+    createInfo.window = demo->window;
+
+    err = vkCreateXcbSurfaceKHR(demo->inst, &createInfo,
                                 NULL, &demo->surface);
 #endif // _WIN32
 
