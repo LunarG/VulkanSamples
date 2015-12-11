@@ -35,41 +35,41 @@
 
 static const VkExtensionProperties wsi_surface_extension_info = {
         .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_SURFACE_REVISION,
+        .specVersion = VK_KHR_SURFACE_SPEC_VERSION,
 };
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 static const VkExtensionProperties wsi_win32_surface_extension_info = {
         .extensionName = VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_WIN32_SURFACE_REVISION,
+        .specVersion = VK_KHR_WIN32_SURFACE_SPEC_VERSION,
 };
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 static const VkExtensionProperties wsi_mir_surface_extension_info = {
         .extensionName = VK_KHR_MIR_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_MIR_SURFACE_REVISION,
+        .specVersion = VK_KHR_MIR_SURFACE_SPEC_VERSION,
 };
 #endif // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 static const VkExtensionProperties wsi_wayland_surface_extension_info = {
         .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_WAYLAND_SURFACE_REVISION,
+        .specVersion = VK_KHR_WAYLAND_SURFACE_SPEC_VERSION,
 };
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 static const VkExtensionProperties wsi_xcb_surface_extension_info = {
         .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_XCB_SURFACE_REVISION,
+        .specVersion = VK_KHR_XCB_SURFACE_SPEC_VERSION,
 };
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 static const VkExtensionProperties wsi_xlib_surface_extension_info = {
         .extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-        .specVersion = VK_KHR_XLIB_SURFACE_REVISION,
+        .specVersion = VK_KHR_XLIB_SURFACE_SPEC_VERSION,
 };
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
@@ -485,8 +485,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkInstance                                  instance,
-    HINSTANCE                                   hinstance,
-    HWND                                        hwnd,
+    const VkWin32SurfaceCreateInfoKHR*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -494,7 +493,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
 
-    res = disp->CreateWin32SurfaceKHR(instance, hinstance, hwnd, pAllocator, pSurface);
+    res = disp->CreateWin32SurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     return res;
 }
 
@@ -504,8 +503,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWin32SurfaceKHR(
     VkInstance                                  instance,
-    HINSTANCE                                   hinstance,
-    HWND                                        hwnd,
+    const VkWin32SurfaceCreateInfoKHR*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -520,8 +518,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWin32SurfaceKHR(
     }
 
     pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_WIN32;
-    pIcdSurface->hinstance = hinstance;
-    pIcdSurface->hwnd = hwnd;
+    pIcdSurface->hinstance = pCreateInfo->hinstance;
+    pIcdSurface->hwnd = pCreateInfo->hwnd;
 
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
@@ -575,8 +573,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWin32PresentationSupportK
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkInstance                                  instance,
-    MirConnection*                              connection,
-    MirSurface*                                 mirSurface,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -584,7 +581,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
 
-    res = disp->CreateMirSurfaceKHR(instance, connection, mirSurface, pAllocator, pSurface);
+    res = disp->CreateMirSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     return res;
 }
 
@@ -594,8 +591,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateMirSurfaceKHR(
     VkInstance                                  instance,
-    Display*                                    dpy,
-    Window                                      window,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -610,8 +606,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateMirSurfaceKHR(
     }
 
     pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_MIR;
-    pIcdSurface->connection = connection;
-    pIcdSurface->mirSurface = mirSurface;
+    pIcdSurface->connection = pCreateInfo->connection;
+    pIcdSurface->mirSurface = pCreateInfo->mirSurface;
 
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
@@ -669,8 +665,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceMirPresentationSupportKHR
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     VkInstance                                  instance,
-    struct wl_display*                          display,
-    struct wl_surface*                          surface,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -678,7 +673,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
 
-    res = disp->CreateWaylandSurfaceKHR(instance, display, surface, pAllocator, pSurface);
+    res = disp->CreateWaylandSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     return res;
 }
 
@@ -688,8 +683,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWaylandSurfaceKHR(
     VkInstance                                  instance,
-    struct wl_display*                          display,
-    struct wl_surface*                          surface,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -704,8 +698,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateWaylandSurfaceKHR(
     }
 
     pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_WAYLAND;
-    pIcdSurface->display = display;
-    pIcdSurface->surface = surface;
+    pIcdSurface->display = pCreateInfo->display;
+    pIcdSurface->surface = pCreateInfo->surface;
 
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
@@ -763,8 +757,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceWaylandPresentationSuppor
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                                  instance,
-    xcb_connection_t*                           connection,
-    xcb_window_t                                window,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -772,7 +765,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
 
-    res = disp->CreateXcbSurfaceKHR(instance, connection, window, pAllocator, pSurface);
+    res = disp->CreateXcbSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     return res;
 }
 
@@ -782,8 +775,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXcbSurfaceKHR(
     VkInstance                                  instance,
-    xcb_connection_t*                           connection,
-    xcb_window_t                                window,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -798,8 +790,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXcbSurfaceKHR(
     }
 
     pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
-    pIcdSurface->connection = connection;
-    pIcdSurface->window = window;
+    pIcdSurface->connection = pCreateInfo->connection;
+    pIcdSurface->window = pCreateInfo->window;
 
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
@@ -861,8 +853,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL loader_GetPhysicalDeviceXcbPresentationSupportKHR
  */
 LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance                                  instance,
-    Display*                                    dpy,
-    Window                                      window,
+    const VkXlibSurfaceCreateInfoKHR*           pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -870,7 +861,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     disp = loader_get_instance_dispatch(instance);
     VkResult res;
 
-    res = disp->CreateXlibSurfaceKHR(instance, dpy, window, pAllocator, pSurface);
+    res = disp->CreateXlibSurfaceKHR(instance, pCreateInfo, pAllocator, pSurface);
     return res;
 }
 
@@ -880,8 +871,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
  */
 VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXlibSurfaceKHR(
     VkInstance                                  instance,
-    Display*                                    dpy,
-    Window                                      window,
+    const VkXlibSurfaceCreateInfoKHR*           pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -896,8 +886,8 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateXlibSurfaceKHR(
     }
 
     pIcdSurface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
-    pIcdSurface->dpy = dpy;
-    pIcdSurface->window = window;
+    pIcdSurface->dpy = pCreateInfo->dpy;
+    pIcdSurface->window = pCreateInfo->window;
 
     *pSurface = (VkSurfaceKHR) pIcdSurface;
 
