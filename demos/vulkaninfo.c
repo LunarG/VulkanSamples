@@ -706,10 +706,11 @@ static void app_gpu_destroy(struct app_gpu *gpu)
 {
     app_dev_destroy(&gpu->dev);
     free(gpu->device_extensions);
-    free(gpu->queue_reqs);
+
     for (uint32_t i = 0; i < gpu->queue_count; i++) {
         free((void *) gpu->queue_reqs[i].pQueuePriorities);
     }
+    free(gpu->queue_reqs);
     free(gpu->queue_props);
 }
 
