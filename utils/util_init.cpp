@@ -491,6 +491,7 @@ void init_window(struct sample_info &info)
 void destroy_window(struct sample_info &info)
 {
     DestroyWindow(info.window);
+    info.fpDestroySurfaceKHR(info.inst, info.surface, NULL);
 }
 #else
 void init_window(struct sample_info &info)
@@ -670,6 +671,7 @@ void init_swapchain_extension(struct sample_info &info)
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfaceFormatsKHR);
     GET_INSTANCE_PROC_ADDR(info.inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(info.inst, DestroySurfaceKHR);
     GET_DEVICE_PROC_ADDR(info.device, CreateSwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, DestroySwapchainKHR);
     GET_DEVICE_PROC_ADDR(info.device, GetSwapchainImagesKHR);
