@@ -1,7 +1,7 @@
 /*
  * Vulkan Samples Kit
  *
- * Copyright (C) 2015 Valve Corporation
+ * Copyright (C) 2015 LunarG, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,7 +24,7 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Draw Textured Cube
+Draw several cubes using primary and secondary command buffers
 */
 
 #include <util_init.hpp>
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
-    char sample_title[] = "Draw Textured Cube";
+    char sample_title[] = "Secondary command buffers";
     const bool depthPresent = true;
 
     init_global_layer_properties(info);
@@ -91,7 +91,6 @@ int main(int argc, char **argv)
     init_device_queue(info);
     init_swap_chain(info);
     init_depth_buffer(info);
-    init_texture(info);
     init_uniform_buffer(info);
     init_descriptor_and_pipeline_layouts(info, true);
     init_renderpass(info, depthPresent);
@@ -99,12 +98,91 @@ int main(int argc, char **argv)
     init_framebuffers(info, depthPresent);
     init_vertex_buffer(info, g_vb_texture_Data, sizeof(g_vb_texture_Data),
                        sizeof(g_vb_texture_Data[0]), true);
-    init_descriptor_pool(info, true);
-    init_descriptor_set(info, true);
     init_pipeline_cache(info);
     init_pipeline(info, depthPresent);
 
+    // we have to set up a couple of things by hand, but this
+    // isn't any different to other examples
+    
+    // get two different textures
+    init_texture(info, "green.ppm");
+    VkDescriptorImageInfo greenTex = info.texture_data.image_info;
+
+    init_texture(info, "lunarg.ppm");
+    VkDescriptorImageInfo lunargTex = info.texture_data.image_info;
+    
+    // create two identical descriptor sets, each with a different texture but identical UBOa
+    VkDescriptorPoolSize pool_size[2];
+    pool_size[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_size[0].descriptorCount = 2;
+    pool_size[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    pool_size[1].descriptorCount = 2;
+
+    VkDescriptorPoolCreateInfo descriptor_pool = {};
+    descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptor_pool.pNext = NULL;
+    descriptor_pool.flags = 0;
+    descriptor_pool.maxSets = 2;
+    descriptor_pool.poolSizeCount = 2;
+    descriptor_pool.pPoolSizes = pool_size;
+
+    res = vkCreateDescriptorPool(info.device, &descriptor_pool, NULL, &info.desc_pool);
+    assert(res == VK_SUCCESS);
+    
+    VkDescriptorSetLayout layouts[] = { info.desc_layout[0], info.desc_layout[0] };
+
+    VkDescriptorSetAllocateInfo alloc_info[1];
+    alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info[0].pNext = NULL;
+    alloc_info[0].descriptorPool = info.desc_pool;
+    alloc_info[0].setLayoutCount = 2;
+    alloc_info[0].pSetLayouts = layouts;
+
+    info.desc_set.resize(2);
+    res = vkAllocateDescriptorSets(info.device, alloc_info, info.desc_set.data());
+    assert(res == VK_SUCCESS);
+
+    VkWriteDescriptorSet writes[2];
+
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].pNext = NULL;
+    writes[0].dstSet = info.desc_set[0];
+    writes[0].descriptorCount = 1;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].pBufferInfo = &info.uniform_data.buffer_info;
+    writes[0].dstArrayElement = 0;
+    writes[0].dstBinding = 0;
+
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].dstSet = info.desc_set[0];
+    writes[1].dstBinding = 1;
+    writes[1].descriptorCount = 1;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writes[1].pImageInfo = &greenTex;
+    writes[1].dstArrayElement = 0;
+
+    vkUpdateDescriptorSets(info.device, 2, writes, 0, NULL);
+
+    writes[0].dstSet = writes[1].dstSet = info.desc_set[1];
+    writes[1].pImageInfo = &lunargTex;
+
+    vkUpdateDescriptorSets(info.device, 2, writes, 0, NULL);
+
     /* VULKAN_KEY_START */
+
+    // create four secondary command buffers, for each quadrant of the screen
+    
+    VkCommandBufferAllocateInfo cmdalloc = {};
+    cmdalloc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdalloc.pNext = NULL;
+    cmdalloc.commandPool = info.cmd_pool;
+    cmdalloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    cmdalloc.bufferCount = 4;
+
+    VkCommandBuffer secondary_cmds[4];
+
+    res = vkAllocateCommandBuffers(info.device, &cmdalloc, secondary_cmds);
+    assert(res == VK_SUCCESS);
 
     VkClearValue clear_values[2];
     clear_values[0].color.float32[0] = 0.2f;
@@ -135,7 +213,55 @@ int main(int argc, char **argv)
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
     assert(res == VK_SUCCESS);
+    
+    const VkDeviceSize offsets[1] = {0};
 
+    VkViewport viewport;
+    viewport.height = 200.0f;
+    viewport.width = 200.0f;
+    viewport.minDepth = (float) 0.0f;
+    viewport.maxDepth = (float) 1.0f;
+    viewport.x = 0;
+    viewport.y = 0;
+    
+    VkRect2D scissor;
+    scissor.extent.width = info.width;
+    scissor.extent.height = info.height;
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+
+    // now we record four separate command buffers, one for each quadrant of the screen
+
+    VkCommandBufferBeginInfo secondary_begin = {};
+    secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    secondary_begin.pNext = NULL;
+    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    secondary_begin.renderPass = info.render_pass;
+    secondary_begin.subpass = 0;
+    secondary_begin.framebuffer = info.framebuffers[info.current_buffer];
+
+    for(int i=0; i < 4; i++)
+    {
+        vkBeginCommandBuffer(secondary_cmds[i], &secondary_begin);
+        
+        vkCmdBindPipeline(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                      info.pipeline);
+        vkCmdBindDescriptorSets(secondary_cmds[i], VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
+                0, 1, &info.desc_set[i==0 || i==3], 0, NULL);
+
+        vkCmdBindVertexBuffers(secondary_cmds[i], 0, 1, &info.vertex_buffer.buf, offsets);
+        
+        viewport.x = 25.0f + 250.0f*(i%2);
+        viewport.y = 25.0f + 250.0f*(i/2);
+        vkCmdSetViewport(secondary_cmds[i], NUM_VIEWPORTS, &viewport);
+
+        vkCmdSetScissor(secondary_cmds[i], NUM_SCISSORS, &scissor);
+
+        vkCmdDraw(secondary_cmds[i], 12 * 3, 1, 0, 0);
+        
+        vkEndCommandBuffer(secondary_cmds[i]);
+    }
+    
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -148,20 +274,12 @@ int main(int argc, char **argv)
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+    // specifying VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS means this render pass may
+    // ONLY call vkCmdExecuteCommands
+    vkCmdBeginRenderPass(info.cmd, &rp_begin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-    vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  info.pipeline);
-    vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
-
-    const VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
-
-    init_viewports(info);
-    init_scissors(info);
-
-    vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
+    vkCmdExecuteCommands(info.cmd, 4, secondary_cmds);
+    
     vkCmdEndRenderPass(info.cmd);
 
     VkImageMemoryBarrier prePresentBarrier = {};
@@ -228,6 +346,9 @@ int main(int argc, char **argv)
     assert(res == VK_SUCCESS);
 
     wait_seconds(1);
+    
+    vkFreeCommandBuffers(info.device, info.cmd_pool, 4, secondary_cmds);
+
     /* VULKAN_KEY_END */
 
     vkDestroyFence(info.device, drawFence, NULL);
