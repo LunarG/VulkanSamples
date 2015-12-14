@@ -1439,7 +1439,7 @@ static void demo_prepare(struct demo *demo)
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = NULL,
         .queueFamilyIndex = demo->graphics_queue_node_index,
-        .flags = 0,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
     };
     err = vkCreateCommandPool(demo->device, &cmd_pool_info, NULL, &demo->cmd_pool);
     assert(!err);
