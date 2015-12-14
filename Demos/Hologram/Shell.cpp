@@ -8,9 +8,7 @@
 #include "Shell.h"
 #include "Game.h"
 
-Shell::Shell(Game &game)
-    : game_(game), settings_(game.settings()), ctx_(),
-      game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_)
+void Shell::init_vk()
 {
     // require generic WSI extensions
     global_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -31,10 +29,24 @@ void Shell::init_vk()
     vk::init_dispatch_table_middle(ctx_.instance, false);
 
     init_physical_dev();
+    init_dev();
+
+    vk::init_dispatch_table_bottom(ctx_.instance, ctx_.dev);
+
+    vk::GetDeviceQueue(ctx_.dev, ctx_.game_queue_family, 0, &ctx_.game_queue);
+    vk::GetDeviceQueue(ctx_.dev, ctx_.present_queue_family, 0, &ctx_.present_queue);
+
+    init_swapchain();
 }
 
 void Shell::cleanup_vk()
 {
+    vk::DeviceWaitIdle(ctx_.dev);
+
+    vk::DestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
+    vk::DestroyDevice(ctx_.dev, nullptr);
+
+    vk::DestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
     vk::DestroyInstance(ctx_.instance, nullptr);
 }
 
@@ -213,31 +225,7 @@ void Shell::create_dev()
     vk::assert_success(vk::CreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
 }
 
-void Shell::create_back_buffers()
-{
-    VkSemaphoreCreateInfo sem_info = {};
-    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fence_info = {};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    // BackBuffer is used to track which swapchain image and its associated
-    // sync primitives are busy.  Having more BackBuffer's than swapchain
-    // images may allows us to replace CPU wait on present_fence by GPU wait
-    // on acquire_semaphore.
-    const int count = settings_.back_buffer_count + 1;
-    for (int i = 0; i < count; i++) {
-        BackBuffer buf = {};
-        vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.acquire_semaphore));
-        vk::assert_success(vk::CreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.render_semaphore));
-        vk::assert_success(vk::CreateFence(ctx_.dev, &fence_info, nullptr, &buf.present_fence));
-
-        ctx_.back_buffers.push(buf);
-    }
-}
-
-void Shell::destroy_back_buffers()
+void Shell::init_swapchain()
 {
     while (!ctx_.back_buffers.empty()) {
         const auto &buf = ctx_.back_buffers.front();
@@ -303,19 +291,8 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     if (ctx_.extent.width == extent.width && ctx_.extent.height == extent.height)
         return;
 
-    uint32_t image_count = settings_.back_buffer_count;
-    if (image_count < caps.minImageCount)
-        image_count = caps.minImageCount;
-    else if (image_count > caps.maxImageCount)
-        image_count = caps.maxImageCount;
-
+    assert(caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
     assert(caps.supportedUsageFlags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-    assert(caps.supportedTransforms & caps.currentTransform);
-    assert(caps.supportedCompositeAlpha & (VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
-                                           VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR));
-    VkCompositeAlphaFlagBitsKHR composite_alpha =
-        (caps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ?
-        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR : VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 
     std::vector<VkPresentModeKHR> modes;
     vk::get(ctx_.physical_dev, ctx_.surface, modes);
@@ -333,26 +310,15 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     VkSwapchainCreateInfoKHR swapchain_info = {};
     swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_info.surface = ctx_.surface;
-    swapchain_info.minImageCount = image_count;
+    swapchain_info.minImageCount = caps.minImageCount;
     swapchain_info.imageFormat = ctx_.format.format;
     swapchain_info.imageColorSpace = ctx_.format.colorSpace;
     swapchain_info.imageExtent = extent;
     swapchain_info.imageArrayLayers = 1;
     swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    std::vector<uint32_t> queue_families(1, ctx_.game_queue_family);
-    if (ctx_.game_queue_family != ctx_.present_queue_family) {
-        queue_families.push_back(ctx_.present_queue_family);
-
-        swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchain_info.queueFamilyIndexCount = (uint32_t)queue_families.size();
-        swapchain_info.pQueueFamilyIndices = queue_families.data();
-    } else {
-        swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    swapchain_info.preTransform = caps.currentTransform;;
-    swapchain_info.compositeAlpha = composite_alpha;
+    swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_info.presentMode = mode;
     swapchain_info.clipped = true;
     swapchain_info.oldSwapchain = ctx_.swapchain;
@@ -371,89 +337,26 @@ void Shell::resize_swapchain(uint32_t width_hint, uint32_t height_hint)
     game_.attach_swapchain();
 }
 
-void Shell::add_game_time(float time)
+// TODO we want the game to render multiple frames ahead
+void Shell::present(float frame_time)
 {
-    int max_ticks = 3;
+    // TODO workaround GPU hangs
+    vk::DeviceWaitIdle(ctx_.dev);
 
-    if (!settings_.no_tick)
-        game_time_ += time;
+    uint32_t index;
+    vk::assert_success(vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX,
+            VK_NULL_HANDLE, VK_NULL_HANDLE, &index));
 
-    while (game_time_ >= game_tick_ && max_ticks--) {
-        game_.on_tick();
-        game_time_ -= game_tick_;
-    }
-}
-
-void Shell::acquire_back_buffer()
-{
-    // acquire just once when not presenting
-    if (settings_.no_present &&
-        ctx_.acquired_back_buffer.acquire_semaphore != VK_NULL_HANDLE)
-        return;
-
-    auto &buf = ctx_.back_buffers.front();
-
-    // wait until acquire and render semaphores are waited/unsignaled
-    vk::assert_success(vk::WaitForFences(ctx_.dev, 1, &buf.present_fence,
-                true, UINT64_MAX));
-    // reset the fence
-    vk::assert_success(vk::ResetFences(ctx_.dev, 1, &buf.present_fence));
-
-    vk::assert_success(vk::AcquireNextImageKHR(ctx_.dev, ctx_.swapchain,
-                UINT64_MAX, buf.acquire_semaphore, VK_NULL_HANDLE,
-                &buf.image_index));
-
-    ctx_.acquired_back_buffer = buf;
-    ctx_.back_buffers.pop();
-}
-
-void Shell::present_back_buffer()
-{
-    const auto &buf = ctx_.acquired_back_buffer;
-
-    if (!settings_.no_render)
-        game_.on_frame(game_time_ / game_tick_);
-
-    if (settings_.no_present) {
-        fake_present();
-        return;
-    }
+    game_.on_frame(frame_time, index);
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = (settings_.no_render) ?
-        &buf.acquire_semaphore : &buf.render_semaphore;
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &ctx_.swapchain;
-    present_info.pImageIndices = &buf.image_index;
+    present_info.pImageIndices = &index;
+
+    // TODO semaphores
+    assert(ctx_.game_queue_family == ctx_.present_queue_family);
 
     vk::assert_success(vk::QueuePresentKHR(ctx_.present_queue, &present_info));
-
-    vk::assert_success(vk::QueueSubmit(ctx_.present_queue, 0, nullptr, buf.present_fence));
-    ctx_.back_buffers.push(buf);
-}
-
-void Shell::fake_present()
-{
-    const auto &buf = ctx_.acquired_back_buffer;
-
-    assert(settings_.no_present);
-
-    // wait render semaphore and signal acquire semaphore
-    if (!settings_.no_render) {
-        VkPipelineStageFlags stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        VkSubmitInfo submit_info = {};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &buf.render_semaphore;
-        submit_info.pWaitDstStageMask = &stage;
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &buf.acquire_semaphore;
-        vk::assert_success(vk::QueueSubmit(ctx_.game_queue, 1, &submit_info, VK_NULL_HANDLE));
-    }
-
-    // push the buffer back just once for Shell::cleanup_vk
-    if (buf.acquire_semaphore != ctx_.back_buffers.back().acquire_semaphore)
-        ctx_.back_buffers.push(buf);
 }

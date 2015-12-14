@@ -9,42 +9,19 @@
 
 namespace {
 
-class PosixTimer {
-public:
-    PosixTimer()
-    {
-        reset();
-    }
+float get_time()
+{
+    struct timespec tv;
 
-    void reset()
-    {
-        clock_gettime(CLOCK_MONOTONIC, &start_);
-    }
+    if (clock_gettime(CLOCK_MONOTONIC, &tv) < 0)
+        return 0.0f;
 
-    double get() const
-    {
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
+    constexpr float ms = 1.0f / 1000.0f;
+    constexpr float us = ms / 1000.0f;
+    constexpr float ns = us / 1000.0f;
 
-        constexpr long one_s_in_ns = 1000 * 1000 * 1000;
-        constexpr double one_s_in_ns_d = static_cast<double>(one_s_in_ns);
-
-        time_t s = now.tv_sec - start_.tv_sec;
-        long ns;
-        if (now.tv_nsec > start_.tv_nsec) {
-            ns = now.tv_nsec - start_.tv_nsec;
-        } else {
-            assert(s > 0);
-            s--;
-            ns = one_s_in_ns - (start_.tv_nsec - now.tv_nsec);
-        }
-
-        return static_cast<double>(s) + static_cast<double>(ns) / one_s_in_ns_d;
-    }
-
-private:
-    struct timespec start_;
-};
+    return (float) tv.tv_sec + ns * tv.tv_nsec;
+}
 
 xcb_intern_atom_cookie_t intern_atom_cookie(xcb_connection_t *c, const std::string &s)
 {
@@ -71,10 +48,13 @@ ShellXcb::ShellXcb(Game &game) : Shell(game)
 
     init_connection();
     init_vk();
+
+    game_.attach_shell(*this);
 }
 
-ShellXcb::~ShellXcb()
-{
+ShellXCB::~ShellXCB()
+{ game_.detach_shell();
+
     cleanup_vk();
     dlclose(lib_handle_);
 
@@ -106,7 +86,7 @@ void ShellXcb::create_window()
     uint32_t value_mask, value_list[32];
     value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     value_list[0] = scr_->black_pixel;
-    value_list[1] = XCB_EVENT_MASK_KEY_PRESS |
+    value_list[1] = XCB_EVENT_MASK_KEY_RELEASE |
                     XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
     xcb_create_window(c_,
@@ -180,8 +160,10 @@ VkSurfaceKHR ShellXcb::create_surface(VkInstance instance)
     return surface;
 }
 
-void ShellXcb::handle_event(const xcb_generic_event_t *ev)
+ShellXCB::Action ShellXCB::handle_event(const xcb_generic_event_t *ev)
 {
+    Action act = DRAW;
+
     switch (ev->response_type & 0x7f) {
     case XCB_CONFIGURE_NOTIFY:
         {
@@ -190,128 +172,80 @@ void ShellXcb::handle_event(const xcb_generic_event_t *ev)
             resize_swapchain(notify->width, notify->height);
         }
         break;
-    case XCB_KEY_PRESS:
+    case XCB_KEY_RELEASE:
         {
-            const xcb_key_press_event_t *press =
-                reinterpret_cast<const xcb_key_press_event_t *>(ev);
-            Game::Key key;
-
             // TODO translate xcb_keycode_t
-            switch (press->detail) {
-            case 9:
-                key = Game::KEY_ESC;
-                break;
-            case 111:
-                key = Game::KEY_UP;
-                break;
-            case 116:
-                key = Game::KEY_DOWN;
-                break;
-            case 65:
-                key = Game::KEY_SPACE;
-                break;
-            default:
-                key = Game::KEY_UNKNOWN;
-                break;
-            }
-
-            game_.on_key(key);
+            const xcb_key_release_event_t *release =
+                reinterpret_cast<const xcb_key_release_event_t *>(ev);
+            game_.on_key(release->detail);
         }
         break;
     case XCB_CLIENT_MESSAGE:
         {
             const xcb_client_message_event_t *msg =
                 reinterpret_cast<const xcb_client_message_event_t *>(ev);
-            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_)
-                game_.on_key(Game::KEY_SHUTDOWN);
+            if (msg->type == wm_protocols_ && msg->data.data32[0] == wm_delete_window_) {
+                game_.on_shutdown();
+                act = QUIT;
+            }
         }
         break;
     default:
         break;
     }
+
+    return act;
 }
 
-void ShellXcb::loop_wait()
+void ShellXCB::run()
 {
-    while (true) {
-        xcb_generic_event_t *ev = xcb_wait_for_event(c_);
-        if (!ev)
-            continue;
+    resize_swapchain(settings_.initial_width, settings_.initial_height);
 
-        handle_event(ev);
-        free(ev);
-
-        if (quit_)
-            break;
-
-        acquire_back_buffer();
-        present_back_buffer();
-    }
-}
-
-void ShellXcb::loop_poll()
-{
-    PosixTimer timer;
-
-    double current_time = timer.get();
-    double profile_start_time = current_time;
-    int profile_present_count = 0;
-
-    while (true) {
-        // handle pending events
-        while (true) {
-            xcb_generic_event_t *ev = xcb_poll_for_event(c_);
-            if (!ev)
-                break;
-
-            handle_event(ev);
-            free(ev);
-        }
-
-        if (quit_)
-            break;
-
-        acquire_back_buffer();
-
-        double t = timer.get();
-        add_game_time(static_cast<float>(t - current_time));
-
-        present_back_buffer();
-
-        current_time = t;
-
-        profile_present_count++;
-        if (current_time - profile_start_time >= 5.0) {
-            const double fps = profile_present_count / (current_time - profile_start_time);
-            std::stringstream ss;
-            ss << profile_present_count << " presents in " <<
-                  current_time - profile_start_time << " seconds " <<
-                  "(FPS: " << fps << ")";
-            log(LOG_INFO, ss.str().c_str());
-
-            profile_start_time = current_time;
-            profile_present_count = 0;
-        }
-    }
-}
-
-void ShellXcb::run()
-{
-    create_window();
     xcb_map_window(c_, win_);
     xcb_flush(c_);
 
-    create_context();
-    resize_swapchain(settings_.initial_width, settings_.initial_height);
+    int profile_present_count = 0;
+    float profile_present_since = get_time();
+    float game_time_base = get_time();
 
-    quit_ = false;
-    if (settings_.animate)
-        loop_poll();
-    else
-        loop_wait();
+    while (true) {
+        Action act = NONE;
+
+        xcb_generic_event_t *ev;
+        if (settings_.animate) {
+            act = DRAW;
+            ev = xcb_poll_for_event(c_);
+        } else {
+            ev = xcb_wait_for_event(c_);
+        }
+
+        if (ev) {
+            act = handle_event(ev);
+            free(ev);
+        }
+
+        if (act == QUIT)
+            break;
+        else if (act == NONE)
+            continue;
+
+        assert(act == DRAW);
+
+        present(get_time() - game_time_base);
+        profile_present_count++;
+
+        float now = get_time();
+        if (now - profile_present_since >= 5.0) {
+            std::cout << profile_present_count << " presents in " << now - profile_present_since << " seconds\n";
+            profile_present_count = 0;
+            profile_present_since = get_time();
+        }
+    }
 
     destroy_context();
 
     xcb_destroy_window(c_, win_);
     xcb_flush(c_);
+
+    game_.detach_swapchain();
 }

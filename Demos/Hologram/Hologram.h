@@ -11,7 +11,6 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
-#include "Simulation.h"
 #include "Game.h"
 
 class Meshes;
@@ -27,10 +26,7 @@ public:
     void attach_swapchain();
     void detach_swapchain();
 
-    void on_key(Key key);
-    void on_tick();
-
-    void on_frame(float frame_pred);
+    void on_frame(float frame_time, int fb);
 
 private:
     class Worker {
@@ -39,9 +35,8 @@ private:
 
         void start();
         void stop();
-        void update_simulation();
-        void draw_objects(VkFramebuffer fb);
-        void wait_idle();
+        void render(float frame_time, int fb);
+        void wait_render();
 
         Hologram &hologram_;
 
@@ -49,21 +44,25 @@ private:
         const int object_begin_;
         const int object_end_;
 
-        const float tick_interval_;
+        std::mt19937 rng_;
+        std::uniform_real_distribution<float> distribution_;
 
-        VkFramebuffer fb_;
+        VkCommandBuffer cmd_;
+
+        float frame_time_;
+        float time_delta_;
+        int fb_;
 
     private:
         enum State {
             INIT,
-            IDLE,
-            STEP,
-            DRAW,
+            WAIT,
+            RENDER,
         };
 
-        void update_loop();
+        void render_loop();
 
-        static void thread_loop(Worker *worker) { worker->update_loop(); }
+        static void thread_loop(Worker *worker) { worker->render_loop(); }
 
         std::thread thread_;
         std::mutex mutex_;
@@ -71,11 +70,13 @@ private:
         State state_;
     };
 
-    struct Camera {
-        glm::vec3 eye_pos;
-        glm::mat4 view_projection;
+    struct Object {
+        int mesh;
 
-        Camera(float eye) : eye_pos(eye) {}
+        glm::vec3 scale;
+        float speed;
+
+        glm::vec3 pos;
     };
 
     struct FrameData {
@@ -92,6 +93,11 @@ private:
 
     // called by the constructor
     void init_workers();
+    void init_objects();
+
+    std::random_device random_dev_;
+    std::mt19937 speed_rng_;
+    std::uniform_real_distribution<float> speed_dist_;
 
     bool multithread_;
     bool use_push_constants_;
@@ -139,35 +145,28 @@ private:
     VkPipeline pipeline_;
 
     VkCommandPool primary_cmd_pool_;
-    std::vector<VkCommandPool> worker_cmd_pools_;
-    VkDescriptorPool desc_pool_;
-    VkDeviceMemory frame_data_mem_;
-    std::vector<FrameData> frame_data_;
-    int frame_data_index_;
-
-    VkClearValue render_pass_clear_value_;
-    VkRenderPassBeginInfo render_pass_begin_info_;
-
+    VkCommandBuffer primary_cmd_;
     VkCommandBufferBeginInfo primary_cmd_begin_info_;
-    VkPipelineStageFlags primary_cmd_submit_wait_stages_;
     VkSubmitInfo primary_cmd_submit_info_;
 
     // called by attach_swapchain
     void prepare_viewport(const VkExtent2D &extent);
-    void prepare_framebuffers(VkSwapchainKHR swapchain);
+    void prepare_images(VkSwapchainKHR swapchain);
+    void prepare_framebuffers();
 
     VkExtent2D extent_;
     VkViewport viewport_;
     VkRect2D scissor_;
+    glm::mat4 view_projection_;
 
     std::vector<VkImage> images_;
     std::vector<VkImageView> image_views_;
     std::vector<VkFramebuffer> framebuffers_;
 
     // called by workers
-    void update_simulation(const Worker &worker);
-    void draw_object(const Simulation::Object &obj, FrameData &data, VkCommandBuffer cmd) const;
-    void draw_objects(Worker &worker);
+    void step_object(Object &obj, Worker &worker) const;
+    void draw_object(const Object &obj, VkCommandBuffer cmd) const;
+    void update_objects(Worker &worker);
 };
 
 #endif // HOLOGRAM_H

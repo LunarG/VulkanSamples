@@ -1,7 +1,6 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <queue>
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
@@ -14,17 +13,6 @@ class Shell {
 public:
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
-    virtual ~Shell() {}
-
-    struct BackBuffer {
-        uint32_t image_index;
-
-        VkSemaphore acquire_semaphore;
-        VkSemaphore render_semaphore;
-
-        // signaled when this struct is ready for reuse
-        VkFence present_fence;
-    };
 
     struct Context {
         VkInstance instance;
@@ -37,15 +25,10 @@ public:
         VkQueue game_queue;
         VkQueue present_queue;
 
-        std::queue<BackBuffer> back_buffers;
-
-        VkSurfaceKHR surface;
         VkSurfaceFormatKHR format;
 
         VkSwapchainKHR swapchain;
         VkExtent2D extent;
-
-        BackBuffer acquired_back_buffer;
     };
     const Context &context() const { return ctx_; }
 
@@ -58,23 +41,15 @@ public:
     virtual void log(LogPriority priority, const char *msg);
 
     virtual void run() = 0;
-    virtual void quit() = 0;
 
 protected:
-    Shell(Game &game);
+    Shell(Game &game) : game_(game), settings_(game.settings()), ctx_() {}
 
     void init_vk();
     void cleanup_vk();
 
-    void create_context();
-    void destroy_context();
-
-    void resize_swapchain(uint32_t width_hint, uint32_t height_hint);
-
-    void add_game_time(float time);
-
-    void acquire_back_buffer();
-    void present_back_buffer();
+    void resize_swapchain(int32_t width_hint, int32_t height_hint);
+    void present(float frame_time);
 
     Game &game_;
     const Game::Settings &settings_;
@@ -91,21 +66,10 @@ private:
     virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
     void init_physical_dev();
-
-    // called by create_context
-    void create_dev();
-    void create_back_buffers();
-    void destroy_back_buffers();
-    virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
-    void create_swapchain();
-    void destroy_swapchain();
-
-    void fake_present();
+    void init_dev();
+    void init_swapchain();
 
     Context ctx_;
-
-    const float game_tick_;
-    float game_time_;
 };
 
 #endif // SHELL_H

@@ -34,8 +34,6 @@ set(sources
     Main.cpp
     Meshes.cpp
     Meshes.h
-    Simulation.cpp
-    Simulation.h
     Shell.cpp
     Shell.h
     )
@@ -53,9 +51,6 @@ set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
-    list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
-
-    list(APPEND sources ShellWin32.cpp ShellWin32.h)
 else()
     list(APPEND libraries PRIVATE -ldl)
 
