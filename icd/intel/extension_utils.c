@@ -43,23 +43,24 @@ const VkExtensionProperties intel_global_exts[INTEL_GLOBAL_EXT_COUNT] = {
         .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_XCB_SURFACE_REVISION,
     },
-#elif VK_USE_PLATFORM_XLIB_KHR
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     {
         .extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_XLIB_SURFACE_REVISION,
     }
-#elif VK_USE_PLATFORM_MIR_KHR
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
     {
         .extensionName = VK_KHR_MIR_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_MIR_SURFACE_REVISION,
     }
-#elif VK_USE_PLATFORM_WAYLAND_KHR
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
     {
         .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
         .specVersion = VK_KHR_WAYLAND_SURFACE_REVISION,
     }
-#else
-    assert(!"Unknown Platform");
 #endif
 };
 
