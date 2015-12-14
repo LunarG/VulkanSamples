@@ -3711,11 +3711,13 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceExtensionProperties(
         uint32_t*                               pPropertyCount,
         VkExtensionProperties*                  pProperties)
 {
-    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
+    struct loader_physical_device *phys_dev;
     uint32_t copy_size;
 
     uint32_t count;
     struct loader_device_extension_list *dev_ext_list=NULL;
+    //TODO fix this aliases physical devices 
+    phys_dev = loader_get_physical_device(physicalDevice);
 
     /* get layer libraries if needed */
     if (pLayerName && strlen(pLayerName) != 0) {
@@ -3767,8 +3769,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_EnumerateDeviceLayerProperties(
         VkLayerProperties*                      pProperties)
 {
     uint32_t copy_size;
-    struct loader_physical_device *phys_dev = (struct loader_physical_device *) physicalDevice;
-
+    struct loader_physical_device *phys_dev;
+    //TODO fix this, aliases physical devices
+    phys_dev = loader_get_physical_device(physicalDevice);
     uint32_t count = phys_dev->this_instance->device_layer_list.count;
 
     if (pProperties == NULL) {
