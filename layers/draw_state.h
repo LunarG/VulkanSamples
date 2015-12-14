@@ -79,7 +79,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND,         // DescriptorSet used by pipeline at draw time is not bound, or has been disturbed (which would have flagged previous warning)
     DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT,     // DescriptorSets bound with different number of dynamic descriptors that were included in dynamicOffsetCount
     DRAWSTATE_CLEAR_CMD_BEFORE_DRAW,            // Clear cmd issued before any Draw in CommandBuffer, should use RenderPass Ops instead
-    DRAWSTATE_BEGIN_CB_INVALID_STATE,           // Primary/Secondary CB created with mismatched FB/RP information
+    DRAWSTATE_BEGIN_CB_INVALID_STATE,           // CB state at Begin call is bad. Can be Primary/Secondary CB created with mismatched FB/RP information or CB in RECORDING state
+    DRAWSTATE_INVALID_COMMAND_BUFFER_RESET,     // Attempting to call Reset (or Begin on recorded cmdBuffer) that was allocated from Pool w/o VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT bit set
     DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH,        // Count for viewports and scissors mismatch and/or state doesn't match count
     DRAWSTATE_INVALID_IMAGE_ASPECT,             // Image aspect is invalid for the current operation
     DRAWSTATE_MISSING_ATTACHMENT_REFERENCE,     // Attachment reference must be present in active subpass
@@ -368,9 +369,9 @@ typedef struct _CMD_NODE {
 
 typedef enum _CB_STATE
 {
-    CB_NEW,            // Newly created CB w/o any cmds
-    CB_UPDATE_ACTIVE,  // BeginCB has been called on this CB
-    CB_UPDATE_COMPLETE // EndCB has been called on this CB
+    CB_NEW,       // Newly created CB w/o any cmds
+    CB_RECORDING, // BeginCB has been called on this CB
+    CB_RECORDED   // EndCB has been called on this CB
 } CB_STATE;
 // CB Status -- used to track status of various bindings on cmd buffer objects
 typedef VkFlags CBStatusFlags;

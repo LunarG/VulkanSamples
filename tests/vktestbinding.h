@@ -568,6 +568,7 @@ inline VkCommandPoolCreateInfo CommandPool::create_info(uint32_t queue_family_in
     VkCommandPoolCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     info.queueFamilyIndex = queue_family_index;
+    info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     return info;
 }
 

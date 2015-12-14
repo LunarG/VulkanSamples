@@ -2277,6 +2277,53 @@ TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
     vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &draw_cmd);
 }
 
+TEST_F(VkLayerTest, CommandBufferResetErrors)
+{
+    // Cause error due to Begin while recording CB
+    // Then cause 2 errors for attempting to reset CB w/o having
+    // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set for the pool from
+    // which CBs were allocated. Note that this bit is off by default.
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT,
+        "Cannot call Begin on CB");
+
+    ASSERT_NO_FATAL_FAILURE(InitState());
+
+    // Calls AllocateCommandBuffers
+    VkCommandBufferObj commandBuffer(m_device, m_commandPool);
+
+    // Force the failure by setting the Renderpass and Framebuffer fields with (fake) data
+    VkCommandBufferBeginInfo cmd_buf_info = {};
+    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmd_buf_info.pNext = NULL;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    // Begin CB to transition to recording state
+    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
+    // Can't re-begin. This should trigger error
+    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'Cannot call Begin on CB (0x<ADDR>) in the RECORDING state...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, "Attempt to reset command buffer ");
+    VkCommandBufferResetFlags flags = 0; // Don't care about flags for this test
+    // Reset attempt will trigger error due to incorrect CommandPool state
+    vkResetCommandBuffer(commandBuffer.GetBufferHandle(), flags);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'Attempt to reset command buffer (0x<ADDR>) created from command pool...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    m_errorMonitor->SetDesiredFailureMsg(VK_DBG_REPORT_ERROR_BIT, " attempts to implicitly reset cmdBuffer created from ");
+    // Transition CB to RECORDED state
+    vkEndCommandBuffer(commandBuffer.GetBufferHandle());
+    // Now attempting to Begin will implicitly reset, which triggers error
+    vkBeginCommandBuffer(commandBuffer.GetBufferHandle(), &cmd_buf_info);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Did not receive Error 'Call to vkBeginCommandBuffer() on command buffer (0x<ADDR>) attempts to implicitly reset...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+}
+
 TEST_F(VkLayerTest, InvalidPipelineCreateState)
 {
     // Attempt to Create Gfx Pipeline w/o a VS

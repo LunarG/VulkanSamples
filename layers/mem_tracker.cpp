@@ -2065,8 +2065,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkBool32    skipCall              = VK_FALSE;
     VkResult    result                = VK_ERROR_VALIDATION_FAILED;
 
-    // TODO: Check the commandPool's flags to see if reset is available for this pool.
-
     auto it = my_data->commandPoolMap[commandPool].pCommandBuffers.begin();
     // Verify that CB's in pool are complete (not in-flight)
     while (it != my_data->commandPoolMap[commandPool].pCommandBuffers.end()) {
@@ -2081,6 +2079,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
             skipCall |= clear_cmd_buf_and_mem_references(my_data, (*it));
             loader_platform_thread_unlock_mutex(&globalLock);
         }
+        ++it;
     }
 
     if (VK_FALSE == skipCall) {
@@ -2136,8 +2135,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandBuffer(
     VkBool32 skipCall          = VK_FALSE;
     VkBool32 commandBufferComplete = VK_FALSE;
     loader_platform_thread_lock_mutex(&globalLock);
-
-    // TODO:  Validate that this cmdBuffer's command pool allows reset
 
     // Verify that CB is complete (not in-flight)
     skipCall = checkCBCompleted(my_data, commandBuffer, &commandBufferComplete);
