@@ -1254,28 +1254,35 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
             // If valid set is not bound throw an error
             if ((pCB->boundDescriptorSets.size() <= setIndex) || (!pCB->boundDescriptorSets[setIndex])) {
                 result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, 0, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND, "DS",
-                        "VkPipeline %#" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline, setIndex);
+                    "VkPipeline %#" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline, setIndex);
             } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[pCB->boundDescriptorSets[setIndex]], pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
                 // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
                 VkDescriptorSet setHandle = my_data->setMap[pCB->boundDescriptorSets[setIndex]]->set;
                 result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_DESCRIPTOR_SET, (uint64_t)setHandle, 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
-                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s", (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
+                    (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
             }
         }
     }
+
     // Verify Vtx binding
-    if (MAX_BINDING != pCB->lastVtxBinding) {
-        if (pCB->lastVtxBinding >= pPipe->vtxBindingCount) {
-            if (0 == pPipe->vtxBindingCount) {
+    if (pPipe->vtxBindingCount > 0) {
+        VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
+        for (auto i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
+            if ((pCB->boundVtxBuffers.size() < (i+1)) || (pCB->boundVtxBuffers[i] == VK_NULL_HANDLE)) {
                 result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                        "Vtx Buffer Index %u was bound, but no vtx buffers are attached to PSO.", pCB->lastVtxBinding);
-            }
-            else {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, (VkDebugReportObjectTypeLUNARG) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                        "Vtx binding Index of %u exceeds PSO pVertexBindingDescriptions max array index of %u.", pCB->lastVtxBinding, (pPipe->vtxBindingCount - 1));
+                    "The Pipeline State Object (%#" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %d should be set via vkCmdBindVertexBuffers.",
+                    (uint64_t)pCB->lastBoundPipeline, i);
             }
         }
+    } else {
+        if (!pCB->boundVtxBuffers.empty()) {
+            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT, (VkDebugReportObjectTypeLUNARG) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,
+                "DS", "Vertex buffers are bound to command buffer (%#" PRIxLEAST64 ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
+                (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
+        }
     }
+
     // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
     VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
     VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
@@ -2360,7 +2367,7 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->framebuffer = 0;
         pCB->boundDescriptorSets.clear();
         pCB->imageLayoutMap.clear();
-        pCB->lastVtxBinding = MAX_BINDING;
+        pCB->boundVtxBuffers.clear();
     }
 }
 
@@ -3916,19 +3923,23 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer 
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
-    VkCommandBuffer                                 commandBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
-    const VkBuffer*                             pBuffers,
-    const VkDeviceSize*                         pOffsets)
+    const VkBuffer                             *pBuffers,
+    const VkDeviceSize                         *pOffsets)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         if (pCB->state == CB_RECORDING) {
-            /* TODO: Need to track all the vertex buffers, not just last one */
-            pCB->lastVtxBinding = startBinding + bindingCount -1;
+            if ((startBinding + bindingCount) > pCB->boundVtxBuffers.size()) {
+                pCB->boundVtxBuffers.resize(startBinding+bindingCount, VK_NULL_HANDLE);
+            }
+            for (auto i = 0; i < bindingCount; i++) {
+                pCB->boundVtxBuffers[i+startBinding] = pBuffers[i];
+            }
             addCmd(dev_data, pCB, CMD_BINDVERTEXBUFFER);
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");

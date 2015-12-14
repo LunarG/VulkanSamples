@@ -417,6 +417,7 @@ typedef struct _GLOBAL_CB_NODE {
     //  each individual CMD_NODE referencing its own "lastBound" state
     VkPipeline                   lastBoundPipeline;
     uint32_t                     lastVtxBinding;
+    vector<VkBuffer>             boundVtxBuffers;
     vector<VkViewport>           viewports;
     vector<VkRect2D>             scissors;
     float                        lineWidth;

@@ -4274,11 +4274,10 @@ TEST_F(VkLayerTest, ClearCmdNoDraw)
 
 TEST_F(VkLayerTest, VtxBufferBadIndex)
 {
-    // Create CommandBuffer where MSAA samples doesn't match RenderPass sampleCount
     VkResult        err;
 
-    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT,
-        "Vtx Buffer Index 1 was bound, but no vtx buffers are attached to PSO.");
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT,
+        "but no vertex buffers are attached to this Pipeline State Object");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
