@@ -195,12 +195,16 @@ sampler_init(struct intel_sampler *sampler,
    min_filter = translate_tex_filter(info->minFilter);
    mag_filter = translate_tex_filter(info->magFilter);
 
-   if (info->maxAnisotropy >= 2 && info->maxAnisotropy <= 16)
-      max_aniso = info->maxAnisotropy / 2 - 1;
-   else if (info->maxAnisotropy > 16)
-      max_aniso = GEN6_ANISORATIO_16;
-   else
-      max_aniso = GEN6_ANISORATIO_2;
+   if (info->anisotropyEnable == VK_FALSE) {
+        max_aniso = 1;
+   } else {
+        if (info->maxAnisotropy >= 2 && info->maxAnisotropy <= 16)
+           max_aniso = info->maxAnisotropy / 2 - 1;
+        else if (info->maxAnisotropy > 16)
+           max_aniso = GEN6_ANISORATIO_16;
+        else
+           max_aniso = GEN6_ANISORATIO_2;
+   }
 
    /*
     * Here is how the hardware calculate per-pixel LOD, from my reading of the
@@ -273,7 +277,7 @@ sampler_init(struct intel_sampler *sampler,
             mip_filter << 20 |
             lod_bias << 1;
 
-      if (info->maxAnisotropy > 1) {
+      if (info->maxAnisotropy > 1 && info->anisotropyEnable == VK_TRUE) {
          dw0 |= GEN6_MAPFILTER_ANISOTROPIC << 17 |
                 GEN6_MAPFILTER_ANISOTROPIC << 14 |
                 1;
@@ -321,7 +325,7 @@ sampler_init(struct intel_sampler *sampler,
 
       dw0 |= translate_compare_func(info->compareOp);
 
-      if (info->maxAnisotropy > 1) {
+      if (info->maxAnisotropy > 1 && info->anisotropyEnable == VK_TRUE) {
          dw0 |= GEN6_MAPFILTER_ANISOTROPIC << 17 |
                 GEN6_MAPFILTER_ANISOTROPIC << 14;
       }

@@ -3421,6 +3421,7 @@ TEST_F(VkLayerTest, DSTypeMismatch)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
@@ -3518,6 +3519,7 @@ TEST_F(VkLayerTest, DSUpdateOutOfBounds)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
@@ -3615,6 +3617,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateIndex)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
@@ -3712,6 +3715,7 @@ TEST_F(VkLayerTest, InvalidDSUpdateStruct)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
@@ -3883,6 +3887,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;
@@ -3990,6 +3995,7 @@ TEST_F(VkLayerTest, CopyDescriptorUpdateErrors)
         sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         sampler_ci.mipLodBias = 1.0;
+        sampler_ci.anisotropyEnable = VK_FALSE;
         sampler_ci.maxAnisotropy = 1;
         sampler_ci.compareEnable = VK_FALSE;
         sampler_ci.compareOp = VK_COMPARE_OP_NEVER;

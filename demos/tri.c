@@ -955,6 +955,7 @@ static void demo_prepare_textures(struct demo *demo)
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
             .mipLodBias = 0.0f,
+            .anisotropyEnable = VK_FALSE,
             .maxAnisotropy = 1,
             .compareOp = VK_COMPARE_OP_NEVER,
             .minLod = 0.0f,

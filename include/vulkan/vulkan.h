@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 210, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 211, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -1183,6 +1183,7 @@ typedef struct VkPhysicalDeviceFeatures {
     VkBool32                                    sparseResidency16Samples;
     VkBool32                                    sparseResidencyAliased;
     VkBool32                                    variableMultisampleRate;
+    VkBool32                                    inheritedQueries;
 } VkPhysicalDeviceFeatures;
 
 typedef struct VkFormatProperties {
@@ -1851,6 +1852,7 @@ typedef struct VkSamplerCreateInfo {
     VkSamplerAddressMode                        addressModeV;
     VkSamplerAddressMode                        addressModeW;
     float                                       mipLodBias;
+    VkBool32                                    anisotropyEnable;
     float                                       maxAnisotropy;
     VkBool32                                    compareEnable;
     VkCompareOp                                 compareOp;

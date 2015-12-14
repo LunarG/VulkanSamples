@@ -829,6 +829,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tsparseResidency16Samples                = %u\n", features->sparseResidency16Samples               );
     printf("\tsparseResidencyAliased                  = %u\n", features->sparseResidencyAliased                 );
     printf("\tvariableMultisampleRate                 = %u\n", features->variableMultisampleRate                );
+    printf("\tiheritedQueries                         = %u\n", features->inheritedQueries                       );
 }
 
 static void app_dump_sparse_props(const VkPhysicalDeviceSparseProperties *sparseProps)
