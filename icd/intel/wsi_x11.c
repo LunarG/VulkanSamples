@@ -353,7 +353,7 @@ static VkResult x11_get_surface_capabilities(
         pSurfaceProperties->currentExtent.width;
     pSurfaceProperties->maxImageExtent.height =
         pSurfaceProperties->currentExtent.height;
-    pSurfaceProperties->maxImageArrayLayers = 0;
+    pSurfaceProperties->maxImageArrayLayers = 1;
     pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
     pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
     pSurfaceProperties->supportedUsageFlags =
