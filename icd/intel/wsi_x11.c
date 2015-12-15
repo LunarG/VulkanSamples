@@ -155,6 +155,7 @@ static VkResult x11_xcb_surface_create(struct intel_instance *instance,
     return VK_SUCCESS;
 }
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
 // Note: The following function is only needed if an application uses this ICD
 // directly, without the common Vulkan loader:
 //
@@ -183,6 +184,19 @@ static VkResult x11_xlib_surface_create(struct intel_instance *instance,
     return VK_SUCCESS;
 }
 
+static inline VkIcdSurfaceXlib *x11_xlib_surface(VkSurfaceKHR surface)
+{
+    VkIcdSurfaceXlib *pSurface = (VkIcdSurfaceXlib *) surface;
+    if (pSurface->base.platform == VK_ICD_WSI_PLATFORM_XLIB)
+    {
+        return pSurface;
+    }
+
+    return 0;
+}
+
+#endif // VK_USE_PLATFORM_XLIB_KHR
+
 static void x11_surface_destroy(VkSurfaceKHR surface)
 {
     intel_free(surface, surface);
@@ -192,17 +206,6 @@ static inline VkIcdSurfaceXcb *x11_xcb_surface(VkSurfaceKHR surface)
 {
     VkIcdSurfaceXcb *pSurface = (VkIcdSurfaceXcb *) surface;
     if (pSurface->base.platform == VK_ICD_WSI_PLATFORM_XCB)
-    {
-        return pSurface;
-    }
-
-    return 0;
-}
-
-static inline VkIcdSurfaceXlib *x11_xlib_surface(VkSurfaceKHR surface)
-{
-    VkIcdSurfaceXlib *pSurface = (VkIcdSurfaceXlib *) surface;
-    if (pSurface->base.platform == VK_ICD_WSI_PLATFORM_XLIB)
     {
         return pSurface;
     }
@@ -311,8 +314,11 @@ static VkResult x11_get_surface_capabilities(
     VkSurfaceCapabilitiesKHR *pSurfaceProperties)
 {
     const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(surface);
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(surface);
     assert(s_xcb || s_xlib);
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     xcb_connection_t *c = 0;
     xcb_window_t window = 0;
@@ -321,11 +327,13 @@ static VkResult x11_get_surface_capabilities(
         c = s_xcb->connection;
         window = s_xcb->window;
     }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     else if (s_xlib)
     {
         c = XGetXCBConnection(s_xlib->dpy);
         window = (xcb_window_t)s_xlib->window;
     }
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     xcb_get_geometry_cookie_t cookie;
     xcb_get_geometry_reply_t *reply;
@@ -850,8 +858,11 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
     const xcb_randr_provider_t provider = 0;
 
     const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(info->surface);
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(info->surface);
     assert(s_xcb || s_xlib);
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     xcb_connection_t *c = 0;
     xcb_window_t window = 0;
@@ -860,11 +871,13 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
         c = s_xcb->connection;
         window = s_xcb->window;
     }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     else if (s_xlib)
     {
         c = XGetXCBConnection(s_xlib->dpy);
         window = (xcb_window_t)s_xlib->window;
     }
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     struct intel_x11_swap_chain *sc;
     int fd;
@@ -1053,6 +1066,7 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupp
     }
 }
 
+#ifdef VK_USE_PLATFORM_XLIB_KHR
 // Note: The following function is only needed if an application uses this ICD
 // directly, without the common Vulkan loader:
 //
@@ -1082,6 +1096,7 @@ ICD_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentationSup
         return VK_FALSE;
     }
 }
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(
     VkInstance                               instance,
@@ -1098,8 +1113,10 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
     VkBool32*                               pSupported)
 {
     const VkIcdSurfaceXcb *s_xcb = x11_xcb_surface(surface);
+#ifdef VK_USE_PLATFORM_XLIB_KHR
     const VkIcdSurfaceXlib *s_xlib = x11_xlib_surface(surface);
     assert(s_xcb || s_xlib);
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     *pSupported = false;
 
@@ -1108,12 +1125,15 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
         if (s_xcb->connection) {
             *pSupported = true;
         }
-    } else if (s_xlib) {
+    }
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    else if (s_xlib) {
         // Just make sure we have a non-zero display:
         if (s_xlib->dpy) {
             *pSupported = true;
         }
     }
+#endif // VK_USE_PLATFORM_XLIB_KHR
 
     return VK_SUCCESS;
 }

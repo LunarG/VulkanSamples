@@ -55,11 +55,21 @@ if(XCB_FOUND)
     list(APPEND include_dirs ${XCB_INCLUDE_DIRS})
     list(APPEND libraries ${XCB_LIBRARIES})
 
-    find_package(X11_XCB COMPONENTS X11-xcb)
-    if(X11_XCB_FOUND)
-        # No include directories by purpose.
-        list(APPEND libraries ${X11_XCB_LIBRARIES})
-    endif()    
+    if (DisplayServer MATCHES "Xcb")
+        find_package(XCB COMPONENTS xcb)
+        if(XCB_FOUND)
+            # No include directories by purpose.
+            list(APPEND libraries ${XCB_LIBRARIES})
+        endif()
+    endif()
+
+    if (DisplayServer MATCHES "Xlib")
+        find_package(X11_XCB COMPONENTS X11-xcb)
+        if(X11_XCB_FOUND)
+            # No include directories by purpose.
+            list(APPEND libraries ${X11_XCB_LIBRARIES})
+        endif()
+    endif()
 
     list(APPEND sources wsi_x11.c)
 

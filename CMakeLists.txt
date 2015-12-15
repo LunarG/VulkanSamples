@@ -11,17 +11,36 @@ project (VULKAN)
 # vulkan-<major>.dll (and other files).
 set(MAJOR "0")
 
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN)
+    set(DisplayServer Win32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR)
+    set(DisplayServer Android)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    add_definitions(-DVK_USE_PLATFORM_XCB_KHR -DVK_USE_PLATFORM_XLIB_KHR)
-#   TODO: Add support to SDK for Wayland and Mir
-#   add_definitions(-DVK_USE_PLATFORM_MIR_KHR -DVK_USEPLATFORM_WAYLAND_KHR)
+    add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    set(DisplayServer Xcb)
+
+#   TODO: Basic support is present for Xlib but is untested.
+#         Wayland/Mir support is stubbed in but unimplemented and untested.
+
+#   add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+#   set(DisplayServer Xlib)
+
+#   add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
+#   set(DisplayServer Mir)
+
+#   add_definitions(-DVK_USEPLATFORM_WAYLAND_KHR)
+#   set(DisplayServer Wayland)
+
 else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
+
+
+
+
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
