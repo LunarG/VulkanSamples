@@ -142,6 +142,64 @@ int main(int argc, char **argv)
         printf("  Pipeline cache miss!\n");
     }
 
+    if (startCacheData != nullptr) {
+        //
+        // Check for cache validity
+        //
+        // TODO: Update this as the spec evolves. The fields are not defined by the header.
+        //
+        // As of SDK 0.10, the table contains:
+        //
+        // Offset	 Size            Meaning
+        // ------    ------------    ------------------------------------------------------------------
+        //      0               4    a device ID equal to VkPhysicalDeviceProperties::DeviceId written
+        //                           as a stream of bytes, with the least significant byte first
+        //
+        //      4    VK_UUID_SIZE    a pipeline cache ID equal to VkPhysicalDeviceProperties::pipelineCacheUUID
+        //
+
+        uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
+        uint32_t deviceID = 0;
+
+        deviceID = *((uint32_t*)startCacheData);
+        memcpy(pipelineCacheUUID, (uint8_t *)startCacheData + 4, VK_UUID_SIZE);
+
+        // Check each field and report bad values before freeing existing cache
+        bool badCache = false;
+
+        if (deviceID != info.gpu_props.deviceID) {
+            badCache = true;
+            printf("  Device ID mismatch in %s.\n", readFileName);
+            printf("    Cache contains: 0x%.8x\n", deviceID);
+            printf("    Driver expects: 0x%.8x\n", info.gpu_props.deviceID);
+        }
+
+        if (memcmp(pipelineCacheUUID, info.gpu_props.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0) {
+            badCache = true;
+            printf("  UUID mismatch in %s.\n", readFileName);
+            printf("    Cache contains: ");
+            print_UUID(pipelineCacheUUID);
+            printf("\n");
+            printf("    Driver expects: ");
+            print_UUID(info.gpu_props.pipelineCacheUUID);
+            printf("\n");
+        }
+
+        if (badCache) {
+            // Don't submit initial cache data if any version info is incorrect
+            free (startCacheData);
+            startCacheSize = 0;
+            startCacheData = nullptr;
+
+            // And clear out the old cache file for use in next run
+            printf("  Deleting cache entry %s to repopulate.\n", readFileName);
+            if (remove(readFileName) != 0) {
+                fputs("Reading error", stderr);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
     // Feed the initial cache data into pipeline creation
     VkPipelineCacheCreateInfo pipelineCache;
     pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
