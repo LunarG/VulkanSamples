@@ -218,9 +218,9 @@ enum intel_global_ext_type intel_gpu_lookup_global_extension(
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
-    const VkInstanceCreateInfo*             pCreateInfo,
-    const VkAllocationCallbacks*            pAllocator,
-    VkInstance*                             pInstance)
+    const VkInstanceCreateInfo*               pCreateInfo,
+    const VkAllocationCallbacks*              pAllocator,
+    VkInstance*                               pInstance)
 {
     return intel_instance_create(pCreateInfo, pAllocator,
             (struct intel_instance **) pInstance);
@@ -228,7 +228,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
     VkInstance                                pInstance,
-    const VkAllocationCallbacks*                     pAllocator)
+    const VkAllocationCallbacks*              pAllocator)
 {
     struct intel_instance *instance = intel_instance(pInstance);
 
@@ -236,9 +236,9 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(
-        const char*                                 pLayerName,
-        uint32_t*                                   pPropertyCount,
-        VkExtensionProperties*                      pProperties)
+        const char*                           pLayerName,
+        uint32_t*                             pPropertyCount,
+        VkExtensionProperties*                pProperties)
 {
     uint32_t copy_size;
 
@@ -258,17 +258,17 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerProperties(
-        uint32_t*                                   pPropertyCount,
-        VkLayerProperties*                          pProperties)
+        uint32_t*                             pPropertyCount,
+        VkLayerProperties*                    pProperties)
 {
     *pPropertyCount = 0;
     return VK_SUCCESS;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
-    VkInstance                  instance_,
-    uint32_t*                   pPhysicalDeviceCount,
-    VkPhysicalDevice*           pPhysicalDevices)
+    VkInstance                                instance_,
+    uint32_t*                                 pPhysicalDeviceCount,
+    VkPhysicalDevice*                         pPhysicalDevices)
 {
     struct intel_instance *instance = intel_instance(instance_);
     struct icd_drm_device *devices, *dev;
@@ -319,10 +319,10 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
-    VkInstance                                  instance,
-    const VkDebugReportCallbackCreateInfoEXT   *pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkDebugReportCallbackEXT*                   pCallback)
+    VkInstance                                instance,
+    const VkDebugReportCallbackCreateInfoEXT  *pCreateInfo,
+    const VkAllocationCallbacks*              pAllocator,
+    VkDebugReportCallbackEXT*                 pCallback)
 {
     struct intel_instance *inst = intel_instance(instance);
 
@@ -330,9 +330,9 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
 }
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
-    VkInstance                                  instance,
-    VkDebugReportCallbackEXT                    callback,
-    const VkAllocationCallbacks                *pAllocator)
+    VkInstance                                instance,
+    VkDebugReportCallbackEXT                  callback,
+    const VkAllocationCallbacks               *pAllocator)
 {
     struct intel_instance *inst = intel_instance(instance);
 
@@ -340,14 +340,14 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(
 }
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
-    VkInstance                                  instance,
-    VkDebugReportFlagsEXT                       flags,
-    VkDebugReportObjectTypeEXT                  objType,
-    uint64_t                                    object,
-    size_t                                      location,
-    int32_t                                     msgCode,
-    const char*                                 pLayerPrefix,
-    const char*                                 pMsg)
+    VkInstance                                instance,
+    VkDebugReportFlagsEXT                     flags,
+    VkDebugReportObjectTypeEXT                objType,
+    uint64_t                                  object,
+    size_t                                    location,
+    int32_t                                   msgCode,
+    const char*                               pLayerPrefix,
+    const char*                               pMsg)
 {
     // Intentionally does nothing.
     // Loader will call registered callbacks after all

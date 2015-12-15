@@ -140,11 +140,11 @@ protected:
     float                               m_depth_clear_color;
     uint32_t                            m_stencil_clear_color;
     VkDepthStencilObj                  *m_depthStencil;
-    PFN_vkCreateDebugReportCallbackEXT          m_CreateDebugReportCallback;
-    PFN_vkDestroyDebugReportCallbackEXT         m_DestroyDebugReportCallback;
-    PFN_vkDebugReportMessageEXT                 m_DebugReportMessage;
-    VkDebugReportCallbackEXT                    m_globalMsgCallback;
-    VkDebugReportCallbackEXT                    m_devMsgCallback;
+    PFN_vkCreateDebugReportCallbackEXT  m_CreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackEXT m_DestroyDebugReportCallback;
+    PFN_vkDebugReportMessageEXT         m_DebugReportMessage;
+    VkDebugReportCallbackEXT            m_globalMsgCallback;
+    VkDebugReportCallbackEXT            m_devMsgCallback;
 
     /*
      * SetUp and TearDown are called by the Google Test framework
