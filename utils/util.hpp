@@ -253,6 +253,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 void init_glslang();
 void finalize_glslang();
 void wait_seconds(int seconds);
+void print_UUID(uint8_t* pipelineCacheUUID);
 
 typedef unsigned long long timestamp_t;
 timestamp_t get_milliseconds();
