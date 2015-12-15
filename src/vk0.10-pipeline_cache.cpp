@@ -290,9 +290,14 @@ int main(int argc, char **argv)
     FILE * pWriteFile;
     const char* writeFileName = "pipeline_cache_data.bin";
     pWriteFile = fopen(writeFileName, "wb");
-    fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
-    fclose(pWriteFile);
-    printf("  cacheData written to %s\n", writeFileName);
+    if (pWriteFile) {
+        fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
+        fclose(pWriteFile);
+        printf("  cacheData written to %s\n", writeFileName);
+    } else {
+        // Something bad happened
+        printf("  Unable to write cache data to disk!\n");
+    }
 
     /* VULKAN_KEY_END */
 
