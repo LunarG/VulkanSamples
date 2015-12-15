@@ -5210,7 +5210,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer comm
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS);
         pCB->activeSubpass++;
-        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, ++pCB->activeSubpass);
+        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
         if (pCB->lastBoundPipeline) {
             skipCall |= validatePipelineState(dev_data, pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
         }
