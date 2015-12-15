@@ -397,7 +397,6 @@ struct demo {
     bool use_break;
     PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
     PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
-    PFN_vkDbgMsgCallback dbgBreakCallback;
     VkDbgMsgCallback msg_callback;
 
     uint32_t current_buffer;
@@ -2325,18 +2324,16 @@ static void demo_init_vk(struct demo *demo)
             ERR_EXIT("GetProcAddr: Unable to find vkDbgDestroyMsgCallback\n",
                      "vkGetProcAddr Failure");
         }
-        demo->dbgBreakCallback = (PFN_vkDbgMsgCallback) vkGetInstanceProcAddr(demo->inst, "vkDbgBreakCallback");
-        if (!demo->dbgBreakCallback) {
-            ERR_EXIT("GetProcAddr: Unable to find vkDbgBreakCallback\n",
-                     "vkGetProcAddr Failure");
-        }
+
 
         PFN_vkDbgMsgCallback callback;
 
         if (!demo->use_break) {
             callback = dbgFunc;
         } else {
-            callback = demo->dbgBreakCallback;
+            callback = dbgFunc;
+            // TODO add a break callback defined locally since there is no longer
+            // one included in the loader
         }
         err = demo->dbgCreateMsgCallback(
                   demo->inst,
