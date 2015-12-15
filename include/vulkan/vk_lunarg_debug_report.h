@@ -34,7 +34,7 @@
 
 #include "vulkan/vulkan.h"
 
-#define VK_EXT_LUNARG_DEBUG_REPORT_EXTNSION_NUMBER 11
+#define VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NUMBER 11
 #define VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_REVISION 1
 #ifdef __cplusplus
 extern "C"
@@ -106,7 +106,7 @@ typedef enum _DEBUG_REPORT_ERROR
     DEBUG_REPORT_CALLBACK_REF,          // Callbacks were not destroyed prior to calling DestroyInstance
 } DEBUG_REPORT_ERROR;
 
-#define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_EXT_LUNARG_DEBUG_REPORT_EXTNSION_NUMBER * -1000 + (id)))
+#define VK_DEBUG_REPORT_ENUM_EXTEND(type, id)    ((type)(VK_EXT_LUNARG_DEBUG_REPORT_EXTENSION_NUMBER * -1000 + (id)))
 
 #define VK_OBJECT_TYPE_MSG_CALLBACK VK_DEBUG_REPORT_ENUM_EXTEND(VkDebugReportObjectTypeLUNARG, 0)
 #define VK_ERROR_VALIDATION_FAILED VK_DEBUG_REPORT_ENUM_EXTEND(VkResult, 0)
