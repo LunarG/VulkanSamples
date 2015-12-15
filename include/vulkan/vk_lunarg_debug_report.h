@@ -116,7 +116,7 @@ typedef enum _DEBUG_REPORT_ERROR
 
 typedef VkBool32 (*PFN_vkDbgMsgCallback)(
     VkFlags                             msgFlags,
-    VkDebugReportObjectTypeLUNARG                     objType,
+    VkDebugReportObjectTypeLUNARG       objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
