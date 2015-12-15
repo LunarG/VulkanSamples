@@ -95,14 +95,7 @@ int main(int argc, char **argv)
 
         std::cout << "pipelineCacheUUID: ";
         std::cout << std::setfill('0') << std::hex;
-        for(int j = 0; j < VK_UUID_SIZE; ++j)
-        {
-            std::cout << std::setw(2) << (uint32_t)properties.pipelineCacheUUID[j];
-            if(j == 3 || j == 5 || j == 7 || j == 9)
-            {
-                std::cout << '-';
-            }
-        }
+        print_UUID(properties.pipelineCacheUUID);
         std::cout << std::setfill(' ') << std::dec;
         std::cout << '\n';
         std::cout << '\n';
