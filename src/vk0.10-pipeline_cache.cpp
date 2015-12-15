@@ -34,7 +34,7 @@ Create and use a pipeline cache accross runs.
 #include <cstdlib>
 #include "cube_data.h"
 
-// This sample tries to save and reuse pipeline cache data betwee runs
+// This sample tries to save and reuse pipeline cache data between runs
 // On first run, no cache will be found, it will be created and saved
 // to disk. On later runs, the cache should be found, loaded, and used.
 // Hopefully a speedup will observed.  In the future, the pipeline could
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 
     // Check disk for existing cache data
     size_t startCacheSize = 0;
-    void*  startCacheData = {};
+    void*  startCacheData = nullptr;
 
     const char* readFileName = "pipeline_cache_data.bin";
     FILE *pReadFile = fopen(readFileName, "rb");
@@ -117,28 +117,31 @@ int main(int argc, char **argv)
     if (pReadFile) {
 
         // Determine cache size
-        fseek (pReadFile , 0 , SEEK_END);
-        startCacheSize = ftell (pReadFile);
-        rewind (pReadFile);
+        fseek(pReadFile, 0 , SEEK_END);
+        startCacheSize = ftell(pReadFile);
+        rewind(pReadFile);
 
         // Allocate memory to hold the initial cache data
-        startCacheData = (char*) malloc (sizeof(char) * startCacheSize);
-        if (startCacheData == NULL) {
-            fputs ("Memory error",stderr);
-            exit (2);
+        startCacheData = (char*) malloc(sizeof(char) * startCacheSize);
+        if (startCacheData == nullptr) {
+            fputs("Memory error",stderr);
+            exit(EXIT_FAILURE);
         }
 
         // Read the data into our buffer
-        size_t result = fread (startCacheData, 1, startCacheSize, pReadFile);
+        size_t result = fread(startCacheData, 1, startCacheSize, pReadFile);
         if (result != startCacheSize) {
-            fputs ("Reading error", stderr);
-            exit (3);
+            fputs("Reading error", stderr);
+            free(startCacheData);
+            exit(EXIT_FAILURE);
         }
 
-        fclose (pReadFile);
+        // Clean up and print results
+        fclose(pReadFile);
         printf("  Pipeline cache HIT!\n");
         printf("  cacheData loaded from %s\n", readFileName);
     } else {
+        // No cache found on disk
         printf("  Pipeline cache miss!\n");
     }
 
@@ -268,16 +271,16 @@ int main(int argc, char **argv)
     // Store away the cache that we've populated.  This could conceivably happen earlier,
     // depends on when the pipeline cache stops being populated internally.
     size_t endCacheSize = 0;
-    void*  endCacheData = {};
+    void*  endCacheData = nullptr;
 
     // Call with nullptr to get cache size
     vkGetPipelineCacheData(info.device, info.pipelineCache, &endCacheSize, nullptr);
 
-    // Allocate memory to hold the initial cache data
-    endCacheData = (char*) malloc (sizeof(char) * endCacheSize);
+    // Allocate memory to hold the populated cache data
+    endCacheData = (char*) malloc(sizeof(char) * endCacheSize);
     if (!endCacheData) {
-        fputs ("Memory error", stderr);
-        exit (2);
+        fputs("Memory error", stderr);
+        exit(EXIT_FAILURE);
     }
 
     // Call again with pointer to buffer
@@ -286,10 +289,10 @@ int main(int argc, char **argv)
     // Write the file to disk, overwriting whatever was there
     FILE * pWriteFile;
     const char* writeFileName = "pipeline_cache_data.bin";
-    pWriteFile = fopen (writeFileName, "wb");
-    fwrite (endCacheData, sizeof(char), endCacheSize, pWriteFile);
-    fclose (pWriteFile);
-    printf ("  cacheData written to %s\n", writeFileName);
+    pWriteFile = fopen(writeFileName, "wb");
+    fwrite(endCacheData, sizeof(char), endCacheSize, pWriteFile);
+    fclose(pWriteFile);
+    printf("  cacheData written to %s\n", writeFileName);
 
     /* VULKAN_KEY_END */
 
