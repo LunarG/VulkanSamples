@@ -119,12 +119,17 @@ int main(int argc, char **argv)
     /* VULKAN_KEY_START */
     info.Model = glm::translate(info.Model, glm::vec3(1.5, 1.5, 1.5));
     glm::mat4 MVP2 = info.Projection * info.View * info.Model;
+    VkDeviceSize buf_size = sizeof(info.MVP);
+
+    if (info.gpu_props.limits.minUniformBufferOffsetAlignment)
+        buf_size = (buf_size + info.gpu_props.limits.minUniformBufferOffsetAlignment - 1) &
+                ~(info.gpu_props.limits.minUniformBufferOffsetAlignment - 1);
 
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    buf_info.size = 2 * sizeof(info.MVP);
+    buf_info.size = 2 * buf_size;
     buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -157,7 +162,7 @@ int main(int argc, char **argv)
 
     memcpy(pData, &info.MVP, sizeof(info.MVP));
 
-    pData += sizeof(info.MVP);
+    pData += buf_size;
     memcpy(pData, &MVP2, sizeof(MVP2));
 
     vkUnmapMemory(info.device, info.uniform_data.mem);
@@ -169,7 +174,7 @@ int main(int argc, char **argv)
 
     info.uniform_data.buffer_info.buffer = info.uniform_data.buf;
     info.uniform_data.buffer_info.offset = 0;
-    info.uniform_data.buffer_info.range = 2 * sizeof(info.MVP);
+    info.uniform_data.buffer_info.range = 2 * buf_size;
 
     /* Init desciptor and pipeline layouts - descriptor type is UNIFORM_BUFFER_DYNAMIC */
     VkDescriptorSetLayoutBinding layout_bindings[2];
@@ -309,7 +314,7 @@ int main(int argc, char **argv)
 
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
 
-    uni_offsets[0] = sizeof(info.MVP); /* The second draw should use the second matrix in the buffer */
+    uni_offsets[0] = buf_size; /* The second draw should use the second matrix in the buffer */
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
             0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 1, uni_offsets);
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
