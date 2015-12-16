@@ -285,7 +285,9 @@ int main(int argc, char **argv)
     assert(!res);
 
     /* Make sure command buffer is finished before presenting */
-    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    do {
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while(res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
     execute_present_image(info);
