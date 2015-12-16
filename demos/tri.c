@@ -1952,7 +1952,7 @@ static void demo_init_vk(struct demo *demo)
         VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
         dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
         dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
-        dbgCreateInfo.pfnCallback = (const void *) dbgFunc;
+        dbgCreateInfo.pfnCallback = dbgFunc;
         dbgCreateInfo.pUserData = NULL;
         dbgCreateInfo.pNext = NULL;
         err = demo->CreateDebugReportCallback(
