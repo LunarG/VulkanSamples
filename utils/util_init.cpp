@@ -1493,7 +1493,7 @@ void init_pipeline_cache(struct sample_info &info)
     assert(res == VK_SUCCESS);
 }
 
-void init_pipeline(struct sample_info &info, VkBool32 include_depth)
+void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 include_vi)
 {
     VkResult U_ASSERT_ONLY res;
 
@@ -1608,9 +1608,9 @@ void init_pipeline(struct sample_info &info, VkBool32 include_depth)
     pipeline.basePipelineHandle  = 0;
     pipeline.basePipelineIndex   = 0;
     pipeline.flags               = 0;
-    pipeline.pVertexInputState   = &vi;
+    pipeline.pVertexInputState   = include_vi?&vi:NULL;
     pipeline.pInputAssemblyState = &ia;
-    pipeline.pRasterizationState        = &rs;
+    pipeline.pRasterizationState = &rs;
     pipeline.pColorBlendState    = &cb;
     pipeline.pTessellationState  = NULL;
     pipeline.pMultisampleState   = &ms;
