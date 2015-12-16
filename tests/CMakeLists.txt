@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.11)
-include (FindPkgConfig)
 
 if(NOT WIN32)
+    include (FindPkgConfig)
     find_package(XCB REQUIRED)
 endif()
 

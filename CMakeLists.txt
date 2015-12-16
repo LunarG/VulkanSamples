@@ -47,7 +47,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 # Header file for CMake settings
 include_directories("${PROJECT_SOURCE_DIR}/include")
 
-include(FindPkgConfig)
+if(NOT WIN32)
+    include(FindPkgConfig)
+endif()
 
 set (CMAKE_INSTALL_PREFIX "")
 
