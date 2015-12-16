@@ -1648,6 +1648,8 @@ static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const
             // TODO : Need to understand this case better and make sure code is correct
             return ((VkCopyDescriptorSet*)pUpdateStruct)->descriptorCount;
     }
+
+	return 0;
 }
 
 // For given Layout Node and binding, return index where that binding begins
