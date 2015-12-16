@@ -2243,13 +2243,13 @@ TEST_F(VkLayerTest, PrimaryCommandBufferFramebufferAndRenderpass)
     }
 }
 
-TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
+TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass)
 {
     VkResult        err;
     VkCommandBuffer     draw_cmd;
 
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "must specify framebuffer and renderpass parameters");
+        " must specify a valid renderpass parameter.");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
 
@@ -2273,7 +2273,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferFramebufferAndRenderpass)
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
-        FAIL() << "Did not receive Error 'vkAllocateCommandBuffers():  Secondary Command Buffer must specify framebuffer and renderpass parameters'";
+        FAIL() << "Did not receive Error 'vkBeginCommandBuffer(): Secondary Command Buffers (0x<ADDR>) must specify a valid renderpass parameter.'";
         m_errorMonitor->DumpFailureMsgs();
     }
     vkFreeCommandBuffers(m_device->device(), m_commandPool, 1, &draw_cmd);
