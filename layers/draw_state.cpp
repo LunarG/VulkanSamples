@@ -591,7 +591,7 @@ collect_interface_by_location(layer_data *my_data, VkDevice dev,
                  * occupied multiple locations, emit one result for each. */
                 unsigned num_locations = get_locations_consumed_by_type(src, type,
                         is_array_of_verts);
-                for (int offset = 0; offset < num_locations; offset++) {
+                for (unsigned int offset = 0; offset < num_locations; offset++) {
                     interface_var v;
                     v.id = id;
                     v.type_id = type;
@@ -1108,14 +1108,14 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
     if (pLayoutNode->layout == pSet->pLayout->layout) { // trivial pass case
         return true;
     }
-    uint32_t descriptorCount = pLayoutNode->descriptorTypes.size();
+    size_t descriptorCount = pLayoutNode->descriptorTypes.size();
     if (descriptorCount != pSet->pLayout->descriptorTypes.size()) {
         errorStr << "setLayout " << layoutIndex << " from pipelineLayout " << layout << " has " << descriptorCount << " descriptors, but corresponding set being bound has " << pSet->pLayout->descriptorTypes.size() << " descriptors.";
         errorMsg = errorStr.str();
         return false; // trivial fail case
     }
     // Now need to check set against corresponding pipelineLayout to verify compatibility
-    for (uint32_t i=0; i<descriptorCount; ++i) {
+    for (size_t i=0; i<descriptorCount; ++i) {
         // Need to verify that layouts are identically defined
         //  TODO : Is below sufficient? Making sure that types & stageFlags match per descriptor
         //    do we also need to check immutable samplers?
@@ -1268,7 +1268,7 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     // Verify Vtx binding
     if (pPipe->vtxBindingCount > 0) {
         VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
-        for (auto i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
+        for (uint32_t i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
             if ((pCB->boundVtxBuffers.size() < (i+1)) || (pCB->boundVtxBuffers[i] == VK_NULL_HANDLE)) {
                 result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
                     "The Pipeline State Object (%#" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %d should be set via vkCmdBindVertexBuffers.",
@@ -2946,7 +2946,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(VkDevice device,
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    for (auto i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         // Delete CB information structure, and remove from commandBufferMap
         auto cb = dev_data->commandBufferMap.find(pCommandBuffers[i]);
         loader_platform_thread_lock_mutex(&globalLock);
@@ -3464,7 +3464,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(VkDevice
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->AllocateCommandBuffers(device, pCreateInfo, pCommandBuffer);
     if (VK_SUCCESS == result) {
-        for (auto i = 0; i < pCreateInfo->bufferCount; i++) {
+        for (uint32_t i = 0; i < pCreateInfo->bufferCount; i++) {
             // Validate command pool
             if (dev_data->commandPoolMap.find(pCreateInfo->commandPool) != dev_data->commandPoolMap.end()) {
                 loader_platform_thread_lock_mutex(&globalLock);
@@ -3950,7 +3950,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
             if ((startBinding + bindingCount) > pCB->boundVtxBuffers.size()) {
                 pCB->boundVtxBuffers.resize(startBinding+bindingCount, VK_NULL_HANDLE);
             }
-            for (auto i = 0; i < bindingCount; i++) {
+            for (uint32_t i = 0; i < bindingCount; i++) {
                 pCB->boundVtxBuffers[i+startBinding] = pBuffers[i];
             }
             addCmd(dev_data, pCB, CMD_BINDVERTEXBUFFER);
