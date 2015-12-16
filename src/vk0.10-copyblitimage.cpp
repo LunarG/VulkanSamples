@@ -223,7 +223,12 @@ int main(int argc, char **argv)
 
     res = vkEndCommandBuffer(info.cmd);
     const VkCommandBuffer cmd_bufs[] = { info.cmd };
-    VkFence nullFence = { VK_NULL_HANDLE };
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
@@ -236,7 +241,7 @@ int main(int argc, char **argv)
     submit_info[0].pSignalSemaphores = NULL;
 
     /* Queue the command buffer for execution */
-    res = vkQueueSubmit(info.queue, 1, submit_info, nullFence);
+    res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
     res = vkQueueWaitIdle(info.queue);
@@ -254,6 +259,11 @@ int main(int argc, char **argv)
     present.waitSemaphoreCount = 0;
     present.pResults = NULL;
 
+    /* Make sure command buffer is finished before presenting */
+    do {
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while(res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
