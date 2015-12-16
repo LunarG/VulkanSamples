@@ -1283,7 +1283,9 @@ void execute_queue_command_buffer(struct sample_info &info)
     res = vkQueueSubmit(info.queue, 1, submit_info, drawFence);
     assert(res == VK_SUCCESS);
 
-    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    do {
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while(res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
 
     vkDestroyFence(info.device, drawFence, NULL);

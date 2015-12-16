@@ -264,7 +264,9 @@ int main(int argc, char **argv)
     present.pResults = NULL;
 
     /* Make sure command buffer is finished before presenting */
-    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    do {
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while(res == VK_TIMEOUT);
     assert(res == VK_SUCCESS);
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
