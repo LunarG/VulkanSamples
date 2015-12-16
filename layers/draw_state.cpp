@@ -3508,13 +3508,16 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
             if (pBeginInfo->renderPass || pBeginInfo->framebuffer) {
                 // These should be NULL for a Primary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkBeginCommandBuffer(): Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters", (void*)commandBuffer);
+                    "vkBeginCommandBuffer(): Primary Command Buffer (%p) may not specify framebuffer or renderpass parameters.", (void*)commandBuffer);
             }
-        } else {
-            if (!pBeginInfo->renderPass || !pBeginInfo->framebuffer) {
-                // These should NOT be null for an Secondary CB
+        } else { // Secondary Command Buffer
+            if (!pBeginInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify framebuffer and renderpass parameters", (void*)commandBuffer);
+                    "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", (void*)commandBuffer);
+            }
+            if (!pBeginInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                    "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.", (void*)commandBuffer);
             }
         }
         pCB->beginInfo = *pBeginInfo;
