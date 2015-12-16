@@ -76,6 +76,7 @@ int main(int argc, char **argv)
     char sample_title[] = "Texel Buffer Sample";
     float texels[] = {1.0, 0.0, 1.0};
     const bool depthPresent = false;
+    const bool vertexPresent = false;
 
     init_global_layer_properties(info);
     init_instance_extension_names(info);
@@ -247,7 +248,7 @@ int main(int argc, char **argv)
 
 
     init_pipeline_cache(info);
-    init_pipeline(info, depthPresent);
+    init_pipeline(info, depthPresent, vertexPresent);
 
     /* VULKAN_KEY_START */
 
@@ -296,9 +297,9 @@ int main(int argc, char **argv)
 
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                   info.pipeline);
-    uint32_t offset = 0;
+
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
-            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 1, &offset);
+            0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
 
     init_viewports(info);
     init_scissors(info);
