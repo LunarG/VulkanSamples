@@ -72,6 +72,8 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_STENCIL_NOT_BOUND,                // Draw submitted with no stencil state bound when stencil enabled
     DRAWSTATE_INDEX_BUFFER_NOT_BOUND,           // Draw submitted with no depth-stencil state bound when depth write enabled
     DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE,    // Draw submitted PSO Pipeline layout that's not compatible with layout from BindDescriptorSets
+    DRAWSTATE_RENDERPASS_INCOMPATIBLE,          // Incompatible renderpasses between secondary cmdBuffer and primary cmdBuffer or framebuffer
+    DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE,         // Incompatible framebuffer between secondary cmdBuffer and active renderPass
     DRAWSTATE_INVALID_RENDERPASS,               // Use of a NULL or otherwise invalid RenderPass object
     DRAWSTATE_INVALID_RENDERPASS_CMD,           // Invalid cmd submitted while a RenderPass is active
     DRAWSTATE_NO_ACTIVE_RENDERPASS,             // Rendering cmd submitted without an active RenderPass
@@ -200,12 +202,12 @@ typedef struct _IMAGE_CMD_BUF_NODE {
     VkImageLayout initialLayout;
 } IMAGE_CMD_BUF_NODE;
 
-typedef struct _RENDER_PASS_NODE {
+struct RENDER_PASS_NODE {
     VkRenderPassCreateInfo const* pCreateInfo;
     std::vector<bool> hasSelfDependency;
     vector<std::vector<VkFormat>> subpassColorFormats;
 
-    _RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo)
+    RENDER_PASS_NODE(VkRenderPassCreateInfo const *pCreateInfo) : pCreateInfo(pCreateInfo)
     {
         uint32_t i;
 
@@ -226,7 +228,7 @@ typedef struct _RENDER_PASS_NODE {
             subpassColorFormats.push_back(color_formats);
         }
     }
-} RENDER_PASS_NODE;
+};
 
 // Descriptor Data structures
 // Layout Node has the core layout data

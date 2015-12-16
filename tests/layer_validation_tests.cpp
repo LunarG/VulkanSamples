@@ -2267,7 +2267,7 @@ TEST_F(VkLayerTest, SecondaryCommandBufferNullRenderpass)
     VkCommandBufferBeginInfo cmd_buf_info = {};
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
 
     // The error should be caught by validation of the BeginCommandBuffer call
     vkBeginCommandBuffer(draw_cmd, &cmd_buf_info);

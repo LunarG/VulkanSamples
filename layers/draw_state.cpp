@@ -1086,6 +1086,91 @@ static VkBool32 validate_draw_state_flags(layer_data* my_data, GLOBAL_CB_NODE* p
     return result;
 }
 
+// Verify attachment reference compatibility according to spec
+//  If one array is larger, treat missing elements of shorter array as VK_ATTACHMENT_UNUSED & other array much match this
+//  If both AttachmentReference arrays have requested index, check their corresponding AttachementDescriptions
+//   to make sure that format and samples counts match.
+//  If not, they are not compatible.
+static bool attachment_references_compatible(const uint32_t index, const VkAttachmentReference* pPrimary, const uint32_t primaryCount, const VkAttachmentDescription* pPrimaryAttachments, 
+                                            const VkAttachmentReference* pSecondary, const uint32_t secondaryCount, const VkAttachmentDescription* pSecondaryAttachments)
+{
+    if (index >= primaryCount) { // Check secondary as if primary is VK_ATTACHMENT_UNUSED
+        if (VK_ATTACHMENT_UNUSED != pSecondary[index].attachment)
+            return false;
+    } else if (index >= secondaryCount) { // Check primary as if secondary is VK_ATTACHMENT_UNUSED
+        if (VK_ATTACHMENT_UNUSED != pPrimary[index].attachment)
+            return false;
+    } else { // format and sample count must match
+        if ((pPrimaryAttachments[pPrimary[index].attachment].format == pSecondaryAttachments[pSecondary[index].attachment].format) &&
+            (pPrimaryAttachments[pPrimary[index].attachment].samples == pSecondaryAttachments[pSecondary[index].attachment].samples))
+            return true;
+    }
+    // Format and sample counts didn't match
+    return false;
+}
+
+// For give primary and secondary RenderPass objects, verify that they're compatible
+static bool verify_renderpass_compatibility(layer_data* my_data, const VkRenderPass primaryRP, const VkRenderPass secondaryRP, string& errorMsg)
+{
+    stringstream errorStr;
+    if (my_data->renderPassMap.find(primaryRP) == my_data->renderPassMap.end()) {
+        errorStr << "invalid VkRenderPass (" << primaryRP << ")";
+        errorMsg = errorStr.str();
+        return false;
+    } else if (my_data->renderPassMap.find(secondaryRP) == my_data->renderPassMap.end()) {
+        errorStr << "invalid VkRenderPass (" << secondaryRP << ")";
+        errorMsg = errorStr.str();
+        return false;
+    }
+    // Trivial pass case is exact same RP
+    if (primaryRP == secondaryRP)
+        return true;
+    const VkRenderPassCreateInfo* primaryRPCI = my_data->renderPassMap[primaryRP]->pCreateInfo;
+    const VkRenderPassCreateInfo* secondaryRPCI = my_data->renderPassMap[secondaryRP]->pCreateInfo;
+    if (primaryRPCI->subpassCount != secondaryRPCI->subpassCount) {
+        errorStr << "RenderPass for primary cmdBuffer has " << primaryRPCI->subpassCount << " subpasses but renderPass for secondary cmdBuffer has " << secondaryRPCI->subpassCount << " subpasses.";
+        errorMsg = errorStr.str();
+        return false;
+    }
+    uint32_t spIndex = 0;
+    for (spIndex = 0; spIndex < primaryRPCI->subpassCount; ++spIndex) {
+        // For each subpass, verify that corresponding color, input, resolve & depth/stencil attachment references are compatible
+        uint32_t primaryColorCount = primaryRPCI->pSubpasses[spIndex].colorAttachmentCount;
+        uint32_t secondaryColorCount = secondaryRPCI->pSubpasses[spIndex].colorAttachmentCount;
+        uint32_t colorMax = std::max(primaryColorCount, secondaryColorCount);
+        for (uint32_t cIdx = 0; cIdx < colorMax; ++cIdx) {
+            if (!attachment_references_compatible(cIdx, primaryRPCI->pSubpasses[spIndex].pColorAttachments, primaryColorCount, primaryRPCI->pAttachments,
+                                                 secondaryRPCI->pSubpasses[spIndex].pColorAttachments, secondaryColorCount, secondaryRPCI->pAttachments)) {
+                errorStr << "color attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
+                errorMsg = errorStr.str();
+                return false;
+            } else if (!attachment_references_compatible(cIdx, primaryRPCI->pSubpasses[spIndex].pResolveAttachments, primaryColorCount, primaryRPCI->pAttachments,
+                                                        secondaryRPCI->pSubpasses[spIndex].pResolveAttachments, secondaryColorCount, secondaryRPCI->pAttachments)) {
+                errorStr << "resolve attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
+                errorMsg = errorStr.str();
+                return false;
+            } else if (!attachment_references_compatible(cIdx, primaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment, primaryColorCount, primaryRPCI->pAttachments,
+                                                        secondaryRPCI->pSubpasses[spIndex].pDepthStencilAttachment, secondaryColorCount, secondaryRPCI->pAttachments)) {
+                errorStr << "depth/stencil attachments at index " << cIdx << " of subpass index " << spIndex << " are not compatible.";
+                errorMsg = errorStr.str();
+                return false;
+            }
+        }
+        uint32_t primaryInputCount = primaryRPCI->pSubpasses[spIndex].inputAttachmentCount;
+        uint32_t secondaryInputCount = secondaryRPCI->pSubpasses[spIndex].inputAttachmentCount;
+        uint32_t inputMax = std::max(primaryInputCount, secondaryInputCount);
+        for (uint32_t i = 0; i < inputMax; ++i) {
+            if (!attachment_references_compatible(i, primaryRPCI->pSubpasses[spIndex].pInputAttachments, primaryColorCount, primaryRPCI->pAttachments,
+                                                 secondaryRPCI->pSubpasses[spIndex].pInputAttachments, secondaryColorCount, secondaryRPCI->pAttachments)) {
+                errorStr << "input attachments at index " << i << " of subpass index " << spIndex << " are not compatible.";
+                errorMsg = errorStr.str();
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // For give SET_NODE, verify that its Set is compatible w/ the setLayout corresponding to pipelineLayout[layoutIndex]
 static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE* pSet, const VkPipelineLayout layout, const uint32_t layoutIndex, string& errorMsg)
 {
@@ -2840,6 +2925,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
     VkBool32 skipCall = VK_FALSE;
     GLOBAL_CB_NODE* pCB = NULL;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    // TODO : Any pCommandBuffers must have USAGE_SIMULTANEOUS_USE_BIT set or cannot already be executing on device
+    //    Same goes for any secondary CBs under the primary CB
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
@@ -2859,7 +2946,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
             }
             if (CB_RECORDED != pCB->state) {
                 // Flag error for using CB w/o vkEndCommandBuffer() called
-                // TODO : How to pass cb as srcObj?
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_NO_END_COMMAND_BUFFER, "DS",
                         "You must call vkEndCommandBuffer() on CB %#" PRIxLEAST64 " before this call to vkQueueSubmit()!", reinterpret_cast<uint64_t>(pCB->commandBuffer));
                 loader_platform_thread_unlock_mutex(&globalLock);
@@ -3518,14 +3604,24 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(VkCommandBuf
             // TODO : Add check here from spec "If commandBuffer is a secondary command buffer and either the
             //  occlusionQueryEnable member of pBeginInfo is VK_FALSE, or the precise occlusion queries feature
             //  is not enabled, the queryFlags member of pBeginInfo must not contain VK_QUERY_CONTROL_PRECISE_BIT"
-            if (!pBeginInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", (void*)commandBuffer);
-            }
-            if (!pBeginInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf according to spec section on vkBeginCommandBuffer:
-                // Specifying the exact framebuffer that the secondary command buffer will be executed with may result in better performance at command buffer execution time.
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
-                    "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.", (void*)commandBuffer);
+            if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
+                if (!pBeginInfo->renderPass) { // renderpass should NOT be null for an Secondary CB
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                        "vkBeginCommandBuffer(): Secondary Command Buffers (%p) must specify a valid renderpass parameter.", (void*)commandBuffer);
+                }
+                if (!pBeginInfo->framebuffer) { // framebuffer may be null for an Secondary CB, but this affects perf
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                        "vkBeginCommandBuffer(): Secondary Command Buffers (%p) may perform better if a valid framebuffer parameter is specified.", (void*)commandBuffer);
+                } else {
+                    string errorString = "";
+                    VkRenderPass fbRP = dev_data->frameBufferMap[pBeginInfo->framebuffer]->renderPass;
+                    if (!verify_renderpass_compatibility(dev_data, fbRP, pBeginInfo->renderPass, errorString)) {
+                        // renderPass that framebuffer was created with must be compatible with local renderPass
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)commandBuffer, 0, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                            "vkBeginCommandBuffer(): Secondary Command Buffer (%p) renderPass (%#" PRIxLEAST64 ") is incompatible w/ framebuffer (%#" PRIxLEAST64 ") w/ render pass (%#" PRIxLEAST64 ") due to: %s",
+                            (void*)commandBuffer, (uint64_t)pBeginInfo->renderPass, (uint64_t)pBeginInfo->framebuffer, (uint64_t)fbRP, errorString.c_str());
+                    }
+                }
             }
         }
         pCB->beginInfo = *pBeginInfo;
@@ -5150,6 +5246,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
+        // TODO : If secondary CB was not created w/ *_USAGE_SIMULTANEOUS_USE_BIT it cannot be used more than once in given primary CB
+        //         ALSO if secondary w/o this flag is set in primary, then primary must not be pending execution more than once at a time
+        //   If not w/ SIMULTANEOUS bit, then any other references to those 2ndary CBs are invalidated, should warn on that case
         GLOBAL_CB_NODE* pSubCB = NULL;
         for (uint32_t i=0; i<commandBuffersCount; i++) {
             pSubCB = getCBNode(dev_data, pCommandBuffers[i]);
@@ -5159,6 +5258,26 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
             } else if (VK_COMMAND_BUFFER_LEVEL_PRIMARY == pSubCB->createInfo.level) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_INVALID_SECONDARY_COMMAND_BUFFER, "DS",
                     "vkCmdExecuteCommands() called w/ Primary Cmd Buffer %p in element %u of pCommandBuffers array. All cmd buffers in pCommandBuffers array must be secondary.", (void*)pCommandBuffers[i], i);
+            } else if (pCB->activeRenderPass) { // Secondary CB w/i RenderPass must have *CONTINUE_BIT set
+                if (!(pSubCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)pCommandBuffers[i], 0, DRAWSTATE_BEGIN_CB_INVALID_STATE, "DS",
+                        "vkCmdExecuteCommands(): Secondary Command Buffer (%p) executed within render pass (%#" PRIxLEAST64 ") must have had vkBeginCommandBuffer() called w/ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT set.", (void*)pCommandBuffers[i], (uint64_t)pCB->activeRenderPass);
+                }
+                string errorString = "";
+                if (!verify_renderpass_compatibility(dev_data, pCB->activeRenderPass, pSubCB->beginInfo.renderPass, errorString)) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)pCommandBuffers[i], 0, DRAWSTATE_RENDERPASS_INCOMPATIBLE, "DS",
+                        "vkCmdExecuteCommands(): Secondary Command Buffer (%p) w/ render pass (%#" PRIxLEAST64 ") is incompatible w/ primary command buffer (%p) w/ render pass (%#" PRIxLEAST64 ") due to: %s",
+                            (void*)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.renderPass, (void*)commandBuffer, (uint64_t)pCB->activeRenderPass, errorString.c_str());
+                }
+                //  If framebuffer for secondary CB is not NULL, then it must match FB from vkCmdBeginRenderPass()
+                //   that this CB will be executed in AND framebuffer must have been created w/ RP compatible w/ renderpass
+                if (pSubCB->beginInfo.framebuffer) {
+                    if (pSubCB->beginInfo.framebuffer != pCB->activeRenderPassBeginInfo.framebuffer) {
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t)pCommandBuffers[i], 0, DRAWSTATE_FRAMEBUFFER_INCOMPATIBLE, "DS",
+                            "vkCmdExecuteCommands(): Secondary Command Buffer (%p) references framebuffer (%#" PRIxLEAST64 ") that does not match framebuffer (%#" PRIxLEAST64 ") in active renderpass (%#" PRIxLEAST64 ").",
+                            (void*)pCommandBuffers[i], (uint64_t)pSubCB->beginInfo.framebuffer, (uint64_t)pCB->activeRenderPassBeginInfo.framebuffer, (uint64_t)pCB->activeRenderPass);
+                    }
+                }
             }
         }
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdExecuteComands");
