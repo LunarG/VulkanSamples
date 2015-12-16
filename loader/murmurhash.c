@@ -11,7 +11,7 @@
 #include "murmurhash.h"
 
 uint32_t
-murmurhash (const char *key, uint32_t len, uint32_t seed) {
+murmurhash (const char *key, size_t len, uint32_t seed) {
   uint32_t c1 = 0xcc9e2d51;
   uint32_t c2 = 0x1b873593;
   uint32_t r1 = 15;
@@ -24,7 +24,7 @@ murmurhash (const char *key, uint32_t len, uint32_t seed) {
   const uint32_t *chunks = NULL;
   const uint8_t *tail = NULL; // tail - last 8 bytes
   int i = 0;
-  int l = len / 4; // chunk length
+  int l = (int) len / 4; // chunk length
 
   h = seed;
 

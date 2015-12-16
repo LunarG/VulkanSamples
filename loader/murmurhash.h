@@ -22,7 +22,7 @@ extern "C" {
  */
 
 uint32_t
-murmurhash (const char *key, uint32_t len, uint32_t seed);
+murmurhash (const char *key, size_t len, uint32_t seed);
 
 #ifdef __cplusplus
 }

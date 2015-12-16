@@ -69,7 +69,7 @@ static bool loader_init_generic_list(
         struct loader_generic_list *list_info,
         size_t element_size);
 
-static int loader_platform_combine_path(char *dest, int len, ...);
+static size_t loader_platform_combine_path(char *dest, size_t len, ...);
 
 struct loader_phys_dev_per_icd {
     uint32_t count;
@@ -329,9 +329,9 @@ static char *loader_get_registry_files(const struct loader_instance *inst, char 
  * to determine the required string length without actually writing a string.
  */
 
-static int loader_platform_combine_path(char *dest, int len, ...)
+static size_t loader_platform_combine_path(char *dest, size_t len, ...)
 {
-    int required_len = 0;
+    size_t required_len = 0;
     va_list ap;
     const char *component;
 
