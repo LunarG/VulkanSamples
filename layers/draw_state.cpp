@@ -1637,7 +1637,7 @@ static VkBool32 validUpdateStruct(layer_data* my_data, const VkDevice device, co
 }
 
 // Set count for given update struct in the last parameter
-// Return value of skipCall, which is only VK_TRUE is error occurs and callback signals execution to cease
+// Return value of skipCall, which is only VK_TRUE if error occurs and callback signals execution to cease
 static uint32_t getUpdateCount(layer_data* my_data, const VkDevice device, const GENERIC_HEADER* pUpdateStruct)
 {
     switch (pUpdateStruct->sType)
