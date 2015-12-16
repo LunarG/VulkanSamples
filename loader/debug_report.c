@@ -94,7 +94,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL debug_report_CreateDebugReportCallback(
 
 // Utility function to handle reporting
 static inline VkBool32 debug_report_log_msg(
-    VkInstance                          instance,
+    struct loader_instance              *inst,
     VkFlags                             msgFlags,
     VkDebugReportObjectTypeLUNARG       objectType,
     uint64_t                            srcObject,
@@ -103,7 +103,6 @@ static inline VkBool32 debug_report_log_msg(
     const char*                         pLayerPrefix,
     const char*                         pMsg)
 {
-    struct loader_instance *inst = loader_get_instance(instance);
     VkBool32 bail = false;
     VkLayerDbgFunctionNode *pTrav = inst->DbgFunctionHead;
     while (pTrav) {
@@ -181,14 +180,9 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDebugReportCallback(
 {
     VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
-    struct loader_instance *inst;
+    struct loader_instance *inst = (struct loader_instance *) instance;
     VkResult res;
     uint32_t storage_idx;
-
-    for (inst = loader.instances; inst; inst = inst->next) {
-        if ((VkInstance) inst == instance)
-            break;
-    }
 
     icd_info = calloc(sizeof(VkDebugReportCallbackLUNARG), inst->total_icd_count);
     if (!icd_info) {
@@ -244,13 +238,8 @@ VKAPI_ATTR void loader_DestroyDebugReportCallback(VkInstance instance,
     uint32_t storage_idx;
     VkDebugReportCallbackLUNARG *icd_info;
     const struct loader_icd *icd;
-    struct loader_instance *inst;
 
-    for (inst = loader.instances; inst; inst = inst->next) {
-        if ((VkInstance) inst == instance)
-            break;
-    }
-
+    struct loader_instance *inst = (struct loader_instance *) instance;
     icd_info = *(VkDebugReportCallbackLUNARG **) &callback;
     storage_idx = 0;
     for (icd = inst->icds; icd; icd = icd->next) {
@@ -280,7 +269,7 @@ VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
         const char*                                 pMsg)
 {
     const struct loader_icd *icd;
-    struct loader_instance *inst = loader_get_instance(instance);
+    struct loader_instance *inst = (struct loader_instance *) instance;
 
     for (icd = inst->icds; icd; icd = icd->next) {
         if (icd->DebugReportMessageLUNARG != NULL) {
@@ -292,7 +281,7 @@ VKAPI_ATTR void VKAPI_CALL loader_DebugReportMessage(
      * Now that all ICDs have seen the message, call the necessary callbacks.
      * Ignoring "bail" return value as there is nothing to bail from at this point.
      */
-    debug_report_log_msg(instance, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
+    debug_report_log_msg(inst, flags, objType, object, location, msgCode, pLayerPrefix, pMsg);
 }
 
 bool debug_report_instance_gpa(
