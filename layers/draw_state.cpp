@@ -1135,7 +1135,7 @@ static bool verify_set_layout_compatibility(layer_data* my_data, const SET_NODE*
 
 // Validate that the shaders used by the given pipeline
 //  As a side effect this function also records the sets that are actually used by the pipeline
-static bool
+static VkBool32
 validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPipeline)
 {
     VkGraphicsPipelineCreateInfo const *pCreateInfo = &pPipeline->graphicsPipelineCI;
@@ -1149,7 +1149,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     memset(shaders, 0, sizeof(shader_module *) * (fragment_stage +1));
     RENDER_PASS_NODE const *rp = 0;
     VkPipelineVertexInputStateCreateInfo const *vi = 0;
-    bool pass = true;
+    VkBool32 pass = true;
 
     for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
         VkPipelineShaderStageCreateInfo const *pStage = &pCreateInfo->pStages[i];
@@ -2297,8 +2297,8 @@ static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCom
             "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
 }
 
-bool validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
-    bool skip_call = false;
+VkBool32 validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
+    VkBool32 skip_call = false;
     for (auto cmd : pCB->pCmds) {
         if (cmd_type == CMD_EXECUTECOMMANDS && cmd->type != CMD_EXECUTECOMMANDS) {
             skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
@@ -2797,8 +2797,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceLayerProperties(
                                    pCount, pProperties);
 }
 
-bool ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
-    bool skip_call = false;
+VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
+    VkBool32 skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     for (auto cb_image_data : pCB->imageLayoutMap) {
@@ -4113,8 +4113,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(VkCommandBuffer comma
         dev_data->device_dispatch_table->CmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
 }
 
-bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout) {
-    bool skip_call = false;
+VkBool32 VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout) {
+    VkBool32 skip_call = false;
 
 #ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
     // TODO: Fix -- initialLayout may have been set in a previous command buffer
@@ -4146,8 +4146,8 @@ bool VerifySourceImageLayout(VkCommandBuffer cmdBuffer, VkImage srcImage, VkImag
     return skip_call;
 }
 
-bool VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkImageLayout destImageLayout) {
-    bool skip_call = false;
+VkBool32 VerifyDestImageLayout(VkCommandBuffer cmdBuffer, VkImage destImage, VkImageLayout destImageLayout) {
+    VkBool32 skip_call = false;
 
 #ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
     // TODO: Fix -- initialLayout may have been set in a previous command buffer
@@ -4464,10 +4464,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(VkCommandBuffer comma
         dev_data->device_dispatch_table->CmdResetEvent(commandBuffer, event, stageMask);
 }
 
-bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
+VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
-    bool skip = false;
+    VkBool32 skip = false;
 
 #ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
     // TODO: Fix -- pay attention to image subresource ranges -- not all subresources transition at the same time
@@ -4496,8 +4496,8 @@ bool TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount,
 
 // AccessFlags MUST have 'required_bit' set, and may have one or more of 'optional_bits' set.
 // If required_bit is zero, accessMask must have at least one of 'optional_bits' set
-bool ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout, VkAccessFlags required_bit, VkAccessFlags optional_bits) {
-    bool skip_call = false;
+VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout, VkAccessFlags required_bit, VkAccessFlags optional_bits) {
+    VkBool32 skip_call = false;
     if ((accessMask & required_bit) || (!required_bit && (accessMask & optional_bits))) {
         if (accessMask & !(required_bit | optional_bits)) {
             // TODO: Verify against Valid Use
@@ -4518,8 +4518,8 @@ bool ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, cons
     return skip_call;
 }
 
-bool ValidateMaskBitsFromLayouts(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout) {
-    bool skip_call = false;
+VkBool32 ValidateMaskBitsFromLayouts(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout) {
+    VkBool32 skip_call = false;
     switch (layout) {
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
             skip_call |= ValidateMaskBits(my_data, cmdBuffer, accessMask, layout, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
@@ -4565,8 +4565,8 @@ bool ValidateMaskBitsFromLayouts(const layer_data* my_data, VkCommandBuffer cmdB
     return skip_call;
 }
 
-bool ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
-    bool skip_call = false;
+VkBool32 ValidateBarriers(VkCommandBuffer cmdBuffer, uint32_t memBarrierCount, const void* const* ppMemBarriers) {
+    VkBool32 skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     if (pCB->activeRenderPass && memBarrierCount) {
@@ -4886,8 +4886,8 @@ VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const 
     return skip_call;
 }
 
-bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
-    bool skip = false;
+VkBool32 ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo) {
+    VkBool32 skip = false;
 
 #ifdef DISABLE_IMAGE_LAYOUT_VALIDATION
     return skip;
@@ -4937,8 +4937,8 @@ bool ValidateLayouts(const layer_data* my_data, VkDevice device, const VkRenderP
     return skip;
 }
 
-bool CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node, std::vector<bool>& has_self_dependency) {
-    bool skip_call = false;
+VkBool32 CreatePassDAG(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node, std::vector<bool>& has_self_dependency) {
+    VkBool32 skip_call = false;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         DAGNode& subpass_node = subpass_to_node[i];
         subpass_node.pass = i;
@@ -4965,7 +4965,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
         VkShaderModule *pShaderModule)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skip_call = false;
     if (!shader_is_spirv(pCreateInfo)) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                 /* dev */ 0, 0, SHADER_CHECKER_NON_SPIRV_SHADER, "SC",
@@ -4987,7 +4987,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
 {
-    bool skip_call = false;
+    VkBool32 skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     // Create DAG
     std::vector<bool> has_self_dependency(pCreateInfo->subpassCount);
@@ -5094,8 +5094,8 @@ static void deleteRenderPasses(layer_data* my_data)
     my_data->renderPassMap.clear();
 }
 
-bool VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin) {
-    bool skip_call = false;
+VkBool32 VerifyFramebufferAndRenderPassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin) {
+    VkBool32 skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, cmdBuffer);
     const VkRenderPassCreateInfo* pRenderPassInfo = dev_data->renderPassMap[pRenderPassBegin->renderPass]->pCreateInfo;
@@ -5166,8 +5166,8 @@ void TransitionSubpassLayouts(VkCommandBuffer cmdBuffer, const VkRenderPassBegin
     }
 }
 
-bool validatePrimaryCommandBuffer(const layer_data* my_data, const GLOBAL_CB_NODE* pCB, const std::string& cmd_name) {
-    bool skip_call = false;
+VkBool32 validatePrimaryCommandBuffer(const layer_data* my_data, const GLOBAL_CB_NODE* pCB, const std::string& cmd_name) {
+    VkBool32 skip_call = false;
     if (pCB->createInfo.level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
                              "Cannot execute command %s on a secondary command buffer.", cmd_name.c_str());
@@ -5294,8 +5294,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(VkCommandBuffer 
         dev_data->device_dispatch_table->CmdExecuteCommands(commandBuffer, commandBuffersCount, pCommandBuffers);
 }
 
-bool ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
-    bool skip_call = false;
+VkBool32 ValidateMapImageLayouts(VkDevice device, VkDeviceMemory mem) {
+    VkBool32 skip_call = false;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     auto mem_data = dev_data->memImageMap.find(mem);
     if (mem_data != dev_data->memImageMap.end()) {
@@ -5320,7 +5320,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkMapMemory(
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
 
-    bool skip_call = VK_FALSE;
+    VkBool32 skip_call = VK_FALSE;
 #ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
     skip_call = ValidateMapImageLayouts(device, mem);
 #endif // DISABLE_IMAGE_LAYOUT_VALIDATION
@@ -5415,7 +5415,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, const VkPresentInfoKHR* pPresentInfo)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skip_call = false;
 
 #ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
     if (pPresentInfo) {
