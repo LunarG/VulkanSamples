@@ -72,7 +72,7 @@ void init_descriptor_pool(struct sample_info &info, bool use_texture);
 void init_descriptor_set(struct sample_info &info, bool use_texture);
 void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText);
 void init_pipeline_cache(struct sample_info &info);
-void init_pipeline(struct sample_info &info, VkBool32 include_depth);
+void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 include_vi = true);
 void init_sampler(struct sample_info &info, VkSampler &sampler);
 void init_image(struct sample_info &info, texture_object &texObj, const char* textureName);
 void init_texture(struct sample_info &info,  const char* textureName = nullptr);
