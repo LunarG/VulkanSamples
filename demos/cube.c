@@ -996,7 +996,7 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
                  int32_t *width, int32_t *height)
 {
     FILE *fPtr = fopen(filename,"rb");
-    char header[256], *cPtr;
+    char header[256], *cPtr, *tmp;
 
     if (!fPtr)
         return false;
@@ -1020,7 +1020,8 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         fclose(fPtr);
         return true;
     }
-    fgets(header, 256, fPtr); // Format
+    tmp = fgets(header, 256, fPtr); // Format
+    (void) tmp;
     if (cPtr == NULL || strncmp(header, "255\n", 3)) {
         fclose(fPtr);
         return false;
@@ -1031,7 +1032,8 @@ bool loadTexture(const char *filename, uint8_t *rgba_data,
         uint8_t *rowPtr = rgba_data;
         for(int x = 0; x < *width; x++)
         {
-            fread(rowPtr, 3, 1, fPtr);
+            size_t s = fread(rowPtr, 3, 1, fPtr);
+            (void) s;
             rowPtr[3] = 255; /* Alpha of 1 */
             rowPtr += 4;
         }
@@ -1428,7 +1430,7 @@ static VkShaderModule demo_prepare_shader_module(struct demo* demo,
 {
     VkShaderModule module;
     VkShaderModuleCreateInfo moduleCreateInfo;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
@@ -2442,7 +2444,7 @@ static void demo_init_vk(struct demo *demo)
 
 static void demo_init_vk_swapchain(struct demo *demo)
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
     uint32_t i;
 
     // Create a WSI surface for the window:

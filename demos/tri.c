@@ -886,7 +886,7 @@ static void demo_prepare_textures(struct demo *demo)
         { 0xffff0000, 0xff00ff00 },
     };
     uint32_t i;
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     vkGetPhysicalDeviceFormatProperties(demo->gpu, tex_format, &props);
 
