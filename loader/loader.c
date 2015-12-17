@@ -2578,7 +2578,7 @@ static void loader_remove_layer_lib(
         struct loader_instance *inst,
         struct loader_layer_properties *layer_prop)
 {
-    uint32_t idx;
+    uint32_t idx = loader.loaded_layer_lib_count;
     struct loader_lib_info *new_layer_lib_list, *my_lib = NULL;
 
     for (uint32_t i = 0; i < loader.loaded_layer_lib_count; i++) {
@@ -2588,6 +2588,12 @@ static void loader_remove_layer_lib(
             my_lib = &loader.loaded_layer_lib_list[i];
             break;
         }
+    }
+
+    if (idx == loader.loaded_layer_lib_count) {
+        loader_log(VK_DEBUG_REPORT_ERROR_BIT, 0,
+                   "Unable to unref library %s", layer_prop->lib_name);
+        return;
     }
 
     if (my_lib) {
