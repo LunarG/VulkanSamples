@@ -232,7 +232,8 @@ void vktrace_platform_full_path(const char* partPath, unsigned long bytes, char*
 #if defined(WIN32)
     GetFullPathName(partPath, bytes, buffer, NULL);
 #elif defined(PLATFORM_LINUX)
-    realpath(partPath, buffer);
+    char *ptr = realpath(partPath, buffer);
+    (void) ptr;
 #endif
 }
 

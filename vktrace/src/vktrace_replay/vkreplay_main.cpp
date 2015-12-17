@@ -61,7 +61,7 @@ int main_loop(Sequencer &seq, vktrace_trace_packet_replay_library *replayerArray
     int err = 0;
     vktrace_trace_packet_header *packet;
     unsigned int res;
-    vktrace_trace_packet_replay_library *replayer;
+    vktrace_trace_packet_replay_library *replayer = NULL;
     vktrace_trace_packet_message* msgPacket;
     struct seqBookmark startingPacket;
 
