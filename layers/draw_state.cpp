@@ -1327,7 +1327,7 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
         pass = validate_fs_outputs_against_render_pass(my_data, dev, shaders[fragment_stage], rp, pCreateInfo->subpass) && pass;
     }
 
-    delete shaders;
+    delete [] shaders;
 
     return pass;
 }
