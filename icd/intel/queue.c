@@ -126,7 +126,7 @@ static VkResult queue_select_pipeline(struct intel_queue *queue,
         GEN6_RENDER_CMD(SINGLE_DW, PIPELINE_SELECT),
         GEN6_MI_CMD(MI_BATCH_BUFFER_END),
     };
-    struct intel_bo *bo;
+    struct intel_bo *bo = NULL;
     VkResult ret;
 
     if (queue->ring != INTEL_RING_RENDER ||

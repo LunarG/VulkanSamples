@@ -3672,7 +3672,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
     const struct intel_pipeline_layout *pipeline_layout;
-    struct intel_cmd_dset_data *data;
+    struct intel_cmd_dset_data *data = NULL;
     uint32_t offset_count = 0;
     uint32_t i;
 
@@ -3879,7 +3879,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(
     VkSubpassContents                        contents)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
-    const struct intel_render_pass *rp = cmd->bind.render_pass;
+    const struct intel_render_pass U_ASSERT_ONLY *rp = cmd->bind.render_pass;
 
     /* TODOVV */
    assert(!(cmd->bind.render_pass_subpass >= rp->subpasses +

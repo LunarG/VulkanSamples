@@ -57,7 +57,8 @@ static char* load_spv_file(const char *filename, size_t *psize)
     fseek(fp, 0L, SEEK_SET);
 
     shader_code = malloc(size);
-    fread(shader_code, size, 1, fp);
+    size_t tmp = fread(shader_code, size, 1, fp);
+    (void) tmp;
 
     *psize = size;
 
@@ -79,7 +80,8 @@ static char* load_glsl_file(const char *filename, size_t *psize, VkShaderStageFl
     fseek(fp, 0L, SEEK_SET);
 
     shader_code = malloc(size);
-    fread((char *)shader_code + sizeof(icd_spv_header), size - sizeof(icd_spv_header), 1, fp);
+    size_t s = fread((char *)shader_code + sizeof(icd_spv_header), size - sizeof(icd_spv_header), 1, fp);
+    (void) s;
     ((char *)shader_code)[size-1] = 0;
 
     icd_spv_header* header = (icd_spv_header*)shader_code;
@@ -143,7 +145,7 @@ int main(int argc, char **argv)
            fflush(stdout);
 
            void *shaderCode;
-           size_t size;
+           size_t size = 0;
            VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
 
            if (checkFileExt(argv[1], ".spv")) {

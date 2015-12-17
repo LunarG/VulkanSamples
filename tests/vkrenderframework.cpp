@@ -187,7 +187,7 @@ void VkRenderFramework::ShutdownFramework()
 
 void VkRenderFramework::InitState()
 {
-    VkResult err;
+    VkResult U_ASSERT_ONLY err;
 
     m_render_target_fmt = VkTestFramework::GetFormat(inst, m_device);
 
