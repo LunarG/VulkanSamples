@@ -2298,17 +2298,25 @@ static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCom
 }
 
 VkBool32 validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
+    // TODO : I think this is trying to validate this part of the spec:
+    //  If contents is VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, the contents are recorded in secondary command
+    //  buffers that will be called from the primary command buffer, and vkCmdExecuteCommands is the only valid command
+    //  on the command buffer until vkCmdNextSubpass or vkCmdEndRenderPass.
+    //
+    //  But the code below is forceing vkCmdExecuteCommands to be the only thing in the command buffer which is not necessary
+    //  it just needs to be the only thing in the renderpass
+    //
     VkBool32 skip_call = false;
-    for (auto cmd : pCB->pCmds) {
-        if (cmd_type == CMD_EXECUTECOMMANDS && cmd->type != CMD_EXECUTECOMMANDS) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                                 "vkCmdExecuteCommands() cannot be called on a cmd buffer with exsiting commands.");
-        }
-        if (cmd_type != CMD_EXECUTECOMMANDS && cmd->type == CMD_EXECUTECOMMANDS) {
-            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-                                 "Commands cannot be added to a cmd buffer with exsiting secondary commands.");
-        }
-    }
+    //for (auto cmd : pCB->pCmds) {
+    //    if (cmd_type == CMD_EXECUTECOMMANDS && cmd->type != CMD_EXECUTECOMMANDS) {
+    //        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+    //                             "vkCmdExecuteCommands() cannot be called on a cmd buffer with exsiting commands.");
+    //    }
+    //    if (cmd_type != CMD_EXECUTECOMMANDS && cmd->type == CMD_EXECUTECOMMANDS) {
+    //        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
+    //                             "Commands cannot be added to a cmd buffer with exsiting secondary commands.");
+    //    }
+    //}
     return skip_call;
 }
 
