@@ -431,6 +431,7 @@ VkResult intel_cmd_end(struct intel_cmd *cmd)
     else {
         assert(0 && "intel_winsys_can_submit_bo failed");
     }
+    return VK_ERROR_DEVICE_LOST;
 }
 
 static void pool_destroy(struct intel_obj *obj)
