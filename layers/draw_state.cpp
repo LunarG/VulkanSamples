@@ -1462,10 +1462,10 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 {
     VkBool32 skipCall = VK_FALSE;
 
+    //if (!validate_pipeline_shaders(my_data, device, &(pPipeline->graphicsPipelineCI))) {
     if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
-
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
         skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_PIPELINE_CREATE_STATE, "DS",
