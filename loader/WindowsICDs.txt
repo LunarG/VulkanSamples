@@ -138,6 +138,11 @@ layers are enabled automatically, whereas explicit
 layers must be enabled explicitly.  What distinguishes a layer as implicit or
 explicit is by which registry key its layer information file is referenced by.
 
+For each value in these keys which has DWORD data set to 0, the loader opens
+the JSON format text information file (a.k.a. "manifest file") specified by the
+name of the value.  Each name must be a full pathname to the text info file.
+The Vulkan loader will open each info file to obtain information about the
+layer, including the name or pathname of a shared library (".dll") file.
 The information file is in the JSON format and contains the following
 information:
 
