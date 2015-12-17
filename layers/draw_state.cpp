@@ -1322,6 +1322,56 @@ validate_pipeline_shaders(layer_data *my_data, VkDevice dev, PIPELINE_NODE* pPip
     return pass;
 }
 
+// Return Set node ptr for specified set or else NULL
+static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
+{
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (my_data->setMap.find(set) == my_data->setMap.end()) {
+        loader_platform_thread_unlock_mutex(&globalLock);
+        return NULL;
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+    return my_data->setMap[set];
+}
+
+// For the given set, verify that for each dynamic descriptor in that set that its
+//  dynamic offset combined with the offet and range from its descriptor update
+//  do not overflow the size of its buffer being updated
+static VkBool32 validate_dynamic_offsets(layer_data* my_data, const SET_NODE* pSet)
+{
+    VkBool32 result = VK_FALSE;
+    if (pSet->dynamicOffsets.empty())
+        return result;
+
+    VkWriteDescriptorSet* pWDS = NULL;
+    uint32_t dynOffsetIndex = 0;
+    VkDeviceSize bufferSize = 0;
+    for (uint32_t i=0; i < pSet->descriptorCount; ++i) {
+        switch (pSet->ppDescriptors[i]->sType) {
+            case VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET:
+                pWDS = (VkWriteDescriptorSet*)pSet->ppDescriptors[i];
+                if ((pWDS->descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
+                    (pWDS->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC)) {
+                    for (uint32_t j=0; j<pWDS->descriptorCount; ++j) {
+                        bufferSize = my_data->bufferMap[pWDS->pBufferInfo[j].buffer]->size;
+                        if ((pSet->dynamicOffsets[dynOffsetIndex] + pWDS->pBufferInfo[j].offset + pWDS->pBufferInfo[j].range) > bufferSize) {
+                            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)pSet->set, 0, DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW, "DS",
+                                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u has dynamic offset %u. Combined with offet %#" PRIxLEAST64 " and range %#" PRIxLEAST64 " from its update, this oversteps its buffer (%#" PRIxLEAST64 ") which has a size of %#" PRIxLEAST64 ".",
+                                    (uint64_t)pSet->set, i, pSet->dynamicOffsets[dynOffsetIndex], pWDS->pBufferInfo[j].offset, pWDS->pBufferInfo[j].range, (uint64_t)pWDS->pBufferInfo[j].buffer, bufferSize);
+                        }
+                        dynOffsetIndex++;
+                        i += j; // Advance i to end of this set of descriptors (++i at end of for loop will move 1 index past last of these descriptors)
+                    }
+                }
+                break;
+            default: // Currently only shadowing Write update nodes so shouldn't get here
+                assert(0);
+                continue;
+        }
+    }
+    return result;
+}
+
 // Validate overall state at the time of a draw call
 static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, VkBool32 indexedDraw) {
     // First check flag states
@@ -1345,6 +1395,10 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
                     result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)setHandle, 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
                         "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
                             (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+                } else { // Valid set is bound and layout compatible, validate any dynamic offsets
+                    // Pull the set node, and for each dynamic descriptor, make sure dynamic offset doesn't overstep buffer
+                    SET_NODE* pSet = getSetNode(my_data, pCB->boundDescriptorSets[setIndex]);
+                    result |= validate_dynamic_offsets(my_data, pSet);
                 }
             }
         }
@@ -1683,18 +1737,6 @@ static DESCRIPTOR_POOL_NODE* getPoolNode(layer_data* my_data, const VkDescriptor
     }
     loader_platform_thread_unlock_mutex(&globalLock);
     return my_data->descriptorPoolMap[pool];
-}
-
-// Return Set node ptr for specified set or else NULL
-static SET_NODE* getSetNode(layer_data* my_data, const VkDescriptorSet set)
-{
-    loader_platform_thread_lock_mutex(&globalLock);
-    if (my_data->setMap.find(set) == my_data->setMap.end()) {
-        loader_platform_thread_unlock_mutex(&globalLock);
-        return NULL;
-    }
-    loader_platform_thread_unlock_mutex(&globalLock);
-    return my_data->setMap[set];
 }
 
 static LAYOUT_NODE* getLayoutNode(layer_data* my_data, const VkDescriptorSetLayout layout) {
@@ -2167,6 +2209,8 @@ static VkBool32 dsUpdate(layer_data* my_data, VkDevice device, uint32_t descript
                             i, j+1, string_VkDescriptorType(pSrcLayout->descriptorTypes[srcStartIndex+j]), string_VkDescriptorType(pDstLayout->descriptorTypes[dstStartIndex+j]));
                     } else {
                         // point dst descriptor at corresponding src descriptor
+                        // TODO : This may be a hole. I believe copy should be its own copy,
+                        //  otherwise a subsequent write update to src will incorrectly affect the copy
                         pDstSet->ppDescriptors[j+dstStartIndex] = pSrcSet->ppDescriptors[j+srcStartIndex];
                     }
                 }
@@ -3912,80 +3956,85 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
-        if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
-                    "Incorrectly binding compute DescriptorSets during active RenderPass (%#" PRIxLEAST64 ")", (uint64_t) pCB->activeRenderPass);
-        } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
-            skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdBindDescriptorSets");
-        }
-        skipCall |= addCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS, "vkCmdBindDescriptorSets()");
-        // Track total count of dynamic descriptor types to make sure we have an offset for each one
-        uint32_t totalDynamicDescriptors = 0;
-        string errorString = "";
-        uint32_t lastSetIndex = firstSet+setCount-1;
-        if (lastSetIndex >= pCB->boundDescriptorSets.size())
-            pCB->boundDescriptorSets.resize(lastSetIndex+1);
-        VkDescriptorSet oldFinalBoundSet = pCB->boundDescriptorSets[lastSetIndex];
-        for (uint32_t i=0; i<setCount; i++) {
-            SET_NODE* pSet = getSetNode(dev_data, pDescriptorSets[i]);
-            if (pSet) {
-                loader_platform_thread_lock_mutex(&globalLock);
-                pCB->lastBoundDescriptorSet = pDescriptorSets[i];
-                pCB->lastBoundPipelineLayout = layout;
-                pCB->boundDescriptorSets[i+firstSet] = pDescriptorSets[i];
-                loader_platform_thread_unlock_mutex(&globalLock);
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
-                        "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
-                if (!pSet->pUpdateStructs) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
-                            "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
-                }
-                // Verify that set being bound is compatible with overlapping setLayout of pipelineLayout
-                if (!verify_set_layout_compatibility(dev_data, pSet, layout, i+firstSet, errorString)) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
-                            "descriptorSet #%u being bound is not compatible with overlapping layout in pipelineLayout due to: %s", i, errorString.c_str());
-                }
-                totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;
-            } else {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS",
-                        "Attempt to bind DS %#" PRIxLEAST64 " that doesn't exist!", (uint64_t) pDescriptorSets[i]);
+        if (pCB->state == CB_RECORDING) {
+            if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
+                        "Incorrectly binding compute DescriptorSets during active RenderPass (%#" PRIxLEAST64 ")", (uint64_t) pCB->activeRenderPass);
+            } else if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+                skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdBindDescriptorSets");
             }
-            // Check if newly last bound set invalidates any remaining bound sets
-            if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
-                if (oldFinalBoundSet && !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
-                        "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u is incompatible with set %#" PRIxLEAST64 " newly bound as set #%u so set #%u and any subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) pCB->boundDescriptorSets[lastSetIndex], lastSetIndex, lastSetIndex+1, (uint64_t) layout);
+            if (VK_FALSE == skipCall) {
+                // Track total count of dynamic descriptor types to make sure we have an offset for each one
+                uint32_t totalDynamicDescriptors = 0;
+                string errorString = "";
+                uint32_t lastSetIndex = firstSet+setCount-1;
+                if (lastSetIndex >= pCB->boundDescriptorSets.size())
                     pCB->boundDescriptorSets.resize(lastSetIndex+1);
+                VkDescriptorSet oldFinalBoundSet = pCB->boundDescriptorSets[lastSetIndex];
+                for (uint32_t i=0; i<setCount; i++) {
+                    SET_NODE* pSet = getSetNode(dev_data, pDescriptorSets[i]);
+                    if (pSet) {
+                        loader_platform_thread_lock_mutex(&globalLock);
+                        pCB->lastBoundDescriptorSet = pDescriptorSets[i];
+                        pCB->lastBoundPipelineLayout = layout;
+                        pCB->boundDescriptorSets[i+firstSet] = pDescriptorSets[i];
+                        loader_platform_thread_unlock_mutex(&globalLock);
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
+                                "DS %#" PRIxLEAST64 " bound on pipeline %s", (uint64_t) pDescriptorSets[i], string_VkPipelineBindPoint(pipelineBindPoint));
+                        if (!pSet->pUpdateStructs) {
+                            // TODO: Verify against Valid Usage
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_DESCRIPTOR_SET_NOT_UPDATED, "DS",
+                                    "DS %#" PRIxLEAST64 " bound but it was never updated. You may want to either update it or not bind it.", (uint64_t) pDescriptorSets[i]);
+                        }
+                        // Verify that set being bound is compatible with overlapping setLayout of pipelineLayout
+                        if (!verify_set_layout_compatibility(dev_data, pSet, layout, i+firstSet, errorString)) {
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                                    "descriptorSet #%u being bound is not compatible with overlapping layout in pipelineLayout due to: %s", i, errorString.c_str());
+                        }
+                        if (pSet->pLayout->dynamicDescriptorCount) {
+                            // First make sure we won't overstep bounds of pDynamicOffsets array
+                            if ((totalDynamicDescriptors + pSet->pLayout->dynamicDescriptorCount) > dynamicOffsetCount) {
+                                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
+                                    "descriptorSet #%u (%#" PRIxLEAST64 ") requires %u dynamicOffsets, but only %u dynamicOffsets are left in pDynamicOffsets array. There must be one dynamic offset for each dynamic descriptor being bound.",
+                                        i, (uint64_t) pDescriptorSets[i], pSet->pLayout->dynamicDescriptorCount, (dynamicOffsetCount - totalDynamicDescriptors));
+                            } else { // Store dynamic offsets with the set
+                                const uint32_t* pStartDynOffset = pDynamicOffsets + totalDynamicDescriptors;
+                                pSet->dynamicOffsets.assign(pStartDynOffset, pStartDynOffset + pSet->pLayout->dynamicDescriptorCount);
+                                totalDynamicDescriptors += pSet->pLayout->dynamicDescriptorCount;
+                            }
+                        }
+                    } else {
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pDescriptorSets[i], 0, DRAWSTATE_INVALID_SET, "DS",
+                                "Attempt to bind DS %#" PRIxLEAST64 " that doesn't exist!", (uint64_t) pDescriptorSets[i]);
+                    }
+                }
+                skipCall |= addCmd(dev_data, pCB, CMD_BINDDESCRIPTORSETS, "vkCmdBindDescrsiptorSets()");
+                // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
+                if (firstSet > 0) { // Check set #s below the first bound set
+                    for (uint32_t i=0; i<firstSet; ++i) {
+                        if (pCB->boundDescriptorSets[i] && !verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
+                            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pCB->boundDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
+                                "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u was disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) pCB->boundDescriptorSets[i], i, (uint64_t) layout);
+                            pCB->boundDescriptorSets[i] = VK_NULL_HANDLE;
+                        }
+                    }
+                }
+                // Check if newly last bound set invalidates any remaining bound sets
+                if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
+                    if (oldFinalBoundSet && !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
+                        skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
+                            "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u is incompatible with set %#" PRIxLEAST64 " newly bound as set #%u so set #%u and any subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) pCB->boundDescriptorSets[lastSetIndex], lastSetIndex, lastSetIndex+1, (uint64_t) layout);
+                        pCB->boundDescriptorSets.resize(lastSetIndex+1);
+                    }
+                }
+                //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
+                if (totalDynamicDescriptors != dynamicOffsetCount) {
+                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
+                            "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
                 }
             }
-            //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
-            if (totalDynamicDescriptors != dynamicOffsetCount) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
-                        "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
-            }
-        }
-        // For any previously bound sets, need to set them to "invalid" if they were disturbed by this update
-        if (firstSet > 0) { // Check set #s below the first bound set
-            for (uint32_t i=0; i<firstSet; ++i) {
-                if (pCB->boundDescriptorSets[i] && !verify_set_layout_compatibility(dev_data, dev_data->setMap[pCB->boundDescriptorSets[i]], layout, i, errorString)) {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) pCB->boundDescriptorSets[i], 0, DRAWSTATE_NONE, "DS",
-                        "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u was disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) pCB->boundDescriptorSets[i], i, (uint64_t) layout);
-                    pCB->boundDescriptorSets[i] = VK_NULL_HANDLE;
-                }
-            }
-        }
-        // Check if newly last bound set invalidates any remaining bound sets
-        if ((pCB->boundDescriptorSets.size()-1) > (lastSetIndex)) {
-            if (oldFinalBoundSet && !verify_set_layout_compatibility(dev_data, dev_data->setMap[oldFinalBoundSet], layout, lastSetIndex, errorString)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t) oldFinalBoundSet, 0, DRAWSTATE_NONE, "DS",
-                    "DescriptorSetDS %#" PRIxLEAST64 " previously bound as set #%u is incompatible with set %#" PRIxLEAST64 " newly bound as set #%u so set #%u and any subsequent sets were disturbed by newly bound pipelineLayout (%#" PRIxLEAST64 ")", (uint64_t) oldFinalBoundSet, lastSetIndex, (uint64_t) pCB->boundDescriptorSets[lastSetIndex], lastSetIndex, lastSetIndex+1, (uint64_t) layout);
-                pCB->boundDescriptorSets.resize(lastSetIndex+1);
-            }
-        }
-        //  dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound
-        if (totalDynamicDescriptors != dynamicOffsetCount) {
-            skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, (uint64_t) commandBuffer, 0, DRAWSTATE_INVALID_DYNAMIC_OFFSET_COUNT, "DS",
-                    "Attempting to bind %u descriptorSets with %u dynamic descriptors, but dynamicOffsetCount is %u. It should exactly match the number of dynamic descriptors.", setCount, totalDynamicDescriptors, dynamicOffsetCount);
+        } else {
+            skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindDescriptorSets()");
         }
     }
     if (VK_FALSE == skipCall)

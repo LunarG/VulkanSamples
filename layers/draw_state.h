@@ -92,6 +92,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_IMAGEVIEW_DESCRIPTOR_ERROR,       // A Descriptor of *_IMAGE or *_ATTACHMENT type is being updated with an invalid or bad ImageView
     DRAWSTATE_BUFFERVIEW_DESCRIPTOR_ERROR,      // A Descriptor of *_TEXEL_BUFFER type is being updated with an invalid or bad BufferView
     DRAWSTATE_BUFFERINFO_DESCRIPTOR_ERROR,      // A Descriptor of *_[UNIFORM|STORAGE]_BUFFER_[DYNAMIC] type is being updated with an invalid or bad BufferView
+    DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,          // At draw time the dynamic offset combined with buffer offset and range oversteps size of buffer
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
@@ -266,6 +267,7 @@ typedef struct _SET_NODE {
     GENERIC_HEADER**     ppDescriptors; // Array where each index points to update node for its slot
     LAYOUT_NODE*         pLayout; // Layout for this set
     struct _SET_NODE*    pNext;
+    vector<uint32_t>     dynamicOffsets; // one dynamic offset per dynamic descriptor
 } SET_NODE;
 
 typedef struct _DESCRIPTOR_POOL_NODE {

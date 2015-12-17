@@ -1748,12 +1748,15 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     vkDestroyDescriptorPool(m_device->device(), ds_pool, NULL);
 }
 
-TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
+TEST_F(VkLayerTest, InvalidDynamicOffsetCases)
 {
-    // Create a descriptorSet w/ some dynamic descriptors and then don't send offsets when binding
+    // Create a descriptorSet w/ dynamic descriptor and then hit 3 offset error cases:
+    // 1. No dynamicOffset supplied
+    // 2. Too many dynamicOffsets supplied
+    // 3. Dynamic offset oversteps buffer being updated
     VkResult        err;
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-        "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0. ");
+        " requires 1 dynamicOffsets, but only 0 dynamicOffsets are left in pDynamicOffsets ");
 
     ASSERT_NO_FATAL_FAILURE(InitState());
     ASSERT_NO_FATAL_FAILURE(InitViewport());
@@ -1840,9 +1843,55 @@ TEST_F(VkLayerTest, InvalidDynamicOffsetCount)
 
     BeginCommandBuffer();
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 0, NULL);
-
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'descriptorSet #0 (0x<ADDR>) requires 1 dynamicOffsets, but only 0 dynamicOffsets are left in pDynamicOffsets array...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    uint32_t pDynOff[2] = {512, 756};
+    // Now cause error b/c too many dynOffsets in array for # of dyn descriptors
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        "Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but ");
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 2, pDynOff);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Error received was not 'Attempting to bind 1 descriptorSets with 1 dynamic descriptors, but dynamicOffsetCount is 0...'";
+        m_errorMonitor->DumpFailureMsgs();
+    }
+    // Finally cause error due to dynamicOffset being too big
+    m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+        " from its update, this oversteps its buffer (");
+    // Create PSO to be used for draw-time errors below
+    char const *vsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "void main(){\n"
+        "   gl_Position = vec4(1);\n"
+        "}\n";
+    char const *fsSource =
+        "#version 140\n"
+        "#extension GL_ARB_separate_shader_objects: require\n"
+        "#extension GL_ARB_shading_language_420pack: require\n"
+        "\n"
+        "layout(location=0) out vec4 x;\n"
+        "layout(set=0) layout(binding=0) uniform foo { int x; int y; } bar;\n"
+        "void main(){\n"
+        "   x = vec4(bar.y);\n"
+        "}\n";
+    VkShaderObj vs(m_device, vsSource, VK_SHADER_STAGE_VERTEX_BIT, this);
+    VkShaderObj fs(m_device, fsSource, VK_SHADER_STAGE_FRAGMENT_BIT, this);
+    VkPipelineObj pipe(m_device);
+    pipe.AddShader(&vs);
+    pipe.AddShader(&fs);
+    pipe.AddColorAttachment();
+    pipe.CreateVKPipeline(pipeline_layout, renderPass());
+
+    vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipe.handle());
+    // This update should succeed, but offset size of 512 will overstep buffer /w range 1024 & size 1024
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptorSet, 1, pDynOff);
+    Draw(1, 0, 0, 0);
+    if (!m_errorMonitor->DesiredMsgFound()) {
+        FAIL() << "Error received was not 'VkDescriptorSet (0x<ADDR>) bound as set #0 has dynamic offset 512. Combined with offet 0 and range 1024 from its update, this oversteps...'";
         m_errorMonitor->DumpFailureMsgs();
     }
 
