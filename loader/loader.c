@@ -2591,7 +2591,7 @@ static void loader_remove_layer_lib(
     }
 
     if (idx == loader.loaded_layer_lib_count) {
-        loader_log(VK_DEBUG_REPORT_ERROR_BIT, 0,
+        loader_log(VK_DEBUG_REPORT_ERROR_BIT_EXT, 0,
                    "Unable to unref library %s", layer_prop->lib_name);
         return;
     }
