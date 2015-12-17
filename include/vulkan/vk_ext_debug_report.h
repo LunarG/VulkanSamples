@@ -30,8 +30,7 @@
  *
  */
 
-#ifndef __VK_LUNARG_DEBUG_REPORT_H__
-#define __VK_LUNARG_DEBUG_REPORT_H__
+#pragma once
 
 #include "vulkan/vulkan.h"
 
@@ -48,7 +47,7 @@ extern "C"
 #define VK_EXT_debug_report 1
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDebugReportCallbackEXT)
 
-#define VK_EXT_DEBUG_REPORT_REVISION      1
+#define VK_EXT_DEBUG_REPORT_REVISION      2
 #define VK_EXT_DEBUG_REPORT_EXTENSION_NUMBER 11
 #define VK_EXT_DEBUG_REPORT_EXTENSION_NAME "VK_EXT_debug_report"
 
@@ -152,4 +151,3 @@ VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(
 } // extern "C"
 #endif // __cplusplus
 
-#endif // __VK_LUNARG_DEBUG_REPORT_H__

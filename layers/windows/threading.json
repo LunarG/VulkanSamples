@@ -10,7 +10,7 @@
         "instance_extensions": [
              {
                  "name": "VK_EXT_debug_report",
-                 "spec_version": "1"
+                 "spec_version": "2"
              }
          ]
     }
