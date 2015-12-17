@@ -63,9 +63,13 @@ size_t vk_format_get_size(VkFormat format);
 static inline int u_ffs(int val)
 {
 #ifdef WIN32
-        return __lzcnt(val) + 1;
+    unsigned long bit_pos = 0;
+    if (_BitScanReverse(&bit_pos, val) != 0) {
+        bit_pos += 1;
+    }
+    return bit_pos;
 #else
-        return ffs(val);
+    return ffs(val);
 #endif
 }
 

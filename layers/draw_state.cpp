@@ -1306,13 +1306,9 @@ static VkBool32 verifyPipelineCreateState(layer_data* my_data, const VkDevice de
 {
     VkBool32 skipCall = VK_FALSE;
 
-#if 0
-    // TODO: This call is causing a crash on Windows Release builds running the cube demo with DrawState enabled
-    //       Root cause and fix.
     if (!validate_pipeline_shaders(my_data, device, pPipeline)) {
         skipCall = VK_TRUE;
     }
-#endif
 
     // VS is required
     if (!(pPipeline->active_shaders & VK_SHADER_STAGE_VERTEX_BIT)) {
