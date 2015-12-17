@@ -3566,29 +3566,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
     if (pCB) {
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_BINDPIPELINE);
-            if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, (uint64_t) pipeline,
-                                    0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
-                                    "Incorrectly binding compute pipeline (%#" PRIxLEAST64 ") during active RenderPass (%#" PRIxLEAST64 ")",
-                                    (uint64_t) pipeline, (uint64_t) pCB->activeRenderPass);
-            } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, (uint64_t) pipeline,
-                                    0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS", "Incorrectly binding graphics pipeline "
-                                    " (%#" PRIxLEAST64 ") without an active RenderPass", (uint64_t) pipeline);
+            PIPELINE_NODE* pPN = getPipeline(dev_data, pipeline);
+            if (pPN) {
+                pCB->lastBoundPipeline = pipeline;
+                loader_platform_thread_lock_mutex(&globalLock);
+                set_cb_pso_status(pCB, pPN);
+                g_lastBoundPipeline = pPN;
+                loader_platform_thread_unlock_mutex(&globalLock);
+                skipCall |= validatePipelineState(dev_data, pCB, pipelineBindPoint, pipeline);
             } else {
-                PIPELINE_NODE* pPN = getPipeline(dev_data, pipeline);
-                if (pPN) {
-                    pCB->lastBoundPipeline = pipeline;
-                    loader_platform_thread_lock_mutex(&globalLock);
-                    set_cb_pso_status(pCB, pPN);
-                    g_lastBoundPipeline = pPN;
-                    loader_platform_thread_unlock_mutex(&globalLock);
-                    skipCall |= validatePipelineState(dev_data, pCB, pipelineBindPoint, pipeline);
-                } else {
-                    skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, (uint64_t) pipeline,
-                                        0, DRAWSTATE_INVALID_PIPELINE, "DS",
-                                        "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(pipeline));
-                }
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_PIPELINE, (uint64_t) pipeline,
+                                    0, DRAWSTATE_INVALID_PIPELINE, "DS",
+                                    "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(pipeline));
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindPipeline()");
