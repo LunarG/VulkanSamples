@@ -1659,7 +1659,7 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
 
     layer_node = cJSON_GetObjectItem(json, "layer");
     if (layer_node == NULL) {
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0, "Can't find \"layer\" object in manifest JSON file, skipping");
+        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0, "Can't find \"layer\" object in manifest JSON file, skipping this file");
         return;
     }
 
@@ -1669,6 +1669,9 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         var = cJSON_GetObjectItem(node, #var);        \
         if (var == NULL) {                            \
             layer_node = layer_node->next;            \
+            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,\
+                "Didn't find required layer object %s in manifest JSON file, skipping this layer",\
+                #var);                                \
             continue;                                 \
         }                                             \
         }
@@ -1676,6 +1679,9 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         item = cJSON_GetObjectItem(node, #var);       \
         if (item == NULL) {                           \
             layer_node = layer_node->next;            \
+            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0,\
+                "Didn't find required layer value %s in manifest JSON file, skipping this layer",\
+                #var);                                \
             continue;                                 \
         }                                             \
         temp = cJSON_Print(item);                     \
@@ -1763,7 +1769,6 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
          * instance_extensions
          * device_extensions
          * enable_environment (implicit layers only)
-         * disable_environment (implicit_layers_only)
          */
 #define GET_JSON_OBJECT(node, var) {                  \
         var = cJSON_GetObjectItem(node, #var);        \
@@ -1868,11 +1873,14 @@ static void loader_add_layer_properties(const struct loader_instance *inst,
         }
         if (is_implicit) {
             GET_JSON_OBJECT(layer_node, enable_environment)
-            strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof (props->enable_env_var.name));
-            props->enable_env_var.name[sizeof (props->enable_env_var.name) - 1] = '\0';
-            strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof (props->enable_env_var.value));
-            props->enable_env_var.value[sizeof (props->enable_env_var.value) - 1] = '\0';
-            //TODO add disable_environment for implicit layers
+
+            // enable_environment is optional
+            if (enable_environment) {
+                strncpy(props->enable_env_var.name, enable_environment->child->string, sizeof (props->enable_env_var.name));
+                props->enable_env_var.name[sizeof (props->enable_env_var.name) - 1] = '\0';
+                strncpy(props->enable_env_var.value, enable_environment->child->valuestring, sizeof (props->enable_env_var.value));
+                props->enable_env_var.value[sizeof (props->enable_env_var.value) - 1] = '\0';
+            }
         }
 #undef GET_JSON_ITEM
 #undef GET_JSON_OBJECT
@@ -2192,14 +2200,17 @@ void loader_layer_scan(
                        struct loader_layer_list *device_layers)
 {
     char *file_str;
-    struct loader_manifest_files manifest_files;
+    struct loader_manifest_files manifest_files[2]; // [0] = explicit, [1] = implicit
     cJSON *json;
     uint32_t i;
+    uint32_t implicit;
 
     // Get a list of manifest files for layers
-    loader_get_manifest_files(inst, LAYERS_PATH_ENV, true, DEFAULT_VK_LAYERS_INFO,
-                              &manifest_files);
-    if (manifest_files.count == 0)
+    loader_get_manifest_files(inst, LAYERS_PATH_ENV, true, DEFAULT_VK_ELAYERS_INFO,
+                              &manifest_files[0]);
+    loader_get_manifest_files(inst, LAYERS_PATH_ENV, true, DEFAULT_VK_ILAYERS_INFO,
+                              &manifest_files[1]);
+    if (manifest_files[0].count == 0 && manifest_files[1].count == 0)
         return;
 
 #if 0 //TODO
@@ -2221,31 +2232,36 @@ void loader_layer_scan(
     loader_delete_layer_properties(inst, device_layers);
 
     loader_platform_thread_lock_mutex(&loader_json_lock);
-    for (i = 0; i < manifest_files.count; i++) {
-        file_str = manifest_files.filename_list[i];
-        if (file_str == NULL)
-            continue;
+    for (implicit = 0; implicit < 2; implicit++) {
+        for (i = 0; i < manifest_files[implicit].count; i++) {
+            file_str = manifest_files[implicit].filename_list[i];
+            if (file_str == NULL)
+                continue;
 
-        // parse file into JSON struct
-        json = loader_get_json(inst, file_str);
-        if (!json) {
-            continue;
+            // parse file into JSON struct
+            json = loader_get_json(inst, file_str);
+            if (!json) {
+                continue;
+            }
+
+            //TODO error if device layers expose instance_extensions
+            //TODO error if instance layers expose device extensions
+            loader_add_layer_properties(inst,
+                                        instance_layers,
+                                        device_layers,
+                                        json,
+                                        (implicit == 1),
+                                        file_str);
+
+            loader_heap_free(inst, file_str);
+            cJSON_Delete(json);
         }
-
-        //TODO pass in implicit versus explicit bool
-        //TODO error if device layers expose instance_extensions
-        //TODO error if instance layers expose device extensions
-        loader_add_layer_properties(inst,
-                                    instance_layers,
-                                    device_layers,
-                                    json,
-                                    false,
-                                    file_str);
-
-        loader_heap_free(inst, file_str);
-        cJSON_Delete(json);
     }
-    loader_heap_free(inst, manifest_files.filename_list);
+    if (manifest_files[0].count != 0)
+        loader_heap_free(inst, manifest_files[0].filename_list);
+
+    if (manifest_files[1].count != 0)
+        loader_heap_free(inst, manifest_files[1].filename_list);
     loader_platform_thread_unlock_mutex(&loader_json_lock);
 }
 
@@ -2638,19 +2654,40 @@ static void loader_remove_layer_lib(
  * Go through the search_list and find any layers which match type. If layer
  * type match is found in then add it to ext_list.
  */
-//TODO need to handle implict layer enable env var and disable env var
 static void loader_add_layer_implicit(
                 const struct loader_instance *inst,
                 const enum layer_type type,
                 struct loader_layer_list *list,
                 const struct loader_layer_list *search_list)
 {
+    bool enable;
+    char *env_value;
     uint32_t i;
     for (i = 0; i < search_list->count; i++) {
         const struct loader_layer_properties *prop = &search_list->list[i];
         if (prop->type & type) {
-            /* Found an layer with the same type, add to layer_list */
-            loader_add_to_layer_list(inst, list, 1, prop);
+            /* Found an implicit layer, see if it should be enabled */
+            enable = false;
+
+            // if no enable_environment variable is specified, this implicit layer
+            // should always be enabled. Otherwise check if the variable is set
+            if (prop->enable_env_var.name[0] == 0) {
+                enable = true;
+            } else {
+                env_value = getenv(prop->enable_env_var.name);
+                if (env_value && !strcmp(prop->enable_env_var.value, env_value))
+                    enable = true;
+            }
+
+            // disable_environment has priority, i.e. if both enable and disable
+            // environment variables are set, the layer is disabled. Implicit layers
+            // are required to have a disable_environment variables
+            env_value = getenv(prop->disable_env_var.name);
+            if (env_value)
+                enable = false;
+
+            if (enable)
+                loader_add_to_layer_list(inst, list, 1, prop);
         }
     }
 
