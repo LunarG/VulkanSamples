@@ -235,7 +235,7 @@ int main(int argc, char **argv)
     VkCommandBufferBeginInfo secondary_begin = {};
     secondary_begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     secondary_begin.pNext = NULL;
-    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    secondary_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT|VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     secondary_begin.renderPass = info.render_pass;
     secondary_begin.subpass = 0;
     secondary_begin.framebuffer = info.framebuffers[info.current_buffer];
