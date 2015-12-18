@@ -1248,55 +1248,57 @@ static VkBool32 validate_draw_state(layer_data* my_data, GLOBAL_CB_NODE* pCB, Vk
     // TODO : Currently only performing next check if *something* was bound (non-zero last bound)
     //  There is probably a better way to gate when this check happens, and to know if something *should* have been bound
     //  We should have that check separately and then gate this check based on that check
-    if (pPipe && (pCB->lastBoundPipelineLayout)) {
-        string errorString;
-        for (auto setIndex : pPipe->active_sets) {
-            // If valid set is not bound throw an error
-            if ((pCB->boundDescriptorSets.size() <= setIndex) || (!pCB->boundDescriptorSets[setIndex])) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND, "DS",
-                        "VkPipeline %#" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline, setIndex);
-            } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[pCB->boundDescriptorSets[setIndex]], pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
-                // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
-                VkDescriptorSet setHandle = my_data->setMap[pCB->boundDescriptorSets[setIndex]]->set;
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)setHandle, 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
-                    "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
-                        (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+    if (pPipe) {
+        if (pCB->lastBoundPipelineLayout) {
+            string errorString;
+            for (auto setIndex : pPipe->active_sets) {
+                // If valid set is not bound throw an error
+                if ((pCB->boundDescriptorSets.size() <= setIndex) || (!pCB->boundDescriptorSets[setIndex])) {
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_DESCRIPTOR_SET_NOT_BOUND, "DS",
+                            "VkPipeline %#" PRIxLEAST64 " uses set #%u but that set is not bound.", (uint64_t)pPipe->pipeline, setIndex);
+                } else if (!verify_set_layout_compatibility(my_data, my_data->setMap[pCB->boundDescriptorSets[setIndex]], pPipe->graphicsPipelineCI.layout, setIndex, errorString)) {
+                    // Set is bound but not compatible w/ overlapping pipelineLayout from PSO
+                    VkDescriptorSet setHandle = my_data->setMap[pCB->boundDescriptorSets[setIndex]]->set;
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, (uint64_t)setHandle, 0, DRAWSTATE_PIPELINE_LAYOUTS_INCOMPATIBLE, "DS",
+                        "VkDescriptorSet (%#" PRIxLEAST64 ") bound as set #%u is not compatible with overlapping VkPipelineLayout %#" PRIxLEAST64 " due to: %s",
+                            (uint64_t)setHandle, setIndex, (uint64_t)pPipe->graphicsPipelineCI.layout, errorString.c_str());
+                }
             }
         }
-    }
 
-    // Verify Vtx binding
-    if (pPipe->vtxBindingCount > 0) {
-        VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
-        for (uint32_t i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
-            if ((pCB->boundVtxBuffers.size() < (i+1)) || (pCB->boundVtxBuffers[i] == VK_NULL_HANDLE)) {
-                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
-                    "The Pipeline State Object (%#" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %d should be set via vkCmdBindVertexBuffers.",
-                    (uint64_t)pCB->lastBoundPipeline, i);
+        // Verify Vtx binding
+        if (pPipe->vtxBindingCount > 0) {
+            VkPipelineVertexInputStateCreateInfo *vtxInCI = &pPipe->vertexInputCI;
+            for (uint32_t i = 0; i < vtxInCI->vertexBindingDescriptionCount; i++) {
+                if ((pCB->boundVtxBuffers.size() < (i+1)) || (pCB->boundVtxBuffers[i] == VK_NULL_HANDLE)) {
+                    result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS, "DS",
+                        "The Pipeline State Object (%#" PRIxLEAST64 ") expects that this Command Buffer's vertex binding Index %d should be set via vkCmdBindVertexBuffers.",
+                        (uint64_t)pCB->lastBoundPipeline, i);
 
+                }
+            }
+        } else {
+            if (!pCB->boundVtxBuffers.empty()) {
+                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,
+                    "DS", "Vertex buffers are bound to command buffer (%#" PRIxLEAST64 ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
+                    (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
             }
         }
-    } else {
-        if (!pCB->boundVtxBuffers.empty()) {
-            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,
-                "DS", "Vertex buffers are bound to command buffer (%#" PRIxLEAST64 ") but no vertex buffers are attached to this Pipeline State Object (%#" PRIxLEAST64 ").",
-                (uint64_t)pCB->commandBuffer, (uint64_t)pCB->lastBoundPipeline);
-        }
-    }
 
-    // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
-    VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
-    VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
-    if (dynViewport) {
-        if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
-            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+        // If Viewport or scissors are dynamic, verify that dynamic count matches PSO count
+        VkBool32 dynViewport = isDynamic(pPipe, VK_DYNAMIC_STATE_VIEWPORT);
+        VkBool32 dynScissor = isDynamic(pPipe, VK_DYNAMIC_STATE_SCISSOR);
+        if (dynViewport) {
+            if (pCB->viewports.size() != pPipe->graphicsPipelineCI.pViewportState->viewportCount) {
+                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                    "Dynamic viewportCount from vkCmdSetViewport() is " PRINTF_SIZE_T_SPECIFIER ", but PSO viewportCount is %u. These counts must match.", pCB->viewports.size(), pPipe->graphicsPipelineCI.pViewportState->viewportCount);
+            }
         }
-    }
-    if (dynScissor) {
-        if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
-            result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
-                "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+        if (dynScissor) {
+            if (pCB->scissors.size() != pPipe->graphicsPipelineCI.pViewportState->scissorCount) {
+                result |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_VIEWPORT_SCISSOR_MISMATCH, "DS",
+                    "Dynamic scissorCount from vkCmdSetScissor() is " PRINTF_SIZE_T_SPECIFIER ", but PSO scissorCount is %u. These counts must match.", pCB->scissors.size(), pPipe->graphicsPipelineCI.pViewportState->scissorCount);
+            }
         }
     }
     return result;
@@ -2557,7 +2559,11 @@ static VkBool32 insideRenderPass(const layer_data* my_data, GLOBAL_CB_NODE *pCB,
 static VkBool32 outsideRenderPass(const layer_data* my_data, GLOBAL_CB_NODE *pCB, const char *apiName)
 {
     VkBool32 outside = VK_FALSE;
-    if (!pCB->activeRenderPass) {
+    if (((pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_PRIMARY)   &&
+         (!pCB->activeRenderPass))                                         ||
+        ((pCB->createInfo.level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) &&
+         (!pCB->activeRenderPass)                                     &&
+         !(pCB->beginInfo.flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT))) {
         outside = log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,
                           (uint64_t)pCB->commandBuffer, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
                           "%s: This call must be issued inside an active render pass.", apiName);
@@ -3595,6 +3601,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
     if (pCB) {
         if (pCB->state == CB_RECORDING) {
             skipCall |= addCmd(dev_data, pCB, CMD_BINDPIPELINE);
+            if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+                skipCall |=  outsideRenderPass(dev_data, pCB, "vkCmdBindPipeline");
+            // TODO: Verify whether compute pipelines must be outside a render pass
+            } else if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                    (uint64_t)pipeline, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS", "Incorrectly binding compute pipeline "
+                    " (%#" PRIxLEAST64 ") inside an active RenderPass", (uint64_t) pipeline);
+            }
             PIPELINE_NODE* pPN = getPipeline(dev_data, pipeline);
             if (pPN) {
                 pCB->lastBoundPipeline = pipeline;
@@ -3607,7 +3621,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, (uint64_t) pipeline,
                                     0, DRAWSTATE_INVALID_PIPELINE, "DS",
                                     "Attempt to bind Pipeline %#" PRIxLEAST64 " that doesn't exist!", reinterpret_cast<uint64_t>(pipeline));
-
             }
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindPipeline()");
@@ -3840,10 +3853,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
             if ((VK_PIPELINE_BIND_POINT_COMPUTE == pipelineBindPoint) && (pCB->activeRenderPass)) {
                 skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_INVALID_RENDERPASS_CMD, "DS",
                         "Incorrectly binding compute DescriptorSets during active RenderPass (%#" PRIxLEAST64 ")", (uint64_t) pCB->activeRenderPass);
-            } else if ((VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) && (!pCB->activeRenderPass)) {
-                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, 0, DRAWSTATE_NO_ACTIVE_RENDERPASS, "DS",
-                        "Incorrectly binding graphics DescriptorSets without an active RenderPass");
-            } else {
+            } else if (VK_PIPELINE_BIND_POINT_GRAPHICS == pipelineBindPoint) {
+                skipCall |= outsideRenderPass(dev_data, pCB, "vkCmdBindDescriptorSets");
+            }
+            if (!skipCall) {
                 // Track total count of dynamic descriptor types to make sure we have an offset for each one
                 uint32_t totalDynamicDescriptors = 0;
                 string errorString = "";
