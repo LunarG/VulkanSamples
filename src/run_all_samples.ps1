@@ -24,6 +24,8 @@ echo "Device"
 & $dPath\vk0.10-device
 echo "Enable Validation and Debug Message Callback"
 & $dPath\vk0.10-enable_validation_with_callback
+echo "Create Debug Message Callback"
+& $dPath\vk0.10-dbgcreatemsgcallback
 echo "Init Swapchain"
 & $dPath\vk0.10-initswapchain
 echo "Init Command Buffer"
@@ -50,14 +52,24 @@ echo "Initialize Pipeline"
 & $dPath\vk0.10-initpipeline
 echo "Draw Cube"
 & $dPath\vk0.10-drawcube
-echo "Draw Textured Cube"
-& $dPath\vk0.10-copyblitimage
 echo "Copy/Blit Image"
+& $dPath\vk0.10-copyblitimage
+echo "Draw Textured Cube"
 & $dPath\vk0.10-drawtexturedcube
 echo "Draw Cubes with Dynamic Uniform Buffer"
 & $dPath\vk0.10-dynamicuniform
 echo "Texel Buffer"
 & $dPath\vk0.10-texelbuffer
+echo "Immutable Sampler"
+& $dPath\vk0.10-immutable_sampler
+echo "Multiple Descriptor Sets"
+& $dPath\vk0.10-multiple_sets
+echo "Multithreaded Command Buffers"
+& $dPath\vk0.10-multithreadcmdbuf
+echo "Push Constants"
+& $dPath\vk0.10-push_constants
+echo "Separate image sampler"
+& $dPath\vk0.10-separate_image_sampler
 echo "Use GLSL Shader"
 & $dPath\vk0.10-useglslshader
 echo "Use SPIR-V Shader"
