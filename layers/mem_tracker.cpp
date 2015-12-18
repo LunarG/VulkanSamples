@@ -2815,6 +2815,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkQueue queue,
     const VkPresentInfoKHR* pPresentInfo)
 {
+    VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
     bool skip_call = false;
     VkDeviceMemory mem;
@@ -2824,8 +2825,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
         skip_call |= get_mem_binding_from_object(my_data, queue, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
         skip_call |= validate_memory_is_valid(my_data, mem, image);
     }
-    if (!skip_call)
-        return my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    if (!skip_call) {
+        result = my_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
+    }
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
@@ -2884,6 +2887,23 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
     return result;
 }
 
+VKAPI_ATTR void VKAPI_CALL vkDestroyFramebuffer(
+    VkDevice                                    device,
+    VkFramebuffer                               framebuffer,
+    const VkAllocationCallbacks*                pAllocator)
+{
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+
+    auto item = my_data->fbMap.find(framebuffer);
+    loader_platform_thread_lock_mutex(&globalLock);
+    if (item != my_data->fbMap.end()) {
+        my_data->fbMap.erase(framebuffer);
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
+    my_data->device_dispatch_table->DestroyFramebuffer(device, framebuffer, pAllocator);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     VkDevice device,
     const VkRenderPassCreateInfo* pCreateInfo,
@@ -2911,22 +2931,24 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
     bool skip_call = false;
-    loader_platform_thread_lock_mutex(&globalLock);
-    auto pass_data = my_data->passMap.find(pRenderPassBegin->renderPass);
-    if (pass_data != my_data->passMap.end()) {
-        MT_PASS_INFO& pass_info = pass_data->second;
-        pass_info.fb = pRenderPassBegin->framebuffer;
-        for (int i = 0; i < pass_info.attachments.size(); ++i) {
-            MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
-            if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-                set_memory_valid(my_data, fb_info.mem, true, fb_info.image);
-            } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
-                skip_call |= validate_memory_is_valid(my_data, fb_info.mem, fb_info.image);
+    if (pRenderPassBegin) {
+        loader_platform_thread_lock_mutex(&globalLock);
+        auto pass_data = my_data->passMap.find(pRenderPassBegin->renderPass);
+        if (pass_data != my_data->passMap.end()) {
+            MT_PASS_INFO& pass_info = pass_data->second;
+            pass_info.fb = pRenderPassBegin->framebuffer;
+            for (int i = 0; i < pass_info.attachments.size(); ++i) {
+                MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
+                if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                    set_memory_valid(my_data, fb_info.mem, true, fb_info.image);
+                } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                    skip_call |= validate_memory_is_valid(my_data, fb_info.mem, fb_info.image);
+                }
             }
-        }
-        auto cb_data = my_data->cbMap.find(cmdBuffer);
-        if (cb_data != my_data->cbMap.end()) {
-            cb_data->second.pass = pRenderPassBegin->renderPass;
+            auto cb_data = my_data->cbMap.find(cmdBuffer);
+            if (cb_data != my_data->cbMap.end()) {
+                cb_data->second.pass = pRenderPassBegin->renderPass;
+            }
         }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
@@ -3096,6 +3118,9 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
     if (!strcmp(funcName, "vkCreateFramebuffer"))
         return (PFN_vkVoidFunction) vkCreateFramebuffer;
+    if (!strcmp(funcName, "vkDestroyFramebuffer"))
+        return (PFN_vkVoidFunction) vkDestroyFramebuffer;
+
 
     my_data = get_my_data_ptr(get_dispatch_key(dev), layer_data_map);
     if (my_data->wsi_enabled)
