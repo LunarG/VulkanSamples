@@ -43,7 +43,7 @@ Use multiple descriptor sets to draw a textured cube.
 /* SPIR-V                                                                 */
 
 const char *vertShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         // Note, set = 0 here
@@ -56,6 +56,9 @@ const char *vertShaderText =
         "layout (location = 1) in vec2 inTexCoords;\n"
         "layout (location = 0) out vec4 outColor;\n"
         "layout (location = 1) out vec2 outTexCoords;\n"
+        "out gl_PerVertex { \n"
+        "    vec4 gl_Position;\n"
+        "};\n"
         "void main() {\n"
         "   outColor = texture(surface, vec2(0.0));\n"
         "   outTexCoords = inTexCoords;\n"
@@ -66,7 +69,7 @@ const char *vertShaderText =
         "}\n";
 
 const char *fragShaderText=
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "layout (location = 0) in vec4 inColor;\n"

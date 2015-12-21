@@ -41,7 +41,7 @@ Render two multi-subpass render passes with different framebuffer attachments
 
 /* This shader renders the cubes in projected space */
 static const char *normalVertShaderText =
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (std140, binding = 0) uniform bufferVals {\n"
@@ -50,6 +50,9 @@ static const char *normalVertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec4 inColor;\n"
     "layout (location = 0) out vec4 outColor;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
     "void main() {\n"
     "   outColor = inColor;\n"
     "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -61,10 +64,13 @@ static const char *normalVertShaderText =
 
 /* This shader renders a simple fullscreen quad using the VS alone */
 static const char *fullscreenVertShaderText =
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (location = 0) out vec4 outColor;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
     "void main() {\n"
     "   outColor = vec4(1.0f, 0.1f, 0.1f, 0.5f);\n"
     "   const vec4 verts[4] = vec4[4](vec4(-1.0, -1.0, 0.5, 1.0),"
@@ -76,7 +82,7 @@ static const char *fullscreenVertShaderText =
     "}\n";
 
 static const char *fragShaderText=
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (location = 0) in vec4 color;\n"
