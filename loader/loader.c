@@ -538,7 +538,7 @@ static void loader_add_instance_extensions(
         const char *lib_name,
         struct loader_extension_list *ext_list)
 {
-    uint32_t i, count;
+    uint32_t i, count = 0;
     VkExtensionProperties *ext_props;
     VkResult res;
 
@@ -3160,14 +3160,27 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateInstance(
         icd = loader_icd_add(ptr_instance, &ptr_instance->icd_libs.list[i]);
         if (icd) {
             icd_create_info.enabledExtensionNameCount = 0;
+            struct loader_extension_list icd_exts;
+
+            loader_log(ptr_instance, VK_DEBUG_REPORT_DEBUG_BIT_EXT, 0, "Build ICD instance extension list");
+            // traverse scanned icd list adding non-duplicate extensions to the list
+            loader_init_generic_list(ptr_instance, (struct loader_generic_list *) &icd_exts,
+                                     sizeof(VkExtensionProperties));
+            loader_add_instance_extensions(ptr_instance,
+                                         icd->this_icd_lib->EnumerateInstanceExtensionProperties,
+                                         icd->this_icd_lib->lib_name,
+                                         &icd_exts);
+
             for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
                 prop = get_extension_property(pCreateInfo->ppEnabledExtensionNames[i],
-                                              &ptr_instance->ext_list);
+                                              &icd_exts);
                 if (prop) {
                     filtered_extension_names[icd_create_info.enabledExtensionNameCount] = (char *) pCreateInfo->ppEnabledExtensionNames[i];
                     icd_create_info.enabledExtensionNameCount++;
                 }
             }
+
+            loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *) &icd_exts);
 
             res = ptr_instance->icd_libs.list[i].CreateInstance(&icd_create_info,
                                            pAllocator,
