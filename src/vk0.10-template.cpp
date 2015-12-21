@@ -40,7 +40,7 @@ Template sample to start from. Draw textured cube with mostly helpers.
 /* SPIR-V                                                                 */
 
 const char *vertShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "layout (std140, binding = 0) uniform buf {\n"
@@ -49,6 +49,9 @@ const char *vertShaderText =
         "layout (location = 0) in vec4 pos;\n"
         "layout (location = 1) in vec2 inTexCoords;\n"
         "layout (location = 0) out vec2 texcoord;\n"
+        "out gl_PerVertex { \n"
+        "    vec4 gl_Position;\n"
+        "};\n"
         "void main() {\n"
         "   texcoord = inTexCoords;\n"
         "   gl_Position = ubuf.mvp * pos;\n"
@@ -59,7 +62,7 @@ const char *vertShaderText =
         "}\n";
 
 const char *fragShaderText=
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (binding = 1) uniform sampler2D tex;\n"
