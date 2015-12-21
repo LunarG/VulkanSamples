@@ -38,7 +38,7 @@ Use a texel buffer to draw a magenta triangle
 /* SPIR-V                                                                 */
 
 static const char *vertShaderText =
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (binding = 0) uniform samplerBuffer texels;\n"
@@ -47,6 +47,9 @@ static const char *vertShaderText =
     "float r;\n"
     "float g;\n"
     "float b;\n"
+    "out gl_PerVertex { \n"
+    "    vec4 gl_Position;\n"
+    "};\n"
     "void main() {\n"
     "    r = texelFetch(texels, 0).r;\n"
     "    g = texelFetch(texels, 1).r;\n"
@@ -59,7 +62,7 @@ static const char *vertShaderText =
     "}\n";
 
 static const char *fragShaderText=
-    "#version 140\n"
+    "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (location = 0) in vec4 color;\n"
