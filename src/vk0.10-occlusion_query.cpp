@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     VkBufferCreateInfo buf_info = {};
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     buf_info.size = 4*sizeof(uint64_t);
     buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
@@ -337,7 +337,10 @@ int main(int argc, char **argv)
     present.pResults = NULL;
 
     /* Make sure command buffer is finished before presenting */
-    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    do {
+        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+
     assert(res == VK_SUCCESS);
     res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
