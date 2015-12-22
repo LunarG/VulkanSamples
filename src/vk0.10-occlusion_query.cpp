@@ -25,7 +25,17 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-Use occlusion query
+Use occlusion query to determine if drawing renders any samples.
+This could be used to quickly determine if more expensive rendering should be done.
+Use vkCreateQueryPool, vkCmdResetQueryPool, and vkDestroyQueryPool to manage a pool.
+Use vkCmdBeginQuery and vkCmdEndQuery to enclose rendering.
+Use vkCmdCopyQueryPoolResults or vkGetQueryPoolResults to read query results.
+This example does one query with no rendering to give a zero result and a second query
+with rendering to give a non-zero result.  Note that exact counts are not guaranteed
+unless vkGetPhysicalDeviceFeatures sets occlusionQueryPrecise and the
+VK_QUERY_CONTROL_PRECISE_BIT is set for vkCmdBeginQuery.
+This example uses vkCmdCopyQueryPoolResults followed by vkMapMemory of a buffer.
+vkCmdCopyQueryPoolResults could also be used to set uniforms used later by shaders.
 */
 
 #include <util_init.hpp>
