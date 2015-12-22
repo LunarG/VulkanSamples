@@ -193,6 +193,8 @@ int main(int argc, char **argv)
                             &query_pool_info, NULL, &query_pool);
     assert(res == VK_SUCCESS);
 
+    vkCmdResetQueryPool(info.cmd, query_pool, 0 /*startQuery*/, 2 /*queryCount*/);
+
     VkRenderPassBeginInfo rp_begin;
     rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rp_begin.pNext = NULL;
@@ -230,8 +232,6 @@ int main(int argc, char **argv)
     scissor.offset.x = 0;
     scissor.offset.y = 0;
     vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
-
-    vkCmdResetQueryPool(info.cmd, query_pool, 0 /*startQuery*/, 2 /*queryCount*/);
 
     vkCmdBeginQuery(info.cmd, query_pool, 0 /*slot*/, 0 /*flags*/);
     vkCmdEndQuery(info.cmd, query_pool, 0 /*slot*/);
