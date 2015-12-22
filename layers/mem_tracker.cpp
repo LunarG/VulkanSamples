@@ -2917,10 +2917,34 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
         MT_PASS_ATTACHMENT_INFO pass_info;
         pass_info.load_op = desc.loadOp;
         pass_info.store_op = desc.storeOp;
+        pass_info.attachment = i;
         loader_platform_thread_lock_mutex(&globalLock);
         my_data->passMap[*pRenderPass].attachments.push_back(pass_info);
         loader_platform_thread_unlock_mutex(&globalLock);
     }
+    //TODO: Maybe fill list and then copy instead of locking
+    loader_platform_thread_lock_mutex(&globalLock);
+    std::unordered_map<uint32_t, bool>& attachment_first_read = my_data->passMap[*pRenderPass].attachment_first_read;
+    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
+        const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
+        for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pInputAttachments[j].attachment;
+            if (attachment_first_read.count(attachment)) continue;
+            attachment_first_read.insert(std::make_pair(attachment, true));
+        }
+        for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
+            uint32_t attachment = subpass.pColorAttachments[j].attachment;
+            if (attachment_first_read.count(attachment)) continue;
+            attachment_first_read.insert(std::make_pair(attachment, false));
+        }
+        if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+            uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
+            if (attachment_first_read.count(attachment)) continue;
+            attachment_first_read.insert(std::make_pair(attachment, false));
+        }
+    }
+    loader_platform_thread_unlock_mutex(&globalLock);
+
     return result;
 }
 
@@ -2941,7 +2965,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                     set_memory_valid(my_data, fb_info.mem, true, fb_info.image);
+                } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
+                    set_memory_valid(my_data, fb_info.mem, false, fb_info.image);
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                    skip_call |= validate_memory_is_valid(my_data, fb_info.mem, fb_info.image);
+                }
+                if (pass_info.attachment_first_read[pass_info.attachments[i].attachment]) {
                     skip_call |= validate_memory_is_valid(my_data, fb_info.mem, fb_info.image);
                 }
             }

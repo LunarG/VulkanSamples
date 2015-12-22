@@ -25,6 +25,7 @@
  */
 #pragma once
 #include <vector>
+#include <unordered_map>
 #include "vulkan/vk_layer.h"
 #include "vulkan/vk_ext_debug_report.h"
 
@@ -161,13 +162,15 @@ struct MT_FB_INFO {
 };
 
 struct MT_PASS_ATTACHMENT_INFO {
+   uint32_t attachment;
    VkAttachmentLoadOp load_op; 
-   VkAttachmentStoreOp store_op; 
+   VkAttachmentStoreOp store_op;
 };
 
 struct MT_PASS_INFO {
     VkFramebuffer fb;
     std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
+    std::unordered_map<uint32_t, bool> attachment_first_read;
 };
 
 // Associate fenceId with a fence object

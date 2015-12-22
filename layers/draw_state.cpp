@@ -4846,26 +4846,10 @@ VkBool32 CheckPreserved(const layer_data* my_data, VkDevice device, const VkRend
     return result;
 }
 
-VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, std::vector<DAGNode>& subpass_to_node) {
-   VkBool32 skip_call = false;
+VkBool32 ValidateDependencies(const layer_data* my_data, VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, const std::vector<DAGNode>& subpass_to_node) {
+    VkBool32 skip_call = false;
     std::vector<std::vector<uint32_t>> output_attachment_to_subpass(pCreateInfo->attachmentCount);
     std::vector<std::vector<uint32_t>> input_attachment_to_subpass(pCreateInfo->attachmentCount);
-
-    // Create DAG
-    for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
-        DAGNode& subpass_node = subpass_to_node[i];
-        subpass_node.pass = i;
-    }
-    for (uint32_t i = 0; i < pCreateInfo->dependencyCount; ++i) {
-        const VkSubpassDependency& dependency = pCreateInfo->pDependencies[i];
-        if (dependency.srcSubpass > dependency.dstSubpass) {
-            skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, 0, DRAWSTATE_INVALID_RENDERPASS, "DS",
-                                 "Dependency graph must be specified such that an earlier pass cannot depend on a later pass.");
-        }
-        subpass_to_node[dependency.dstSubpass].prev.push_back(dependency.srcSubpass);
-        subpass_to_node[dependency.srcSubpass].next.push_back(dependency.dstSubpass);
-    }
-
     // Find for each attachment the subpasses that use them.
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
