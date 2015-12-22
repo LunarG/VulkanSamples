@@ -64,7 +64,7 @@ VkBool32 dbgFunc(
 #ifdef _WIN32
     MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
 #else
-    std::cout << message << std::endl;
+    std::cout << message.str() << std::endl;
 #endif
 
     /*
