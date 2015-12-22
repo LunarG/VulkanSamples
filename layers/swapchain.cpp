@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vk_loader_platform.h>
+#include <vk_icd.h>
 #include "swapchain.h"
 #include "vk_layer_extension_utils.h"
 #include "vk_enum_string_helper.h"
@@ -74,6 +75,35 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerPropertie
                                    pCount, pProperties);
 }
 
+// This function validates a VkSurfaceKHR object:
+static VkBool32 validateSurface(layer_data *my_data, VkSurfaceKHR surface, char *fn)
+{
+    VkBool32 skipCall = VK_FALSE;
+    bool found_error = false;
+
+    SwpSurface *pSurface = &my_data->surfaceMap[surface];
+    if ((pSurface == NULL) || (pSurface->surface != surface)) {
+        found_error = true;
+    } else {
+#if !defined(__ANDROID__)
+        VkIcdSurfaceBase *pIcdSurface = (VkIcdSurfaceBase *) surface;
+        if (pSurface->platform != pIcdSurface->platform) {
+            found_error = true;
+        }
+#else  // !defined(__ANDROID__)
+        if (pSurface->platform != VK_ICD_WSI_PLATFORM_ANDROID) {
+            found_error = true;
+        }
+#endif // !defined(__ANDROID__)
+    }
+    if (found_error) {
+        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SURFACE_KHR, surface, "VkSurfaceKHR",
+                              SWAPCHAIN_INVALID_HANDLE,
+                              "%s() called with an invalid surface object.",
+                              fn);
+    }
+    return skipCall;
+}
 
 static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
@@ -119,6 +149,25 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
     VkLayerInstanceDispatchTable *pDisp  = my_data->instance_dispatch_table;
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    pDisp->CreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR) gpa(instance, "vkCreateAndroidSurfaceKHR");
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    pDisp->CreateMirSurfaceKHR = (PFN_vkCreateMirSurfaceKHR) gpa(instance, "vkCreateMirSurfaceKHR");
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    pDisp->CreateWaylandSurfaceKHR = (PFN_vkCreateWaylandSurfaceKHR) gpa(instance, "vkCreateWaylandSurfaceKHR");
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) gpa(instance, "vkCreateWin32SurfaceKHR");
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    pDisp->CreateXcbSurfaceKHR = (PFN_vkCreateXcbSurfaceKHR) gpa(instance, "vkCreateXcbSurfaceKHR");
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    pDisp->CreateXlibSurfaceKHR = (PFN_vkCreateXlibSurfaceKHR) gpa(instance, "vkCreateXlibSurfaceKHR");
+#endif // VK_USE_PLATFORM_XLIB_KHR
+    pDisp->DestroySurfaceKHR = (PFN_vkDestroySurfaceKHR) gpa(instance, "vkDestroySurfaceKHR");
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
     pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
@@ -284,6 +333,277 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     layer_data_map.erase(key);
 }
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
+    VkInstance                                  instance,
+    ANativeWindow*                              window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(
+                instance, window, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_ANDROID;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+
+#ifdef VK_USE_PLATFORM_MIR_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
+    VkInstance                                  instance,
+    MirConnection*                              connection,
+    MirSurface*                                 mirSurface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(
+                instance, connection, mirSurface, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_MIR;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_MIR_KHR
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
+    VkInstance                                  instance,
+    struct wl_display*                          display,
+    struct wl_surface*                          surface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(
+                instance, display, surface, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_WAYLAND;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
+    VkInstance                                  instance,
+    HINSTANCE                                   hinstance,
+    HWND                                        hwnd,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(
+                instance, hinstance, hwnd, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_WIN32;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
+    VkInstance                                  instance,
+    xcb_connection_t*                           connection,
+    xcb_window_t                                window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(
+                instance, connection, window, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_XCB;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_XCB_KHR
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
+    VkInstance                                  instance,
+    Display*                                    dpy,
+    Window                                      window,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+    VkResult result = VK_SUCCESS;
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(
+                instance, dpy, window, pAllocator, pSurface);
+
+        if ((result == VK_SUCCESS) && pInstance && pSurface) {
+            // Record the VkSurfaceKHR returned by the ICD:
+            my_data->surfaceMap[*pSurface].surface = *pSurface;
+            my_data->surfaceMap[*pSurface].pInstance = pInstance;
+            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_XLIB;
+            // Point to the associated SwpInstance:
+            pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
+            skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
+        }
+        return result;
+    }
+    return VK_ERROR_VALIDATION_FAILED;
+}
+#endif // VK_USE_PLATFORM_XLIB_KHR
+
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  instance, VkSurfaceKHR  surface, const VkAllocationCallbacks* pAllocator)
+{
+    VkBool32 skipCall = VK_FALSE;
+    layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
+
+    // Validate that a valid VkInstance was used:
+    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
+    if (!pInstance) {
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+                                            instance,
+                                            "VkInstance");
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Validate that a valid VkSurfaceKHR was used:
+        skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
+    }
+
+    if (VK_FALSE == skipCall) {
+        // Call down the call chain:
+        my_data->instance_dispatch_table->DestroySurfaceKHR(
+                instance, surface, pAllocator);
+    }
+
+    // Regardless of skipCall value, do some internal cleanup:
+    SwpSurface *pSurface = &my_data->surfaceMap[surface];
+    if (pSurface && pSurface->pInstance) {
+        pSurface->pInstance->surfaces.erase(surface);
+    }
+    my_data->surfaceMap.erase(surface);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
 {
     VkResult result = VK_SUCCESS;
@@ -426,6 +746,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
+    skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -471,6 +792,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
+    skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -513,6 +835,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
+    skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -563,6 +886,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                               "%s() called even though the %s extension was not enabled for this VkInstance.",
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
+    skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -624,6 +948,15 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                               "vkGetPhysicalDeviceSurfaceCapabilitiesKHR().",
                               fn);
     } else {
+        // Validate pCreateInfo->surface, to ensure it is valid (Note: in order
+        // to validate, we must lookup layer_data based on the VkInstance
+        // associated with this VkDevice):
+        SwpPhysicalDevice *pPhysicalDevice = pDevice->pPhysicalDevice;
+        SwpInstance *pInstance = pPhysicalDevice->pInstance;
+        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(pInstance->instance), layer_data_map);
+        skipCall |= validateSurface(my_instance_data,
+                                    pCreateInfo->surface,
+                                    (char *) "vkCreateSwapchainKHR");
         // Validate pCreateInfo->minImageCount against
         // VkSurfaceCapabilitiesKHR::{min|max}ImageCount:
         VkSurfaceCapabilitiesKHR *pCapabilities = &pDevice->pPhysicalDevice->surfaceCapabilities;
@@ -1274,6 +1607,32 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     if (my_data->instanceMap.size() != 0 &&
         my_data->instanceMap[instance].swapchainExtensionEnabled)
     {
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateAndroidSurfaceKHR);
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        if (!strcmp("vkCreateMirSurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateMirSurfaceKHR);
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        if (!strcmp("vkCreateWaylandSurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWaylandSurfaceKHR);
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (!strcmp("vkCreateWin32SurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateWin32SurfaceKHR);
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        if (!strcmp("vkCreateXcbSurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXcbSurfaceKHR);
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        if (!strcmp("vkCreateXlibSurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkCreateXlibSurfaceKHR);
+#endif // VK_USE_PLATFORM_XLIB_KHR
+        if (!strcmp("vkDestroySurfaceKHR", funcName))
+            return reinterpret_cast<PFN_vkVoidFunction>(vkDestroySurfaceKHR);
         if (!strcmp("vkGetPhysicalDeviceSurfaceSupportKHR", funcName))
             return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceSupportKHR);
         if (!strcmp("vkGetPhysicalDeviceSurfaceCapabilitiesKHR", funcName))
@@ -1282,7 +1641,6 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
             return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfaceFormatsKHR);
         if (!strcmp("vkGetPhysicalDeviceSurfacePresentModesKHR", funcName))
             return reinterpret_cast<PFN_vkVoidFunction>(vkGetPhysicalDeviceSurfacePresentModesKHR);
-// FIXME: ADD SUPPORT FOR THE vkCreate*SurfaceKHR() functions
     }
 
     if (pTable->GetInstanceProcAddr == NULL)
