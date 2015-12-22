@@ -39,6 +39,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_NONE,                          // Used for INFO & other non-error messages
     MEMTRACK_INVALID_CB,                    // Cmd Buffer invalid
     MEMTRACK_INVALID_MEM_OBJ,               // Invalid Memory Object
+    MEMTRACK_INVALID_ALIASING,              // Invalid Memory Aliasing
     MEMTRACK_INTERNAL_ERROR,                // Bug in Mem Track Layer internal data structures
     MEMTRACK_FREED_MEM_REF,                 // MEM Obj freed while it still has obj and/or CB refs
     MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS,  // Clearing bindings on mem obj that doesn't have any bindings
@@ -192,6 +193,13 @@ struct MT_QUEUE_INFO {
 struct MT_SWAP_CHAIN_INFO {
     VkSwapchainCreateInfoKHR    createInfo;
     std::vector<VkImage>        images;
+};
+
+struct MEMORY_RANGE {
+    uint64_t handle;
+    VkDeviceMemory memory;
+    VkDeviceSize start;
+    VkDeviceSize end;
 };
 
 #ifdef __cplusplus

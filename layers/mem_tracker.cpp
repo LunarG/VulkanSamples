@@ -59,6 +59,8 @@ struct layer_data {
     VkLayerInstanceDispatchTable      *instance_dispatch_table;
     VkBool32                           wsi_enabled;
     uint64_t                           currentFenceId;
+    VkPhysicalDeviceProperties         properties;
+    unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>          bufferRanges, imageRanges;
     // Maps for tracking key structs related to MemTracker state
     unordered_map<VkCommandBuffer,     MT_CB_INFO>               cbMap;
     unordered_map<VkCommandPool,       MT_CMD_POOL_INFO>         commandPoolMap;
@@ -1162,6 +1164,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
+        my_instance_data->instance_dispatch_table->GetPhysicalDeviceProperties(gpu, &my_device_data->properties);
     }
     return result;
 }
@@ -1391,6 +1394,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkFreeMemory(
     const VkAllocationCallbacks *pAllocator)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    my_data->bufferRanges.erase(mem);
+    my_data->imageRanges.erase(mem);
 
     // From spec : A memory object is freed by calling vkFreeMemory() when it is no longer needed.
     // Before freeing a memory object, an application must ensure the memory object is no longer
@@ -1695,6 +1700,47 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     }
 }
 
+bool print_memory_range_error(layer_data *my_data, const uint64_t object_handle, const uint64_t other_handle, VkDebugReportObjectTypeEXT object_type) {
+    if (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0, MEMTRACK_INVALID_ALIASING, "MEM",
+                       "Buffer %" PRIx64 " is alised with image %" PRIx64, object_handle, other_handle);
+    } else {
+        return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0, MEMTRACK_INVALID_ALIASING, "MEM",
+                       "Image %" PRIx64 " is alised with buffer %" PRIx64, object_handle, other_handle);
+    }
+}
+
+bool validate_memory_range(layer_data *my_data, const unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>& memory, const MEMORY_RANGE& new_range, VkDebugReportObjectTypeEXT object_type) {
+    bool skip_call = false;
+    if (!memory.count(new_range.memory)) return false;
+    const vector<MEMORY_RANGE>& ranges = memory.at(new_range.memory);
+    for (auto range : ranges) {
+        if ((range.end & ~(my_data->properties.limits.bufferImageGranularity - 1)) < new_range.start) continue;
+        if (range.start > (new_range.end & ~(my_data->properties.limits.bufferImageGranularity - 1))) continue;
+        skip_call |= print_memory_range_error(my_data, new_range.handle, range.handle, object_type);
+    }
+    return skip_call;
+}
+
+bool validate_buffer_image_aliasing(
+    layer_data *my_data,
+    uint64_t handle,
+    VkDeviceMemory mem,
+    VkDeviceSize memoryOffset,
+    VkMemoryRequirements memRequirements,
+    unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>& ranges,
+    const unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>& other_ranges,
+    VkDebugReportObjectTypeEXT object_type)
+{
+    MEMORY_RANGE range;
+    range.handle = handle;
+    range.memory = mem;
+    range.start = memoryOffset;
+    range.end = memoryOffset + memRequirements.size - 1;
+    ranges[mem].push_back(range);
+    return validate_memory_range(my_data, other_ranges, range, object_type);
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkDevice       device,
     VkBuffer       buffer,
@@ -1705,8 +1751,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindBufferMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
-    add_object_binding_info(my_data, (uint64_t)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, mem);
+    uint64_t buffer_handle = reinterpret_cast<uint64_t>(buffer);
+    VkBool32 skipCall = set_mem_binding(my_data, device, mem, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "vkBindBufferMemory");
+    add_object_binding_info(my_data, buffer_handle, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, mem);
+    {
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+        skipCall |= validate_buffer_image_aliasing(my_data, buffer_handle, mem, memoryOffset, memRequirements, my_data->bufferRanges, my_data->imageRanges, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT);
+    }
     print_mem_list(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
@@ -1725,8 +1777,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkBindImageMemory(
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     loader_platform_thread_lock_mutex(&globalLock);
     // Track objects tied to memory
-    VkBool32 skipCall = set_mem_binding(my_data, device, mem, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
-    add_object_binding_info(my_data, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem);
+    uint64_t image_handle = reinterpret_cast<uint64_t>(image);
+    VkBool32 skipCall = set_mem_binding(my_data, device, mem, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "vkBindImageMemory");
+    add_object_binding_info(my_data, image_handle, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, mem);
+    {
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(device, image, &memRequirements);
+        skipCall |= validate_buffer_image_aliasing(my_data, image_handle, mem, memoryOffset, memRequirements, my_data->imageRanges, my_data->bufferRanges, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
+    }
     print_mem_list(my_data, device);
     loader_platform_thread_unlock_mutex(&globalLock);
     if (VK_FALSE == skipCall) {
