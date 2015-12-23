@@ -1730,11 +1730,11 @@ static void demo_init_vk(struct demo *demo)
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "MemTracker",
+        "VK_LUNARG_LAYER_MemTracker",
     };
 
     char *device_validation_layers[] = {
-        "MemTracker",
+        "VK_LUNARG_LAYER_MemTracker",
     };
 
     /* Look for validation layers */
