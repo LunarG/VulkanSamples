@@ -99,7 +99,7 @@ static const char bindStateFragShaderText[] =
         "   uFragColor = vec4(0,1,0,1);\n"
         "}\n";
 
-static VkBool32 myDbgFunc(
+static VKAPI_ATTR VkBool32 VKAPI_CALL myDbgFunc(
     VkFlags                             msgFlags,
     VkDebugReportObjectTypeEXT                     objType,
     uint64_t                            srcObject,
