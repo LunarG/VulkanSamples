@@ -52,7 +52,7 @@ static const VkExtensionProperties nulldrv_instance_extensions[NULLDRV_EXT_COUNT
 const VkExtensionProperties nulldrv_device_exts[1] = {
     {
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = VK_KHR_SWAPCHAIN_REVISION,
+        .specVersion = VK_KHR_SWAPCHAIN_SPEC_VERSION,
     }
 };
 
