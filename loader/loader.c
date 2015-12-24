@@ -3551,7 +3551,7 @@ VKAPI_ATTR VkResult VKAPI_CALL loader_CreateDevice(
 
     // since physicalDevice object maybe wrapped by a layer need to get unwrapped version
     // we haven't yet called down the chain for the layer to unwrap the object
-    res = icd->CreateDevice(phys_dev->phys_dev, pCreateInfo, pAllocator, pDevice);
+    res = icd->CreateDevice(phys_dev->phys_dev, &device_create_info, pAllocator, pDevice);
     if (res != VK_SUCCESS) {
         return res;
     }
