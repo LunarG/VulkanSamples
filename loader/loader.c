@@ -2208,7 +2208,8 @@ void loader_layer_scan(
     // Get a list of manifest files for layers
     loader_get_manifest_files(inst, LAYERS_PATH_ENV, true, DEFAULT_VK_ELAYERS_INFO,
                               &manifest_files[0]);
-    loader_get_manifest_files(inst, LAYERS_PATH_ENV, true, DEFAULT_VK_ILAYERS_INFO,
+    // Pass NULL for environment variable override - implicit layers are not overridden by LAYERS_PATH_ENV
+    loader_get_manifest_files(inst, NULL, true, DEFAULT_VK_ILAYERS_INFO,
                               &manifest_files[1]);
     if (manifest_files[0].count == 0 && manifest_files[1].count == 0)
         return;
