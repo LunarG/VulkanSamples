@@ -1,0 +1,20 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "VK_LAYER_LUNARG_Basic",
+        "type": "GLOBAL",
+        "library_path": "/etc/vulkan/implicit_layer.d/libVKLayerBasic.so",
+        "api_version": "0.210.0",
+        "implementation_version": "1",
+        "description": "LunarG Sample Layer",
+        "device_extensions": [
+             {
+                 "name": "VK_LUNARG_LayerExtension1",
+                 "spec_version": "0",
+		 "entrypoints": ["vkLayerExtension1"]
+             }
+        ],
+	"disable_environment": { "DISABLE_LAYER_BASIC_1": "1"},
+	"enable_environment": { "ENABLE_LAYER_BASIC_1": "134"}
+    }
+}
