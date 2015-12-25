@@ -560,8 +560,8 @@ VkFormat TestFrameworkVkPresent::GetPresentFormat()
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.connection = m_connection;
-    createInfo.window = m_window;
+    createInfo.hinstance = m_connection;
+    createInfo.hwnd = m_window;
 
     res = vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface);
 #else  // _WIN32
@@ -878,8 +878,8 @@ void TestFrameworkVkPresent::CreateSwapchain()
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.connection = m_connection;
-    createInfo.window = m_window;
+    createInfo.hinstance = m_connection;
+    createInfo.hwnd = m_window;
 
     err = vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &m_surface);
 #else  // _WIN32

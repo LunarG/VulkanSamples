@@ -2453,8 +2453,8 @@ static void demo_init_vk_swapchain(struct demo *demo)
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     createInfo.pNext = NULL;
     createInfo.flags = 0;
-    createInfo.connection = demo->connection;
-    createInfo.window = demo->window;
+    createInfo.hinstance = demo->connection;
+    createInfo.hwnd = demo->window;
 
     err = vkCreateWin32SurfaceKHR(demo->inst, &createInfo,
                                   NULL, &demo->surface);
