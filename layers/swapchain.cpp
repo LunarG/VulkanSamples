@@ -234,33 +234,14 @@ static void initSwapchain(layer_data *my_data, const VkAllocationCallbacks *pAll
 
 static const char *surfaceTransformStr(VkSurfaceTransformFlagBitsKHR value)
 {
-
-    // TODO: parse flags and print out one at a time
     // Return a string corresponding to the value:
     return string_VkSurfaceTransformFlagBitsKHR(value);
 }
 
 static const char *presentModeStr(VkPresentModeKHR value)
 {
-    static std::string presentModeStrings[] = {
-        "VK_PRESENT_MODE_IMMEDIATE_KHR",
-        "VK_PRESENT_MODE_MAILBOX_KHR",
-        "VK_PRESENT_MODE_FIFO_KHR",
-        "Out-of-Range Value"};
-
-    // Deal with a out-of-range value:
-    switch (value) {
-    case VK_PRESENT_MODE_IMMEDIATE_KHR:
-    case VK_PRESENT_MODE_MAILBOX_KHR:
-    case VK_PRESENT_MODE_FIFO_KHR:
-        break;
-    default:
-        value = (VkPresentModeKHR) (VK_PRESENT_MODE_FIFO_KHR + 1);
-        break;
-    }
-
     // Return a string corresponding to the value:
-    return presentModeStrings[value].c_str();
+    return string_VkPresentModeKHR(value);
 }
 
 
