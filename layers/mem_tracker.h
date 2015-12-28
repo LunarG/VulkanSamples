@@ -40,6 +40,7 @@ typedef enum _MEM_TRACK_ERROR
     MEMTRACK_INVALID_CB,                    // Cmd Buffer invalid
     MEMTRACK_INVALID_MEM_OBJ,               // Invalid Memory Object
     MEMTRACK_INVALID_ALIASING,              // Invalid Memory Aliasing
+    MEMTRACK_INVALID_LAYOUT,                // Invalid Layout
     MEMTRACK_INTERNAL_ERROR,                // Bug in Mem Track Layer internal data structures
     MEMTRACK_FREED_MEM_REF,                 // MEM Obj freed while it still has obj and/or CB refs
     MEMTRACK_MEM_OBJ_CLEAR_EMPTY_BINDINGS,  // Clearing bindings on mem obj that doesn't have any bindings
@@ -172,6 +173,7 @@ struct MT_PASS_INFO {
     VkFramebuffer fb;
     std::vector<MT_PASS_ATTACHMENT_INFO> attachments;
     std::unordered_map<uint32_t, bool> attachment_first_read;
+    std::unordered_map<uint32_t, VkImageLayout> attachment_first_layout;
 };
 
 // Associate fenceId with a fence object

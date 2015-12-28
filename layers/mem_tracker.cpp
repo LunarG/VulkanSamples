@@ -2983,22 +2983,26 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
     //TODO: Maybe fill list and then copy instead of locking
     loader_platform_thread_lock_mutex(&globalLock);
     std::unordered_map<uint32_t, bool>& attachment_first_read = my_data->passMap[*pRenderPass].attachment_first_read;
+    std::unordered_map<uint32_t, VkImageLayout>& attachment_first_layout = my_data->passMap[*pRenderPass].attachment_first_layout;
     for (uint32_t i = 0; i < pCreateInfo->subpassCount; ++i) {
         const VkSubpassDescription& subpass = pCreateInfo->pSubpasses[i];
         for (uint32_t j = 0; j < subpass.inputAttachmentCount; ++j) {
             uint32_t attachment = subpass.pInputAttachments[j].attachment;
             if (attachment_first_read.count(attachment)) continue;
             attachment_first_read.insert(std::make_pair(attachment, true));
+            attachment_first_layout.insert(std::make_pair(attachment, subpass.pInputAttachments[j].layout));
         }
         for (uint32_t j = 0; j < subpass.colorAttachmentCount; ++j) {
             uint32_t attachment = subpass.pColorAttachments[j].attachment;
             if (attachment_first_read.count(attachment)) continue;
             attachment_first_read.insert(std::make_pair(attachment, false));
+            attachment_first_layout.insert(std::make_pair(attachment, subpass.pColorAttachments[j].layout));
         }
         if (subpass.pDepthStencilAttachment && subpass.pDepthStencilAttachment->attachment != VK_ATTACHMENT_UNUSED) {
             uint32_t attachment = subpass.pDepthStencilAttachment->attachment;
             if (attachment_first_read.count(attachment)) continue;
             attachment_first_read.insert(std::make_pair(attachment, false));
+            attachment_first_layout.insert(std::make_pair(attachment, subpass.pDepthStencilAttachment->layout));
         }
     }
     loader_platform_thread_unlock_mutex(&globalLock);
@@ -3023,6 +3027,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                     set_memory_valid(my_data, fb_info.mem, true, fb_info.image);
+                    VkImageLayout& attachment_layout = pass_info.attachment_first_layout[pass_info.attachments[i].attachment];
+                    if (attachment_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL ||
+                        attachment_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+                        skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
+                                             reinterpret_cast<uint64_t>(pRenderPassBegin->renderPass), __LINE__, MEMTRACK_INVALID_LAYOUT, "MEM",
+                                             "Cannot clear attachment %d with invalid first layout %d.", pass_info.attachments[i].attachment, attachment_layout);
+                    }
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
                     set_memory_valid(my_data, fb_info.mem, false, fb_info.image);
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
