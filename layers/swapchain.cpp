@@ -238,10 +238,22 @@ static const char *surfaceTransformStr(VkSurfaceTransformFlagBitsKHR value)
     return string_VkSurfaceTransformFlagBitsKHR(value);
 }
 
+static const char *surfaceCompositeAlphaStr(VkCompositeAlphaFlagBitsKHR value)
+{
+    // Return a string corresponding to the value:
+    return string_VkCompositeAlphaFlagBitsKHR(value);
+}
+
 static const char *presentModeStr(VkPresentModeKHR value)
 {
     // Return a string corresponding to the value:
     return string_VkPresentModeKHR(value);
+}
+
+static const char *sharingModeStr(VkSharingMode value)
+{
+    // Return a string corresponding to the value:
+    return string_VkSharingMode(value);
 }
 
 
@@ -1027,6 +1039,39 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                              LAYER_NAME,
                                              errorString.c_str());
         }
+        // Validate pCreateInfo->compositeAlpha against
+        // VkSurfaceCapabilitiesKHR::supportedCompositeAlpha:
+        if (!((pCreateInfo->compositeAlpha) & pCapabilities->supportedCompositeAlpha)) {
+            // This is an error situation; one for which we'd like to give
+            // the developer a helpful, multi-line error message.  Build it
+            // up a little at a time, and then log it:
+            std::string errorString = "";
+            char str[1024];
+            // Here's the first part of the message:
+            sprintf(str, "%s() called with a non-supported "
+                    "pCreateInfo->compositeAlpha (i.e. %s).  "
+                    "Supported values are:\n",
+                    fn,
+                    surfaceCompositeAlphaStr(pCreateInfo->compositeAlpha));
+            errorString += str;
+            for (int i = 0; i < 32; i++) {
+                // Build up the rest of the message:
+                if ((1 << i) & pCapabilities->supportedCompositeAlpha) {
+                    const char *newStr =
+                        surfaceCompositeAlphaStr((VkCompositeAlphaFlagBitsKHR) (1 << i));
+                    sprintf(str, "    %s\n", newStr);
+                    errorString += str;
+                }
+            }
+            // Log the message that we've built up:
+            skipCall |= debug_report_log_msg(my_data->report_data,
+                                             VK_DBG_REPORT_ERROR_BIT,
+                                             VK_OBJECT_TYPE_DEVICE,
+                                             (uint64_t) device, 0,
+                                             SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
+                                             LAYER_NAME,
+                                             errorString.c_str());
+        }
         // Validate pCreateInfo->imageArraySize against
         // VkSurfaceCapabilitiesKHR::maxImageArraySize:
         if (pCreateInfo->imageArrayLayers > pCapabilities->maxImageArrayLayers) {
@@ -1138,11 +1183,54 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         }
     }
 
-    // TODO: Validate the following values:
-    // - pCreateInfo->sharingMode
-    // - pCreateInfo->queueFamilyIndexCount
-    // - pCreateInfo->pQueueFamilyIndices
-    // - pCreateInfo->oldSwapchain
+    if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
+        if ((pCreateInfo->queueFamilyIndexCount <= 1) ||
+            !pCreateInfo->pQueueFamilyIndices) {
+            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                                  SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,
+                                  "%s() called with a supported "
+                                  "pCreateInfo->sharingMode of (i.e. %s),"
+                                  "but with a bad value(s) for "
+                                  "pCreateInfo->queueFamilyIndexCount or "
+                                  "pCreateInfo->pQueueFamilyIndices).",
+                                  fn,
+                                  sharingModeStr(pCreateInfo->imageSharingMode));
+        }
+    } else if (pCreateInfo->imageSharingMode != VK_SHARING_MODE_EXCLUSIVE) {
+        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,
+                              "%s() called with a non-supported "
+                              "pCreateInfo->imageSharingMode (i.e. %s).",
+                              fn,
+                              sharingModeStr(pCreateInfo->imageSharingMode));
+    }
+
+    if ((pCreateInfo->clipped != VK_FALSE) &&
+        (pCreateInfo->clipped != VK_TRUE)) {
+        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                              SWAPCHAIN_BAD_BOOL,
+                              "%s() called with a VkBool32 value that is neither "
+                              "VK_TRUE nor VK_FALSE, but has the numeric value of %d.",
+                              fn,
+                              pCreateInfo->clipped);
+    }
+
+    if (pCreateInfo->oldSwapchain) {
+        SwpSwapchain *pSwapchain = &my_data->swapchainMap[pCreateInfo->oldSwapchain];
+        if (pSwapchain) {
+            if (device != pSwapchain->pDevice->device) {
+                LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                          SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
+                          "%s() called with a different VkDevice than the "
+                          "VkSwapchainKHR was created with.",
+                          __FUNCTION__);
+            }
+        } else {
+            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+                                                pCreateInfo->oldSwapchain,
+                                                "VkSwapchainKHR");
+        }
+    }
 
     return skipCall;
 }

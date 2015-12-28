@@ -68,16 +68,20 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS,// Called vkCreateSwapchainKHR() with out-of-bounds imageExtent
     SWAPCHAIN_CREATE_SWAP_EXTENTS_NO_MATCH_WIN, // Called vkCreateSwapchainKHR() with imageExtent that doesn't match window's extent
     SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,    // Called vkCreateSwapchainKHR() with a non-supported preTransform
+    SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,  // Called vkCreateSwapchainKHR() with a non-supported compositeAlpha
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_ARRAY_SIZE,   // Called vkCreateSwapchainKHR() with a non-supported imageArraySize
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_USAGE_FLAGS,  // Called vkCreateSwapchainKHR() with a non-supported imageUsageFlags
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_COLOR_SPACE,  // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_FORMAT,       // Called vkCreateSwapchainKHR() with a non-supported imageFormat
     SWAPCHAIN_CREATE_SWAP_BAD_IMG_FMT_CLR_SP,   // Called vkCreateSwapchainKHR() with a non-supported imageColorSpace
     SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,     // Called vkCreateSwapchainKHR() with a non-supported presentMode
+    SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,     // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
+    SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,   // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is VK_SHARING_MODE_CONCURRENT
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,         // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
     SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,         // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_INDEX_TOO_LARGE,                  // Index is too large for swapchain
     SWAPCHAIN_INDEX_NOT_IN_USE,                 // vkQueuePresentKHR() given index that is not owned by app
+    SWAPCHAIN_BAD_BOOL,                         // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
 } SWAPCHAIN_ERROR;
 
 
