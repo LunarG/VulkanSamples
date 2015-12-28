@@ -26,7 +26,11 @@
  * Author: Tobin Ehlis <tobine@google.com>
  * Author: Chia-I Wu <olv@google.com>
  * Author: Chris Forbes <chrisf@ijw.co.nz>
+ * Author: Mark Lobodzinski <mark@lunarg.com>
  */
+
+// Allow use of STL min and max functions in Windows
+#define NOMINMAX
 
 #include <stdio.h>
 #include <stdlib.h>
