@@ -53,7 +53,7 @@ function(sampleWithSingleFile)
         set(SAMPLE_NAME ${VULKAN_VERSION}-${TARG})
         if(UNIX)
             add_executable(${SAMPLE_NAME} ${SAMPLE_NAME}.cpp)
-            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD})
+            target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${XCB_LIBRARIES} ${VULKAN_LOADER} ${PTHREAD} ${SPIRV_TOOLS_LIBRARIES})
         else()
             add_executable(${SAMPLE_NAME} WIN32 ${SAMPLE_NAME}.cpp)
             target_link_libraries(${SAMPLE_NAME} ${UTILS_NAME} ${GLSLANG_LIBRARIES} ${VULKAN_LOADER} ${WINLIBS})
@@ -202,6 +202,13 @@ else ()
     set (GLSLANG_LIBRARIES ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${SPIRV_LIB})
 endif()
 
+# include spirv-tools library, used to consume inlined SPIR-V assembly
+# requires spirv-tools to be a peer of VulkanSamplesKit
+include_directories("${CMAKE_SOURCE_DIR}/../spirv-tools/include"
+                    "${CMAKE_SOURCE_DIR}/../spirv-tools/external/include")
+find_library(SPIRV_TOOLS_LIBRARIES NAMES SPIRV-Tools
+             HINTS "${CMAKE_SOURCE_DIR}/../spirv-tools/build")
+
 #
 # START BUILDING SAMPLES HERE
 #
@@ -220,9 +227,8 @@ set (S_TARGETS instance device enumerate enumerate-adv
     instance_layer_extension_properties dbgcreatemsgcallback
     enable_validation_with_callback multiple_sets
     copyblitimage template separate_image_sampler
-    occlusion_query
+    occlusion_query spirv_assembly
     immutable_sampler push_constants drawsubpasses secondarycmd)
-
 sampleWithSingleFile()
 
 # targets that use spv shaders
