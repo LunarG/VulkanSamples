@@ -2199,5 +2199,13 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceImageFormatProperties(
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
+    pImageFormatProperties->maxExtent.width = 1024;
+    pImageFormatProperties->maxExtent.height = 1024;
+    pImageFormatProperties->maxExtent.depth = 1024;
+    pImageFormatProperties->maxMipLevels = 10;
+    pImageFormatProperties->maxArrayLayers = 1024;
+    pImageFormatProperties->sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+    pImageFormatProperties->maxResourceSize = 1024*1024*1024;
+
     return VK_SUCCESS;
 }
