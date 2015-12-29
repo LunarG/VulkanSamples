@@ -48,6 +48,7 @@ VkBool32 dbgFunc(
 {
     std::ostringstream message;
 
+    message << "(Expected) ";
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
         message << "ERROR: ";
     } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
@@ -79,8 +80,10 @@ VkBool32 dbgFunc(
 
 int main(int argc, char **argv)
 {
-    VkExtensionProperties *vk_props = NULL;
+    VkExtensionProperties *vk_extension_props = NULL;
     uint32_t instance_extension_count;
+    VkLayerProperties *vk_layer_props = NULL;
+    uint32_t instance_layer_count;
     VkResult res;
 
     /* VULKAN_KEY_START */
@@ -108,14 +111,14 @@ int main(int argc, char **argv)
             break;
         }
 
-        vk_props = (VkExtensionProperties *) realloc(vk_props, instance_extension_count * sizeof(VkExtensionProperties));
+        vk_extension_props = (VkExtensionProperties *) realloc(vk_extension_props, instance_extension_count * sizeof(VkExtensionProperties));
 
-        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_props);
+        res = vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, vk_extension_props);
     } while (res == VK_INCOMPLETE);
 
     bool found_extension = false;
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (!strcmp(vk_props[i].extensionName, VK_DEBUG_REPORT_EXTENSION_NAME)) {
+        if (!strcmp(vk_extension_props[i].extensionName, VK_DEBUG_REPORT_EXTENSION_NAME)) {
             found_extension = true;
         }
     }
@@ -125,7 +128,35 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // Do the same as above, but look for the Device Limits layer.
+    do {
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
+        if (res)
+            break;
+
+        if (instance_layer_count == 0) {
+            break;
+        }
+
+        vk_layer_props = (VkLayerProperties *) realloc(vk_layer_props, instance_layer_count * sizeof(VkLayerProperties));
+
+        res = vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_layer_props);
+    } while (res == VK_INCOMPLETE);
+
+    bool found_layer = false;
+    for (uint32_t i = 0; i < instance_layer_count; i++) {
+        if (!strcmp(vk_layer_props[i].layerName, "VK_LAYER_LUNARG_DeviceLimits")) {
+            found_layer = true;
+        }
+    }
+
+    if (!found_layer) {
+        std::cout << "Something went very wrong, cannot find VK_LAYER_LUNARG_DeviceLimits layer" << std::endl;
+        exit(1);
+    }
+
     const char *extension_names[1] = { VK_DEBUG_REPORT_EXTENSION_NAME };
+    const char *layer_names[1] = { "VK_LAYER_LUNARG_DeviceLimits" };
 
     // initialize the VkApplicationInfo structure
     VkApplicationInfo app_info = {};
@@ -145,8 +176,8 @@ int main(int argc, char **argv)
     inst_info.pApplicationInfo = &app_info;
     inst_info.enabledExtensionNameCount = 1;
     inst_info.ppEnabledExtensionNames = extension_names;
-    inst_info.enabledLayerNameCount = 0;
-    inst_info.ppEnabledLayerNames = NULL;
+    inst_info.enabledLayerNameCount = 1;
+    inst_info.ppEnabledLayerNames = layer_names;
 
     VkInstance inst;
 
@@ -192,6 +223,11 @@ int main(int argc, char **argv)
         exit(1);
         break;
     }
+
+    // Purposely enumerate physical devices without first querying the number of devices to trigger the callback.
+    uint32_t cnt = 0;
+    VkPhysicalDevice device;
+    res = vkEnumeratePhysicalDevices(inst, &cnt, &device);
 
     /* Clean up callback */
     dbgDestroyMsgCallback(inst, msg_callback);
