@@ -194,7 +194,7 @@ struct _SwpDevice {
     SwpPhysicalDevice *pPhysicalDevice;
 
     // Set to true if VK_KHR_SWAPCHAIN_EXTENSION_NAME was enabled:
-    bool deviceSwapchainExtensionEnabled;
+    bool swapchainExtensionEnabled;
 
     // When vkCreateSwapchainKHR is called, the VkSwapchainKHR's are
     // remembered:
