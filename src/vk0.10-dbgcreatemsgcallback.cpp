@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 
     bool found_extension = false;
     for (uint32_t i = 0; i < instance_extension_count; i++) {
-        if (strcmp(vk_props[i].extensionName, VK_DEBUG_REPORT_EXTENSION_NAME)) {
+        if (!strcmp(vk_props[i].extensionName, VK_DEBUG_REPORT_EXTENSION_NAME)) {
             found_extension = true;
         }
     }
