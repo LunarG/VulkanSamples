@@ -1388,7 +1388,8 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
 {
     NULLDRV_LOG_FUNC;
 
-    pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    pFormatInfo->linearTilingFeatures = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+        VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
     pFormatInfo->optimalTilingFeatures = pFormatInfo->linearTilingFeatures;
     pFormatInfo->bufferFeatures = 0;
 }
