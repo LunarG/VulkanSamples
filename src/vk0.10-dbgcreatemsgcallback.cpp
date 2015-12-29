@@ -48,7 +48,10 @@ create and destroy msg callback
 
 #define APP_SHORT_NAME "vulkansamples_msgcallback"
 
-bool callbackTriggered = false;
+typedef struct {
+    bool callbackTriggered;
+    bool callbackNoisy;
+} UserData;
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
@@ -58,14 +61,12 @@ VkBool32 dbgFunc(
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    void*                               pUserData)
+    void*                               pUserDataIn)
 {
     std::ostringstream message;
-    bool callbackNoisy;
+    UserData *pUserData = (UserData*)pUserDataIn;
 
-    callbackNoisy = *((bool*)pUserData);
-
-    callbackTriggered = true;
+    pUserData->callbackTriggered = true;
 
     message << "(Expected) ";
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
@@ -81,7 +82,7 @@ VkBool32 dbgFunc(
     }
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
 
-    if (callbackNoisy) {
+    if (pUserData->callbackNoisy) {
 #ifdef _WIN32
         MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
 #else
@@ -106,10 +107,10 @@ int main(int argc, char **argv)
     VkLayerProperties *vk_layer_props = NULL;
     uint32_t instance_layer_count;
     VkResult res;
-    bool callbackNoisy = false;
+    UserData userData = {};
 
     if (argc == 2 && !strcmp("-noisy", argv[1])) {
-        callbackNoisy = true;
+        userData.callbackNoisy = true;
     }
 
     /* VULKAN_KEY_START */
@@ -242,7 +243,7 @@ int main(int argc, char **argv)
               inst,
               VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
               dbgFunc,
-              &callbackNoisy,
+              &userData,
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
@@ -273,7 +274,7 @@ int main(int argc, char **argv)
     res = vkEnumeratePhysicalDevices(inst, &count, pPhysicalDevices);
 
     // The callback should have been called because of the above error.
-    if (!callbackTriggered) {
+    if (!userData.callbackTriggered) {
 #ifdef _WIN32
         MessageBox(NULL, "Message Callback did not get called.", "Alert", MB_OK);
 #else
