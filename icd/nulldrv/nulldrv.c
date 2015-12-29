@@ -761,6 +761,13 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
 {
     NULLDRV_LOG_FUNC;
 
+    if (pPresentModes) {
+        pPresentModes[0] = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        pPresentModes[1] = VK_PRESENT_MODE_FIFO_KHR;
+    } else {
+        *pPresentModeCount = 2;
+    }
+
     return VK_SUCCESS;
 }
 
