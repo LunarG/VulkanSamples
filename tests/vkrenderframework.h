@@ -398,12 +398,14 @@ class VkDescriptorSetObj : public vk_testing::DescriptorPool {
 class VkShaderObj : public vk_testing::ShaderModule {
   public:
     VkShaderObj(VkDeviceObj *device, const char *shaderText,
-                VkShaderStageFlagBits stage, VkRenderFramework *framework);
+                VkShaderStageFlagBits stage, VkRenderFramework *framework,
+                char const *name = "main");
     VkPipelineShaderStageCreateInfo GetStageCreateInfo() const;
 
   protected:
     VkPipelineShaderStageCreateInfo stage_info;
     VkShaderStageFlagBits m_stage;
+    char const *m_name;
     VkDeviceObj *m_device;
 };
 

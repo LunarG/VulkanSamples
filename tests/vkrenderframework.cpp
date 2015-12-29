@@ -1052,14 +1052,15 @@ VkPipelineShaderStageCreateInfo VkShaderObj::GetStageCreateInfo() const {
     stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stageInfo.stage = m_stage;
     stageInfo.module = handle();
-    stageInfo.pName = "main";
+    stageInfo.pName = m_name;
 
     return stageInfo;
 }
 
 VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code,
                          VkShaderStageFlagBits stage,
-                         VkRenderFramework *framework) {
+                         VkRenderFramework *framework,
+                         char const *name) {
     VkResult U_ASSERT_ONLY err = VK_SUCCESS;
     std::vector<unsigned int> spv;
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1067,6 +1068,7 @@ VkShaderObj::VkShaderObj(VkDeviceObj *device, const char *shader_code,
 
     m_stage = stage;
     m_device = device;
+    m_name = name;
 
     moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     moduleCreateInfo.pNext = NULL;
