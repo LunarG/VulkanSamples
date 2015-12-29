@@ -739,6 +739,17 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
 {
     NULLDRV_LOG_FUNC;
 
+    if (pSurfaceFormats) {
+        uint32_t i;
+        for (i = 0; i < *pSurfaceFormatCount; i++) {
+            pSurfaceFormats[i].format = nulldrv_presentable_formats[i];
+            pSurfaceFormats[i].colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+        }
+    }
+    else {
+        *pSurfaceFormatCount = ARRAY_SIZE(nulldrv_presentable_formats);
+    }
+
     return VK_SUCCESS;
 }
 
