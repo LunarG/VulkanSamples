@@ -121,46 +121,73 @@ function build_spirv-tools () {
    make -j $(nproc)
 }
 
-# Parse options
-while [[ $# > 0 ]]
-do
-option="$1"
+# If any options are provided, just compile those tools
+# If no options are provided, build everything
+INCLUDE_GLSLANG=false
+INCLUDE_LUNARGLASS=false
+INCLUDE_SPIRV_TOOLS=false
 
-case $option in
-    # option to allow just building glslang components
-    -g|--glslang-only)
-    GLSLANG_ONLY=true
-    echo "Building glslang only: GLSLANG_ONLY=true"
-    ;;
-    *)
-    echo "Unrecognized option: $option"
-    exit 1
-    ;;
-esac
-shift
-done
+if [ "$#" == 0 ]; then
+  echo "Building glslang, LunarGLASS, spirv-tools"
+  INCLUDE_GLSLANG=true
+  INCLUDE_LUNARGLASS=true
+  INCLUDE_SPIRV_TOOLS=true
+else
+  # Parse options
+  while [[ $# > 0 ]]
+  do
+    option="$1"
 
-if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
-   create_glslang
+    case $option in
+        # options to specify build of glslang components
+        -g|--glslang)
+        INCLUDE_GLSLANG=true
+        echo "Building glslang ($option)"
+        ;;
+        # options to specify build of LunarGLASS components
+        -l|--LunarGLASS)
+        INCLUDE_LUNARGLASS=true
+        echo "Building LunarGLASS ($option)"
+        ;;
+        # options to specify build of spirv-tools components
+        -s|--spirv-tools)
+        INCLUDE_SPIRV_TOOLS=true
+        echo "Building spirv-tools ($option)"
+        ;;
+        *)
+        echo "Unrecognized option: $option"
+        echo "Try the following:"
+        echo " -g | --glslang      # enable glslang"
+        echo " -l | --LunarGLASS   # enable LunarGLASS"
+        echo " -s | --spirv-tools  # enable spirv-tools"
+        exit 1
+        ;;
+    esac
+    shift
+  done
 fi
 
-if [ ! $GLSLANG_ONLY ]; then
+if [ $INCLUDE_GLSLANG == "true" ]; then
+  if [ ! -d "$BASEDIR/glslang" -o ! -d "$BASEDIR/glslang/.git" -o -d "$BASEDIR/glslang/.svn" ]; then
+     create_glslang
+  fi
+  update_glslang
+  build_glslang
+fi
+
+
+if [ $INCLUDE_LUNARGLASS == "true" ]; then
     if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
        create_LunarGLASS
     fi
+    update_LunarGLASS
+    build_LunarGLASS
+fi
+
+if [ $INCLUDE_SPIRV_TOOLS == "true" ]; then
     if [ ! -d "$BASEDIR/spirv-tools" -o ! -d "$BASEDIR/spirv-tools/.git" ]; then
        create_spirv-tools
     fi
-fi
-
-update_glslang
-if [ ! $GLSLANG_ONLY ]; then
-    update_LunarGLASS
     update_spirv-tools
-fi
-
-build_glslang
-if [ ! $GLSLANG_ONLY ]; then
-    build_LunarGLASS
     build_spirv-tools
 fi
