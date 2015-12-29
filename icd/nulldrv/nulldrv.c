@@ -270,6 +270,7 @@ static VkResult img_get_memory_requirements(struct nulldrv_base *base,
 
     pRequirements->size = img->total_size;
     pRequirements->alignment = 4096;
+    pRequirements->memoryTypeBits = ~0u;        /* can use any memory type */
 
     return ret;
 }
