@@ -1716,6 +1716,17 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
 {
 
     NULLDRV_LOG_FUNC;
+
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+    struct nulldrv_pipeline_cache *pipeline_cache;
+
+    pipeline_cache = (struct nulldrv_pipeline_cache *) nulldrv_base_create(dev,
+            sizeof(*pipeline_cache), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT);
+    if (!pipeline_cache)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    *pPipelineCache = (VkPipelineCache) pipeline_cache;
+
     return VK_SUCCESS;
 }
 
