@@ -1,12 +1,14 @@
 #!/bin/bash
-# Update source for glslang and LLVM
+# Update source for glslang, LunarGLASS, spirv-tools
 
 set -e
 
 LUNARGLASS_REVISION=$(cat $PWD/LunarGLASS_revision)
 GLSLANG_REVISION=$(cat $PWD/glslang_revision)
+SPIRV_TOOLS_REVISION=$(cat $PWD/spirv-tools_revision)
 echo "LUNARGLASS_REVISION=$LUNARGLASS_REVISION"
 echo "GLSLANG_REVISION=$GLSLANG_REVISION"
+echo "SPIRV_TOOLS_REVISION=$SPIRV_TOOLS_REVISION"
 
 LUNARGLASS_REVISION_R32=$(cat $PWD/LunarGLASS_revision_R32)
 echo "LUNARGLASS_REVISION_R32=$LUNARGLASS_REVISION_R32"
@@ -65,6 +67,22 @@ function update_LunarGLASS () {
    svn revert -R .
 }
 
+function create_spirv-tools () {
+   rm -rf $BASEDIR/spirv-tools
+   echo "Creating local spirv-tools repository ($BASEDIR/spirv-tools)."
+   mkdir -p $BASEDIR/spirv-tools
+   cd $BASEDIR/spirv-tools
+   git clone git@gitlab.khronos.org:spirv/spirv-tools.git .
+   git checkout $SPIRV_TOOLS_REVISION
+}
+
+function update_spirv-tools () {
+   echo "Updating $BASEDIR/spirv-tools"
+   cd $BASEDIR/spirv-tools
+   git fetch --all
+   git checkout $SPIRV_TOOLS_REVISION
+}
+
 function build_glslang () {
    echo "Building $BASEDIR/glslang"
    cd $BASEDIR/glslang
@@ -94,6 +112,15 @@ function build_LunarGLASS () {
    make install
 }
 
+function build_spirv-tools () {
+   echo "Building $BASEDIR/spirv-tools"
+   cd $BASEDIR/spirv-tools
+   mkdir -p build
+   cd build
+   cmake -D CMAKE_BUILD_TYPE=Release ..
+   make -j $(nproc)
+}
+
 # Parse options
 while [[ $# > 0 ]]
 do
@@ -121,14 +148,19 @@ if [ ! $GLSLANG_ONLY ]; then
     if [ ! -d "$BASEDIR/LunarGLASS" -o ! -d "$BASEDIR/LunarGLASS/.git" ]; then
        create_LunarGLASS
     fi
+    if [ ! -d "$BASEDIR/spirv-tools" -o ! -d "$BASEDIR/spirv-tools/.git" ]; then
+       create_spirv-tools
+    fi
 fi
 
 update_glslang
 if [ ! $GLSLANG_ONLY ]; then
     update_LunarGLASS
+    update_spirv-tools
 fi
 
 build_glslang
 if [ ! $GLSLANG_ONLY ]; then
     build_LunarGLASS
+    build_spirv-tools
 fi
