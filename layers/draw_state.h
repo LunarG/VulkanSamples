@@ -502,6 +502,7 @@ typedef struct _GLOBAL_CB_NODE {
     VkPipelineLayout             lastBoundPipelineLayout;
     VkRenderPassBeginInfo        activeRenderPassBeginInfo;
     VkRenderPass                 activeRenderPass;
+    VkSubpassContents            activeSubpassContents;
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to

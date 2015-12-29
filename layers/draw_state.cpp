@@ -2436,26 +2436,16 @@ static VkBool32 report_error_no_cb_begin(const layer_data* dev_data, const VkCom
         "You must call vkBeginCommandBuffer() before this call to %s", caller_name);
 }
 
-VkBool32 validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
-    // TODO : I think this is trying to validate this part of the spec:
-    //  If contents is VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, the contents are recorded in secondary command
-    //  buffers that will be called from the primary command buffer, and vkCmdExecuteCommands is the only valid command
-    //  on the command buffer until vkCmdNextSubpass or vkCmdEndRenderPass.
-    //
-    //  But the code below is forceing vkCmdExecuteCommands to be the only thing in the command buffer which is not necessary
-    //  it just needs to be the only thing in the renderpass
-    //
-    VkBool32 skip_call = false;
-    //for (auto cmd : pCB->pCmds) {
-    //    if (cmd_type == CMD_EXECUTECOMMANDS && cmd->type != CMD_EXECUTECOMMANDS) {
-    //        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-    //                             "vkCmdExecuteCommands() cannot be called on a cmd buffer with exsiting commands.");
-    //    }
-    //    if (cmd_type != CMD_EXECUTECOMMANDS && cmd->type == CMD_EXECUTECOMMANDS) {
-    //        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_COMMAND_BUFFER, "DS",
-    //                             "Commands cannot be added to a cmd buffer with exsiting secondary commands.");
-    //    }
-    //}
+bool validateCmdsInCmdBuffer(const layer_data* dev_data, const GLOBAL_CB_NODE* pCB, const CMD_TYPE cmd_type) {
+    if (!pCB->activeRenderPass) return false;
+    bool skip_call = false;
+    if (pCB->activeSubpassContents == VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS && cmd_type != CMD_EXECUTECOMMANDS) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "Commands cannot be called in a subpass using secondary command buffers.");
+    } else if (pCB->activeSubpassContents == VK_SUBPASS_CONTENTS_INLINE && cmd_type == CMD_EXECUTECOMMANDS) {
+        skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__,
+            DRAWSTATE_INVALID_COMMAND_BUFFER, "DS", "vkCmdExecuteCommands() cannot be called in a subpass using inline commands.");
+    }
     return skip_call;
 }
 
@@ -2991,7 +2981,7 @@ VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB)
             }
         }
     }
-	return skip_call;
+    return skip_call;
 }
 
 void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
@@ -5586,6 +5576,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(VkCommandBuffer 
             // This is a shallow copy as that is all that is needed for now
             pCB->activeRenderPassBeginInfo = *pRenderPassBegin;
             pCB->activeSubpass = 0;
+            pCB->activeSubpassContents = contents;
             pCB->framebuffer = pRenderPassBegin->framebuffer;
         } else {
             skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT) 0, 0, __LINE__, DRAWSTATE_INVALID_RENDERPASS, "DS",
@@ -5610,7 +5601,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdNextSubpass(VkCommandBuffer comm
         skipCall |= validatePrimaryCommandBuffer(dev_data, pCB, "vkCmdNextSubpass");
         skipCall |= addCmd(dev_data, pCB, CMD_NEXTSUBPASS, "vkCmdNextSubpass()");
         pCB->activeSubpass++;
-        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, pCB->activeSubpass);
+        pCB->activeSubpassContents = contents;
+        TransitionSubpassLayouts(commandBuffer, &pCB->activeRenderPassBeginInfo, ++pCB->activeSubpass);
         if (pCB->lastBoundPipeline) {
             skipCall |= validatePipelineState(dev_data, pCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pCB->lastBoundPipeline);
         }
