@@ -1265,7 +1265,17 @@ class StructWrapperGen:
     def _generateSizeHelperFunctionsC(self):
         sh_funcs = []
         # generate function definitions
+        exclude_struct_list = ['VkAndroidSurfaceCreateInfoKHR',
+                               'VkMirSurfaceCreateInfoKHR',
+                               'VkWaylandSurfaceCreateInfoKHR',
+                               'VkXlibSurfaceCreateInfoKHR']
+        if sys.platform == 'win32':
+            exclude_struct_list.append('VkXcbSurfaceCreateInfoKHR')
+        else:
+            exclude_struct_list.append('VkWin32SurfaceCreateInfoKHR')
         for s in sorted(self.struct_dict):
+            if (typedef_fwd_dict[s] in exclude_struct_list):
+                continue
             skip_list = [] # Used when struct elements need to be skipped b/c size already accounted for
             sh_funcs.append('size_t %s(const %s* pStruct)\n{' % (self._get_size_helper_func_name(s), typedef_fwd_dict[s]))
             indent = '    '
@@ -1315,7 +1325,8 @@ class StructWrapperGen:
                     elif is_type(self.struct_dict[s][m]['type'], 'struct'):
                         sh_funcs.append('%sstructSize += %s(pStruct->%s);' % (indent, self._get_size_helper_func_name(self.struct_dict[s][m]['type']), self.struct_dict[s][m]['name']))
                     elif 'void' not in self.struct_dict[s][m]['type'].lower():
-                        sh_funcs.append('%sstructSize += sizeof(%s);' % (indent, self.struct_dict[s][m]['type']))
+                        if (self.struct_dict[s][m]['type'] != 'xcb_connection_t'):
+                            sh_funcs.append('%sstructSize += sizeof(%s);' % (indent, self.struct_dict[s][m]['type']))
                 elif 'size_t' == self.struct_dict[s][m]['type'].lower():
                     sh_funcs.append('%sstructSize += pStruct->%s;' % (indent, self.struct_dict[s][m]['name']))
                     skip_list.append(m+1)

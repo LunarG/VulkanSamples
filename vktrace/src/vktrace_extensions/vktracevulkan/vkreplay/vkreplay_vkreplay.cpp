@@ -1913,7 +1913,13 @@ VkResult vkReplay::manually_replay_vkCreateXcbSurfaceKHR(packet_vkCreateXcbSurfa
     }
 
     VkIcdSurfaceXcb *pSurf = (VkIcdSurfaceXcb *) m_display->get_surface();
-    replayResult = m_vkFuncs.real_vkCreateXcbSurfaceKHR(remappedinstance, pSurf->connection, pSurf->window, pPacket->pAllocator, &local_pSurface);
+    VkXcbSurfaceCreateInfoKHR createInfo;
+    createInfo.sType = pPacket->pCreateInfo->sType;
+    createInfo.pNext = pPacket->pCreateInfo->pNext;
+    createInfo.flags = pPacket->pCreateInfo->flags;
+    createInfo.connection = pSurf->connection;
+    createInfo.window = pSurf->window;
+    replayResult = m_vkFuncs.real_vkCreateXcbSurfaceKHR(remappedinstance, &createInfo, pPacket->pAllocator, &local_pSurface);
     if (replayResult == VK_SUCCESS) {
         m_objMapper.add_to_surfacekhrs_map(*(pPacket->pSurface), local_pSurface);
     }
@@ -1933,7 +1939,13 @@ VkResult vkReplay::manually_replay_vkCreateWin32SurfaceKHR(packet_vkCreateWin32S
     }
 
     VkIcdSurfaceWin32 *pSurf = (VkIcdSurfaceWin32 *) m_display->get_surface();
-    replayResult = m_vkFuncs.real_vkCreateWin32SurfaceKHR(remappedinstance, pSurf->hinstance, pSurf->hwnd, pPacket->pAllocator, &local_pSurface);
+    VkWin32SurfaceCreateInfoKHR createInfo;
+    createInfo.sType = pPacket->pCreateInfo->sType;
+    createInfo.pNext = pPacket->pCreateInfo->pNext;
+    createInfo.flags = pPacket->pCreateInfo->flags;
+    createInfo.hinstance = pSurf->hinstance;
+    createInfo.hwnd = pSurf->hwnd;
+    replayResult = m_vkFuncs.real_vkCreateWin32SurfaceKHR(remappedinstance, &createInfo, pPacket->pAllocator, &local_pSurface);
     if (replayResult == VK_SUCCESS) {
         m_objMapper.add_to_surfacekhrs_map(*(pPacket->pSurface), local_pSurface);
     }
