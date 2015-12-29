@@ -716,6 +716,8 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupportKHR(
 {
     NULLDRV_LOG_FUNC;
 
+    *pSupported = VK_TRUE;
+
     return VK_SUCCESS;
 }
 
