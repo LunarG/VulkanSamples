@@ -1892,8 +1892,18 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateShaderModule(
     const VkAllocationCallbacks*                     pAllocator,
     VkShaderModule*                             pShaderModule)
 {
-    // TODO: Fill in with real data
     NULLDRV_LOG_FUNC;
+
+    struct nulldrv_dev *dev = nulldrv_dev(device);
+    struct nulldrv_shader_module *shader_module;
+
+    shader_module = (struct nulldrv_shader_module *) nulldrv_base_create(dev,
+            sizeof(*shader_module), VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT);
+    if (!shader_module)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    *pShaderModule = (VkShaderModule) shader_module;
+
     return VK_SUCCESS;
 }
 

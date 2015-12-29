@@ -113,6 +113,10 @@ struct nulldrv_sampler {
     struct nulldrv_obj obj;
 };
 
+struct nulldrv_shader_module {
+    struct nulldrv_obj obj;
+};
+
 struct nulldrv_pipeline_cache {
     struct nulldrv_obj obj;
 };
