@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buf_info.pNext = NULL;
     buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = sizeof(info.MVP);
+    buf_info.size = sizeof(g_vb_solid_face_colors_Data);
     buf_info.queueFamilyIndexCount = 0;
     buf_info.pQueueFamilyIndices = NULL;
     buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
