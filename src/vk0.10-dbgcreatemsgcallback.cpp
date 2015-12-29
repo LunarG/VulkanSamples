@@ -24,8 +24,20 @@
 
 /*
 VULKAN_SAMPLE_SHORT_DESCRIPTION
-create and destroy Vulkan instance
+create and destroy msg callback
 */
+
+/*
+ * This sample program registers a debug message callback
+ * function and then intentionally causes an error in the
+ * device limits debug layer to trigger the callback.
+ *
+ * The message callback is quiet by default so the sample
+ * executes without emitting errors or creating a message box.
+ *
+ * Specifying the -noisy argument displays the message constructed
+ * in the callback.
+ */
 
 #include <iostream>
 #include <cstdlib>
@@ -34,7 +46,9 @@ create and destroy Vulkan instance
 #include <string.h>
 #include "util.hpp"
 
-#define APP_SHORT_NAME "vulkansamples_instance"
+#define APP_SHORT_NAME "vulkansamples_msgcallback"
+
+bool callbackTriggered = false;
 
 VkBool32 dbgFunc(
     VkFlags                             msgFlags,
@@ -47,6 +61,11 @@ VkBool32 dbgFunc(
     void*                               pUserData)
 {
     std::ostringstream message;
+    bool callbackNoisy;
+
+    callbackNoisy = *((bool*)pUserData);
+
+    callbackTriggered = true;
 
     message << "(Expected) ";
     if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
@@ -62,11 +81,13 @@ VkBool32 dbgFunc(
     }
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
 
+    if (callbackNoisy) {
 #ifdef _WIN32
-    MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
+        MessageBox(NULL, message.str().c_str(), "Alert", MB_OK);
 #else
-    std::cout << message.str() << std::endl;
+        std::cout << message.str() << std::endl;
 #endif
+    }
 
     /*
      * false indicates that layer should not bail-out of an
@@ -85,6 +106,11 @@ int main(int argc, char **argv)
     VkLayerProperties *vk_layer_props = NULL;
     uint32_t instance_layer_count;
     VkResult res;
+    bool callbackNoisy = false;
+
+    if (argc == 2 && !strcmp("-noisy", argv[1])) {
+        callbackNoisy = true;
+    }
 
     /* VULKAN_KEY_START */
 
@@ -128,7 +154,13 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    // Do the same as above, but look for the Device Limits layer.
+    /*
+     * Enable the Device Limits layer so that this program can intentionally generate
+     * an error in this layer.
+     *
+     * Use the same approach as above, but look for the Device Limits layer.
+     */
+
     do {
         res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
         if (res)
@@ -209,7 +241,8 @@ int main(int argc, char **argv)
     res = dbgCreateMsgCallback(
               inst,
               VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
-              dbgFunc, NULL,
+              dbgFunc,
+              &callbackNoisy,
               &msg_callback);
     switch (res) {
     case VK_SUCCESS:
@@ -224,10 +257,29 @@ int main(int argc, char **argv)
         break;
     }
 
-    // Purposely enumerate physical devices without first querying the number of devices to trigger the callback.
-    uint32_t cnt = 0;
-    VkPhysicalDevice device;
-    res = vkEnumeratePhysicalDevices(inst, &cnt, &device);
+    /*
+     * Purposely cause an error in the Device Limits layer to trigger the callback.
+     *
+     * Normally, an application enumerates physical devices by first calling this function with a NULL
+     * pointer for the physical device(s) in order to get the count of physical devices.  After dynamically
+     * allocating enough memory, the application calls the function again with the returned count and a pointer
+     * to the memory just allocated.  Calling the function first with a non-NULL pointer creates an
+     * invalid call sequence that is reported by the Device Limits layer.
+     */
+
+    uint32_t count = 1;
+    VkPhysicalDevice physicalDevice;
+    VkPhysicalDevice *pPhysicalDevices = &physicalDevice;
+    res = vkEnumeratePhysicalDevices(inst, &count, pPhysicalDevices);
+
+    // The callback should have been called because of the above error.
+    if (!callbackTriggered) {
+#ifdef _WIN32
+        MessageBox(NULL, "Message Callback did not get called.", "Alert", MB_OK);
+#else
+        std::cout << "Message Callback did not get called." << std::endl;
+#endif
+    }
 
     /* Clean up callback */
     dbgDestroyMsgCallback(inst, msg_callback);
