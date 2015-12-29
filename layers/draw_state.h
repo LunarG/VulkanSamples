@@ -49,6 +49,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_INVALID_COMMAND_BUFFER,           // Invalid CommandBuffer referenced
     DRAWSTATE_INVALID_BARRIER,                  // Invalid Barrier
     DRAWSTATE_INVALID_BUFFER,                   // Invalid Buffer
+    DRAWSTATE_INVALID_QUERY,                    // Invalid Query
     DRAWSTATE_VTX_INDEX_OUT_OF_BOUNDS,          // binding in vkCmdBindVertexData() too large for PSO's pVertexBindingDescriptions array
     DRAWSTATE_VTX_INDEX_ALIGNMENT_ERROR,        // binding offset in vkCmdBindIndexBuffer() out of alignment based on indexType
     //DRAWSTATE_MISSING_DOT_PROGRAM,              // No "dot" program in order to generate png image
@@ -254,11 +255,18 @@ class FENCE_NODE : public BASE_NODE {
     VkFence priorFence;
 };
 
+class EVENT_NODE : public BASE_NODE {
+  public:
+    using BASE_NODE::in_use;
+    bool needsSignaled;
+};
+
 class QUEUE_NODE {
   public:
     VkDevice device;
     VkFence priorFence;
     vector<VkCommandBuffer> untrackedCmdBuffers;
+    unordered_set<VkCommandBuffer> inFlightCmdBuffers;
 };
 
 class DEVICE_NODE {
@@ -443,6 +451,24 @@ typedef struct _DRAW_DATA {
     vector<VkBuffer> buffers;
 } DRAW_DATA;
 
+struct QueryObject {
+    VkQueryPool pool;
+    uint32_t index;
+};
+
+bool operator==(const QueryObject& query1, const QueryObject& query2) {
+    return (query1.pool == query2.pool && query1.index == query2.index);
+}
+
+namespace std {
+template <>
+struct hash<QueryObject> {
+    size_t operator()(QueryObject query) const throw() {
+        return hash<uint64_t>()(reinterpret_cast<uint64_t>(query.pool)) ^ hash<uint32_t>()(query.index);
+    }
+};
+}
+
 // Cmd Buffer Wrapper Struct
 typedef struct _GLOBAL_CB_NODE {
     VkCommandBuffer              commandBuffer;
@@ -479,6 +505,9 @@ typedef struct _GLOBAL_CB_NODE {
     uint32_t                     activeSubpass;
     VkFramebuffer                framebuffer;
     vector<VkDescriptorSet>      boundDescriptorSets; // Index is set# that given set is bound to
+    vector<VkEvent>              waitedEvents;
+    unordered_map<QueryObject, vector<VkEvent> > waitedEventsBeforeQueryReset;
+    unordered_map<QueryObject, bool> queryToStateMap; // 0 is unavailable, 1 is available
     unordered_map<VkImage, IMAGE_CMD_BUF_NODE> imageLayoutMap;
     vector<DRAW_DATA>            drawData;
     DRAW_DATA                    currentDrawData;
