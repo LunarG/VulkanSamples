@@ -133,7 +133,7 @@ struct _SwpInstance {
     unordered_map<const void*, SwpPhysicalDevice*> physicalDevices;
 
     // Set to true if VK_KHR_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
-    bool swapchainExtensionEnabled;
+    bool surfaceExtensionEnabled;
 
     // TODO: Add additional booleans for platform-specific extensions:
 };

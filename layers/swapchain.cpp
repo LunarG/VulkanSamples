@@ -176,7 +176,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     // Remember this instance, and whether the VK_KHR_surface extension
     // was enabled for it:
     my_data->instanceMap[instance].instance = instance;
-    my_data->instanceMap[instance].swapchainExtensionEnabled = false;
+    my_data->instanceMap[instance].surfaceExtensionEnabled = false;
 
     // Record whether the WSI instance extension was enabled for this
     // VkInstance.  No need to check if the extension was advertised by
@@ -184,7 +184,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0) {
 
-            my_data->instanceMap[instance].swapchainExtensionEnabled = true;
+            my_data->instanceMap[instance].surfaceExtensionEnabled = true;
         }
     }
 }
@@ -738,7 +738,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
+    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -784,7 +784,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
+    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -827,7 +827,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
+    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -878,7 +878,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
         skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                             physicalDevice,
                                             "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->swapchainExtensionEnabled) {
+    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -1605,7 +1605,7 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(V
     }
 
     if (my_data->instanceMap.size() != 0 &&
-        my_data->instanceMap[instance].swapchainExtensionEnabled)
+        my_data->instanceMap[instance].surfaceExtensionEnabled)
     {
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         if (!strcmp("vkCreateAndroidSurfaceKHR", funcName))
