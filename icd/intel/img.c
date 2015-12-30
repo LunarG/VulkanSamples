@@ -182,6 +182,8 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     pLayout->rowPitch = img->layout.bo_stride;
     pLayout->depthPitch = intel_layout_get_slice_stride(&img->layout,
                                                        pSubresource->mipLevel);
+    pLayout->arrayPitch = intel_layout_get_slice_stride(&img->layout,
+                                                       pSubresource->arrayLayer);
 }
 
 VKAPI_ATTR void VKAPI_CALL vkGetImageSparseMemoryRequirements(

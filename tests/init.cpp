@@ -372,6 +372,7 @@ void VkTest::CreateImageTest()
 //        VkDeviceSize                            size;                   // Specified in bytes
 //        VkDeviceSize                            rowPitch;               // Specified in bytes
 //        VkDeviceSize                            depthPitch;             // Specified in bytes
+//        VkDeviceSize                            arrayPitch;             // Specified in bytes
 //    } VkSubresourceLayout;
 
 //    typedef struct VkImageSubresource_

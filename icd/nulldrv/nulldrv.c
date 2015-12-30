@@ -1479,6 +1479,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetImageSubresourceLayout(
     pLayout->size = 1;
     pLayout->rowPitch = 4;
     pLayout->depthPitch = 4;
+    pLayout->arrayPitch = 4;
 }
 
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAllocateMemory(

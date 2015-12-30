@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 213, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 214, 1)
 
 
 #define VK_NULL_HANDLE 0
@@ -1067,7 +1067,6 @@ typedef enum VkCommandBufferResetFlagBits {
 typedef VkFlags VkCommandBufferResetFlags;
 
 typedef enum VkStencilFaceFlagBits {
-    VK_STENCIL_FACE_NONE = 0,
     VK_STENCIL_FACE_FRONT_BIT = 0x00000001,
     VK_STENCIL_FACE_BACK_BIT = 0x00000002,
     VK_STENCIL_FRONT_AND_BACK = 0x3,
@@ -1577,6 +1576,7 @@ typedef struct VkSubresourceLayout {
     VkDeviceSize                                offset;
     VkDeviceSize                                size;
     VkDeviceSize                                rowPitch;
+    VkDeviceSize                                arrayPitch;
     VkDeviceSize                                depthPitch;
 } VkSubresourceLayout;
 

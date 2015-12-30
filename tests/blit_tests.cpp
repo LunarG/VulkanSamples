@@ -181,6 +181,7 @@ VkSubresourceLayout ImageChecker::buffer_layout(const VkBufferImageCopy &region)
     layout.offset = region.bufferOffset;
     layout.rowPitch = buffer_cpp() * region.imageExtent.width;
     layout.depthPitch = layout.rowPitch * region.imageExtent.height;
+    layout.arrayPitch = layout.depthPitch;
     layout.size = layout.depthPitch * region.imageExtent.depth;
 
     return layout;
@@ -203,6 +204,7 @@ VkDeviceSize ImageChecker::buffer_size() const
 bool ImageChecker::walk_region(Action action, const VkBufferImageCopy &region,
                                const VkSubresourceLayout &layout, void *data) const
 {
+    //TODO  handle array layers > 1
     for (int32_t z = 0; z < region.imageExtent.depth; z++) {
         for (int32_t y = 0; y < region.imageExtent.height; y++) {
             for (int32_t x = 0; x < region.imageExtent.width; x++) {
