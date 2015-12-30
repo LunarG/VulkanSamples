@@ -936,6 +936,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
     skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
+    if (!pSupported) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                           physicalDevice,
+                                           "pSupported");
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -982,6 +987,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
     skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
+    if (!pSurfaceCapabilities) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                           physicalDevice,
+                                           "pSurfaceCapabilities");
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -989,6 +999,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
                 physicalDevice, surface, pSurfaceCapabilities);
 
         if ((result == VK_SUCCESS) && pPhysicalDevice) {
+            // Record the result of this query:
             pPhysicalDevice->gotSurfaceCapabilities = true;
 // FIXME: NEED TO COPY THIS DATA, BECAUSE pSurfaceCapabilities POINTS TO APP-ALLOCATED DATA
             pPhysicalDevice->surfaceCapabilities = *pSurfaceCapabilities;
@@ -1002,7 +1013,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice physicalDevice,
     VkSurfaceKHR surface,
-    uint32_t* pCount,
+    uint32_t* pSurfaceFormatCount,
     VkSurfaceFormatKHR* pSurfaceFormats)
 {
     VkResult result = VK_SUCCESS;
@@ -1025,19 +1036,39 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
     skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
+    if (!pSurfaceFormatCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                           physicalDevice,
+                                           "pSurfaceFormatCount");
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfaceFormatsKHR(
-                physicalDevice, surface, pCount, pSurfaceFormats);
+                physicalDevice, surface, pSurfaceFormatCount, pSurfaceFormats);
 
-        if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats && pCount &&
-            (*pCount > 0)) {
-            pPhysicalDevice->surfaceFormatCount = *pCount;
+        if ((result == VK_SUCCESS) && pPhysicalDevice && !pSurfaceFormats &&
+            pSurfaceFormatCount) {
+            // Record the result of this preliminary query:
+            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
+        }
+        if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats &&
+            pSurfaceFormatCount && (*pSurfaceFormatCount > 0)) {
+            // Compare the preliminary value of *pSurfaceFormatCount with the
+            // value this time:
+            if (*pSurfaceFormatCount != pPhysicalDevice->surfaceFormatCount) {
+                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                        physicalDevice,
+                                        "pSurfaceFormatCount",
+                                        "pSurfaceFormats",
+                                        pPhysicalDevice->surfaceFormatCount);
+            }
+            // Record the result of this query:
+            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
             pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)
-                malloc(*pCount * sizeof(VkSurfaceFormatKHR));
+                malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
             if (pPhysicalDevice->pSurfaceFormats) {
-                for (uint32_t i = 0 ; i < *pCount ; i++) {
+                for (uint32_t i = 0 ; i < *pSurfaceFormatCount ; i++) {
                     pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
                 }
             } else {
@@ -1053,7 +1084,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(
     VkPhysicalDevice physicalDevice,
     VkSurfaceKHR surface,
-    uint32_t* pCount,
+    uint32_t* pPresentModeCount,
     VkPresentModeKHR* pPresentModes)
 {
     VkResult result = VK_SUCCESS;
@@ -1076,19 +1107,39 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                               __FUNCTION__, VK_KHR_SURFACE_EXTENSION_NAME);
     }
     skipCall |= validateSurface(my_data, surface, (char *) __FUNCTION__);
+    if (!pPresentModeCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                           physicalDevice,
+                                           "pPresentModeCount");
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->GetPhysicalDeviceSurfacePresentModesKHR(
-                physicalDevice, surface, pCount, pPresentModes);
+                physicalDevice, surface, pPresentModeCount, pPresentModes);
 
-        if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes && pCount &&
-            (*pCount > 0)) {
-            pPhysicalDevice->presentModeCount = *pCount;
+        if ((result == VK_SUCCESS) && pPhysicalDevice && !pPresentModes &&
+            pPresentModeCount) {
+            // Record the result of this preliminary query:
+            pPhysicalDevice->presentModeCount = *pPresentModeCount;
+        }
+        if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes &&
+            pPresentModeCount && (*pPresentModeCount > 0)) {
+            // Compare the preliminary value of *pPresentModeCount with the
+            // value this time:
+            if (*pPresentModeCount != pPhysicalDevice->presentModeCount) {
+                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                        physicalDevice,
+                                        "pPresentModeCount",
+                                        "pPresentModes",
+                                        pPhysicalDevice->presentModeCount);
+            }
+            // Record the result of this query:
+            pPhysicalDevice->presentModeCount = *pPresentModeCount;
             pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)
-                malloc(*pCount * sizeof(VkPresentModeKHR));
+                malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
             if (pPhysicalDevice->pSurfaceFormats) {
-                for (uint32_t i = 0 ; i < *pCount ; i++) {
+                for (uint32_t i = 0 ; i < *pPresentModeCount ; i++) {
                     pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
                 }
             } else {
@@ -1515,7 +1566,11 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
     }
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pCount, VkImage* pSwapchainImages)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint32_t*                                   pSwapchainImageCount,
+    VkImage*                                    pSwapchainImages)
 {
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
@@ -1540,25 +1595,39 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(VkDevice 
                                             swapchain.handle,
                                             "VkSwapchainKHR");
     }
+    if (!pSwapchainImageCount) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
+                                           physicalDevice,
+                                           "pSwapchainImageCount");
+    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->device_dispatch_table->GetSwapchainImagesKHR(
-                device, swapchain, pCount, pSwapchainImages);
+                device, swapchain, pSwapchainImageCount, pSwapchainImages);
 
-// TBD: Should we validate that this function was called once with
-// pSwapchainImages set to NULL (and record pCount at that time), and then
-// called again with a non-NULL pSwapchainImages?
-        if ((result == VK_SUCCESS) && pSwapchain &&pSwapchainImages &&
-            pCount && (*pCount > 0)) {
+        if ((result == VK_SUCCESS) && pSwapchain && !pSwapchainImages &&
+            pSwapchainImageCount) {
+            // Record the result of this preliminary query:
+            pSwapchain->imageCount = *pSwapchainImageCount;
+        }
+        if ((result == VK_SUCCESS) && pSwapchain && pSwapchainImages &&
+            pSwapchainImageCount && (*pSwapchainImageCount > 0)) {
+            // Compare the preliminary value of *pSwapchainImageCount with the
+            // value this time:
+            if (*pSwapchainImageCount != pSwapchain->imageCount) {
+                LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                        device,
+                                        "pSwapchainImageCount",
+                                        "pSwapchainImages",
+                                        pSwapchain->imageCount);
+            }
             // Record the images and their state:
-            if (pSwapchain) {
-                pSwapchain->imageCount = *pCount;
-                for (uint32_t i = 0 ; i < *pCount ; i++) {
-                    pSwapchain->images[i].image = pSwapchainImages[i];
-                    pSwapchain->images[i].pSwapchain = pSwapchain;
-                    pSwapchain->images[i].ownedByApp = false;
-                }
+            pSwapchain->imageCount = *pSwapchainImageCount;
+            for (uint32_t i = 0 ; i < *pSwapchainImageCount ; i++) {
+                pSwapchain->images[i].image = pSwapchainImages[i];
+                pSwapchain->images[i].pSwapchain = pSwapchain;
+                pSwapchain->images[i].ownedByApp = false;
             }
         }
 

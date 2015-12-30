@@ -61,6 +61,7 @@ using namespace std;
 typedef enum _SWAPCHAIN_ERROR
 {
     SWAPCHAIN_INVALID_HANDLE,                   // Handle used that isn't currently valid
+    SWAPCHAIN_NULL_POINTER,                     // Pointer set to NULL, instead of being a valid pointer
     SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,         // Did not enable WSI extension, but called WSI function 
     SWAPCHAIN_DEL_DEVICE_BEFORE_SWAPCHAINS,     // Called vkDestroyDevice() before vkDestroySwapchainKHR()
     SWAPCHAIN_CREATE_SWAP_WITHOUT_QUERY,        // Called vkCreateSwapchainKHR() without calling a query (e.g. vkGetPhysicalDeviceSurfaceCapabilitiesKHR())
@@ -82,6 +83,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_INDEX_TOO_LARGE,                  // Index is too large for swapchain
     SWAPCHAIN_INDEX_NOT_IN_USE,                 // vkQueuePresentKHR() given index that is not owned by app
     SWAPCHAIN_BAD_BOOL,                         // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
+    SWAPCHAIN_INVALID_COUNT,                    // Second time a query called, the pCount value didn't match first time
 } SWAPCHAIN_ERROR;
 
 
@@ -93,7 +95,20 @@ typedef enum _SWAPCHAIN_ERROR
                 (uint64_t) (obj), __LINE__, SWAPCHAIN_INVALID_HANDLE, LAYER_NAME, \
                 "%s() called with a non-valid %s.", __FUNCTION__, (obj)) \
     : VK_FALSE
-
+#define LOG_ERROR_NULL_POINTER(objType, type, obj)                     \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_NULL_POINTER, LAYER_NAME, \
+                "%s() called with NULL pointer %s.", __FUNCTION__, (obj)) \
+    : VK_FALSE
+#define LOG_ERROR_INVALID_COUNT(objType, type, obj, obj2, val)          \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_INVALID_COUNT, LAYER_NAME, \
+                "%s() called with non-NULL %s, and with %s not matching " \
+                "the value (%d) that was returned when %s was NULL.",   \
+                __FUNCTION__, (obj2), (obj), (val), (obj2))             \
+    : VK_FALSE
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
     (my_data) ?                                                         \
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
