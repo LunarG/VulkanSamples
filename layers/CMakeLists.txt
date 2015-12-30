@@ -15,19 +15,19 @@ macro(run_vk_layer_generate subcmd output)
 endmacro()
 
 set(LAYER_JSON_FILES
-    api_dump
-    basic
-    draw_state
-    generic
-    image
-    mem_tracker
-    multi
-    object_tracker
-    param_checker
-    screenshot
-    swapchain
-    threading
-    device_limits
+    VkLayer_api_dump
+    VkLayer_basic
+    VkLayer_draw_state
+    VkLayer_generic
+    VkLayer_image
+    VkLayer_mem_tracker
+    VkLayer_multi
+    VkLayer_object_tracker
+    VkLayer_param_checker
+    VkLayer_screenshot
+    VkLayer_swapchain
+    VkLayer_threading
+    VkLayer_device_limits
     )
 
 set(VK_LAYER_RPATH /usr/lib/x86_64-linux-gnu/vulkan/layer:/usr/lib/i386-linux-gnu/vulkan/layer)
@@ -58,23 +58,23 @@ endif()
 
 if (WIN32)
     macro(add_vk_layer target)
-	add_custom_command(OUTPUT VKLayer${target}.def
-		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py win-def-file VKLayer${target} layer > VKLayer${target}.def
+	add_custom_command(OUTPUT VkLayer_${target}.def
+		COMMAND ${PYTHON_CMD} ${PROJECT_SOURCE_DIR}/vk-generate.py win-def-file VkLayer_${target} layer > VkLayer_${target}.def
 		DEPENDS ${PROJECT_SOURCE_DIR}/vk-generate.py ${PROJECT_SOURCE_DIR}/vk.py
 	)
-	add_library(VKLayer${target} SHARED ${ARGN} VKLayer${target}.def)
-        target_link_Libraries(VKLayer${target} layer_utils)
-	add_dependencies(VKLayer${target} layer_utils_static)
-	add_dependencies(VKLayer${target} generate_vk_layer_helpers)
-	set_target_properties(VKLayer${target} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/VKLayer${target}.def")
+	add_library(VkLayer_${target} SHARED ${ARGN} VkLayer_${target}.def)
+    target_link_Libraries(VkLayer_${target} layer_utils)
+	add_dependencies(VkLayer_${target} layer_utils_static)
+	add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
+	set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "/DEF:${CMAKE_CURRENT_BINARY_DIR}/VkLayer_${target}.def")
     endmacro()
 else()
     macro(add_vk_layer target)
-	add_library(VKLayer${target} SHARED ${ARGN})
-        target_link_Libraries(VKLayer${target} layer_utils)
-	add_dependencies(VKLayer${target} generate_vk_layer_helpers)
-	set_target_properties(VKLayer${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
-	install(TARGETS VKLayer${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
+	add_library(VkLayer_${target} SHARED ${ARGN})
+    target_link_Libraries(VkLayer_${target} layer_utils)
+	add_dependencies(VkLayer_${target} generate_vk_layer_helpers)
+	set_target_properties(VkLayer_${target} PROPERTIES LINK_FLAGS "-Wl,-Bsymbolic")
+	install(TARGETS VkLayer_${target} DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
     endmacro()
 endif()
 
@@ -103,11 +103,11 @@ add_custom_command(OUTPUT vk_dispatch_table_helper.h
 run_vk_helper(gen_enum_string_helper vk_enum_string_helper.h)
 run_vk_helper(gen_struct_wrappers
 	vk_struct_string_helper.h
-        vk_struct_string_helper_cpp.h
+    vk_struct_string_helper_cpp.h
 	vk_struct_string_helper_no_addr.h
 	vk_struct_string_helper_no_addr_cpp.h
-        vk_struct_size_helper.h
-        vk_struct_size_helper.c
+    vk_struct_size_helper.h
+    vk_struct_size_helper.c
 	vk_struct_wrappers.h
 	vk_struct_wrappers.cpp
 )
@@ -117,18 +117,18 @@ add_custom_target(generate_vk_layer_helpers DEPENDS
 	vk_enum_string_helper.h
 	vk_struct_string_helper.h
 	vk_struct_string_helper_no_addr.h
-        vk_struct_string_helper_cpp.h
+    vk_struct_string_helper_cpp.h
 	vk_struct_string_helper_no_addr_cpp.h
-        vk_struct_size_helper.h
-        vk_struct_size_helper.c
+    vk_struct_size_helper.h
+    vk_struct_size_helper.c
 	vk_struct_wrappers.h
 	vk_struct_wrappers.cpp
 )
 
-run_vk_layer_generate(Generic generic_layer.cpp)
-run_vk_layer_generate(APIDump api_dump.cpp)
-run_vk_layer_generate(ObjectTracker object_track.cpp)
-run_vk_layer_generate(Threading threading.cpp)
+run_vk_layer_generate(generic generic_layer.cpp)
+run_vk_layer_generate(api_dump api_dump.cpp)
+run_vk_layer_generate(object_tracker object_tracker.cpp)
+run_vk_layer_generate(threading threading.cpp)
 
 add_library(layer_utils SHARED vk_layer_config.cpp vk_layer_extension_utils.cpp vk_layer_utils.cpp)
 if (WIN32)
@@ -139,17 +139,17 @@ else()
     install(TARGETS layer_utils DESTINATION ${PROJECT_BINARY_DIR}/install_staging)
 endif()
 
-add_vk_layer(Basic basic.cpp vk_layer_table.cpp)
-add_vk_layer(Multi multi.cpp vk_layer_table.cpp)
-add_vk_layer(DrawState draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
-add_vk_layer(DeviceLimits device_limits.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp vk_layer_utils.cpp)
-add_vk_layer(MemTracker mem_tracker.cpp vk_layer_table.cpp)
-add_vk_layer(Image image.cpp vk_layer_table.cpp)
-add_vk_layer(ParamChecker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
-add_vk_layer(ScreenShot screenshot.cpp vk_layer_table.cpp)
-add_vk_layer(Swapchain swapchain.cpp vk_layer_table.cpp)
+add_vk_layer(basic basic.cpp vk_layer_table.cpp)
+add_vk_layer(multi multi.cpp vk_layer_table.cpp)
+add_vk_layer(draw_state draw_state.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
+add_vk_layer(device_limits device_limits.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp vk_layer_utils.cpp)
+add_vk_layer(mem_tracker mem_tracker.cpp vk_layer_table.cpp)
+add_vk_layer(image image.cpp vk_layer_table.cpp)
+add_vk_layer(param_checker param_checker.cpp vk_layer_debug_marker_table.cpp vk_layer_table.cpp)
+add_vk_layer(screenshot screenshot.cpp vk_layer_table.cpp)
+add_vk_layer(swapchain swapchain.cpp vk_layer_table.cpp)
 # generated
-add_vk_layer(Generic generic_layer.cpp vk_layer_table.cpp)
-add_vk_layer(APIDump api_dump.cpp vk_layer_table.cpp)
-add_vk_layer(ObjectTracker object_track.cpp vk_layer_table.cpp)
-add_vk_layer(Threading threading.cpp vk_layer_table.cpp)
+add_vk_layer(generic generic_layer.cpp vk_layer_table.cpp)
+add_vk_layer(api_dump api_dump.cpp vk_layer_table.cpp)
+add_vk_layer(object_tracker object_tracker.cpp vk_layer_table.cpp)
+add_vk_layer(threading threading.cpp vk_layer_table.cpp)

@@ -31,51 +31,51 @@ Note that some layers are code-generated and will therefore exist in the directo
 -include/vkLayer.h  - header file for layer code.
 
 ### Templates
-layers/basic.cpp (name=VK_LAYER_LUNARG_Basic) simple example wrapping a few entrypoints. Shows layer features:
+layers/basic.cpp (name=VK_LAYER_LUNARG_basic) simple example wrapping a few entrypoints. Shows layer features:
 - Multiple dispatch tables for supporting multiple GPUs.
 - Example layer extension function shown.
 - Layer extension advertised by vkGetXXXExtension().
 
 layers/multi.cpp (name=VK_LAYER_LUNARG_multi1:VK_LAYER_LUNARG_multi2) simple example showing multiple layers per library
 
-(build dir)/layer/generic_layer.cpp (name=VK_LAYER_LUNARG_Generic) - auto generated example wrapping all VK entrypoints.
+(build dir)/layer/generic_layer.cpp (name=VK_LAYER_LUNARG_generic) - auto generated example wrapping all VK entrypoints.
 
 ### Layer Details
 For complete details of current validation layers, including all of the validation checks that they perform, please refer to the document layers/vk_validation_layer_details.md. Below is a brief overview of each layer.
 
 ### Print API Calls and Parameter Values
-(build dir)/layers/api_dump.cpp (name=VK_LAYER_LUNARG_APIDump) - print out API calls along with parameter values
+(build dir)/layers/api_dump.cpp (name=VK_LAYER_LUNARG_api_dump) - print out API calls along with parameter values
 
 ### Print Object Stats
-(build dir)/layers/object_track.cpp (name=VK_LAYER_LUNARG_ObjectTracker) - Track object creation, use, and destruction. As objects are created, they're stored in a map. As objects are used, the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed, they're removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed, they are reported as leaked objects. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+(build dir)/layers/object_tracker.cpp (name=VK_LAYER_LUNARG_object_tracker) - Track object creation, use, and destruction. As objects are created, they're stored in a map. As objects are used, the layer verifies they exist in the map, flagging errors for unknown objects. As objects are destroyed, they're removed from the map. At vkDestroyDevice() and vkDestroyInstance() times, if any objects have not been destroyed, they are reported as leaked objects. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Validate Draw State and Shaders
-layers/draw\_state.cpp (name=VK_LAYER_LUNARG_DrawState) - DrawState tracks the Descriptor Set, Pipeline State, Shaders, and dynamic state performing some point validation as states are created and used, and further validation at each Draw call. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. Additionally DrawState include sharder validation (formerly separate ShaderChecker layer) that inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time. It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks depends on the pair of pipeline stages involved. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layers/draw\_state.cpp (name=VK_LAYER_LUNARG_draw_state) - DrawState tracks the Descriptor Set, Pipeline State, Shaders, and dynamic state performing some point validation as states are created and used, and further validation at each Draw call. Of primary interest is making sure that the resources bound to Descriptor Sets correctly align with the layout specified for the Set. Additionally DrawState include sharder validation (formerly separate ShaderChecker layer) that inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time. It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks depends on the pair of pipeline stages involved. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Track GPU Memory
-layers/mem\_tracker.cpp (name=VK_LAYER_LUNARG_MemTracker) - The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layers/mem\_tracker.cpp (name=VK_LAYER_LUNARG_mem_tracker) - The MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check parameters
-layers/param_checker.cpp (name=VK_LAYER_LUNARG_ParamChecker) - Check the input parameters to API calls for validity. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layers/param_checker.cpp (name=VK_LAYER_LUNARG_param_checker) - Check the input parameters to API calls for validity. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Image parameters
-layers/image.cpp (name=VK_LAYER_LUNARG_Image) - The Image layer is intended to validate image parameters, formats, and correct use. Images are a significant enough area that they were given a separate layer. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layers/image.cpp (name=VK_LAYER_LUNARG_image) - The Image layer is intended to validate image parameters, formats, and correct use. Images are a significant enough area that they were given a separate layer. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Check threading
-<build dir>/layers/threading.cpp (name=VK_LAYER_LUNARG_Threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+<build dir>/layers/threading.cpp (name=VK_LAYER_LUNARG_threading) - Check multithreading of API calls for validity. Currently this checks that only one thread at a time uses an object in free-threaded API calls. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ### Swapchain
-<build dir>/layer/swapchain.cpp (name=VK_LAYER_LUNARG_Swapchain) - Check that WSI extensions are being used correctly.
+<build dir>/layer/swapchain.cpp (name=VK_LAYER_LUNARG_swapchain) - Check that WSI extensions are being used correctly.
 
 ### Device Limitations
-layers/device_limits.cpp (name=VK_LAYER_LUNARG_DeviceLimits) - This layer is intended to capture underlying device features and limitations and then flag errors if an app makes requests for unsupported features or exceeding limitations. This layer is a work in progress and currently only flags some high-level errors without flagging errors on specific feature and limitation. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
+layers/device_limits.cpp (name=VK_LAYER_LUNARG_device_limits) - This layer is intended to capture underlying device features and limitations and then flag errors if an app makes requests for unsupported features or exceeding limitations. This layer is a work in progress and currently only flags some high-level errors without flagging errors on specific feature and limitation. If a Dbg callback function is registered, this layer will use callback function(s) for reporting, otherwise uses stdout.
 
 ## Using Layers
 
 1. Build VK loader and i965 icd driver using normal steps (cmake and make)
-2. Place libVKLayer<name>.so in the same directory as your VK test or app:
+2. Place libVkLayer_<name>.so in the same directory as your VK test or app:
 
-    cp build/layer/libVKLayerBasic.so build/layer/libVKLayerGeneric.so build/tests
+    cp build/layer/libVkLayer_basic.so build/layer/libVkLayer_generic.so build/tests
 
     This is required for the Loader to be able to scan and enumerate your library.
     Alternatively, use the VK\_LAYER\_PATH environment variable to specify where the layer libraries reside.
@@ -87,8 +87,8 @@ layers/device_limits.cpp (name=VK_LAYER_LUNARG_DeviceLimits) - This layer is int
 4. Specify which Layers to activate by using
 vkCreateDevice and/or vkCreateInstance or environment variables.
 
-    export VK\_INSTANCE\_LAYERS=VK_LAYER_LUNARG_Basic:VK_LAYER_LUNARG_Generic
-    export VK\_DEVICE\_LAYERS=VK_LAYER_LUNARG_Basic:VK_LAYER_LUNARG_Generic
+    export VK\_INSTANCE\_LAYERS=VK_LAYER_LUNARG_basic:VK_LAYER_LUNARG_generic
+    export VK\_DEVICE\_LAYERS=VK_LAYER_LUNARG_basic:VK_LAYER_LUNARG_generic
     cd build/tests; ./vkinfo
 
 ## Tips for writing new layers
@@ -104,7 +104,7 @@ vkCreateDevice and/or vkCreateInstance or environment variables.
     implementation; exceptions are vkGetXXXXProcAddr,
     which must have the correct name since the Loader calls these entrypoints;
 8. entrypoint names must be exported to the OSes dynamic loader with VK\_LAYER\_EXPORT;
-9. Layer naming convention is camel case same name as in library: libVKLayer<name>.so
+9. Layer naming convention is camel case same name as in library: libVkLayer_<name>.so
 10. For multiple layers in one library the manifest file can specify each layer.
 
 ## Status

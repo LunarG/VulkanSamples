@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_Vktrace",
+        "name": "VK_LAYER_LUNARG_vktrace",
         "type": "GLOBAL",
-        "library_path": ".\\vktrace_layer.dll",
+        "library_path": ".\\VkLayer_vktrace_layer.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "Vktrace tracing library",

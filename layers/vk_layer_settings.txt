@@ -33,57 +33,57 @@
 #
 # Example of actual settings for each layer
 #
-# VK_LUNARG_LAYER_DeviceLimits Settings
+# VK_LUNARG_LAYER_device_limits Settings
 DeviceLimitsDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DeviceLimitsReportFlags = error,warn,perf
 DeviceLimitsLogFilename = stdout
 
-# VK_LUNARG_LAYER_DrawState Settings
+# VK_LUNARG_LAYER_draw_state Settings
 DrawStateDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 DrawStateReportFlags = error,warn,perf
 DrawStateLogFilename = stdout
 
-# VK_LUNARG_LAYER_Image Settings
+# VK_LUNARG_LAYER_image Settings
 ImageDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ImageReportFlags = error,warn,perf
 ImageLogFilename = stdout
 
-# VK_LUNARG_LAYER_MemTracker Settings
+# VK_LUNARG_LAYER_mem_tracker Settings
 MemTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 MemTrackerReportFlags = error,warn,perf
 MemTrackerLogFilename = stdout
 
-# VK_LUNARG_LAYER_ObjectTracker Settings
+# VK_LUNARG_LAYER_object_tracker Settings
 ObjectTrackerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ObjectTrackerReportFlags = error,warn,perf
 ObjectTrackerLogFilename = stdout
 
-# VK_LUNARG_LAYER_ParamChecker Settings
+# VK_LUNARG_LAYER_param_checker Settings
 ParamCheckerDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ParamCheckerReportFlags = error,warn,perf
 ParamCheckerLogFilename = stdout
 
-# VK_LUNARG_LAYER_Swapchain Settings
+# VK_LUNARG_LAYER_swapchain Settings
 SwapchainDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 SwapchainReportFlags = error,warn,perf
 SwapchainLogFilename = stdout
 
-# VK_LUNARG_LAYER_Threading Settings
+# VK_LUNARG_LAYER_threading Settings
 ThreadingDebugAction = VK_DBG_LAYER_ACTION_LOG_MSG
 ThreadingReportFlags = error,warn,perf
 ThreadingLogFilename = stdout
 
-# VK_LUNARG_LAYER_APIDump Settings - NOTE that VK_LUNARG_LAYER_APIDump is
+# VK_LUNARG_LAYER_api_dump Settings - NOTE that VK_LUNARG_LAYER_api_dump is
 # not a validation layer and the common settings for ReportFlags and
 # DebugAction do not apply
 # Detailed TRUE causes parameter details to be dumped in addition to API calls
-APIDumpDetailed = TRUE
+ApiDumpDetailed = TRUE
 # NoAddr TRUE causes "address" to be dumped in place of hex addresses
-APIDumpNoAddr = FALSE
+ApiDumpNoAddr = FALSE
 # File = TRUE indicates that output should be written to file instead of STDOUT
-APIDumpFile = FALSE
+ApiDumpFile = FALSE
 # LogFilename is file to dump to when "File = TRUE" default is "vk_apidump.txt"
-APIDumpLogFilename = stdout
+ApiDumpLogFilename = stdout
 # Flush = TRUE causes IO to be flushed after each line that's written
-APIDumpFlush = FALSE
+ApiDumpFlush = FALSE
 

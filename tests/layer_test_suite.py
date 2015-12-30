@@ -40,7 +40,7 @@ def handle_args():
     parser.add_argument('--script_name', required=False, default='./run_all_tests_with_layers.sh', help='The script file to be executed and have its output checked.')
     return parser.parse_args()
 
-expected_layers = ['DrawState', 'MemTracker', 'ParamChecker', 'ObjectTracker']
+expected_layers = ['draw_state', 'mem_tracker', 'param_checker', 'object_tracker']
 
 # Format of this dict is <testname> key points to a list of expected error text
 # The start of each line of output for any given test is compared against the expected error txt

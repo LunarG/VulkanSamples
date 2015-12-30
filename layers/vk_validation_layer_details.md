@@ -2,13 +2,13 @@
 
 # Validation Layer Details
 
-## VK_LAYER_LUNARG_DrawState
+## VK_LAYER_LUNARG_draw_state
 
-### VK_LAYER_LUNARG_DrawState Overview
+### VK_LAYER_LUNARG_draw_state Overview
 
-The VK_LAYER_LUNARG_DrawState layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, shaders, and descriptor set state. VK_LAYER_LUNARG_DrawState validates the consistency and correctness between and within these states. VK_LAYER_LUNARG_DrawState also includes SPIR-V validation which functionality is recorded under the VK_LAYER_LUNARG_ShaderChecker section below.
+The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This includes the Pipeline state, dynamic state, shaders, and descriptor set state. VK_LAYER_LUNARG_draw_state validates the consistency and correctness between and within these states. VK_LAYER_LUNARG_draw_state also includes SPIR-V validation which functionality is recorded under the VK_LAYER_LUNARG_ShaderChecker section below.
 
-### VK_LAYER_LUNARG_DrawState Details Table
+### VK_LAYER_LUNARG_draw_state Details Table
 
 | Check | Overview | ENUM DRAWSTATE_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -16,8 +16,8 @@ The VK_LAYER_LUNARG_DrawState layer tracks state leading into Draw cmds. This in
 | Validate DbgMarker exensions | Validates that DbgMarker extensions have been enabled before use | INVALID_EXTENSION | vkCmdDbgMarkerBegin vkCmdDbgMarkerEnd | TBD | None |
 | Valid BeginCommandBuffer state | Must not call Begin on command buffers that are being recorded, and primary command buffers must specify VK_NULL_HANDLE for RenderPass or Framebuffer parameters, while secondary command buffers must provide non-null parameters,  | BEGIN_CB_INVALID_STATE | vkBeginCommandBuffer | PrimaryCommandBufferFramebufferAndRenderpass SecondaryCommandBufferFramebufferAndRenderpass | None |
 | Valid Command Buffer Reset | Can only reset individual command buffer that was allocated from a pool with VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT set | INVALID_COMMAND_BUFFER_RESET | vkBeginCommandBuffer vkResetCommandBuffer | CommandBufferResetErrors | None |
-| PSO Bound | Verify that a properly created and valid pipeline object is bound to the CommandBuffer specified in these calls | NO_PIPELINE_BOUND | vkCmdBindDescriptorSets vkCmdBindVertexBuffers | PipelineNotBound | This check is currently more related to VK_LAYER_LUNARG_DrawState data structures and less about verifying that PSO is bound at all appropriate points in API. For API purposes, need to make sure this is checked at Draw time and any other relevant calls. |
-| Valid DescriptorPool | Verifies that the descriptor set pool object was properly created and is valid | INVALID_POOL | vkResetDescriptorPool vkAllocateDescriptorSets | None | This is just an internal layer data structure check. VK_LAYER_LUNARG_ParamChecker or VK_LAYER_LUNARG_ObjectTracker should really catch bad DSPool |
+| PSO Bound | Verify that a properly created and valid pipeline object is bound to the CommandBuffer specified in these calls | NO_PIPELINE_BOUND | vkCmdBindDescriptorSets vkCmdBindVertexBuffers | PipelineNotBound | This check is currently more related to VK_LAYER_LUNARG_draw_state data structures and less about verifying that PSO is bound at all appropriate points in API. For API purposes, need to make sure this is checked at Draw time and any other relevant calls. |
+| Valid DescriptorPool | Verifies that the descriptor set pool object was properly created and is valid | INVALID_POOL | vkResetDescriptorPool vkAllocateDescriptorSets | None | This is just an internal layer data structure check. VK_LAYER_LUNARG_param_checker or VK_LAYER_LUNARG_object_tracker should really catch bad DSPool |
 | Valid DescriptorSet | Validate that descriptor set was properly created and is currently valid | INVALID_SET | vkCmdBindDescriptorSets | None | Is this needed other places (like Update/Clear descriptors) |
 | Valid DescriptorSetLayout | Flag DescriptorSetLayout object that was not properly created | INVALID_LAYOUT | vkAllocateDescriptorSets | None | Anywhere else to check this? |
 | Valid Pipeline | Flag VkPipeline object that was not properly created | INVALID_PIPELINE | vkCmdBindPipeline | InvalidPipeline | NA |
@@ -57,7 +57,7 @@ The VK_LAYER_LUNARG_DrawState layer tracks state leading into Draw cmds. This in
 | Correct Clear Use | Warn user if CmdClear for Color or DepthStencil issued to Cmd Buffer prior to a Draw Cmd. RenderPass LOAD_OP_CLEAR is preferred in this case. | CLEAR_CMD_BEFORE_DRAW | vkCmdClearColorImage vkCmdClearDepthStencilImage | ClearCmdNoDraw | NA |
 | Index Buffer Binding | Verify that an index buffer is bound at the point when an indexed draw is attempted. | INDEX_BUFFER_NOT_BOUND | vkCmdDrawIndexed vkCmdDrawIndexedIndirect | TODO | Implement validation test |
 | Viewport and Scissors match | In PSO viewportCount and scissorCount must match. Also for each count that is non-zero, there corresponding data array ptr should be non-NULL. | VIEWPORT_SCISSOR_MISMATCH | vkCreateGraphicsPipelines vkCmdSetViewport vkCmdSetScissor | TODO | Implement validation test |
-| Valid Image Aspects for descriptor Updates | When updating ImageView for Descriptor Sets with layout of DEPTH_STENCIL type, the Image Aspect must not have both the DEPTH and STENCIL aspects set, but must have one of the two set. For COLOR_ATTACHMENT, aspect must have COLOR_BIT set. | INVALID_IMAGE_ASPECT | vkUpdateDescriptorSets | DepthStencilImageViewWithColorAspectBitError | This test hits Image layer error, but tough to create case that that skips that error and gets to VK_LAYER_LUNARG_DrawState error. |
+| Valid Image Aspects for descriptor Updates | When updating ImageView for Descriptor Sets with layout of DEPTH_STENCIL type, the Image Aspect must not have both the DEPTH and STENCIL aspects set, but must have one of the two set. For COLOR_ATTACHMENT, aspect must have COLOR_BIT set. | INVALID_IMAGE_ASPECT | vkUpdateDescriptorSets | DepthStencilImageViewWithColorAspectBitError | This test hits Image layer error, but tough to create case that that skips that error and gets to VK_LAYER_LUNARG_draw_state error. |
 | Valid sampler descriptor Updates | An invalid sampler is used when updating SAMPLER descriptor. | SAMPLER_DESCRIPTOR_ERROR | vkUpdateDescriptorSets | SampleDescriptorUpdateError | Currently only making sure sampler handle is known, can add further validation for sampler parameters |
 | Immutable sampler update consistency | Within a single write update, all sampler updates must use either immutable samplers or non-immutable samplers, but not a combination of both. | INCONSISTENT_IMMUTABLE_SAMPLER_UPDATE | vkUpdateDescriptorSets | None | Write a test for this case |
 | Valid imageView descriptor Updates | An invalid imageView is used when updating *_IMAGE or *_ATTACHMENT descriptor. | IMAGEVIEW_DESCRIPTOR_ERROR | vkUpdateDescriptorSets | ImageViewDescriptorUpdateError | Currently only making sure imageView handle is known, can add further validation for imageView and underlying image parameters |
@@ -68,11 +68,11 @@ The VK_LAYER_LUNARG_DrawState layer tracks state leading into Draw cmds. This in
 | Verify Memory Access Flags/Memory Barriers | Validate correct access flags for memory barriers | INVALID_BARRIER | vkCmdWaitEvents VkCmdPipelineBarrier | TBD | None |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
-| NA | Enum used when VK_LAYER_LUNARG_Drawstate attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
-| NA | Enum used when VK_LAYER_LUNARG_Drawstate attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
+| NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
+| NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
 
-### VK_LAYER_LUNARG_DrawState Pending Work
-Additional checks to be added to VK_LAYER_LUNARG_DrawState
+### VK_LAYER_LUNARG_draw_state Pending Work
+Additional checks to be added to VK_LAYER_LUNARG_draw_state
 
  7. Lifetime validation (See [bug 13383](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13383))
 	 8. XGL_DESCRIPTOR_SET
@@ -99,7 +99,7 @@ Additional checks to be added to VK_LAYER_LUNARG_DrawState
 
 ### VK_LAYER_LUNARG_ShaderChecker Overview
 
-The VK_LAYER_LUNARG_ShaderChecker functionality is part of VK_LAYER_LUNARG_DrawState layer and it inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time.
+The VK_LAYER_LUNARG_ShaderChecker functionality is part of VK_LAYER_LUNARG_draw_state layer and it inspects the SPIR-V shader images and fixed function pipeline stages at PSO creation time.
 It flags errors when inconsistencies are found across interfaces between shader stages. The exact behavior of the checks
 depends on the pair of pipeline stages involved.
 
@@ -122,13 +122,13 @@ depends on the pair of pipeline stages involved.
 - Additional test cases for variously broken SPIRV images
 - Validation of a single SPIRV image in isolation (the spec describes many constraints)
 
-## VK_LAYER_LUNARG_ParamChecker
+## VK_LAYER_LUNARG_param_checker
 
-### VK_LAYER_LUNARG_ParamChecker Overview
+### VK_LAYER_LUNARG_param_checker Overview
 
-The VK_LAYER_LUNARG_ParamChecker layer validates parameter values and flags errors for any values that are outside of acceptable values for the given parameter.
+The VK_LAYER_LUNARG_param_checker layer validates parameter values and flags errors for any values that are outside of acceptable values for the given parameter.
 
-### VK_LAYER_LUNARG_ParamChecker Details Table
+### VK_LAYER_LUNARG_param_checker Details Table
 
 | Check | Overview | ENUM | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -136,7 +136,7 @@ The VK_LAYER_LUNARG_ParamChecker layer validates parameter values and flags erro
 | Call results, Output Parameters | Return values are checked for VK_SUCCESS, returned pointers are checked to be NON-NULL, enumerated types of return values are checked to be within the defined range. | NA | vkEnumeratePhysicalDevices vkGetPhysicalDeviceFeatures vkGetPhysicalDeviceFormatProperties vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceLimits vkGetPhysicalDeviceProperties vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceMemoryProperties vkGetDeviceQueue vkQueueSubmit vkQueueWaitIdle vkDeviceWaitIdle vkAllocateMemory vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkGetDeviceMemoryCommitment vkBindBufferMemory vkBindImageMemory vkGetBufferMemoryRequirements vkGetImageMemoryRequirements vkGetImageSparseMemoryRequirements vkGetPhysicalDeviceSparseImageFormatProperties vkQueueBindSparse vkCreateFence vkDestroyFence vkResetFences vkGetFenceStatus vkWaitForFences vkCreateSemaphore vkDestroySemaphore vkCreateEvent vkDestroyEvent vkGetEventStatus vkSetEvent vkResetEvent vkCreateQueryPool vkDestroyQueryPool vkGetQueryPoolResults vkCreateBuffer vkDestroyBuffer vkCreateBufferView vkDestroyBufferView vkCreateImage vkDestroyImage vkGetImageSubresourceLayout vkCreateImageView vkDestroyImageView vkDestroyShaderModule vkCreatePipelineCache vkDestroyPipelineCache vkGetPipelineCacheData vkMergePipelineCaches vkCreateGraphicsPipelines vkCreateComputePipelines vkDestroyPipeline vkCreatePipelineLayout vkDestroyPipelineLayout vkCreateSampler vkDestroySampler vkCreateDescriptorSetLayout vkDestroyDescriptorSetLayout vkCreateDescriptorPool vkDestroyDescriptorPool vkResetDescriptorPool vkAllocateDescriptorSets vkFreeDescriptorSets vkUpdateDescriptorSets vkCreateFramebuffer vkDestroyFramebuffer vkCreateRenderPass vkDestroyRenderPass vkGetRenderAreaGranularity vkCreateCommandPool vkDestroyCommandPool vkResetCommandPool vkAllocateCommandBuffers vkFreeCommandBuffers vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdPushConstants vkCmdBeginRenderPass vkCmdNextSubpass vkCmdEndRenderPass vkCmdExecuteCommands | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_ParamChecker Pending Work
+### VK_LAYER_LUNARG_param_checker Pending Work
 Additional work to be done
 
  1. Source2 was creating a VK_FORMAT_R8_SRGB texture (and image view) which was not supported by the underlying implementation (rendersystemtest imageformat test).  Checking that formats are supported by the implementation is something the validation layer could do using the VK_FORMAT_INFO_TYPE_PROPERTIES query.   There are probably a bunch of checks here you could be doing around vkCreateImage formats along with whether image/color/depth attachment views are valid.  I’m not sure how much of this is already there.
@@ -149,13 +149,13 @@ Additional work to be done
  8. Check for valid VkIndexType in vkCmdBindIndexBuffer() should be in PreCmdBindIndexBuffer() call
  9. Check for valid VkPipelineBindPoint in vkCmdBindPipeline() & vkCmdBindDescriptorSets() should be in PreCmdBindPipeline() & PreCmdBindDescriptorSets() calls respectively.
 
-## VK_LAYER_LUNARG_Image
+## VK_LAYER_LUNARG_image
 
-### VK_LAYER_LUNARG_Image Layer Overview
+### VK_LAYER_LUNARG_image Layer Overview
 
-The VK_LAYER_LUNARG_Image layer is responsible for validating format-related information and enforcing format restrictions.
+The VK_LAYER_LUNARG_image layer is responsible for validating format-related information and enforcing format restrictions.
 
-### VK_LAYER_LUNARG_Image Layer Details Table
+### VK_LAYER_LUNARG_image Layer Details Table
 
 DETAILS TABLE PENDING
 
@@ -175,16 +175,16 @@ DETAILS TABLE PENDING
 | Verify Image Format Limits | Verifies that image creation parameters are with the device format limits | INVALID_FORMAT_LIMITS_VIOLATION | vkCreateImage | TBD | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_Image Pending Work
+### VK_LAYER_LUNARG_image Pending Work
 Additional work to be done
 
-## VK_LAYER_LUNARG_MemTracker
+## VK_LAYER_LUNARG_mem_tracker
 
-### VK_LAYER_LUNARG_MemTracker Overview
+### VK_LAYER_LUNARG_mem_tracker Overview
 
-The VK_LAYER_LUNARG_MemTracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. VK_LAYER_LUNARG_MemTracker validates several other hazard-related issues related to command buffers, fences, and memory mapping.
+The VK_LAYER_LUNARG_mem_tracker layer tracks memory objects and references and validates that they are managed correctly by the application.  This includes tracking object bindings, memory hazards, and memory object lifetimes. VK_LAYER_LUNARG_mem_tracker validates several other hazard-related issues related to command buffers, fences, and memory mapping.
 
-### VK_LAYER_LUNARG_MemTracker Details Table
+### VK_LAYER_LUNARG_mem_tracker Details Table
 
 | Check | Overview | ENUM MEMTRACK_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -193,7 +193,7 @@ The VK_LAYER_LUNARG_MemTracker layer tracks memory objects and references and va
 | Free Referenced Memory | Checks to see if memory being freed still has current references | FREED_MEM_REF | vmFreeMemory | FreeBoundMemory | NA |
 | Memory Properly Bound | Validate that the memory object referenced in the call was properly created, is currently valid, and is properly bound to the object | MISSING_MEM_BINDINGS | vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyQueryPoolResults vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage | NA | NA |
 | Valid Object | Verifies that the specified Vulkan object was created properly and is currently valid | INVALID_OBJECT | vkCmdBindPipeline vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage | NA | NA |
-| Bind Invalid Memory | Validate that memory object was correctly created, that the command buffer object was correctly created, and that both are currently valid objects. | MEMORY_BINDING_ERROR | vkQueueBindSparse vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage | NA | The valid Object checks are primarily the responsibilty of VK_LAYER_LUNARG_ObjectTracker layer, so these checks are more of a backup in case VK_LAYER_LUNARG_ObjectTracker is not enabled |
+| Bind Invalid Memory | Validate that memory object was correctly created, that the command buffer object was correctly created, and that both are currently valid objects. | MEMORY_BINDING_ERROR | vkQueueBindSparse vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdResolveImage | NA | The valid Object checks are primarily the responsibilty of VK_LAYER_LUNARG_object_tracker layer, so these checks are more of a backup in case VK_LAYER_LUNARG_object_tracker is not enabled |
 | Objects Not Destroyed | Verify all objects destroyed at DestroyDevice time | MEMORY_LEAK | vkDestroyDevice | NA | NA |
 | Memory Mapping State | Verifies that mapped memory is CPU-visible | INVALID_STATE | vkMapMemory | MapMemWithoutHostVisibleBit | NA |
 | Command Buffer Synchronization | Command Buffer must be complete before BeginCommandBuffer or ResetCommandBuffer can be called | RESET_CB_WHILE_IN_FLIGHT | vkBeginCommandBuffer vkResetCommandBuffer | CallBeginCommandBufferBeforeCompletion CallBeginCommandBufferBeforeCompletion | NA |
@@ -205,9 +205,9 @@ The VK_LAYER_LUNARG_MemTracker layer tracks memory objects and references and va
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 
-### VK_LAYER_LUNARG_MemTracker Pending Work
+### VK_LAYER_LUNARG_mem_tracker Pending Work
 
-#### VK_LAYER_LUNARG_MemTracker Enhancements
+#### VK_LAYER_LUNARG_mem_tracker Enhancements
 
 1.  Flag any memory hazards: Validate that the pipeline barriers for buffers are sufficient to avoid hazards
 2.  Make sure that the XGL_IMAGE_VIEW_ATTACH_INFO.layout matches the layout of the image as determined by the last IMAGE_MEMORY_BARRIER
@@ -221,13 +221,13 @@ The VK_LAYER_LUNARG_MemTracker layer tracks memory objects and references and va
 12. Modify INVALID_FENCE_STATE to be WARNINGs instead of ERROR
 13. Report destroy or modify of resources in use on queues and not cleared by fence or WaitIdle. Could be fence, semaphore, or objects used by submitted CommandBuffers.
 
-## VK_LAYER_LUNARG_ObjectTracker
+## VK_LAYER_LUNARG_object_tracker
 
-### VK_LAYER_LUNARG_ObjectTracker Overview
+### VK_LAYER_LUNARG_object_tracker Overview
 
-The VK_LAYER_LUNARG_ObjectTracker layer maintains a record of all Vulkan objects. It flags errors when invalid objects are used and at DestroyInstance time it flags any objects that were not properly destroyed.
+The VK_LAYER_LUNARG_object_tracker layer maintains a record of all Vulkan objects. It flags errors when invalid objects are used and at DestroyInstance time it flags any objects that were not properly destroyed.
 
-### VK_LAYER_LUNARG_ObjectTracker Details Table
+### VK_LAYER_LUNARG_object_tracker Details Table
 
 | Check | Overview | ENUM OBJTRACK_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -242,7 +242,7 @@ The VK_LAYER_LUNARG_ObjectTracker layer maintains a record of all Vulkan objects
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 
-### VK_LAYER_LUNARG_ObjectTracker Pending Work
+### VK_LAYER_LUNARG_object_tracker Pending Work
 
  4. Verify images have CmdPipelineBarrier layouts matching new layout parameters to Cmd*Image* functions
  6. For specific object instances that are allowed to be NULL, update object validation to verify that such objects are either NULL or valid
@@ -251,11 +251,11 @@ The VK_LAYER_LUNARG_ObjectTracker layer maintains a record of all Vulkan objects
  9. Use reference counting for non-dispatchable objects.  Multiple object creation calls may return identical handles.
  10. Update codegen for destroy_obj & validate_obj to generate all of the correct signatures and use the generated code
 
-## VK_LAYER_LUNARG_Threading
+## VK_LAYER_LUNARG_threading
 
-### VK_LAYER_LUNARG_Threading Overview
+### VK_LAYER_LUNARG_threading Overview
 
-The VK_LAYER_LUNARG_Threading layer checks for simultaneous use of objects by calls from multiple threads.
+The VK_LAYER_LUNARG_threading layer checks for simultaneous use of objects by calls from multiple threads.
 Application code is responsible for preventing simultaneous use of the same objects by certain calls that modify objects.
 See [bug 13433](https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13433) and
 <https://cvs.khronos.org/svn/repos/oglc/trunk/nextgen/vulkan/function_properties.csv>
@@ -276,7 +276,7 @@ But the layer cannot prevent such a reentrant use of an object.
 The layer can only observe when a mutual exclusion rule is actually violated.
 It cannot insure that there is no latent race condition.
 
-### VK_LAYER_LUNARG_Threading Details Table
+### VK_LAYER_LUNARG_threading Details Table
 
 | Check | Overview | ENUM THREADING_CHECKER_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
@@ -284,26 +284,26 @@ It cannot insure that there is no latent race condition.
 | Thread Reentrancy | Detects cases of a single thread calling Vulkan reentrantly | SINGLE_THREAD_REUSE | vkQueueSubmit vkFreeMemory vkMapMemory vkUnmapMemory vkFlushMappedMemoryRanges vkInvalidateMappedMemoryRanges vkBindBufferMemory vkBindImageMemory vkQueueBindSparse vkDestroySemaphore vkDestroyBuffer vkDestroyImage vkDestroyDescriptorPool vkResetDescriptorPool vkAllocateDescriptorSets vkFreeDescriptorSets vkFreeCommandBuffers vkBeginCommandBuffer vkEndCommandBuffer vkResetCommandBuffer vkCmdBindPipeline vkCmdSetViewport vkCmdSetBlendConstants vkCmdSetLineWidth vkCmdSetDepthBias vkCmdSetDepthBounds vkCmdSetStencilCompareMask vkCmdSetStencilWriteMask vkCmdSetStencilReference vkCmdBindDescriptorSets vkCmdBindIndexBuffer vkCmdBindVertexBuffers vkCmdDraw vkCmdDrawIndexed vkCmdDrawIndirect vkCmdDrawIndexedIndirect vkCmdDispatch vkCmdDispatchIndirect vkCmdCopyBuffer vkCmdCopyImage vkCmdBlitImage vkCmdCopyBufferToImage vkCmdCopyImageToBuffer vkCmdUpdateBuffer vkCmdFillBuffer vkCmdClearColorImage vkCmdClearDepthStencilImage vkCmdClearAttachments vkCmdResolveImage vkCmdSetEvent vkCmdResetEvent vkCmdWaitEvents vkCmdPipelineBarrier vkCmdBeginQuery vkCmdEndQuery vkCmdResetQueryPool vkCmdWriteTimestamp vkCmdCopyQueryPoolResults vkCmdBeginRenderPass vkCmdNextSubpass vkCmdPushConstants vkCmdEndRenderPass vkCmdExecuteCommands | ??? | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_Threading Pending Work
+### VK_LAYER_LUNARG_threading Pending Work
 Additional work to be done
 
-## VK_LAYER_LUNARG_DeviceLimits
+## VK_LAYER_LUNARG_device_limits
 
-### VK_LAYER_LUNARG_DeviceLimits Overview
+### VK_LAYER_LUNARG_device_limits Overview
 
-This layer is a work in progress. VK_LAYER_LUNARG_DeviceLimits layer is intended to capture two broad categories of errors:
+This layer is a work in progress. VK_LAYER_LUNARG_device_limits layer is intended to capture two broad categories of errors:
  1. Incorrect use of APIs to query device capabilities
  2. Attempt to use API functionality beyond the capability of the underlying device
 
 For the first category, the layer tracks which calls are made and flags errors if calls are excluded that should not be, or if call sequencing is incorrect. An example is an app that assumes attempts to Query and use queues without ever having called vkGetPhysicalDeviceQueueFamilyProperties(). Also, if an app is calling vkGetPhysicalDeviceQueueFamilyProperties() to retrieve properties with some assumed count for array size instead of first calling vkGetPhysicalDeviceQueueFamilyProperties() w/ a NULL pQueueFamilyProperties parameter in order to query the actual count.
-For the second category of errors, VK_LAYER_LUNARG_DeviceLimits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
+For the second category of errors, VK_LAYER_LUNARG_device_limits stores its own internal record of underlying device capabilities and flags errors if requests are made beyond those limits. Most (all?) of the limits are queried via vkGetPhysicalDevice* calls.
 
-### VK_LAYER_LUNARG_DeviceLimits Details Table
+### VK_LAYER_LUNARG_device_limits Details Table
 
 | Check | Overview | ENUM DEVLIMITS_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ---------------- | -------- | ---------- |
-| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_ObjectTracker should also catch this so if we made sure VK_LAYER_LUNARG_ObjectTracker was always on top, we could avoid this check |
-| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_ObjectTracker should also catch this so if we made sure VK_LAYER_LUNARG_ObjectTracker was always on top, we could avoid this check |
+| Valid instance | If an invalid instance is used, this error will be flagged | INVALID_INSTANCE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
+| Valid physical device | Enum used for informational messages | INVALID_PHYSICAL_DEVICE | vkEnumeratePhysicalDevices | NA | VK_LAYER_LUNARG_object_tracker should also catch this so if we made sure VK_LAYER_LUNARG_object_tracker was always on top, we could avoid this check |
 | Querying array counts | For API calls where an array count should be queried with an initial call and a NULL array pointer, verify that such a call was made before making a call with non-null array pointer. | MUST_QUERY_COUNT | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Array count value | For API calls where an array of details is queried, verify that the size of the requested array matches the size of the array supported by the device. | COUNT_MISMATCH | vkEnumeratePhysicalDevices vkGetPhysicalDeviceQueueFamilyProperties | NA | Create focused test |
 | Queue Creation | When creating/requesting queues, make sure that QueueFamilyPropertiesIndex and index/count within that queue family are valid. | INVALID_QUEUE_CREATE_REQUEST | vkGetDeviceQueue vkCreateDevice | NA | Create focused test |
@@ -316,17 +316,17 @@ For the second category of errors, VK_LAYER_LUNARG_DeviceLimits stores its own i
 | Alignment | When filling a buffer, data should be aligned on 4 byte boundaries  | LIMITS_VIOLATION | vkCmdFillBuffer | UpdateBufferAlignment | NA |
 | NA | Enum used for informational messages | NONE | | NA | None |
 
-### VK_LAYER_LUNARG_DeviceLimits Pending Work
+### VK_LAYER_LUNARG_device_limits Pending Work
 
  1. For all Formats, call vkGetPhysicalDeviceFormatProperties to pull their properties for the underlying device. After that point, if the app attempts to use any formats in violation of those properties, flag errors (this is done for Images).
 
-## VK_LAYER_LUNARG_Swapchain
+## VK_LAYER_LUNARG_swapchain
 
 ### Swapchain Overview
 
-This layer is a work in progress. VK_LAYER_LUNARG_Swapchain layer is intended to ...
+This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to ...
 
-### VK_LAYER_LUNARG_Swapchain Details Table
+### VK_LAYER_LUNARG_swapchain Details Table
 
 | Check | Overview | ENUM SWAPCHAIN_* | Relevant API | Testname | Notes/TODO |
 | ----- | -------- | ---------------- | ------------ | -------- | ---------- |
@@ -349,8 +349,8 @@ This layer is a work in progress. VK_LAYER_LUNARG_Swapchain layer is intended to
 | Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkQueuePresentKHR | NA | None |
 | Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | NA | None |
 
-### VK_LAYER_LUNARG_Swapchain Pending Work
-Additional checks to be added to VK_LAYER_LUNARG_Swapchain
+### VK_LAYER_LUNARG_swapchain Pending Work
+Additional checks to be added to VK_LAYER_LUNARG_swapchain
 
  1. Check that the queue used for presenting was checked/valid during vkGetPhysicalDeviceSurfaceSupportKHR.
  2. One issue that has already come up is correct UsageFlags for WSI SwapChains and SurfaceProperties.
@@ -358,11 +358,11 @@ Additional checks to be added to VK_LAYER_LUNARG_Swapchain
 
 # Non-validation Layer Details
 
-## VK_LAYER_LUNARG_APIDump
+## VK_LAYER_LUNARG_api_dump
 
-VK_LAYER_LUNARG_APIDump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
+VK_LAYER_LUNARG_api_dump layer is used for dumping a stream of all the Vulkan API calls that are made, along with details of the parameters to those calls.
 
-### VK_LAYER_LUNARG_APIDump Pending Work
+### VK_LAYER_LUNARG_api_dump Pending Work
 
  1. vkAllocateDescriptorSets does not correctly print out all of the created DescriptorSets (no array printing following main API txt)
 

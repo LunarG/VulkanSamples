@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_Swapchain",
+        "name": "VK_LAYER_LUNARG_param_checker",
         "type": "GLOBAL",
-        "library_path": ".\\VKLayerSwapchain.dll",
+        "library_path": "./libVkLayer_param_checker.so",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

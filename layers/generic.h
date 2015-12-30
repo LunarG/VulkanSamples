@@ -31,7 +31,7 @@
 #include "vulkan/vk_layer.h"
 
 /*
- * This file contains static functions for the generated layer Generic
+ * This file contains static functions for the generated layer generic
  */
 
 // The following is for logging error messages:
@@ -50,7 +50,7 @@ static const VkLayerProperties globalLayerProps[] = {
         "VK_LAYER_LUNARG_generic",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: Generic",
+        "layer: generic",
     }
 };
 
@@ -59,7 +59,7 @@ static const VkLayerProperties deviceLayerProps[] = {
         "VK_LAYER_LUNARG_generic",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: Generic",
+        "layer: generic",
     }
 };
 

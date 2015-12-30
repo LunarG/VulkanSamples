@@ -11,8 +11,8 @@ echo $dPath
 
 Set-Item -path env:Path -value ($env:Path + ";..\loader\$dPath")
 Set-Item -path env:Path -value ($env:Path + ";gtest-1.7.0\$dPath")
-$env:VK_INSTANCE_LAYERS = "VK_LAYER_LUNARG_Threading;VK_LAYER_LUNARG_MemTracker;VK_LAYER_LUNARG_ObjectTracker;VK_LAYER_LUNARG_DrawState;VK_LAYER_LUNARG_ParamChecker;VK_LAYER_LUNARG_Swapchain;VK_LAYER_LUNARG_DeviceLimits;VK_LAYER_LUNARG_Image"
-$env:VK_DEVICE_LAYERS = "VK_LAYER_LUNARG_Threading;VK_LAYER_LUNARG_MemTracker;VK_LAYER_LUNARG_ObjectTracker;VK_LAYER_LUNARG_DrawState;VK_LAYER_LUNARG_ParamChecker;VK_LAYER_LUNARG_Swapchain;VK_LAYER_LUNARG_DeviceLimits;VK_LAYER_LUNARG_Image"
+$env:VK_INSTANCE_LAYERS = "VK_LAYER_LUNARG_threading;VK_LAYER_LUNARG_mem_tracker;VK_LAYER_LUNARG_object_tracker;VK_LAYER_LUNARG_draw_state;VK_LAYER_LUNARG_param_checker;VK_LAYER_LUNARG_swapchain;VK_LAYER_LUNARG_device_limits;VK_LAYER_LUNARG_image"
+$env:VK_DEVICE_LAYERS = "VK_LAYER_LUNARG_threading;VK_LAYER_LUNARG_mem_tracker;VK_LAYER_LUNARG_object_tracker;VK_LAYER_LUNARG_draw_state;VK_LAYER_LUNARG_param_checker;VK_LAYER_LUNARG_swapchain;VK_LAYER_LUNARG_device_limits;VK_LAYER_LUNARG_image"
 $env:VK_LAYER_PATH = "..\layers\$dPath"
 
 Copy-Item ..\..\tests\vk_layer_settings.txt .

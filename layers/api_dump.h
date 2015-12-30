@@ -30,7 +30,7 @@
 #include "vulkan/vk_layer.h"
 
 /*
- * This file contains static functions for the generated layer Generic
+ * This file contains static functions for the generated layer api_dump
  */
 
 #define LAYER_PROPS_ARRAY_SIZE 1
@@ -39,7 +39,7 @@ static const VkLayerProperties layerProps[LAYER_PROPS_ARRAY_SIZE] = {
         "VK_LAYER_LUNARG_api_dump",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: APIDump",
+        "layer: api_dump",
     }
 };
 
@@ -49,7 +49,7 @@ static const VkLayerProperties layerDevProps[LAYER_DEV_PROPS_ARRAY_SIZE] = {
         "VK_LAYER_LUNARG_api_dump",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: APIDump",
+        "layer: api_dump",
     }
 };
 

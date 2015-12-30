@@ -259,7 +259,7 @@ class WinDefFileSubcommand(Subcommand):
                     "vkEnumerateInstanceLayerProperties",
                     "vkEnumerateInstanceExtensionProperties"
                 ],
-                "layerMulti": [
+                "layer_multi": [
                     "multi2GetInstanceProcAddr",
                     "multi1GetDeviceProcAddr"
                 ]
@@ -271,8 +271,8 @@ class WinDefFileSubcommand(Subcommand):
             return
 
         self.library = self.argv[0]
-        if self.library == "VKLayerMulti":
-            self.exports = library_exports["layerMulti"]
+        if self.library == "VkLayer_multi":
+            self.exports = library_exports["layer_multi"]
         else:
             self.exports = library_exports[self.argv[1]]
 
@@ -317,7 +317,7 @@ class WinDefFileSubcommand(Subcommand):
         body.append("EXPORTS")
 
         for proto in self.exports:
-            if self.library != "VKLayerSwapchain" or proto != "vkEnumerateInstanceExtensionProperties" and proto != "vkEnumerateInstanceLayerProperties":
+            if self.library != "VkLayerSwapchain" or proto != "vkEnumerateInstanceExtensionProperties" and proto != "vkEnumerateInstanceLayerProperties":
                 body.append( proto)
 
         return "\n".join(body)

@@ -18,7 +18,7 @@ mkdir vktracereplay_tmp
 cd vktracereplay_tmp
 cp ../../vktrace/vkreplay .
 cp ../../vktrace/vktrace .
-cp ../../vktrace/libvktrace_layer.so .
+cp ../../vktrace/libVkLayer_vktrace_layer.so .
 cp ../../demos/cube .
 cp ../../demos/*ppm .
 cp ../../demos/*spv .

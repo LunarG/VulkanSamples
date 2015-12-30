@@ -93,8 +93,8 @@ struct instExts {
 
 static std::unordered_map<void *, struct instExts> instanceExtMap;
 static std::unordered_map<void*, layer_data *> layer_data_map;
-static device_table_map                        ObjectTracker_device_table_map;
-static instance_table_map                      ObjectTracker_instance_table_map;
+static device_table_map                        object_tracker_device_table_map;
+static instance_table_map                      object_tracker_instance_table_map;
 
 // We need additionally validate image usage using a separate map
 // of swapchain-created images
@@ -185,7 +185,7 @@ static inline const char* string_VkDebugReportObjectTypeEXT(VkDebugReportObjectT
 static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo, VkDevice device)
 {
     layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);
+    VkLayerDispatchTable *pDisp = get_dispatch_table(object_tracker_device_table_map, device);
     PFN_vkGetDeviceProcAddr gpa = pDisp->GetDeviceProcAddr;
     pDisp->CreateSwapchainKHR = (PFN_vkCreateSwapchainKHR) gpa(device, "vkCreateSwapchainKHR");
     pDisp->DestroySwapchainKHR = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
@@ -205,7 +205,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
 static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreateInfo, VkInstance instance)
 {
     uint32_t i;
-    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(ObjectTracker_instance_table_map, instance);
+    VkLayerInstanceDispatchTable *pDisp = get_dispatch_table(object_tracker_instance_table_map, instance);
     PFN_vkGetInstanceProcAddr gpa = pDisp->GetInstanceProcAddr;
     pDisp->GetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceSupportKHR");
     pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
@@ -762,7 +762,7 @@ explicit_CreateInstance(
     VkInstance                 * pInstance)
 {
 
-    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, *pInstance);
+    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, *pInstance);
     VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
@@ -786,7 +786,7 @@ explicit_GetPhysicalDeviceQueueFamilyProperties(
     uint32_t*                        pCount,
     VkQueueFamilyProperties*         pProperties)
 {
-    get_dispatch_table(ObjectTracker_instance_table_map, gpu)->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
+    get_dispatch_table(object_tracker_instance_table_map, gpu)->GetPhysicalDeviceQueueFamilyProperties(gpu, pCount, pProperties);
 
     loader_platform_thread_lock_mutex(&objLock);
     if (pProperties != NULL)
@@ -802,12 +802,10 @@ explicit_CreateDevice(
     VkDevice                 *pDevice)
 {
     loader_platform_thread_lock_mutex(&objLock);
-//    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, gpu);
-    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
+    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(object_tracker_device_table_map, *pDevice);
     VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
         layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        //// VkLayerDispatchTable *pTable = get_dispatch_table(ObjectTracker_device_table_map, *pDevice);
         layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
         my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         create_device(*pDevice, *pDevice, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT);
@@ -826,7 +824,7 @@ VkResult explicit_EnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysi
     loader_platform_thread_unlock_mutex(&objLock);
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
-    VkResult result = get_dispatch_table(ObjectTracker_instance_table_map, instance)->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
+    VkResult result = get_dispatch_table(object_tracker_instance_table_map, instance)->EnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices);
     loader_platform_thread_lock_mutex(&objLock);
     if (result == VK_SUCCESS) {
         if (pPhysicalDevices) {
@@ -850,7 +848,7 @@ explicit_GetDeviceQueue(
     validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
+    get_dispatch_table(object_tracker_device_table_map, device)->GetDeviceQueue(device, queueNodeIndex, queueIndex, pQueue);
 
     loader_platform_thread_lock_mutex(&objLock);
     addQueueInfo(queueNodeIndex, *pQueue);
@@ -875,7 +873,7 @@ explicit_MapMemory(
     if (skipCall == VK_TRUE)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->MapMemory(device, mem, offset, size, flags, ppData);
 
     return result;
 }
@@ -893,7 +891,7 @@ explicit_UnmapMemory(
     if (skipCall == VK_TRUE)
         return;
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->UnmapMemory(device, mem);
+    get_dispatch_table(object_tracker_device_table_map, device)->UnmapMemory(device, mem);
 }
 
 VkResult
@@ -917,7 +915,7 @@ explicit_QueueBindSparse(
 
     loader_platform_thread_unlock_mutex(&objLock);
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, queue)->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
     return result;
 }
 
@@ -937,7 +935,7 @@ explicit_AllocateCommandBuffers(
         return VK_ERROR_VALIDATION_FAILED_EXT;
     }
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocateCommandBuffers(
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->AllocateCommandBuffers(
         device, pAllocateInfo, pCommandBuffers);
 
     loader_platform_thread_lock_mutex(&objLock);
@@ -966,7 +964,7 @@ explicit_AllocateDescriptorSets(
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->AllocateDescriptorSets(
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->AllocateDescriptorSets(
         device, pAllocateInfo, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
@@ -990,7 +988,7 @@ explicit_FreeCommandBuffers(
     validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->FreeCommandBuffers(device,
+    get_dispatch_table(object_tracker_device_table_map, device)->FreeCommandBuffers(device,
         commandPool, commandBufferCount, pCommandBuffers);
 
     loader_platform_thread_lock_mutex(&objLock);
@@ -1023,7 +1021,7 @@ explicit_DestroySwapchainKHR(
     destroy_swapchain(device, swapchain);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
+    get_dispatch_table(object_tracker_device_table_map, device)->DestroySwapchainKHR(device, swapchain, pAllocator);
 }
 
 void
@@ -1036,7 +1034,7 @@ explicit_FreeMemory(
     validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
 
-    get_dispatch_table(ObjectTracker_device_table_map, device)->FreeMemory(device, mem, pAllocator);
+    get_dispatch_table(object_tracker_device_table_map, device)->FreeMemory(device, mem, pAllocator);
 
     loader_platform_thread_lock_mutex(&objLock);
     destroy_device_memory(device, mem);
@@ -1054,7 +1052,7 @@ explicit_FreeDescriptorSets(
     validate_descriptor_pool(device, descriptorPool);
     validate_device(device, device);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->FreeDescriptorSets(device, descriptorPool, count, pDescriptorSets);
 
     loader_platform_thread_lock_mutex(&objLock);
     for (uint32_t i=0; i<count; i++)
@@ -1092,7 +1090,7 @@ explicit_DestroyDescriptorPool(
     }
     destroy_descriptor_pool(device, descriptorPool);
     loader_platform_thread_unlock_mutex(&objLock);
-    get_dispatch_table(ObjectTracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
+    get_dispatch_table(object_tracker_device_table_map, device)->DestroyDescriptorPool(device, descriptorPool, pAllocator);
 }
 
 void
@@ -1124,7 +1122,7 @@ explicit_DestroyCommandPool(
     }
     destroy_command_pool(device, commandPool);
     loader_platform_thread_unlock_mutex(&objLock);
-    get_dispatch_table(ObjectTracker_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
+    get_dispatch_table(object_tracker_device_table_map, device)->DestroyCommandPool(device, commandPool, pAllocator);
 }
 
 VkResult
@@ -1141,7 +1139,7 @@ explicit_GetSwapchainImagesKHR(
     if (skipCall)
         return VK_ERROR_VALIDATION_FAILED_EXT;
 
-    VkResult result = get_dispatch_table(ObjectTracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
+    VkResult result = get_dispatch_table(object_tracker_device_table_map, device)->GetSwapchainImagesKHR(device, swapchain, pCount, pSwapchainImages);
 
     if (pSwapchainImages != NULL) {
         loader_platform_thread_lock_mutex(&objLock);

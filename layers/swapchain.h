@@ -40,7 +40,7 @@ static const VkLayerProperties globalLayerProps[] = {
         "VK_LAYER_LUNARG_swapchain",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: Swapchain",
+        "layer: swapchain",
     }
 };
 
@@ -49,7 +49,7 @@ static const VkLayerProperties deviceLayerProps[] = {
         "VK_LAYER_LUNARG_swapchain",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: Swapchain",
+        "layer: swapchain",
     }
 };
 

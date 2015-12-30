@@ -47,8 +47,8 @@ struct layer_data {
 };
 
 static std::unordered_map<void*, layer_data *> layer_data_map;
-static device_table_map                        Threading_device_table_map;
-static instance_table_map                      Threading_instance_table_map;
+static device_table_map                        threading_device_table_map;
+static instance_table_map                      threading_instance_table_map;
 
 static inline debug_report_data *mdd(const void* object)
 {

@@ -259,7 +259,7 @@ VkResult vkReplay::manually_replay_vkCreateInstance(packet_vkCreateInstance* pPa
             // clean up
             free(instance_extensions);
         } else {
-            const char strScreenShot[] = "VK_LAYER_LUNARG_ScreenShot";
+            const char strScreenShot[] = "VK_LAYER_LUNARG_screenshot";
             pCreateInfo = (VkInstanceCreateInfo *) pPacket->pCreateInfo;
             if (g_pReplaySettings->screenshotList != NULL) {
                 // enable screenshot layer if it is available and not already in list
@@ -330,7 +330,7 @@ VkResult vkReplay::manually_replay_vkCreateDevice(packet_vkCreateDevice* pPacket
         {
             return VK_ERROR_VALIDATION_FAILED_EXT;
         }
-        const char strScreenShot[] = "VK_LAYER_LUNARG_ScreenShot";
+        const char strScreenShot[] = "VK_LAYER_LUNARG_screenshot";
         //char *strScreenShotEnv = vktrace_get_global_var("_VK_SCREENSHOT");
 
         pCreateInfo = (VkDeviceCreateInfo *) pPacket->pCreateInfo;

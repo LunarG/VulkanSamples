@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright 2015 The Android Open Source Project
+# Copyright (C) 2015 Valve Corporation
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +22,8 @@ python ../vk-generate.py dispatch-table-ops layer > generated/vk_dispatch_table_
 python ../vk_helper.py --gen_enum_string_helper ../include/vulkan/vulkan.h --abs_out_dir generated
 python ../vk_helper.py --gen_struct_wrappers ../include/vulkan/vulkan.h --abs_out_dir generated
 
-python ../vk-layer-generate.py Generic ../include/vulkan/vulkan.h > generated/generic_layer.cpp
-python ../vk-layer-generate.py APIDump ../include/vulkan/vulkan.h > generated/api_dump.cpp
-python ../vk-layer-generate.py ObjectTracker ../include/vulkan/vulkan.h > generated/object_track.cpp
-python ../vk-layer-generate.py Threading ../include/vulkan/vulkan.h > generated/threading.cpp
+python ../vk-layer-generate.py generic ../include/vulkan/vulkan.h > generated/generic_layer.cpp
+python ../vk-layer-generate.py api_dump ../include/vulkan/vulkan.h > generated/api_dump.cpp
+python ../vk-layer-generate.py object_tracker ../include/vulkan/vulkan.h > generated/object_tracker.cpp
+python ../vk-layer-generate.py threading ../include/vulkan/vulkan.h > generated/threading.cpp
 

@@ -269,25 +269,25 @@ int main(int argc, char* argv[])
         {
             char *instEnv = vktrace_get_global_var("VK_INSTANCE_LAYERS");
             // Add ScreenShot layer if enabled
-            if (g_settings.screenshotList && (!instEnv || !strstr(instEnv, "VK_LAYER_LUNARG_ScreenShot")))
+            if (g_settings.screenshotList && (!instEnv || !strstr(instEnv, "VK_LAYER_LUNARG_screenshot")))
             {
                 if (!instEnv || strlen(instEnv)  == 0)
-                    vktrace_set_global_var("VK_INSTANCE_LAYERS", "VK_LAYER_LUNARG_ScreenShot");
+                    vktrace_set_global_var("VK_INSTANCE_LAYERS", "VK_LAYER_LUNARG_screenshot");
                 else
                 {
-                    char *newEnv = vktrace_copy_and_append(instEnv, VKTRACE_LIST_SEPARATOR, "VK_LAYER_LUNARG_ScreenShot");
+                    char *newEnv = vktrace_copy_and_append(instEnv, VKTRACE_LIST_SEPARATOR, "VK_LAYER_LUNARG_screenshot");
                     vktrace_set_global_var("VK_INSTANCE_LAYERS", newEnv);
                 }
                 instEnv = vktrace_get_global_var("VK_INSTANCE_LAYERS");
             }
             char *devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
-            if (g_settings.screenshotList && (!devEnv || !strstr(devEnv, "VK_LAYER_LUNARG_ScreenShot")))
+            if (g_settings.screenshotList && (!devEnv || !strstr(devEnv, "VK_LAYER_LUNARG_screenshot")))
             {
                 if (!devEnv || strlen(devEnv) == 0)
-                    vktrace_set_global_var("VK_DEVICE_LAYERS", "VK_LAYER_LUNARG_ScreenShot");
+                    vktrace_set_global_var("VK_DEVICE_LAYERS", "VK_LAYER_LUNARG_screenshot");
                 else
                 {
-                    char *newEnv = vktrace_copy_and_append(devEnv, VKTRACE_LIST_SEPARATOR, "VK_LAYER_LUNARG_ScreenShot");
+                    char *newEnv = vktrace_copy_and_append(devEnv, VKTRACE_LIST_SEPARATOR, "VK_LAYER_LUNARG_screenshot");
                     vktrace_set_global_var("VK_DEVICE_LAYERS", newEnv);
                 }
                 devEnv = vktrace_get_global_var("VK_DEVICE_LAYERS");
@@ -295,20 +295,20 @@ int main(int argc, char* argv[])
             // Add vktrace_layer enable env var if needed
             if (!instEnv || strlen(instEnv) == 0)
             {
-                vktrace_set_global_var("VK_INSTANCE_LAYERS", "VK_LAYER_LUNARG_Vktrace");
+                vktrace_set_global_var("VK_INSTANCE_LAYERS", "VK_LAYER_LUNARG_vktrace");
             }
-            else if (instEnv != strstr(instEnv, "VK_LAYER_LUNARG_Vktrace"))
+            else if (instEnv != strstr(instEnv, "VK_LAYER_LUNARG_vktrace"))
             {
-                char *newEnv = vktrace_copy_and_append("VK_LAYER_LUNARG_Vktrace", VKTRACE_LIST_SEPARATOR, instEnv);
+                char *newEnv = vktrace_copy_and_append("VK_LAYER_LUNARG_vktrace", VKTRACE_LIST_SEPARATOR, instEnv);
                 vktrace_set_global_var("VK_INSTANCE_LAYERS", newEnv);
             }
             if (!devEnv || strlen(devEnv) == 0)
             {
-                vktrace_set_global_var("VK_DEVICE_LAYERS", "VK_LAYER_LUNARG_Vktrace");
+                vktrace_set_global_var("VK_DEVICE_LAYERS", "VK_LAYER_LUNARG_vktrace");
             }
-            else if (devEnv != strstr(devEnv, "VK_LAYER_LUNARG_Vktrace"))
+            else if (devEnv != strstr(devEnv, "VK_LAYER_LUNARG_vktrace"))
             {
-                char *newEnv = vktrace_copy_and_append("VK_LAYER_LUNARG_Vktrace", VKTRACE_LIST_SEPARATOR, devEnv);
+                char *newEnv = vktrace_copy_and_append("VK_LAYER_LUNARG_vktrace", VKTRACE_LIST_SEPARATOR, devEnv);
                 vktrace_set_global_var("VK_DEVICE_LAYERS", newEnv);
             }
             // call CreateProcess to launch the application

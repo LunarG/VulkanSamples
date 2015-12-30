@@ -1,11 +1,11 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_Generic",
+        "name": "VK_LAYER_LUNARG_screenshot",
         "type": "GLOBAL",
-        "library_path": "./libVKLayerGeneric.so",
+        "library_path": ".\\VkLayer_screenshot.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
-        "description": "LunarG Sample Layer"
+        "description": "LunarG image capture layer"
     }
 }

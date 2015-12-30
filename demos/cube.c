@@ -2130,25 +2130,25 @@ static void demo_init_vk(struct demo *demo)
     uint32_t enabled_layer_count = 0;
 
     char *instance_validation_layers[] = {
-        "VK_LAYER_LUNARG_Threading",
-        "VK_LAYER_LUNARG_MemTracker",
-        "VK_LAYER_LUNARG_ObjectTracker",
-        "VK_LAYER_LUNARG_DrawState",
-        "VK_LAYER_LUNARG_ParamChecker",
-        "VK_LAYER_LUNARG_Swapchain",
-        "VK_LAYER_LUNARG_DeviceLimits",
-        "VK_LAYER_LUNARG_Image",
+        "VK_LAYER_LUNARG_threading",
+        "VK_LAYER_LUNARG_mem_tracker",
+        "VK_LAYER_LUNARG_object_tracker",
+        "VK_LAYER_LUNARG_draw_state",
+        "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_LUNARG_device_limits",
+        "VK_LAYER_LUNARG_image",
     };
 
     char *device_validation_layers[] = {
-        "VK_LAYER_LUNARG_Threading",
-        "VK_LAYER_LUNARG_MemTracker",
-        "VK_LAYER_LUNARG_ObjectTracker",
-        "VK_LAYER_LUNARG_DrawState",
-        "VK_LAYER_LUNARG_ParamChecker",
-        "VK_LAYER_LUNARG_Swapchain",
-        "VK_LAYER_LUNARG_DeviceLimits",
-        "VK_LAYER_LUNARG_Image",
+        "VK_LAYER_LUNARG_threading",
+        "VK_LAYER_LUNARG_mem_tracker",
+        "VK_LAYER_LUNARG_object_tracker",
+        "VK_LAYER_LUNARG_draw_state",
+        "VK_LAYER_LUNARG_param_checker",
+        "VK_LAYER_LUNARG_swapchain",
+        "VK_LAYER_LUNARG_device_limits",
+        "VK_LAYER_LUNARG_image",
     };
 
     /* Look for validation layers */

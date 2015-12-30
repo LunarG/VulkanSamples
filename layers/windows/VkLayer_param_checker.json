@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_DeviceLimits",
+        "name": "VK_LAYER_LUNARG_param_checker",
         "type": "GLOBAL",
-        "library_path": ".\\VKLayerDeviceLimits.dll",
+        "library_path": ".\\VkLayer_param_checker.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

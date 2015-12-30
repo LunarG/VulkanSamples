@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_ObjectTracker",
+        "name": "VK_LAYER_LUNARG_device_limits",
         "type": "GLOBAL",
-        "library_path": "./libVKLayerObjectTracker.so",
+        "library_path": "./libVkLayer_device_limits.so",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

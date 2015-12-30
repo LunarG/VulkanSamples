@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_Threading",
+        "name": "VK_LAYER_LUNARG_mem_tracker",
         "type": "GLOBAL",
-        "library_path": "./libVKLayerThreading.so",
+        "library_path": "./libVkLayer_mem_tracker.so",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

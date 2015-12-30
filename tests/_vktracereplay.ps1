@@ -26,10 +26,10 @@ cp ..\..\demos\$dPath\cube.exe .
 cp ..\..\demos\*.ppm .
 cp ..\..\demos\*.spv .
 cp ..\..\loader\$dPath\vulkan-0.dll .
-cp ..\..\layers\$dPath\VKLayerScreenShot.dll .
+cp ..\..\layers\$dPath\VkLayerScreenShot.dll .
 cp ..\..\layers\$dPath\screenshot.json .
-cp ..\..\layers\$dPath\vktrace_layer.dll .
-cp ..\..\layers\$dPath\vktrace_layer.json .
+cp ..\..\layers\$dPath\VkLayer_vktrace_layer.dll .
+cp ..\..\layers\$dPath\VkLayer_vktrace_layer.json .
 
 # Change PATH to the temp directory
 $oldpath = $Env:PATH

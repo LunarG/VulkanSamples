@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_MemTracker",
+        "name": "VK_LAYER_LUNARG_object_tracker",
         "type": "GLOBAL",
-        "library_path": "./libVKLayerMemTracker.so",
+        "library_path": ".\\VkLayer_object_tracker.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

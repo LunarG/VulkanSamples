@@ -1,9 +1,9 @@
 {
     "file_format_version" : "1.0.0",
     "layer" : {
-        "name": "VK_LAYER_LUNARG_Threading",
+        "name": "VK_LAYER_LUNARG_swapchain",
         "type": "GLOBAL",
-        "library_path": ".\\VKLayerThreading.dll",
+        "library_path": ".\\VkLayer_swapchain.dll",
         "api_version": "0.210.0",
         "implementation_version": "1",
         "description": "LunarG Validation Layer",

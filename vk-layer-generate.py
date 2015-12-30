@@ -234,7 +234,7 @@ class Subcommand(object):
         r_body.append('        VkDebugReportCallbackEXT*                    pCallback)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
             r_body.append('    VkResult result = pInstanceTable->CreateDebugReportCallbackEXT(instance, pCreateInfo, pAllocator, pCallback);')
             r_body.append('    if (VK_SUCCESS == result) {')
@@ -261,7 +261,7 @@ class Subcommand(object):
         r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT msgCallback, const VkAllocationCallbacks *pAllocator)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
         else:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
@@ -277,7 +277,7 @@ class Subcommand(object):
         r_body.append('VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDebugReportMessageEXT(VkInstance instance, VkDebugReportFlagsEXT    flags, VkDebugReportObjectTypeEXT objType, uint64_t object, size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg)')
         r_body.append('{')
         # Switch to this code section for the new per-instance storage and debug callbacks
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(%s_instance_table_map, instance);' % self.layer_name )
         else:
             r_body.append('    VkLayerInstanceDispatchTable *pInstanceTable = instance_dispatch_table(instance);')
@@ -285,13 +285,13 @@ class Subcommand(object):
         r_body.append('}')
         return "\n".join(r_body)
 
-    def _gen_layer_get_global_extension_props(self, layer="Generic"):
+    def _gen_layer_get_global_extension_props(self, layer="generic"):
         ggep_body = []
         # generated layers do not provide any global extensions
         ggep_body.append('%s' % self.lineinfo.get())
 
         ggep_body.append('')
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
             ggep_body.append('static const VkExtensionProperties instance_extensions[] = {')
             ggep_body.append('    {')
             ggep_body.append('        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,')
@@ -300,16 +300,16 @@ class Subcommand(object):
             ggep_body.append('};')
         ggep_body.append('VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceExtensionProperties(const char *pLayerName, uint32_t *pCount,  VkExtensionProperties* pProperties)')
         ggep_body.append('{')
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
           ggep_body.append('    return util_GetExtensionProperties(1, instance_extensions, pCount, pProperties);')
         else:
           ggep_body.append('    return util_GetExtensionProperties(0, NULL, pCount, pProperties);')
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
-    def _gen_layer_get_global_layer_props(self, layer="Generic"):
+    def _gen_layer_get_global_layer_props(self, layer="generic"):
         ggep_body = []
-        if layer == 'Generic':
+        if layer == 'generic':
             # Do nothing, extension definition part of generic.h
             ggep_body.append('%s' % self.lineinfo.get())
         else:
@@ -333,9 +333,9 @@ class Subcommand(object):
         ggep_body.append('}')
         return "\n".join(ggep_body)
 
-    def _gen_layer_get_physical_device_layer_props(self, layer="Generic"):
+    def _gen_layer_get_physical_device_layer_props(self, layer="generic"):
         gpdlp_body = []
-        if layer == 'Generic':
+        if layer == 'generic':
             # Do nothing, extension definition part of generic.h
             gpdlp_body.append('%s' % self.lineinfo.get())
         else:
@@ -446,7 +446,7 @@ class Subcommand(object):
 #
 # New style of GPA Functions for the new layer_data/layer_logging changes
 #
-        if self.layer_name == 'ObjectTracker' or self.layer_name == 'Threading':
+        if self.layer_name == 'object_tracker' or self.layer_name == 'threading':
             func_body.append("VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkDevice device, const char* funcName)\n"
                              "{\n"
                              "    PFN_vkVoidFunction addr;\n"
@@ -536,7 +536,7 @@ class Subcommand(object):
                              "    if (device == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n")
-            if self.layer_name == 'Generic':
+            if self.layer_name == 'generic':
                 func_body.append("\n"
                              "    /* loader uses this to force layer initialization; device object is wrapped */\n"
                              "    if (!strcmp(\"vkGetDeviceProcAddr\", funcName)) {\n"
@@ -585,7 +585,7 @@ class Subcommand(object):
                              "    if (instance == VK_NULL_HANDLE) {\n"
                              "        return NULL;\n"
                              "    }\n")
-            if self.layer_name == 'Generic':
+            if self.layer_name == 'generic':
                 func_body.append("\n"
                              "    /* loader uses this to force layer initialization; instance object is wrapped */\n"
                              "    if (!strcmp(\"vkGetInstanceProcAddr\", funcName)) {\n"
@@ -642,7 +642,7 @@ class Subcommand(object):
     def _generate_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static void init%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
+        func_body.append('static void init_%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
                          '{\n' % self.layer_name)
         if init_opts:
             func_body.append('%s' % self.lineinfo.get())
@@ -685,7 +685,7 @@ class Subcommand(object):
     def _generate_new_layer_initialization(self, init_opts=False, prefix='vk', lockname=None, condname=None):
         func_body = ["#include \"vk_dispatch_table_helper.h\""]
         func_body.append('%s' % self.lineinfo.get())
-        func_body.append('static void init%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
+        func_body.append('static void init_%s(layer_data *my_data, const VkAllocationCallbacks *pAllocator)\n'
                          '{\n' % self.layer_name)
         if init_opts:
             func_body.append('%s' % self.lineinfo.get())
@@ -783,14 +783,14 @@ class GenericLayerSubcommand(Subcommand):
                      '    layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);\n'
                      '    sprintf(str, "At start of Generic layered %s\\n");\n'
                      '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,'
-                     '            (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                     '            (uint64_t)physicalDevice, 0, 0, (char *) "generic", "%%s", (char *) str);\n'
                      '    %sdevice_dispatch_table(*pDevice)->%s;\n'
                      '    if (result == VK_SUCCESS) {\n'
                      '        my_data->report_data = layer_debug_report_create_device(my_data->report_data, *pDevice);\n'
                      '        createDeviceRegisterExtensions(pCreateInfo, *pDevice);\n'
                      '    }\n'
-                     '    sprintf(str, "Completed Generic layered %s\\n");\n'
-                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, (uint64_t)physicalDevice, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                     '    sprintf(str, "Completed generic layered %s\\n");\n'
+                     '    log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT, (uint64_t)physicalDevice, 0, 0, (char *) "generic", "%%s", (char *) str);\n'
                      '    %s'
                      '}' % (qual, decl, proto.name, ret_val, proto.c_call(), proto.name, stmt))
         elif proto.name == "DestroyDevice":
@@ -835,9 +835,9 @@ class GenericLayerSubcommand(Subcommand):
                          '                                   *pInstance,\n'
                          '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        initGeneric(my_data, pAllocator);\n'
-                         '        sprintf(str, "Completed Generic layered %s\\n");\n'
-                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, (uint64_t)*pInstance, 0, 0, (char *) "Generic", "%%s", (char *) str);\n'
+                         '        init_generic(my_data, pAllocator);\n'
+                         '        sprintf(str, "Completed generic layered %s\\n");\n'
+                         '        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, (uint64_t)*pInstance, 0, 0, (char *) "generic", "%%s", (char *) str);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl, ret_val, proto.c_call(), proto.name))
@@ -862,7 +862,7 @@ class GenericLayerSubcommand(Subcommand):
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        self.layer_name = "Generic"
+        self.layer_name = "generic"
         instance_extensions=[('msg_callback_get_proc_addr', []),
                      ('wsi_enabled',
                      ['vkGetPhysicalDeviceSurfaceSupportKHR',
@@ -897,7 +897,7 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('#include "vk_layer_table.h"')
         header_txt.append('#include "vk_layer_extension_utils.h"')
         header_txt.append('#include <unordered_map>')
-        header_txt.append('#include "apidump.h"')
+        header_txt.append('#include "api_dump.h"')
         header_txt.append('')
         header_txt.append('static std::ofstream fileStream;')
         header_txt.append('static std::string fileName = "vk_apidump.txt";')
@@ -909,12 +909,12 @@ class APIDumpSubcommand(Subcommand):
         header_txt.append('        if (fileName == "stdout")')
         header_txt.append('        {')
         header_txt.append('            outputStream = &std::cout;')
-        header_txt.append('            (*outputStream) << endl << "APIDump output filename \'stdout\' specified. Writing to STDOUT instead of a file." << endl << endl;')
+        header_txt.append('            (*outputStream) << endl << "api_dump output filename \'stdout\' specified. Writing to STDOUT instead of a file." << endl << endl;')
         header_txt.append('        } else {')
         header_txt.append('            fileStream.open(fileName);')
         header_txt.append('            if ((fileStream.rdstate() & fileStream.failbit) != 0) {')
         header_txt.append('                outputStream = &std::cout;')
-        header_txt.append('                (*outputStream) << endl << "APIDump ERROR: Bad output filename specified: " << fileName << ". Writing to STDOUT instead" << endl << endl;')
+        header_txt.append('                (*outputStream) << endl << "api_dump ERROR: Bad output filename specified: " << fileName << ". Writing to STDOUT instead" << endl << endl;')
         header_txt.append('            }')
         header_txt.append('            else')
         header_txt.append('                outputStream = &fileStream;')
@@ -1281,7 +1281,7 @@ class APIDumpSubcommand(Subcommand):
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        self.layer_name = "APIDump"
+        self.layer_name = "api_dump"
         if sys.platform.startswith('win32'):
             instance_extensions=[('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
@@ -1335,8 +1335,8 @@ class ObjectTrackerSubcommand(Subcommand):
         header_txt.append('#include "vk_layer_data.h"')
         header_txt.append('#include "vk_layer_logging.h"')
         header_txt.append('')
-#       NOTE:  The non-autoGenerated code is in the object_track.h header file
-        header_txt.append('#include "object_track.h"')
+#       NOTE:  The non-autoGenerated code is in the object_tracker.h header file
+        header_txt.append('#include "object_tracker.h"')
         header_txt.append('')
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         header_txt.append('')
@@ -1532,7 +1532,7 @@ class ObjectTrackerSubcommand(Subcommand):
             gedi_txt.append('    %sMap.clear();' % (o))
             gedi_txt.append('')
         gedi_txt.append('    dispatch_key key = get_dispatch_key(instance);')
-        gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(ObjectTracker_instance_table_map, instance);')
+        gedi_txt.append('    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(object_tracker_instance_table_map, instance);')
         gedi_txt.append('    pInstanceTable->DestroyInstance(instance, pAllocator);')
         gedi_txt.append('')
         gedi_txt.append('    // Clean up logging callback, if any')
@@ -1547,8 +1547,8 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('    instanceExtMap.erase(pInstanceTable);')
         gedi_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
         # The loader holds a mutex that protects this from other threads
-        gedi_txt.append('    ObjectTracker_instance_table_map.erase(key);')
-        gedi_txt.append('    if (ObjectTracker_instance_table_map.empty()) {')
+        gedi_txt.append('    object_tracker_instance_table_map.erase(key);')
+        gedi_txt.append('    if (object_tracker_instance_table_map.empty()) {')
         gedi_txt.append('        // Release mutex when destroying last instance.')
         gedi_txt.append('        loader_platform_thread_delete_mutex(&objLock);')
         gedi_txt.append('        objLockInitialized = 0;')
@@ -1587,10 +1587,10 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('    loader_platform_thread_unlock_mutex(&objLock);')
         gedd_txt.append('')
         gedd_txt.append('    dispatch_key key = get_dispatch_key(device);')
-        gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(ObjectTracker_device_table_map, device);')
+        gedd_txt.append('    VkLayerDispatchTable *pDisp = get_dispatch_table(object_tracker_device_table_map, device);')
         gedd_txt.append('    pDisp->DestroyDevice(device, pAllocator);')
-        gedd_txt.append('    ObjectTracker_device_table_map.erase(key);')
-        gedd_txt.append('    assert(ObjectTracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
+        gedd_txt.append('    object_tracker_device_table_map.erase(key);')
+        gedd_txt.append('    assert(object_tracker_device_table_map.size() == 0 && "Should not have any instance mappings hanging around");')
         gedd_txt.append('')
         gedd_txt.append('}')
         gedd_txt.append('')
@@ -1832,7 +1832,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '{\n'
                      '%s'
                      '%s'
-                     '    %sget_dispatch_table(ObjectTracker_%s_table_map, %s)->%s;\n'
+                     '    %sget_dispatch_table(object_tracker_%s_table_map, %s)->%s;\n'
                      '%s'
                      '%s'
                      '}' % (qual, decl, using_line, destroy_line, ret_val, table_type, dispatch_param, proto.c_call(), create_line, stmt))
@@ -1841,7 +1841,7 @@ class ObjectTrackerSubcommand(Subcommand):
         return "\n\n".join(funcs)
 
     def generate_body(self):
-        self.layer_name = "ObjectTracker"
+        self.layer_name = "object_tracker"
         extensions=[('wsi_enabled',
                      ['vkCreateSwapchainKHR',
                       'vkDestroySwapchainKHR', 'vkGetSwapchainImagesKHR',
@@ -2028,7 +2028,7 @@ class ThreadingSubcommand(Subcommand):
                      '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
                      '        useVkDeviceMemory((const void *) %s, pMemoryRanges[i].memory);\n' % proto.params[0].name +
                      '    }\n'
-                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
+                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                      '    %s pDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
                      '    for (uint32_t i=0; i<memoryRangeCount; i++) {\n'
                      '        finishUsingVkDeviceMemory(pMemoryRanges[i].memory);\n'
@@ -2047,7 +2047,7 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s' % self.lineinfo.get())
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'
-                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_device_table_map, (void *) *pDevice);\n'
+                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_device_table_map, (void *) *pDevice);\n'
                      '    VkResult result = pDeviceTable->%s;\n' % (proto.c_call()) +
                      '    if (result == VK_SUCCESS) {\n'
                      '        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(%s), layer_data_map);\n' % proto.params[0].name +
@@ -2066,7 +2066,7 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n' % (qual, decl) +
                      '{\n'
                      '    use%s((const void *) %s, %s);\n' % (proto.params[0].ty, proto.params[0].name, proto.params[0].name) +
-                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
+                     '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                      '    %spDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
                      '    finishUsing%s(%s);\n' % (proto.params[0].ty, proto.params[0].name) +
                      '%s' % stmt +
@@ -2084,16 +2084,16 @@ class ThreadingSubcommand(Subcommand):
             funcs.append('%s%s\n' % (qual, decl) +
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(device);\n'
-                         '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
+                         '    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_%s_table_map, %s);\n' % (table, proto.params[0].name) +
                          '    %spDeviceTable->%s;\n' % (ret_val, proto.c_call()) +
-                         '    Threading_device_table_map.erase(key);\n'
+                         '    threading_device_table_map.erase(key);\n'
                          '}\n')
             return "\n".join(funcs);
         elif proto.name == "DestroyInstance":
             funcs.append('%s%s\n' % (qual, decl) +
                          '{\n'
                          '    dispatch_key key = get_dispatch_key(instance);\n'
-                         '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(Threading_instance_table_map, %s);\n' % proto.params[0].name +
+                         '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(threading_instance_table_map, %s);\n' % proto.params[0].name +
                          '    %spInstanceTable->%s;\n' % (ret_val, proto.c_call()) +
                          '    destroy_instance_dispatch_table(key);\n'
                          '\n'
@@ -2106,13 +2106,13 @@ class ThreadingSubcommand(Subcommand):
                          '    layer_debug_report_destroy_instance(my_data->report_data);\n'
                          '    layer_data_map.erase(pInstanceTable);\n'
                          '\n'
-                         '    Threading_instance_table_map.erase(key);\n'
+                         '    threading_instance_table_map.erase(key);\n'
                          '}\n')
             return "\n".join(funcs);
         elif proto.name == "CreateInstance":
             funcs.append('%s%s\n'
                          '{\n'
-                         '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(Threading_instance_table_map, *pInstance);\n'
+                         '    VkLayerInstanceDispatchTable *pInstanceTable = get_dispatch_table(threading_instance_table_map, *pInstance);\n'
                          '    VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);\n'
                          '\n'
                          '    if (result == VK_SUCCESS) {\n'
@@ -2122,7 +2122,7 @@ class ThreadingSubcommand(Subcommand):
                          '                                   *pInstance,\n'
                          '                                   pCreateInfo->enabledExtensionNameCount,\n'
                          '                                   pCreateInfo->ppEnabledExtensionNames);\n'
-                         '        initThreading(my_data, pAllocator);\n'
+                         '        init_threading(my_data, pAllocator);\n'
                          '    }\n'
                          '    return result;\n'
                          '}\n' % (qual, decl))
@@ -2135,7 +2135,7 @@ class ThreadingSubcommand(Subcommand):
         funcs.append('{')
         for param in checked_params:
             funcs.append('    use%s((const void *) %s, %s);' % (param.ty, proto.params[0].name, param.name))
-        funcs.append('    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(Threading_%s_table_map, %s);' % (table, proto.params[0].name));
+        funcs.append('    VkLayerDispatchTable *pDeviceTable = get_dispatch_table(threading_%s_table_map, %s);' % (table, proto.params[0].name));
         funcs.append('    %spDeviceTable->%s;' % (ret_val, proto.c_call()))
         for param in checked_params:
             funcs.append('    finishUsing%s(%s);' % (param.ty, param.name))
@@ -2144,7 +2144,7 @@ class ThreadingSubcommand(Subcommand):
         return "\n".join(funcs)
 
     def generate_body(self):
-        self.layer_name = "Threading"
+        self.layer_name = "threading"
         body = [self._generate_new_layer_initialization(True, lockname='threading', condname='threading'),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_layer_gpa_function(extensions=[],
@@ -2157,10 +2157,10 @@ class ThreadingSubcommand(Subcommand):
 def main():
     subcommands = {
             "layer-funcs" : LayerFuncsSubcommand,
-            "Generic" : GenericLayerSubcommand,
-            "APIDump" : APIDumpSubcommand,
-            "ObjectTracker" : ObjectTrackerSubcommand,
-            "Threading" : ThreadingSubcommand,
+            "generic" : GenericLayerSubcommand,
+            "api_dump" : APIDumpSubcommand,
+            "object_tracker" : ObjectTrackerSubcommand,
+            "threading" : ThreadingSubcommand,
     }
 
     if len(sys.argv) < 3 or sys.argv[1] not in subcommands or not os.path.exists(sys.argv[2]):

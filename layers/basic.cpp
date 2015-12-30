@@ -34,10 +34,10 @@
 
 static const VkLayerProperties globalLayerProps[] = {
     {
-        "Basic",
+        "basic",
         VK_API_VERSION,                 // specVersion
         VK_MAKE_VERSION(0, 1, 0),       // implementationVersion
-        "layer: Basic",
+        "layer: basic",
     }
 };
 
@@ -54,7 +54,7 @@ static const VkLayerProperties basic_physicaldevice_layers[] = {
         "VK_LAYER_LUNARG_basic",
         VK_API_VERSION,
         VK_MAKE_VERSION(0, 1, 0),
-        "Sample layer: Basic, implements vkLayerExtension1",
+        "Sample layer: basic, implements vkLayerExtension1",
     }
 };
 
