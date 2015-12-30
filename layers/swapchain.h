@@ -78,12 +78,15 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_CREATE_SWAP_BAD_PRESENT_MODE,     // Called vkCreateSwapchainKHR() with a non-supported presentMode
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,     // Called vkCreateSwapchainKHR() with a non-supported imageSharingMode
     SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,   // Called vkCreateSwapchainKHR() with bad values when imageSharingMode is VK_SHARING_MODE_CONCURRENT
+    SWAPCHAIN_CREATE_SWAP_DIFF_SURFACE,         // Called vkCreateSwapchainKHR() with pCreateInfo->oldSwapchain that has a different surface than pCreateInfo->surface
     SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,         // Called vkDestroySwapchainKHR() with a different VkDevice than vkCreateSwapchainKHR()
     SWAPCHAIN_APP_OWNS_TOO_MANY_IMAGES,         // vkAcquireNextImageKHR() asked for more images than are available
     SWAPCHAIN_INDEX_TOO_LARGE,                  // Index is too large for swapchain
     SWAPCHAIN_INDEX_NOT_IN_USE,                 // vkQueuePresentKHR() given index that is not owned by app
     SWAPCHAIN_BAD_BOOL,                         // VkBool32 that doesn't have value of VK_TRUE or VK_FALSE (e.g. is a non-zero form of true)
     SWAPCHAIN_INVALID_COUNT,                    // Second time a query called, the pCount value didn't match first time
+    SWAPCHAIN_WRONG_STYPE,                      // The sType for a struct has the wrong value
+    SWAPCHAIN_WRONG_NEXT,                       // The pNext for a struct is not NULL
 } SWAPCHAIN_ERROR;
 
 
@@ -108,6 +111,21 @@ typedef enum _SWAPCHAIN_ERROR
                 "%s() called with non-NULL %s, and with %s not matching " \
                 "the value (%d) that was returned when %s was NULL.",   \
                 __FUNCTION__, (obj2), (obj), (val), (obj2))             \
+    : VK_FALSE
+#define LOG_ERROR_WRONG_STYPE(objType, type, obj, val)          \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_WRONG_STYPE, LAYER_NAME, \
+                "%s() called with the wrong value for %s->sType "       \
+                "(expected %s).",                                       \
+                __FUNCTION__, (obj), (val))                             \
+    : VK_FALSE
+#define LOG_ERROR_WRONG_NEXT(objType, type, obj)          \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_WRONG_NEXT, LAYER_NAME, \
+                "%s() called with non-NULL value for %s->pNext.",       \
+                __FUNCTION__, (obj))                                    \
     : VK_FALSE
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \
     (my_data) ?                                                         \
@@ -240,6 +258,9 @@ struct _SwpSwapchain {
 
     // Corresponding VkDevice (and info) to this VkSwapchainKHR:
     SwpDevice *pDevice;
+
+    // Corresponding VkSurfaceKHR to this VkSwapchainKHR:
+    VkSurfaceKHR surface;
 
     // When vkGetSwapchainImagesKHR is called, the VkImage's are
     // remembered:
