@@ -1052,8 +1052,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
             // Record the result of this preliminary query:
             pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
         }
-        if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats &&
-            pSurfaceFormatCount && (*pSurfaceFormatCount > 0)) {
+        else if ((result == VK_SUCCESS) && pPhysicalDevice && pSurfaceFormats &&
+                 pSurfaceFormatCount) {
             // Compare the preliminary value of *pSurfaceFormatCount with the
             // value this time:
             if (*pSurfaceFormatCount != pPhysicalDevice->surfaceFormatCount) {
@@ -1063,16 +1063,18 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
                                         "pSurfaceFormats",
                                         pPhysicalDevice->surfaceFormatCount);
             }
-            // Record the result of this query:
-            pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
-            pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)
-                malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
-            if (pPhysicalDevice->pSurfaceFormats) {
-                for (uint32_t i = 0 ; i < *pSurfaceFormatCount ; i++) {
-                    pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
+            else if (*pSurfaceFormatCount > 0) {
+                // Record the result of this query:
+                pPhysicalDevice->surfaceFormatCount = *pSurfaceFormatCount;
+                pPhysicalDevice->pSurfaceFormats = (VkSurfaceFormatKHR *)
+                    malloc(*pSurfaceFormatCount * sizeof(VkSurfaceFormatKHR));
+                if (pPhysicalDevice->pSurfaceFormats) {
+                    for (uint32_t i = 0 ; i < *pSurfaceFormatCount ; i++) {
+                        pPhysicalDevice->pSurfaceFormats[i] = pSurfaceFormats[i];
+                    }
+                } else {
+                    pPhysicalDevice->surfaceFormatCount = 0;
                 }
-            } else {
-                pPhysicalDevice->surfaceFormatCount = 0;
             }
         }
 
@@ -1123,8 +1125,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
             // Record the result of this preliminary query:
             pPhysicalDevice->presentModeCount = *pPresentModeCount;
         }
-        if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes &&
-            pPresentModeCount && (*pPresentModeCount > 0)) {
+        else if ((result == VK_SUCCESS) && pPhysicalDevice && pPresentModes &&
+                 pPresentModeCount) {
             // Compare the preliminary value of *pPresentModeCount with the
             // value this time:
             if (*pPresentModeCount != pPhysicalDevice->presentModeCount) {
@@ -1134,16 +1136,18 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                                         "pPresentModes",
                                         pPhysicalDevice->presentModeCount);
             }
-            // Record the result of this query:
-            pPhysicalDevice->presentModeCount = *pPresentModeCount;
-            pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)
-                malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
-            if (pPhysicalDevice->pSurfaceFormats) {
-                for (uint32_t i = 0 ; i < *pPresentModeCount ; i++) {
-                    pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
+            else if (*pPresentModeCount > 0) {
+                // Record the result of this query:
+                pPhysicalDevice->presentModeCount = *pPresentModeCount;
+                pPhysicalDevice->pPresentModes = (VkPresentModeKHR *)
+                    malloc(*pPresentModeCount * sizeof(VkPresentModeKHR));
+                if (pPhysicalDevice->pSurfaceFormats) {
+                    for (uint32_t i = 0 ; i < *pPresentModeCount ; i++) {
+                        pPhysicalDevice->pPresentModes[i] = pPresentModes[i];
+                    }
+                } else {
+                    pPhysicalDevice->presentModeCount = 0;
                 }
-            } else {
-                pPhysicalDevice->presentModeCount = 0;
             }
         }
 
@@ -1611,8 +1615,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
             // Record the result of this preliminary query:
             pSwapchain->imageCount = *pSwapchainImageCount;
         }
-        if ((result == VK_SUCCESS) && pSwapchain && pSwapchainImages &&
-            pSwapchainImageCount && (*pSwapchainImageCount > 0)) {
+        else if ((result == VK_SUCCESS) && pSwapchain && pSwapchainImages &&
+                 pSwapchainImageCount) {
             // Compare the preliminary value of *pSwapchainImageCount with the
             // value this time:
             if (*pSwapchainImageCount != pSwapchain->imageCount) {
@@ -1622,12 +1626,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
                                         "pSwapchainImages",
                                         pSwapchain->imageCount);
             }
-            // Record the images and their state:
-            pSwapchain->imageCount = *pSwapchainImageCount;
-            for (uint32_t i = 0 ; i < *pSwapchainImageCount ; i++) {
-                pSwapchain->images[i].image = pSwapchainImages[i];
-                pSwapchain->images[i].pSwapchain = pSwapchain;
-                pSwapchain->images[i].ownedByApp = false;
+            else if (*pSwapchainImageCount > 0) {
+                // Record the images and their state:
+                pSwapchain->imageCount = *pSwapchainImageCount;
+                for (uint32_t i = 0 ; i < *pSwapchainImageCount ; i++) {
+                    pSwapchain->images[i].image = pSwapchainImages[i];
+                    pSwapchain->images[i].pSwapchain = pSwapchain;
+                    pSwapchain->images[i].ownedByApp = false;
+                }
             }
         }
 
