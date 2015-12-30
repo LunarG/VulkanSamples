@@ -340,16 +340,20 @@ This layer is a work in progress. VK_LAYER_LUNARG_swapchain layer is intended to
 | vkCreateSwapchainKHR(pCreateInfo->imageExtent) | Validates vkCreateSwapchainKHR(pCreateInfo->imageExtent) when window has no fixed size | CREATE_SWAP_OUT_OF_BOUNDS_EXTENTS | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageExtent) | Validates vkCreateSwapchainKHR(pCreateInfo->imageExtent) when window has a fixed size | CREATE_SWAP_EXTENTS_NO_MATCH_WIN | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->preTransform) | Validates vkCreateSwapchainKHR(pCreateInfo->preTransform) | CREATE_SWAP_BAD_PRE_TRANSFORM | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->compositeAlpha) | Validates vkCreateSwapchainKHR(pCreateInfo->compositeAlpha) | CREATE_SWAP_BAD_COMPOSITE_ALPHA | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageArraySize) | Validates vkCreateSwapchainKHR(pCreateInfo->imageArraySize) | CREATE_SWAP_BAD_IMG_ARRAY_SIZE | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageUsageFlags) | Validates vkCreateSwapchainKHR(pCreateInfo->imageUsageFlags) | CREATE_SWAP_BAD_IMG_USAGE_FLAGS | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageColorSpace) | Validates vkCreateSwapchainKHR(pCreateInfo->imageColorSpace) | CREATE_SWAP_BAD_IMG_COLOR_SPACE | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageFormat) | Validates vkCreateSwapchainKHR(pCreateInfo->imageFormat) | CREATE_SWAP_BAD_IMG_FORMAT | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->imageFormat and pCreateInfo->imageColorSpace) | Validates vkCreateSwapchainKHR(pCreateInfo->imageFormat and pCreateInfo->imageColorSpace) | CREATE_SWAP_BAD_IMG_FMT_CLR_SP | vkCreateSwapchainKHR | NA | None |
 | vkCreateSwapchainKHR(pCreateInfo->presentMode) | Validates vkCreateSwapchainKHR(pCreateInfo->presentMode) | CREATE_SWAP_BAD_PRESENT_MODE | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | Validates vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | CREATE_SWAP_BAD_SHARING_MODE | vkCreateSwapchainKHR | NA | None |
+| vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | Validates vkCreateSwapchainKHR(pCreateInfo->imageSharingMode) | CREATE_SWAP_BAD_SHARING_VALUES | vkCreateSwapchainKHR | NA | None |
 | Use same device for swapchain | Validates that vkDestroySwapchainKHR() called with the same VkDevice as vkCreateSwapchainKHR() | DESTROY_SWAP_DIFF_DEVICE | vkDestroySwapchainKHR | NA | None |
 | Don't use too many images | Validates that app never tries to own too many swapchain images at a time | APP_OWNS_TOO_MANY_IMAGES | vkAcquireNextImageKHR | NA | None |
 | Index too large | Validates that an image index is within the number of images in a swapchain | INDEX_TOO_LARGE | vkQueuePresentKHR | NA | None |
 | Can't present a non-owned image | Validates that application only presents images that it owns | INDEX_NOT_IN_USE | vkQueuePresentKHR | NA | None |
+| A VkBool32 must have values of VK_TRUE or VK_FALSE | Validates that a VkBool32 must have values of VK_TRUE or VK_FALSE | BAD_BOOL | vkCreateSwapchainKHR | NA | None |
 
 ### VK_LAYER_LUNARG_swapchain Pending Work
 Additional checks to be added to VK_LAYER_LUNARG_swapchain
