@@ -97,7 +97,7 @@ static VkBool32 validateSurface(layer_data *my_data, VkSurfaceKHR surface, char 
 #endif // !defined(__ANDROID__)
     }
     if (found_error) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_SURFACE_KHR, surface, "VkSurfaceKHR",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, surface, "VkSurfaceKHR",
                               SWAPCHAIN_INVALID_HANDLE,
                               "%s() called with an invalid surface object.",
                               fn);
@@ -329,7 +329,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkInstance                                  instance,
-    ANativeWindow*                              window,
+    const VkAndroidSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -340,7 +340,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -348,7 +348,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateAndroidSurfaceKHR(
-                instance, window, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -361,15 +361,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
 #ifdef VK_USE_PLATFORM_MIR_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkInstance                                  instance,
-    MirConnection*                              connection,
-    MirSurface*                                 mirSurface,
+    const VkMirSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -380,7 +379,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -388,7 +387,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateMirSurfaceKHR(
-                instance, connection, mirSurface, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -401,15 +400,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_MIR_KHR
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     VkInstance                                  instance,
-    struct wl_display*                          display,
-    struct wl_surface*                          surface,
+    const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -420,7 +418,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -428,7 +426,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateWaylandSurfaceKHR(
-                instance, display, surface, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -441,15 +439,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_WAYLAND_KHR
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkInstance                                  instance,
-    HINSTANCE                                   hinstance,
-    HWND                                        hwnd,
+    const VkWin32SurfaceCreateInfoKHR*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -460,7 +457,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -468,7 +465,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateWin32SurfaceKHR(
-                instance, hinstance, hwnd, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -481,15 +478,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkInstance                                  instance,
-    xcb_connection_t*                           connection,
-    xcb_window_t                                window,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -500,7 +496,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -508,7 +504,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateXcbSurfaceKHR(
-                instance, connection, window, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -521,15 +517,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_XCB_KHR
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkInstance                                  instance,
-    Display*                                    dpy,
-    Window                                      window,
+    const VkXlibSurfaceCreateInfoKHR*           pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
@@ -540,7 +535,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -548,7 +543,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->instance_dispatch_table->CreateXlibSurfaceKHR(
-                instance, dpy, window, pAllocator, pSurface);
+                instance, pCreateInfo, pAllocator, pSurface);
 
         if ((result == VK_SUCCESS) && pInstance && pSurface) {
             // Record the VkSurfaceKHR returned by the ICD:
@@ -561,7 +556,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
         }
         return result;
     }
-    return VK_ERROR_VALIDATION_FAILED;
+    return VK_ERROR_VALIDATION_FAILED_EXT;
 }
 #endif // VK_USE_PLATFORM_XLIB_KHR
 
@@ -573,7 +568,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
     // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
     if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_INSTANCE,
+        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                                             instance,
                                             "VkInstance");
     }
@@ -1065,8 +1060,8 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             }
             // Log the message that we've built up:
             skipCall |= debug_report_log_msg(my_data->report_data,
-                                             VK_DBG_REPORT_ERROR_BIT,
-                                             VK_OBJECT_TYPE_DEVICE,
+                                             VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                                             VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              (uint64_t) device, 0,
                                              SWAPCHAIN_CREATE_SWAP_BAD_COMPOSITE_ALPHA,
                                              LAYER_NAME,
@@ -1186,7 +1181,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
     if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
         if ((pCreateInfo->queueFamilyIndexCount <= 1) ||
             !pCreateInfo->pQueueFamilyIndices) {
-            skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+            skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,
                                   "%s() called with a supported "
                                   "pCreateInfo->sharingMode of (i.e. %s),"
@@ -1197,7 +1192,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
                                   sharingModeStr(pCreateInfo->imageSharingMode));
         }
     } else if (pCreateInfo->imageSharingMode != VK_SHARING_MODE_EXCLUSIVE) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_CREATE_SWAP_BAD_SHARING_MODE,
                               "%s() called with a non-supported "
                               "pCreateInfo->imageSharingMode (i.e. %s).",
@@ -1207,7 +1202,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
 
     if ((pCreateInfo->clipped != VK_FALSE) &&
         (pCreateInfo->clipped != VK_TRUE)) {
-        skipCall |= LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+        skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_BAD_BOOL,
                               "%s() called with a VkBool32 value that is neither "
                               "VK_TRUE nor VK_FALSE, but has the numeric value of %d.",
@@ -1219,14 +1214,14 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
         SwpSwapchain *pSwapchain = &my_data->swapchainMap[pCreateInfo->oldSwapchain];
         if (pSwapchain) {
             if (device != pSwapchain->pDevice->device) {
-                LOG_ERROR(VK_OBJECT_TYPE_DEVICE, device, "VkDevice",
+                LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                           SWAPCHAIN_DESTROY_SWAP_DIFF_DEVICE,
                           "%s() called with a different VkDevice than the "
                           "VkSwapchainKHR was created with.",
                           __FUNCTION__);
             }
         } else {
-            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                                 pCreateInfo->oldSwapchain,
                                                 "VkSwapchainKHR");
         }
