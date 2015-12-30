@@ -1705,8 +1705,14 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkFence fence,
     uint32_t* pImageIndex)
 {
-// TODO: Record/update the state of the swapchain, in case an error occurs
-// (e.g. VK_ERROR_OUT_OF_DATE_KHR).
+// TODOs:
+//
+// - Address the timeout.  Possibilities include looking at the state of the
+//   swapchain's images, depending on the timeout value.
+// - Validate that semaphore and fence are either VK_NULL_HANDLE or valid
+//   handles.
+// - Record/update the state of the swapchain, in case an error occurs
+//   (e.g. VK_ERROR_OUT_OF_DATE_KHR).
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
@@ -1756,6 +1762,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
                                          "swapchain.",
                                          __FUNCTION__, __FUNCTION__);
         }
+    }
+    if (!pImageIndex) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                           device,
+                                           "pImageIndex");
     }
 
     if (VK_FALSE == skipCall) {
