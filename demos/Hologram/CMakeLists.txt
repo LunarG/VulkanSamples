@@ -32,6 +32,8 @@ set(sources
     Main.cpp
     Meshes.cpp
     Meshes.h
+    Path.cpp
+    Path.h
     Shell.cpp
     Shell.h
     )
