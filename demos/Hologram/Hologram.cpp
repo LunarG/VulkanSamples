@@ -7,9 +7,7 @@
 #define OBJECT_COUNT 10000
 
 Hologram::Hologram(const std::vector<std::string> &args)
-    : Game("Hologram", args), random_dev_(),
-      speed_rng_(random_dev_()), speed_dist_(1.0f, 10.0f),
-      multithread_(true),
+    : Game("Hologram", args), random_dev_(), multithread_(true),
       render_pass_clear_value_(), render_pass_begin_info_(),
       primary_cmd_begin_info_(), primary_cmd_submit_info_()
 {
@@ -56,18 +54,7 @@ void Hologram::init_objects()
 {
     objects_.reserve(OBJECT_COUNT);
     for (int i = 0; i < OBJECT_COUNT; i++) {
-        float x = speed_dist_(speed_rng_) / 5.0f;
-        float y = speed_dist_(speed_rng_) / 5.0f;
-        float z = speed_dist_(speed_rng_) / 5.0f;
-
-        Object obj = {};
-
-        obj.mesh = i;
-
-        obj.scale = glm::vec3(0.01f);
-        obj.speed = speed_dist_(speed_rng_);
-        obj.pos = glm::vec3(x, y, z);
-
+        Object obj = { i, random_dev_() };
         objects_.push_back(obj);
     }
 }
@@ -455,21 +442,19 @@ void Hologram::prepare_framebuffers()
 
 void Hologram::step_object(Object &obj, Worker &worker) const
 {
-    glm::vec3 disp(worker.distribution_(worker.rng_),
-                   worker.distribution_(worker.rng_),
-                   worker.distribution_(worker.rng_));
+    glm::vec3 pos = obj.path.position(worker.frame_time_);
+    glm::vec3 scale = glm::vec3(0.01f);
 
-    obj.pos += disp * obj.speed * worker.time_delta_;
+    obj.model = glm::mat4(1.0f);
+    obj.model = glm::translate(obj.model, pos);
+    obj.model = glm::scale(obj.model, scale);
 }
 
 void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
 {
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, obj.pos);
-    model = glm::scale(model, obj.scale);
-
-    glm::mat4 mvp = view_projection_ * model;
-    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp), glm::value_ptr(mvp));
+    glm::mat4 mvp = view_projection_ * obj.model;
+    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT,
+            0, sizeof(mvp), glm::value_ptr(mvp));
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
@@ -529,8 +514,7 @@ void Hologram::on_frame(float frame_time, int fb)
 }
 
 Hologram::Worker::Worker(Hologram &hologram, int object_begin, int object_end)
-    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end),
-      rng_(hologram_.random_dev_()), distribution_(-0.02f, 0.02f), state_(INIT)
+    : hologram_(hologram), object_begin_(object_begin), object_end_(object_end), state_(INIT)
 {
 }
 
@@ -557,7 +541,6 @@ void Hologram::Worker::render(float frame_time, int fb)
         std::lock_guard<std::mutex> lock(mutex_);
         bool started = (state_ != INIT);
 
-        time_delta_ = frame_time - frame_time_;
         frame_time_ = frame_time;
         fb_ = fb;
         state_ = RENDER;
