@@ -1,5 +1,5 @@
 @echo off
-REM Update source for glslang (and eventually LunarGLASS)
+REM Update source for glslang, LunarGLASS, spirv-tools
 
 setlocal EnableDelayedExpansion
 set errorCode=0
@@ -7,6 +7,7 @@ set BUILD_DIR=%~dp0
 set BASE_DIR=%BUILD_DIR%..
 set GLSLANG_DIR=%BASE_DIR%\glslang
 set LUNARGLASS_DIR=%BASE_DIR%\LunarGLASS
+set SPIRV_TOOLS_DIR=%BASE_DIR%\spirv-tools
 
 REM // ======== Parameter parsing ======== //
 
@@ -16,16 +17,20 @@ REM // ======== Parameter parsing ======== //
       echo Available options:
       echo   --sync-glslang      just pull glslang_revision
       echo   --sync-LunarGLASS   just pull LunarGLASS_revision
+	  echo   --sync-spirv-tools  just pull spirv-tools_revision
       echo   --build-glslang     pulls glslang_revision, configures CMake, builds Release and Debug
       echo   --build-LunarGLASS  pulls LunarGLASS_revision, configures CMake, builds Release and Debug
-      echo   --all               sync and build both glslang and LunarGLASS
+      echo   --build-spirv-tools pulls spirv-tools_revision, configures CMake, builds Release and Debug
+      echo   --all               sync and build glslang, LunarGLASS, spirv-tools
       goto:finish
    )
 
    set sync-glslang=0
    set sync-LunarGLASS=0
+   set sync-spirv-tools=0
    set build-glslang=0
    set build-LunarGLASS=0
+   set build-spirv-tools=0
    set check-glslang-build-dependencies=0
    set check-LunarGLASS-fetch-dependencies=0
    set check-LunarGLASS-build-dependencies=0
@@ -47,6 +52,12 @@ REM // ======== Parameter parsing ======== //
          goto:parameterLoop
       )
 
+	  if "%1" == "--sync-spirv-tools" (
+         set sync-spirv-tools=1
+         shift
+         goto:parameterLoop
+      )
+
       if "%1" == "--build-glslang" (
          set sync-glslang=1
          set check-glslang-build-dependencies=1
@@ -64,11 +75,22 @@ REM // ======== Parameter parsing ======== //
          goto:parameterLoop
       )
 
+	  if "%1" == "--build-spirv-tools" (
+         set sync-spirv-tools=1
+		 REM glslang has the same needs as spirv-tools
+         set check-glslang-build-dependencies=1
+         set build-spirv-tools=1
+         shift
+         goto:parameterLoop
+      )
+
       if "%1" == "--all" (
          set sync-glslang=1
          set sync-LunarGLASS=1
+         set sync-spirv-tools=1
          set build-glslang=1
          set build-LunarGLASS=1
+         set build-spirv-tools=1
          set check-LunarGLASS-fetch-dependencies=1
          set check-glslang-build-dependencies=1
          set check-LunarGLASS-build-dependencies=1
@@ -190,15 +212,24 @@ if not exist glslang_revision (
    goto:error
 )
 
+if not exist spirv-tools_revision (
+   echo.
+   echo Missing spirv-tools_revision file!  Place it next to this script with target version in it.
+   set errorCode=1
+   goto:error
+)
+
 set /p LUNARGLASS_REVISION= < LunarGLASS_revision
 set /p GLSLANG_REVISION= < glslang_revision
+set /p SPIRV_TOOLS_REVISION= < spirv-tools_revision
 echo LUNARGLASS_REVISION=%LUNARGLASS_REVISION%
 echo GLSLANG_REVISION=%GLSLANG_REVISION%
+echo SPIRV_TOOLS_REVISION=%SPIRV_TOOLS_REVISION%
 
 set /p LUNARGLASS_REVISION_R32= < LunarGLASS_revision_R32
 echo LUNARGLASS_REVISION_R32=%LUNARGLASS_REVISION_R32%
 
-echo Creating and/or updating glslang and LunarGLASS in %BASE_DIR%
+echo Creating and/or updating glslang, LunarGLASS, spirv-tools in %BASE_DIR%
 
 if %sync-glslang% equ 1 (
    rd /S /Q %GLSLANG_DIR%
@@ -220,6 +251,17 @@ if %sync-LunarGLASS% equ 1 (
    if %errorCode% neq 0 (goto:error)
 )
 
+if %sync-spirv-tools% equ 1 (
+   rd /S /Q %SPIRV_TOOLS_DIR%
+   if %errorlevel% neq 0 (goto:error)
+   if not exist %SPIRV_TOOLS_DIR% (
+      call:create_spirv-tools
+   )
+   if %errorCode% neq 0 (goto:error)
+   call:update_spirv-tools
+   if %errorCode% neq 0 (goto:error)
+)
+
 if %build-glslang% equ 1 (
    call:build_glslang
    if %errorCode% neq 0 (goto:error)
@@ -230,9 +272,13 @@ if %build-LunarGLASS% equ 1 (
    if %errorCode% neq 0 (goto:error)
 )
 
-REM If we made it here, we are golden
+if %build-spirv-tools% equ 1 (
+   call:build_spirv-tools
+   if %errorCode% neq 0 (goto:error)
+)
+
 echo.
-echo Success
+echo Exiting
 goto:finish
 
 :error
@@ -328,6 +374,27 @@ goto:eof
    svn revert -R .
 goto:eof
 
+:create_spirv-tools
+   echo.
+   echo Creating local spirv-tools repository %SPIRV_TOOLS_DIR%)
+   mkdir %SPIRV_TOOLS_DIR%
+   cd %SPIRV_TOOLS_DIR%
+   git clone git@gitlab.khronos.org:spirv/spirv-tools.git .
+   git checkout %SPIRV_TOOLS_REVISION%
+   if not exist %SPIRV_TOOLS_DIR%\source (
+      echo spirv-tools source download failed!
+      set errorCode=1
+   )
+goto:eof
+
+:update_spirv-tools
+   echo.
+   echo Updating %SPIRV_TOOLS_DIR%
+   cd %SPIRV_TOOLS_DIR%
+   git fetch --all
+   git checkout %SPIRV_TOOLS_REVISION%
+goto:eof
+
 :build_glslang
    echo.
    echo Building %GLSLANG_DIR%
@@ -404,4 +471,28 @@ goto:eof
    REM     set errorCode=1
    REM     goto:eof
    REM  )
+goto:eof
+
+:build_spirv-tools
+   echo.
+   echo Building %SPIRV_TOOLS_DIR%
+   cd  %SPIRV_TOOLS_DIR%
+   mkdir build
+   set SPIRV_TOOLS_BUILD_DIR=%SPIRV_TOOLS_DIR%\build
+   cd %SPIRV_TOOLS_BUILD_DIR%
+   cmake -G "Visual Studio 12 2013 Win64" ..
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Debug
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\Debug\SPIRV-Tools.lib (
+      echo.
+      echo spirv-tools Debug build failed!
+      set errorCode=1
+   )
+   msbuild ALL_BUILD.vcxproj /p:Platform=x64 /p:Configuration=Release
+   REM Check for existence of one lib, even though we should check for all results
+   if not exist %SPIRV_TOOLS_BUILD_DIR%\Release\SPIRV-Tools.lib (
+      echo.
+      echo spirv-tools Release build failed!
+      set errorCode=1
+   )
 goto:eof
