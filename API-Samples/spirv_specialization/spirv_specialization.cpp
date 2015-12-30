@@ -46,7 +46,7 @@ The SPIR-V path is included as an alternative to using a front end.
 static const bool use_SPIRV_asm = true;
 
 const char *vertShaderText =
-    "#version 400\n"
+    "#version 140\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (std140, binding = 0) uniform buf {\n"
@@ -55,9 +55,6 @@ const char *vertShaderText =
     "layout (location = 0) in vec4 pos;\n"
     "layout (location = 1) in vec2 inTexCoords;\n"
     "layout (location = 0) out vec2 texcoord;\n"
-    "out gl_PerVertex { \n"
-    "    vec4 gl_Position;\n"
-    "};\n"
     "void main() {\n"
     "   texcoord = inTexCoords;\n"
     "   gl_Position = ubuf.mvp * pos;\n"
@@ -68,7 +65,7 @@ const char *vertShaderText =
     "}\n";
 
 const char *fragShaderText=
-    "#version 400\n"
+    "#version 140\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
     "layout (binding = 1) uniform sampler2D tex;\n"
@@ -230,7 +227,7 @@ const std::string fragmentSPIRV_specialized =
 
 
 
-int sample_main()
+int main(int argc, char **argv)
 {
     VkResult U_ASSERT_ONLY res;
     struct sample_info info = {};
@@ -243,7 +240,7 @@ int sample_main()
     init_instance(info, sample_title);
     init_enumerate_device(info);
     init_device(info);
-    get_window_size(&info.width, &info.height);
+    info.width = info.height = 500;
     init_connection(info);
     init_window(info);
     init_swapchain_extension(info);
@@ -394,14 +391,12 @@ int sample_main()
     init_present_info(info, present);
 
     /* Make sure command buffer is finished before presenting */
-    do {
-        res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-    } while (res == VK_TIMEOUT);
+    res = vkWaitForFences(info.device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
     assert(res == VK_SUCCESS);
-    res = vkQueuePresentKHR(info.queue, &present);
+    res = info.fpQueuePresentKHR(info.queue, &present);
     assert(res == VK_SUCCESS);
 
-    while(!wait(1)) {};
+    wait_seconds(1);
 
     vkDestroyFence(info.device, drawFence, NULL);
     vkDestroySemaphore(info.device, info.presentCompleteSemaphore, NULL);
