@@ -252,6 +252,7 @@ static void writePPM( const char *filename, VkImage image1)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &commandBuffer;
     submit_info.signalSemaphoreCount = 0;

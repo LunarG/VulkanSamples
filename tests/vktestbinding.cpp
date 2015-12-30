@@ -402,6 +402,7 @@ void Queue::submit(const std::vector<const CommandBuffer *> &cmds, Fence &fence)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = (uint32_t)cmd_handles.size();
     submit_info.pCommandBuffers = cmd_handles.data();
     submit_info.signalSemaphoreCount = 0;

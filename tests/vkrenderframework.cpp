@@ -1005,6 +1005,7 @@ void VkConstantBufferObj::BufferMemoryBarrier(
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = bufferArray;
     submit_info.signalSemaphoreCount = 0;
@@ -1606,6 +1607,7 @@ void VkCommandBufferObj::QueueCommandBuffer(VkFence fence)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &handle();
     submit_info.signalSemaphoreCount = 0;

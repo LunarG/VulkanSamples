@@ -676,11 +676,13 @@ void  TestFrameworkVkPresent::Display()
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
     VkFence nullFence = { VK_NULL_HANDLE };
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &presentCompleteSemaphore,
+    submit_info.pWaitSemaphores = &presentCompleteSemaphore;
+    submit_info.pWaitDstStageMask = &pipe_stage_flags;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = cmdBufs;
     submit_info.signalSemaphoreCount = 0;
@@ -1140,6 +1142,7 @@ void TestFrameworkVkPresent::SetImageLayout(VkImage image, VkImageAspectFlags as
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = cmd_bufs;
     submit_info.signalSemaphoreCount = 0;

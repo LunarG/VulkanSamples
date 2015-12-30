@@ -283,6 +283,7 @@ static void demo_flush_init_cmd(struct demo *demo)
         .pNext = NULL,
         .waitSemaphoreCount = 0,
         .pWaitSemaphores = NULL,
+        .pWaitDstStageMask = NULL,
         .commandBufferCount = 1,
         .pCommandBuffers = cmd_bufs,
         .signalSemaphoreCount = 0,
@@ -507,12 +508,13 @@ static void demo_draw(struct demo *demo)
 // FIXME/TODO: DEAL WITH VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     demo_draw_build_cmd(demo);
     VkFence nullFence = VK_NULL_HANDLE;
-
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     VkSubmitInfo submit_info = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pNext = NULL,
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &presentCompleteSemaphore,
+        .pWaitDstStageMask = &pipe_stage_flags,
         .commandBufferCount = 1,
         .pCommandBuffers = &demo->draw_cmd,
         .signalSemaphoreCount = 0,

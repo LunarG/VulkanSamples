@@ -491,6 +491,7 @@ TEST_F(VkLayerTest, CallResetCommandBufferBeforeCompletion)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
@@ -535,6 +536,7 @@ TEST_F(VkLayerTest, CallBeginCommandBufferBeforeCompletion)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
@@ -814,6 +816,7 @@ TEST_F(VkLayerTest, SubmitSignaledFence)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
@@ -1297,6 +1300,7 @@ TEST_F(VkLayerTest, CommandBufferTwoSubmits)
     submit_info.pNext = NULL;
     submit_info.waitSemaphoreCount = 0;
     submit_info.pWaitSemaphores = NULL;
+    submit_info.pWaitDstStageMask = NULL;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_commandBuffer->handle();
     submit_info.signalSemaphoreCount = 0;
