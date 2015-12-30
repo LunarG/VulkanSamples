@@ -911,6 +911,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     VkSurfaceKHR surface,
     VkBool32* pSupported)
 {
+// TODOs:
+//
+// - Ensure that queueFamilyIndex is a valid queue family index for
+//   physicalDevice.  How?  Probably need to record data from another function
+//   call(s).
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
