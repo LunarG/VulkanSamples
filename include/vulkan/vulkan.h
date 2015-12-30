@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 214, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 215, 1)
 
 
 #define VK_NULL_HANDLE 0
@@ -898,7 +898,6 @@ typedef enum VkQueryPipelineStatisticFlagBits {
 typedef VkFlags VkQueryPipelineStatisticFlags;
 
 typedef enum VkQueryResultFlagBits {
-    VK_QUERY_RESULT_DEFAULT = 0,
     VK_QUERY_RESULT_64_BIT = 0x00000001,
     VK_QUERY_RESULT_WAIT_BIT = 0x00000002,
     VK_QUERY_RESULT_WITH_AVAILABILITY_BIT = 0x00000004,

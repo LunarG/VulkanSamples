@@ -828,8 +828,7 @@ bool ValidateEnumerator(VkQueryResultFlagBits const& enumerator)
     VkQueryResultFlagBits allFlags = (VkQueryResultFlagBits)(VK_QUERY_RESULT_PARTIAL_BIT |
         VK_QUERY_RESULT_WITH_AVAILABILITY_BIT |
         VK_QUERY_RESULT_WAIT_BIT |
-        VK_QUERY_RESULT_64_BIT |
-        VK_QUERY_RESULT_DEFAULT);
+        VK_QUERY_RESULT_64_BIT);
     if(enumerator & (~allFlags))
     {
         return false;
@@ -862,10 +861,6 @@ std::string EnumeratorString(VkQueryResultFlagBits const& enumerator)
     if(enumerator & VK_QUERY_RESULT_64_BIT)
     {
         strings.push_back("VK_QUERY_RESULT_64_BIT");
-    }
-    if(enumerator & VK_QUERY_RESULT_DEFAULT)
-    {
-        strings.push_back("VK_QUERY_RESULT_DEFAULT");
     }
 
     std::string enumeratorString;
