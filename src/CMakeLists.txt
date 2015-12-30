@@ -245,7 +245,7 @@ set (S_TARGETS instance device enumerate enumerate-adv
     copyblitimage template separate_image_sampler
     occlusion_query pipeline_cache pipeline_derivative
     immutable_sampler push_constants drawsubpasses secondarycmd
-    spirv_assembly)
+    spirv_assembly spirv_specialization)
 sampleWithSingleFile()
 
 # targets that use spv shaders
