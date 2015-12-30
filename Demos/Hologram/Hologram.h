@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
+#include "Path.h"
 #include "Game.h"
 
 class Meshes;
@@ -44,13 +45,9 @@ private:
         const int object_begin_;
         const int object_end_;
 
-        std::mt19937 rng_;
-        std::uniform_real_distribution<float> distribution_;
-
         VkCommandBuffer cmd_;
 
         float frame_time_;
-        float time_delta_;
         int fb_;
 
     private:
@@ -72,11 +69,9 @@ private:
 
     struct Object {
         int mesh;
+        Path path;
 
-        glm::vec3 scale;
-        float speed;
-
-        glm::vec3 pos;
+        glm::mat4 model;
     };
 
     struct FrameData {
@@ -96,8 +91,6 @@ private:
     void init_objects();
 
     std::random_device random_dev_;
-    std::mt19937 speed_rng_;
-    std::uniform_real_distribution<float> speed_dist_;
 
     bool multithread_;
     bool use_push_constants_;
