@@ -387,8 +387,8 @@ void VkRenderTest::GenericDrawPreparation(VkCommandBufferObj *commandBuffer, VkP
     }
 
     commandBuffer->PrepareAttachments();
-    commandBuffer->SetViewport(m_viewports.size(), m_viewports.data());
-    commandBuffer->SetScissor(m_scissors.size(), m_scissors.data());
+    commandBuffer->SetViewport(0, m_viewports.size(), m_viewports.data());
+    commandBuffer->SetScissor(0, m_scissors.size(), m_scissors.data());
 
     descriptorSet.CreateVKDescriptorSet(commandBuffer);
     VkResult err = pipelineobj.CreateVKPipeline(descriptorSet.GetPipelineLayout(), renderPass());

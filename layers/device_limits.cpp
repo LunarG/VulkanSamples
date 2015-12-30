@@ -344,28 +344,30 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatP
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            viewportCount,
-    const VkViewport*                   pViewports)
+    uint32_t                                firstViewport,
+    uint32_t                                viewportCount,
+    const VkViewport*                       pViewports)
 {
     VkBool32 skipCall = VK_FALSE;
     /* TODO: Verify viewportCount < maxViewports from VkPhysicalDeviceLimits */
     if (VK_FALSE == skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        my_data->device_dispatch_table->CmdSetViewport(commandBuffer, viewportCount, pViewports);
+        my_data->device_dispatch_table->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
     }
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            scissorCount,
-    const VkRect2D*                     pScissors)
+    uint32_t                                firstScissor,
+    uint32_t                                scissorCount,
+    const VkRect2D*                         pScissors)
 {
     VkBool32 skipCall = VK_FALSE;
     /* TODO: Verify scissorCount < maxViewports from VkPhysicalDeviceLimits */
     /* TODO: viewportCount and scissorCount must match at draw time */
     if (VK_FALSE == skipCall) {
         layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-        my_data->device_dispatch_table->CmdSetScissor(commandBuffer, scissorCount, pScissors);
+        my_data->device_dispatch_table->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
     }
 }
 

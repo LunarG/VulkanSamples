@@ -307,7 +307,7 @@ public:
     void init(const Device &dev, const VkQueryPoolCreateInfo &info);
 
     // vkGetQueryPoolResults()
-    VkResult results(uint32_t start, uint32_t count, size_t size, void *data, size_t stride);
+    VkResult results(uint32_t first, uint32_t count, size_t size, void *data, size_t stride);
 
     static VkQueryPoolCreateInfo create_info(VkQueryType type, uint32_t slot_count);
 };

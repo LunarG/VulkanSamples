@@ -32,6 +32,8 @@
 #include "obj.h"
 
 struct intel_dynamic_viewport {
+    uint32_t first_viewport;
+    uint32_t first_scissor;
     uint32_t viewport_count;
     uint32_t scissor_count;
     VkViewport viewports[INTEL_MAX_VIEWPORTS];
@@ -76,8 +78,8 @@ struct intel_dynamic_stencil {
 };
 
 struct intel_cmd;
-void intel_set_viewport(struct intel_cmd *cmd, uint32_t count, const VkViewport *viewports);
-void intel_set_scissor(struct intel_cmd *cmd, uint32_t count, const VkRect2D *scissors);
+void intel_set_viewport(struct intel_cmd *cmd, uint32_t first, uint32_t count, const VkViewport *viewports);
+void intel_set_scissor(struct intel_cmd *cmd, uint32_t first, uint32_t count, const VkRect2D *scissors);
 void intel_set_line_width(struct intel_cmd *cmd, float line_width);
 void intel_set_depth_bias(
     struct intel_cmd                   *cmd,

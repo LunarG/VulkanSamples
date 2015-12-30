@@ -242,7 +242,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     size_t                                      dataSize,
     void*                                       pData,
@@ -252,7 +252,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     struct intel_query *query = intel_query(queryPool);
 
     if (pData)
-        return intel_query_get_results(query, startQuery, queryCount, pData);
+        return intel_query_get_results(query, firstQuery, queryCount, pData);
     else
         return VK_SUCCESS;
 }

@@ -20,7 +20,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-# Author: Cody Northrop <cody@lunarg.com>
+# Author: Chia-I Wu <olv@lunarg.com>
+# Author: Jon Ashburn <jon@lunarg.com>
 # Author: Courtney Goeltzenleuchter <courtney@LunarG.com>
 # Author: Tobin Ehlis <tobin@lunarg.com>
 # Author: Tony Barbour <tony@LunarG.com>
@@ -479,7 +480,7 @@ core = Extension(
         Proto("VkResult", "GetQueryPoolResults",
             [Param("VkDevice", "device"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "startQuery"),
+             Param("uint32_t", "firstQuery"),
              Param("uint32_t", "queryCount"),
              Param("size_t", "dataSize"),
              Param("void*", "pData"),
@@ -730,11 +731,13 @@ core = Extension(
 
         Proto("void", "CmdSetViewport",
             [Param("VkCommandBuffer", "commandBuffer"),
+             Param("uint32_t", "firstViewport"),
              Param("uint32_t", "viewportCount"),
              Param("const VkViewport*", "pViewports")]),
 
         Proto("void", "CmdSetScissor",
             [Param("VkCommandBuffer", "commandBuffer"),
+             Param("uint32_t", "firstScissor"),
              Param("uint32_t", "scissorCount"),
              Param("const VkRect2D*", "pScissors")]),
 
@@ -790,7 +793,7 @@ core = Extension(
 
         Proto("void", "CmdBindVertexBuffers",
             [Param("VkCommandBuffer", "commandBuffer"),
-             Param("uint32_t", "startBinding"),
+             Param("uint32_t", "firstBinding"),
              Param("uint32_t", "bindingCount"),
              Param("const VkBuffer*", "pBuffers"),
              Param("const VkDeviceSize*", "pOffsets")]),
@@ -964,7 +967,7 @@ core = Extension(
         Proto("void", "CmdResetQueryPool",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "startQuery"),
+             Param("uint32_t", "firstQuery"),
              Param("uint32_t", "queryCount")]),
 
         Proto("void", "CmdWriteTimestamp",
@@ -976,7 +979,7 @@ core = Extension(
         Proto("void", "CmdCopyQueryPoolResults",
             [Param("VkCommandBuffer", "commandBuffer"),
              Param("VkQueryPool", "queryPool"),
-             Param("uint32_t", "startQuery"),
+             Param("uint32_t", "firstQuery"),
              Param("uint32_t", "queryCount"),
              Param("VkBuffer", "dstBuffer"),
              Param("VkDeviceSize", "dstOffset"),

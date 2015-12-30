@@ -2956,7 +2956,7 @@ TEST_F(VkLayerTest, PSOViewportCountWithoutDataAndDynScissorMismatch)
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     VkRect2D scissors[2] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 2, scissors);
+    vkCmdSetScissor(m_commandBuffer->GetBufferHandle(), 0, 2, scissors);
     Draw(1, 0, 0, 0);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
@@ -3113,7 +3113,7 @@ TEST_F(VkLayerTest, PSOScissorCountWithoutDataAndDynViewportMismatch)
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     VkViewport viewports[2] = {}; // don't care about data
     // Count of 2 doesn't match PSO count of 1
-    vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 2, viewports);
+    vkCmdSetViewport(m_commandBuffer->GetBufferHandle(), 0, 2, viewports);
     Draw(1, 0, 0, 0);
 
     if (!m_errorMonitor->DesiredMsgFound()) {

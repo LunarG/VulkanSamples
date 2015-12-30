@@ -3343,11 +3343,11 @@ static void cmd_bind_dynamic_state(struct intel_cmd *cmd,
     cmd->bind.state.use_pipeline_dynamic_state = use_flags;
     if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_VIEWPORT) {
         const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
-        intel_set_viewport(cmd, viewport->viewport_count, viewport->viewports);
+        intel_set_viewport(cmd, viewport->first_viewport, viewport->viewport_count, viewport->viewports);
     }
     if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_SCISSOR) {
         const struct intel_dynamic_viewport *viewport = &pipeline->state.viewport;
-        intel_set_scissor(cmd, viewport->scissor_count, viewport->scissors);
+        intel_set_scissor(cmd, viewport->first_scissor, viewport->scissor_count, viewport->scissors);
     }
     if (use_flags & INTEL_USE_PIPELINE_DYNAMIC_LINE_WIDTH) {
         intel_set_line_width(cmd, pipeline->state.line_width.line_width);
@@ -3707,16 +3707,16 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
-    uint32_t                                    startBinding,
-    uint32_t                                    bindingCount,
-    const VkBuffer*                             pBuffers,
-    const VkDeviceSize*                         pOffsets)
+    uint32_t                                        firstBinding,
+    uint32_t                                        bindingCount,
+    const VkBuffer*                                 pBuffers,
+    const VkDeviceSize*                             pOffsets)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
     for (uint32_t i = 0; i < bindingCount; i++) {
         struct intel_buf *buf = intel_buf(pBuffers[i]);
-        cmd_bind_vertex_data(cmd, buf, pOffsets[i], startBinding + i);
+        cmd_bind_vertex_data(cmd, buf, pOffsets[i], firstBinding + i);
     }
 }
 

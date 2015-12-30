@@ -3110,7 +3110,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
 bool PostGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount,
     size_t dataSize,
     void* pData,
@@ -3140,16 +3140,16 @@ bool PostGetQueryPoolResults(
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount,
     size_t dataSize,
     void* pData,
     VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
-    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
+    VkResult result = get_dispatch_table(pc_device_table_map, device)->GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 
-    PostGetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags, result);
+    PostGetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags, result);
 
     return result;
 }
@@ -5067,14 +5067,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     PostCmdBindPipeline(commandBuffer, pipelineBindPoint, pipeline);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount, const VkViewport* pViewports)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetViewport(commandBuffer, viewportCount, pViewports);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const VkRect2D* pScissors)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, scissorCount, pScissors);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
@@ -5218,7 +5218,7 @@ bool PreCmdBindVertexBuffers(
 
 bool PostCmdBindVertexBuffers(
     VkCommandBuffer commandBuffer,
-    uint32_t startBinding,
+    uint32_t firstBinding,
     uint32_t bindingCount)
 {
 
@@ -5229,16 +5229,16 @@ bool PostCmdBindVertexBuffers(
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer commandBuffer,
-    uint32_t startBinding,
+    uint32_t firstBinding,
     uint32_t bindingCount,
     const VkBuffer* pBuffers,
     const VkDeviceSize* pOffsets)
 {
     PreCmdBindVertexBuffers(commandBuffer, pBuffers, pOffsets);
 
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 
-    PostCmdBindVertexBuffers(commandBuffer, startBinding, bindingCount);
+    PostCmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount);
 }
 
 bool PreCmdDraw(
@@ -6178,7 +6178,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
 bool PostCmdResetQueryPool(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount)
 {
 
@@ -6191,12 +6191,12 @@ bool PostCmdResetQueryPool(
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
 
-    PostCmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
+    PostCmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
 }
 
 bool PostCmdWriteTimestamp(
@@ -6225,7 +6225,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
 bool PostCmdCopyQueryPoolResults(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
@@ -6246,16 +6246,16 @@ bool PostCmdCopyQueryPoolResults(
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer commandBuffer,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount,
     VkBuffer dstBuffer,
     VkDeviceSize dstOffset,
     VkDeviceSize stride,
     VkQueryResultFlags flags)
 {
-    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyQueryPoolResults(commandBuffer, queryPool, startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
+    get_dispatch_table(pc_device_table_map, commandBuffer)->CmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 
-    PostCmdCopyQueryPoolResults(commandBuffer, queryPool, startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
+    PostCmdCopyQueryPoolResults(commandBuffer, queryPool, firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
 bool PreCmdPushConstants(

@@ -1148,7 +1148,7 @@ void vkReplay::manually_replay_vkCmdBindVertexBuffers(packet_vkCmdBindVertexBuff
             *pBuff = m_objMapper.remap_buffers(pPacket->pBuffers[i]);
         }
     }
-    m_vkFuncs.real_vkCmdBindVertexBuffers(remappedCommandBuffer, pPacket->startBinding, pPacket->bindingCount, pPacket->pBuffers, pPacket->pOffsets);
+    m_vkFuncs.real_vkCmdBindVertexBuffers(remappedCommandBuffer, pPacket->firstBinding, pPacket->bindingCount, pPacket->pBuffers, pPacket->pOffsets);
     for (uint32_t k = 0; k < i; k++)
     {
         VkBuffer *pBuff = (VkBuffer*) &(pPacket->pBuffers[k]);

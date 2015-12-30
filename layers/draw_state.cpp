@@ -3779,8 +3779,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer com
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            viewportCount,
-    const VkViewport*                   pViewports)
+    uint32_t                                firstViewport,
+    uint32_t                                viewportCount,
+    const VkViewport*                       pViewports)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3794,13 +3795,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetViewport(commandBuffer, viewportCount, pViewports);
+        dev_data->device_dispatch_table->CmdSetViewport(commandBuffer, firstViewport, viewportCount, pViewports);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            scissorCount,
-    const VkRect2D*                     pScissors)
+    uint32_t                                firstScissor,
+    uint32_t                                scissorCount,
+    const VkRect2D*                         pScissors)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -3814,7 +3816,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdSetScissor(commandBuffer, scissorCount, pScissors);
+        dev_data->device_dispatch_table->CmdSetScissor(commandBuffer, firstScissor, scissorCount, pScissors);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(VkCommandBuffer commandBuffer, float lineWidth)
@@ -4076,7 +4078,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer 
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                             commandBuffer,
-    uint32_t                                    startBinding,
+    uint32_t                                    firstBinding,
     uint32_t                                    bindingCount,
     const VkBuffer                             *pBuffers,
     const VkDeviceSize                         *pOffsets)
@@ -4086,15 +4088,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         addCmd(dev_data, pCB, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        if ((startBinding + bindingCount) > pCB->boundVtxBuffers.size()) {
-            pCB->boundVtxBuffers.resize(startBinding+bindingCount, VK_NULL_HANDLE);
+        if ((firstBinding + bindingCount) > pCB->boundVtxBuffers.size()) {
+            pCB->boundVtxBuffers.resize(firstBinding+bindingCount, VK_NULL_HANDLE);
         }
         for (auto i = 0; i < bindingCount; i++) {
-            pCB->boundVtxBuffers[i+startBinding] = pBuffers[i];
+            pCB->boundVtxBuffers[i+firstBinding] = pBuffers[i];
         }
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+        dev_data->device_dispatch_table->CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
@@ -4698,7 +4700,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer command
         dev_data->device_dispatch_table->CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount)
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
@@ -4708,10 +4710,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer c
         skipCall |= insideRenderPass(dev_data, pCB, "vkCmdQueryPool");
     }
     if (VK_FALSE == skipCall)
-        dev_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
+        dev_data->device_dispatch_table->CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery,
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery,
                                                      uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset,
                                                      VkDeviceSize stride, VkQueryResultFlags flags)
 {
@@ -4724,7 +4726,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBu
     }
     if (VK_FALSE == skipCall)
         dev_data->device_dispatch_table->CmdCopyQueryPoolResults(commandBuffer, queryPool,
-                           startQuery, queryCount, dstBuffer, dstOffset, stride, flags);
+                           firstQuery, queryCount, dstBuffer, dstOffset, stride, flags);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)

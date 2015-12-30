@@ -197,8 +197,8 @@ public:
     void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
     void QueueCommandBuffer();
     void QueueCommandBuffer(VkFence fence);
-    void SetViewport(uint32_t viewportCount, const VkViewport* pViewports);
-    void SetScissor(uint32_t scissorCount, const VkRect2D* pScissors);
+    void SetViewport(uint32_t firstViewport, uint32_t viewportCount, const VkViewport* pViewports);
+    void SetScissor(uint32_t firstScissor, uint32_t scissorCount, const VkRect2D* pScissors);
     void SetLineWidth(float lineWidth);
     void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
     void SetBlendConstants(const float blendConstants[4]);

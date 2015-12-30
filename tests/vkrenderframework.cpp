@@ -1513,17 +1513,19 @@ void VkCommandBufferObj::EndRenderPass()
 }
 
 void VkCommandBufferObj::SetViewport(
+    uint32_t                            firstViewport,
     uint32_t                            viewportCount,
     const VkViewport*                   pViewports)
 {
-    vkCmdSetViewport( handle(), viewportCount, pViewports);
+    vkCmdSetViewport( handle(), firstViewport, viewportCount, pViewports);
 }
 
 void VkCommandBufferObj::SetScissor(
+    uint32_t                            firstScissor,
     uint32_t                            scissorCount,
     const VkRect2D*                     pScissors)
 {
-    vkCmdSetScissor( handle(), scissorCount, pScissors);
+    vkCmdSetScissor( handle(), firstScissor, scissorCount, pScissors);
 }
 
 void VkCommandBufferObj::SetLineWidth(float lineWidth)

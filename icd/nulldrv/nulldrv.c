@@ -987,7 +987,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer                              commandBuffer,
     VkQueryPool                              queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount)
 {
     NULLDRV_LOG_FUNC;
@@ -1012,7 +1012,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     VkBuffer                                    dstBuffer,
     VkDeviceSize                                dstOffset,
@@ -1039,12 +1039,12 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(VkCommandBuffer commandBuffer, uint32_t firstViewport, uint32_t viewportCount, const VkViewport* pViewports)
 {
     NULLDRV_LOG_FUNC;
 }
 
-ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors)
+ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(VkCommandBuffer commandBuffer, uint32_t firstScissor, uint32_t scissorCount, const VkRect2D* pScissors)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1099,10 +1099,10 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
-    uint32_t                                    startBinding,
-    uint32_t                                    bindingCount,
-    const VkBuffer*                             pBuffers,
-    const VkDeviceSize*                            pOffsets)
+    uint32_t                                        firstBinding,
+    uint32_t                                        bindingCount,
+    const VkBuffer*                                 pBuffers,
+    const VkDeviceSize*                             pOffsets)
 {
     NULLDRV_LOG_FUNC;
 }
@@ -1777,7 +1777,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(
 ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkDevice                                    device,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     size_t                                      dataSize,
     void*                                       pData,

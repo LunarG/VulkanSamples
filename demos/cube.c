@@ -596,7 +596,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
     viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
-    vkCmdSetViewport(cmd_buf, 1, &viewport);
+    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
 
     VkRect2D scissor;
     memset(&scissor, 0, sizeof(scissor));
@@ -604,7 +604,7 @@ static void demo_draw_build_cmd(struct demo *demo, VkCommandBuffer cmd_buf)
     scissor.extent.height = demo->height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(cmd_buf, 1, &scissor);
+    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
 
     vkCmdDraw(cmd_buf, 12 * 3, 1, 0, 0);
     vkCmdEndRenderPass(cmd_buf);

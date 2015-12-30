@@ -31,16 +31,16 @@
 #include "state.h"
 #include "cmd.h"
 
-void intel_set_viewport(struct intel_cmd *cmd, uint32_t count, const VkViewport *viewports)
+void intel_set_viewport(struct intel_cmd *cmd, uint32_t first, uint32_t count, const VkViewport *viewports)
 {
     cmd->bind.state.viewport.viewport_count = count;
-    memcpy(cmd->bind.state.viewport.viewports, viewports, count * sizeof(VkViewport));
+    memcpy(cmd->bind.state.viewport.viewports + first, viewports, count * sizeof(VkViewport));
 }
 
-void intel_set_scissor(struct intel_cmd *cmd, uint32_t count, const VkRect2D *scissors)
+void intel_set_scissor(struct intel_cmd *cmd, uint32_t first, uint32_t count, const VkRect2D *scissors)
 {
     cmd->bind.state.viewport.scissor_count = count;
-    memcpy(cmd->bind.state.viewport.scissors, scissors, count * sizeof(VkRect2D));
+    memcpy(cmd->bind.state.viewport.scissors + first, scissors, count * sizeof(VkRect2D));
 }
 
 void intel_set_line_width(struct intel_cmd *cmd, float line_width)
@@ -151,8 +151,9 @@ void intel_set_stencil_reference(
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            viewportCount,
-    const VkViewport*                   pViewports)
+    uint32_t                                firstViewport,
+    uint32_t                                viewportCount,
+    const VkViewport*                       pViewports)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -160,13 +161,14 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetViewport(
         return;
     }
 
-    intel_set_viewport(cmd, viewportCount, pViewports);
+    intel_set_viewport(cmd, firstViewport, viewportCount, pViewports);
 }
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
     VkCommandBuffer                         commandBuffer,
-    uint32_t                            scissorCount,
-    const VkRect2D*                     pScissors)
+    uint32_t                                firstScissor,
+    uint32_t                                scissorCount,
+    const VkRect2D*                         pScissors)
 {
     struct intel_cmd *cmd = intel_cmd(commandBuffer);
 
@@ -174,7 +176,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetScissor(
         return;
     }
 
-    intel_set_scissor(cmd, scissorCount, pScissors);
+    intel_set_scissor(cmd, firstScissor, scissorCount, pScissors);
 }
 
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(

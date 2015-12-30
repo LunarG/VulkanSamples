@@ -601,7 +601,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkEnumeratePhysicalDevic
 VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetQueryPoolResults(
     VkDevice device,
     VkQueryPool queryPool,
-    uint32_t startQuery,
+    uint32_t firstQuery,
     uint32_t queryCount,
     size_t dataSize,
     void* pData,
@@ -615,7 +615,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetQueryPoolResults(
     uint64_t endTime;
     uint64_t vktraceStartTime = vktrace_get_time();
     startTime = vktrace_get_time();
-    result = mdd(device)->devTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
+    result = mdd(device)->devTable.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
     endTime = vktrace_get_time();
     CREATE_TRACE_PACKET(vkGetQueryPoolResults, dataSize);
     pHeader->vktrace_begin_time = vktraceStartTime;
@@ -624,7 +624,7 @@ VKTRACER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL __HOOKED_vkGetQueryPoolResults(
     pPacket = interpret_body_as_vkGetQueryPoolResults(pHeader);
     pPacket->device = device;
     pPacket->queryPool = queryPool;
-    pPacket->startQuery = startQuery;
+    pPacket->firstQuery = firstQuery;
     pPacket->queryCount = queryCount;
     pPacket->dataSize = dataSize;
     pPacket->stride = stride;

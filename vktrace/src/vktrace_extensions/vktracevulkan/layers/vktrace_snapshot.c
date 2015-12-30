@@ -905,12 +905,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(VkDevice device
     return result;
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
+VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(queryPool, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT);
     loader_platform_thread_unlock_mutex(&objLock);
-    VkResult result = nextTable.GetQueryPoolResults(device, queryPool, startQuery, queryCount, pDataSize, pData, flags);
+    VkResult result = nextTable.GetQueryPoolResults(device, queryPool, firstQuery, queryCount, pDataSize, pData, flags);
     return result;
 }
 
@@ -1248,15 +1248,15 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuff
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     VkCommandBuffer                                 commandBuffer,
-    uint32_t                                    startBinding,
-    uint32_t                                    bindingCount,
-    const VkBuffer*                             pBuffers,
-    const VkDeviceSize*                         pOffsets)
+    uint32_t                                        firstBinding,
+    uint32_t                                        bindingCount,
+    const VkBuffer*                                 pBuffers,
+    const VkDeviceSize*                             pOffsets)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdBindVertexBuffers(commandBuffer, startBinding, bindingCount, pBuffers, pOffsets);
+    nextTable.CmdBindVertexBuffers(commandBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType)
@@ -1455,12 +1455,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer command
     nextTable.CmdEndQuery(commandBuffer, queryPool, slot);
 }
 
-VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount)
+VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount)
 {
     loader_platform_thread_lock_mutex(&objLock);
     ll_increment_use_count(commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT);
     loader_platform_thread_unlock_mutex(&objLock);
-    nextTable.CmdResetQueryPool(commandBuffer, queryPool, startQuery, queryCount);
+    nextTable.CmdResetQueryPool(commandBuffer, queryPool, firstQuery, queryCount);
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t slot)

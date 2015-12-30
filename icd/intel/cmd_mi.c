@@ -160,7 +160,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount)
 {
     /* no-op */
@@ -207,7 +207,7 @@ ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetEvent(
 ICD_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                                 commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     VkBuffer                                    dstBuffer,
     VkDeviceSize                                dstOffset,

@@ -418,7 +418,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     viewport.width = (float) demo->width;
     viewport.minDepth = (float) 0.0f;
     viewport.maxDepth = (float) 1.0f;
-    vkCmdSetViewport(demo->draw_cmd, 1, &viewport);
+    vkCmdSetViewport(demo->draw_cmd, 0, 1, &viewport);
 
     VkRect2D scissor;
     memset(&scissor, 0, sizeof(scissor));
@@ -426,7 +426,7 @@ static void demo_draw_build_cmd(struct demo *demo)
     scissor.extent.height = demo->height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(demo->draw_cmd, 1, &scissor);
+    vkCmdSetScissor(demo->draw_cmd, 0, 1, &scissor);
 
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(demo->draw_cmd, VERTEX_BUFFER_BIND_ID, 1, &demo->vertices.buf, offsets);
