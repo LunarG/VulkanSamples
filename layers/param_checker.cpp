@@ -1249,7 +1249,7 @@ bool ValidateEnumerator(VkPipelineStageFlagBits const& enumerator)
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT |
         VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
         VK_PIPELINE_STAGE_HOST_BIT |
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE |
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT |
         VK_PIPELINE_STAGE_TRANSFER_BIT |
         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
@@ -1300,7 +1300,7 @@ std::string EnumeratorString(VkPipelineStageFlagBits const& enumerator)
     {
         strings.push_back("VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT");
     }
-    if(enumerator & VK_PIPELINE_STAGE_BOTTOM_OF_PIPE)
+    if(enumerator & VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
     {
         strings.push_back("VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT");
     }
