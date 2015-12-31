@@ -676,7 +676,7 @@ void  TestFrameworkVkPresent::Display()
     // engine has fully released ownership to the application, and it is
     // okay to render to the image.
     VkFence nullFence = { VK_NULL_HANDLE };
-    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE;
     VkSubmitInfo submit_info;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.pNext = NULL;
