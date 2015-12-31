@@ -8,7 +8,7 @@
 class MeshGenerator {
 public:
     MeshGenerator(unsigned int rng_seed, int count) :
-        count_(count), current_(-1), generator_(rng_seed), distribution_(0.0f, 1.0f)
+        count_(count), current_(-1), rng_(rng_seed), color_(0.0f, 1.0f)
     {
     }
 
@@ -50,10 +50,10 @@ public:
         };
 
         for (int i = 0; i < 5; i++) {
-            vb_data[i][3] = distribution_(generator_);
-            vb_data[i][4] = distribution_(generator_);
-            vb_data[i][5] = distribution_(generator_);
-            vb_data[i][6] = distribution_(generator_);
+            vb_data[i][3] = color_(rng_);
+            vb_data[i][4] = color_(rng_);
+            vb_data[i][5] = color_(rng_);
+            vb_data[i][6] = color_(rng_);
         }
 
         assert(sizeof(vb_data) <= size);
@@ -131,10 +131,8 @@ private:
     int count_;
     int current_;
 
-    std::mt19937 generator_;
-    std::uniform_real_distribution<float> distribution_;
-    float color_[4];
-    float increment_;
+    std::mt19937 rng_;
+    std::uniform_real_distribution<float> color_;
 };
 
 Meshes::Meshes(unsigned int rng_seed, VkPhysicalDevice phy, VkDevice dev, int count)
