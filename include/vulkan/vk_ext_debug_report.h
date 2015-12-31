@@ -117,9 +117,6 @@ typedef struct VkDebugReportCallbackCreateInfoEXT {
     const void*                                 pUserData;
 } VkDebugReportCallbackCreateInfoEXT;
 
-#define VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT ((VkStructureType) 1000010000)
-#define VK_ERROR_VALIDATION_FAILED_EXT ((VkResult) -1000010001)
-
 typedef VkResult (VKAPI_PTR *PFN_vkCreateDebugReportCallbackEXT)(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
 typedef void (VKAPI_PTR *PFN_vkDestroyDebugReportCallbackEXT)(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 typedef void (VKAPI_PTR *PFN_vkDebugReportMessageEXT)(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage);
