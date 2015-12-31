@@ -337,51 +337,59 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
     return res;
 }
 
-VkResult init_debug_msg_callback(struct sample_info &info, PFN_vkDbgMsgCallback dbgFunc)
+VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
 {
     VkResult res;
-    VkDbgMsgCallback msg_callback;
+    VkDebugReportCallbackEXT debug_report_callback;
 
-    info.dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgCreateMsgCallback");
-    if (!info.dbgCreateMsgCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkDbgCreateMsgCallback function." << std::endl;
+    info.dbgCreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkCreateDebugReportCallbackEXT");
+    if (!info.dbgCreateDebugReportCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkCreateDebugReportCallbackEXT function." << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
     }
-    std::cout << "Got dbgCreateMsgCallback function\n";
+    std::cout << "Got dbgCreateDebugReportCallback function\n";
 
-    info.dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgDestroyMsgCallback");
-    if (!info.dbgDestroyMsgCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkDbgDestroyMsgCallback function." << std::endl;
+    info.dbgDestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkDestroyDebugReportCallbackEXT");
+    if (!info.dbgDestroyDebugReportCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkDestroyDebugReportCallbackEXT function." << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
     }
+    std::cout << "Got dbgDestroyDebugReportCallback function\n";
 
-    res = info.dbgCreateMsgCallback(
-              info.inst,
-              VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
-              dbgFunc, NULL,
-              &msg_callback);
+    VkDebugReportCallbackCreateInfoEXT create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    create_info.pNext = NULL;
+    create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+    create_info.pfnCallback = dbgFunc;
+    create_info.pUserData = NULL;
+
+    res = info.dbgCreateDebugReportCallback(
+                info.inst,
+                &create_info,
+                NULL,
+                &debug_report_callback);
     switch (res) {
     case VK_SUCCESS:
-        std::cout << "Successfully created message calback object\n";
-        info.msg_callbacks.push_back(msg_callback);
+        std::cout << "Successfully created debug report callback object\n";
+        info.debug_report_callbacks.push_back(debug_report_callback);
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
-        std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: out of host memory pointer\n" << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
         break;
     default:
-        std::cout << "dbgCreateMsgCallback: unknown failure\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: unknown failure\n" << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
         break;
     }
     return res;
 }
 
-void destroy_debug_msg_callback(struct sample_info &info)
+void destroy_debug_report_callback(struct sample_info &info)
 {
-    while (info.msg_callbacks.size() > 0) {
-        info.dbgDestroyMsgCallback(info.inst, info.msg_callbacks.back());
-        info.msg_callbacks.pop_back();
+    while (info.debug_report_callbacks.size() > 0) {
+        info.dbgDestroyDebugReportCallback(info.inst, info.debug_report_callbacks.back(), NULL);
+        info.debug_report_callbacks.pop_back();
     }
 }
 
