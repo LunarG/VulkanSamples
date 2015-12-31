@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 216, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 217, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -1882,7 +1882,7 @@ typedef struct VkDescriptorSetLayoutCreateInfo {
     const void*                                 pNext;
     VkDescriptorSetLayoutCreateFlags            flags;
     uint32_t                                    bindingCount;
-    const VkDescriptorSetLayoutBinding*         pBinding;
+    const VkDescriptorSetLayoutBinding*         pBindings;
 } VkDescriptorSetLayoutCreateInfo;
 
 typedef struct VkDescriptorPoolSize {

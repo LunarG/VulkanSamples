@@ -319,8 +319,8 @@ static void add_create_ds_layout_to_trace_packet(vktrace_trace_packet_header* pH
         ppOutNext = NULL;
         vktrace_add_buffer_to_trace_packet(pHeader, (void**)(ppOutNow), sizeof(VkDescriptorSetLayoutCreateInfo), pInNow);
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
-        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBinding), sizeof(VkDescriptorSetLayoutBinding) * pInNow->bindingCount, pInNow->pBinding);
-        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBinding));
+        vktrace_add_buffer_to_trace_packet(pHeader, (void**)&((*ppOutNow)->pBindings), sizeof(VkDescriptorSetLayoutBinding) * pInNow->bindingCount, pInNow->pBindings);
+        vktrace_finalize_buffer_address(pHeader, (void**)&((*ppOutNow)->pBindings));
         ppOutNext = (VkDescriptorSetLayoutCreateInfo**)&(*ppOutNow)->pNext;
         pInNow = (VkDescriptorSetLayoutCreateInfo*)pInNow->pNext;
         vktrace_finalize_buffer_address(pHeader, (void**)(ppOutNow));

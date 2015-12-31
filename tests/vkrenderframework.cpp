@@ -507,7 +507,7 @@ void VkDescriptorSetObj::CreateVKDescriptorSet(VkCommandBufferObj *commandBuffer
     VkDescriptorSetLayoutCreateInfo layout = {};
     layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layout.bindingCount = bindings.size();
-    layout.pBinding = bindings.data();
+    layout.pBindings = bindings.data();
 
     m_layout.init(*m_device, layout);
     vector<const vk_testing::DescriptorSetLayout *> layouts;
