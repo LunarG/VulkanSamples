@@ -166,8 +166,7 @@ void Hologram::create_pipeline_layout()
     VkPushConstantRange push_const_range = {};
     push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     push_const_range.offset = 0;
-    // two mat4's
-    push_const_range.size = 4 * 4 * 2 * sizeof(float);
+    push_const_range.size = sizeof(glm::mat4);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -469,8 +468,8 @@ void Hologram::draw_object(const Object &obj, VkCommandBuffer cmd) const
     model = glm::translate(model, obj.pos);
     model = glm::scale(model, obj.scale);
 
-    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(model), glm::value_ptr(model));
-    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, sizeof(model), sizeof(view_projection_), glm::value_ptr(view_projection_));
+    glm::mat4 mvp = view_projection_ * model;
+    vk::CmdPushConstants(cmd, pipeline_layout_, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp), glm::value_ptr(mvp));
 
     meshes_->cmd_draw(cmd, obj.mesh);
 }
