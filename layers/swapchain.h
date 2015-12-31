@@ -87,6 +87,7 @@ typedef enum _SWAPCHAIN_ERROR
     SWAPCHAIN_INVALID_COUNT,                    // Second time a query called, the pCount value didn't match first time
     SWAPCHAIN_WRONG_STYPE,                      // The sType for a struct has the wrong value
     SWAPCHAIN_WRONG_NEXT,                       // The pNext for a struct is not NULL
+    SWAPCHAIN_ZERO_VALUE,                       // A value should be non-zero
 } SWAPCHAIN_ERROR;
 
 
@@ -125,6 +126,13 @@ typedef enum _SWAPCHAIN_ERROR
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, SWAPCHAIN_WRONG_NEXT, LAYER_NAME, \
                 "%s() called with non-NULL value for %s->pNext.",       \
+                __FUNCTION__, (obj))                                    \
+    : VK_FALSE
+#define LOG_ERROR_ZERO_VALUE(objType, type, obj)                        \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_ZERO_VALUE, LAYER_NAME,  \
+                "%s() called with a zero value for %s.",                \
                 __FUNCTION__, (obj))                                    \
     : VK_FALSE
 #define LOG_ERROR(objType, type, obj, enm, fmt, ...)                    \

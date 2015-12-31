@@ -1788,7 +1788,54 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
 
-    for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
+    if (!pPresentInfo) {
+        skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                           device,
+                                           "pPresentInfo");
+    } else {
+        if (pPresentInfo->sType != VK_STRUCTURE_TYPE_PRESENT_INFO_KHR) {
+            skipCall |= LOG_ERROR_WRONG_STYPE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                              device,
+                                              "pPresentInfo",
+                                              "VK_STRUCTURE_TYPE_PRESENT_INFO_KHR");
+        }
+        if (pPresentInfo->pNext != NULL) {
+            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                             device,
+                                             "pPresentInfo");
+        }
+        if (!pPresentInfo->waitSemaphoreCount) {
+            skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                             device,
+                                             "pPresentInfo->waitSemaphoreCount");
+        }
+        if (!pPresentInfo->pWaitSemaphores) {
+            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                               device,
+                                               "pPresentInfo->pWaitSemaphores");
+        }
+        if (!pPresentInfo->swapchainCount) {
+            skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                             device,
+                                             "pPresentInfo->swapchainCount");
+        }
+        if (!pPresentInfo->pSwapchains) {
+            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                               device,
+                                               "pPresentInfo->pSwapchains");
+        }
+        if (!pPresentInfo->pImageIndices) {
+            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+                                               device,
+                                               "pPresentInfo->pImageIndices");
+        }
+        // Note: pPresentInfo->pResults is allowed to be NULL
+    }
+
+    for (uint32_t i = 0;
+         pPresentInfo && (i < pPresentInfo->swapchainCount);
+         i++) {
+        uint32_t swapchainCount = pPresentInfo->swapchainCount;
         uint32_t index = pPresentInfo->pImageIndices[i];
         SwpSwapchain *pSwapchain =
             &my_data->swapchainMap[pPresentInfo->pSwapchains[i]];
@@ -1832,9 +1879,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         result = my_data->device_dispatch_table->QueuePresentKHR(queue,
-                                                               pPresentInfo);
+                                                                 pPresentInfo);
 
-        if ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR)) {
+        if (pPresentInfo &&
+            ((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
             for (uint32_t i = 0; i < pPresentInfo->swapchainCount ; i++) {
                 int index = pPresentInfo->pImageIndices[i];
                 SwpSwapchain *pSwapchain =
