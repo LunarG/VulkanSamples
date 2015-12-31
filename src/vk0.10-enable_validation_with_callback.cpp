@@ -33,26 +33,26 @@ Show how to enable validation layers and provide callback
 #include <util_init.hpp>
 
 VkBool32 dbgFunc(
-    VkFlags                             msgFlags,
-    VkDbgObjectType                     objType,
+    VkDebugReportFlagsEXT               msgFlags,
+    VkDebugReportObjectTypeEXT          objType,
     uint64_t                            srcObject,
     size_t                              location,
     int32_t                             msgCode,
     const char*                         pLayerPrefix,
     const char*                         pMsg,
-    void*                               pUserData)
+    const void*                         pUserData)
 {
     std::ostringstream message;
 
-    if (msgFlags & VK_DBG_REPORT_ERROR_BIT) {
+    if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         message << "ERROR: ";
-    } else if (msgFlags & VK_DBG_REPORT_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_WARN_BIT_EXT) {
         message << "WARNING: ";
-    } else if (msgFlags & VK_DBG_REPORT_PERF_WARN_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_PERF_WARN_BIT_EXT) {
         message << "PERFORMANCE WARNING: ";
-    } else if (msgFlags & VK_DBG_REPORT_INFO_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_INFO_BIT_EXT) {
         message << "INFO: ";
-    } else if (msgFlags & VK_DBG_REPORT_DEBUG_BIT) {
+    } else if (msgFlags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
         message << "DEBUG: ";
     }
     message << "[" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg;
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     }
 
     /* Enable debug callback extension */
-    info.instance_extension_names.push_back("DEBUG_REPORT");
+    info.instance_extension_names.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -187,34 +187,40 @@ int main(int argc, char **argv)
     res = vkCreateDevice(info.gpus[0], &device_info, NULL, &info.device);
     assert(res == VK_SUCCESS);
 
-    VkDbgMsgCallback msg_callback;
+    VkDebugReportCallbackEXT debug_report_callback;
 
-    info.dbgCreateMsgCallback = (PFN_vkDbgCreateMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgCreateMsgCallback");
-    if (!info.dbgCreateMsgCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkDbgCreateMsgCallback function." << std::endl;
+    info.dbgCreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkCreateDebugReportCallbackEXT");
+    if (!info.dbgCreateDebugReportCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkCreateDebugReportCallbackEXT function." << std::endl;
         exit(1);
     }
 
-    info.dbgDestroyMsgCallback = (PFN_vkDbgDestroyMsgCallback) vkGetInstanceProcAddr(info.inst, "vkDbgDestroyMsgCallback");
-    if (!info.dbgDestroyMsgCallback) {
-        std::cout << "GetInstanceProcAddr: Unable to find vkDbgDestroyMsgCallback function." << std::endl;
+    info.dbgDestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(info.inst, "vkDestroyDebugReportCallbackEXT");
+    if (!info.dbgDestroyDebugReportCallback) {
+        std::cout << "GetInstanceProcAddr: Unable to find vkDestroyDebugReportCallbackEXT function." << std::endl;
         exit(1);
     }
 
-    res = info.dbgCreateMsgCallback(
-              info.inst,
-              VK_DBG_REPORT_ERROR_BIT | VK_DBG_REPORT_WARN_BIT,
-              dbgFunc, NULL,
-              &msg_callback);
+    VkDebugReportCallbackCreateInfoEXT create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    create_info.pNext = NULL;
+    create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARN_BIT_EXT;
+    create_info.pfnCallback = dbgFunc;
+    create_info.pUserData = NULL;
+    res = info.dbgCreateDebugReportCallback(
+                info.inst,
+                &create_info,
+                NULL,
+                &debug_report_callback);
     switch (res) {
     case VK_SUCCESS:
         break;
     case VK_ERROR_OUT_OF_HOST_MEMORY:
-        std::cout << "dbgCreateMsgCallback: out of host memory pointer\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: out of host memory\n" << std::endl;
         exit(1);
         break;
     default:
-        std::cout << "dbgCreateMsgCallback: unknown failure\n" << std::endl;
+        std::cout << "dbgCreateDebugReportCallback: unknown failure\n" << std::endl;
         exit(1);
         break;
     }
@@ -238,7 +244,7 @@ int main(int argc, char **argv)
     vkDestroyDevice(info.device, NULL);
 
     /* Clean up callback */
-    info.dbgDestroyMsgCallback(info.inst, msg_callback);
+    info.dbgDestroyDebugReportCallback(info.inst, debug_report_callback, NULL);
 
     /* VULKAN_KEY_END */
 

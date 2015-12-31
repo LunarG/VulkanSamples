@@ -43,7 +43,7 @@
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_lunarg_debug_report.h>
+#include <vulkan/vk_ext_debug_report.h>
 
 #include "vulkan/vk_sdk_platform.h"
 
@@ -226,10 +226,10 @@ struct sample_info {
     VkDescriptorPool desc_pool;
     std::vector<VkDescriptorSet> desc_set;
 
-    PFN_vkDbgCreateMsgCallback dbgCreateMsgCallback;
-    PFN_vkDbgDestroyMsgCallback dbgDestroyMsgCallback;
-    PFN_vkDbgMsgCallback dbgBreakCallback;
-    std::vector<VkDbgMsgCallback> msg_callbacks;
+    PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
+    PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
+    PFN_vkDebugReportMessageEXT dbgBreakCallback;
+    std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
 
     uint32_t current_buffer;
     uint32_t queue_count;
