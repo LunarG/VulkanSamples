@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 220, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 221, 0)
 
 
 #define VK_NULL_HANDLE 0
@@ -1155,6 +1155,7 @@ typedef struct VkPhysicalDeviceFeatures {
     VkBool32                                    dualSrcBlend;
     VkBool32                                    logicOp;
     VkBool32                                    multiDrawIndirect;
+    VkBool32                                    drawIndirectFirstInstance;
     VkBool32                                    depthClamp;
     VkBool32                                    depthBiasClamp;
     VkBool32                                    fillModeNonSolid;

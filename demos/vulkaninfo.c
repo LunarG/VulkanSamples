@@ -839,6 +839,7 @@ static void app_gpu_dump_features(const struct app_gpu *gpu)
     printf("\tdualSrcBlend                            = %u\n", features->dualSrcBlend                           );
     printf("\tlogicOp                                 = %u\n", features->logicOp                                );
     printf("\tmultiDrawIndirect                       = %u\n", features->multiDrawIndirect                      );
+    printf("\tdrawIndirectFirstInstance               = %u\n", features->drawIndirectFirstInstance              );
     printf("\tdepthClamp                              = %u\n", features->depthClamp                             );
     printf("\tdepthBiasClamp                          = %u\n", features->depthBiasClamp                         );
     printf("\tfillModeNonSolid                        = %u\n", features->fillModeNonSolid                       );
