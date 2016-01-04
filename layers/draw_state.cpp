@@ -2381,6 +2381,7 @@ static void clearDescriptorPool(layer_data* my_data, const VkDevice device, cons
         SET_NODE* pSet = pPool->pSets;
         while (pSet) {
             clearDescriptorSet(my_data, pSet->set);
+            pSet = pSet->pNext;
         }
         // Reset available count to max count for this pool
         for (uint32_t i=0; i<pPool->availableDescriptorTypeCount.size(); ++i) {
