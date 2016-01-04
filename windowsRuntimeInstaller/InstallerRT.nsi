@@ -39,7 +39,7 @@
 # This number is determined by doing an install, and then from Windows Explorer,
 # doing a "Properties" on the install directory. Add to this the size of the
 # files installed to C:\Windows\System32. And then add a little bit more.
-.  The units are 1K bytes.
+# The units are 1K bytes.
 !define ESTIMATEDSIZE "340"
 
 # Set the icon
