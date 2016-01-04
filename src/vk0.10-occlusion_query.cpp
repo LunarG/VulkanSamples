@@ -234,14 +234,14 @@ int main(int argc, char **argv)
     viewport.maxDepth = (float) 1.0f;
     viewport.x = 0;
     viewport.y = 0;
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
 
     vkCmdBeginQuery(info.cmd, query_pool, 0 /*slot*/, 0 /*flags*/);
     vkCmdEndQuery(info.cmd, query_pool, 0 /*slot*/);
