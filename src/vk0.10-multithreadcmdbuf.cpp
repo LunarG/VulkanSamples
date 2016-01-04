@@ -177,6 +177,7 @@ int main(int argc, char **argv)
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -253,16 +254,18 @@ int main(int argc, char **argv)
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-    vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(threadCmdBufs[3], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 
     res = vkEndCommandBuffer(threadCmdBufs[3]);
     assert(res == VK_SUCCESS);
 
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 4; /* 3 from threads + prePresentBarrier */
     submit_info[0].pCommandBuffers = threadCmdBufs;
     submit_info[0].signalSemaphoreCount = 0;

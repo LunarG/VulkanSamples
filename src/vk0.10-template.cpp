@@ -137,8 +137,9 @@ int main(int argc, char **argv)
 
     VkFence drawFence = {};
     init_fence(info, drawFence);
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info = {};
-    init_submit_info(info, submit_info);
+    init_submit_info(info, submit_info, pipe_stage_flags);
 
     /* Queue the command buffer for execution */
     res = vkQueueSubmit(info.queue, 1, &submit_info, drawFence);
