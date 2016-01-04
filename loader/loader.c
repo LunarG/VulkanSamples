@@ -1366,7 +1366,7 @@ static bool loader_icd_init_entrys(struct loader_icd *icd,
 
 static void loader_debug_init(void)
 {
-    const char *env;
+    const char *env, *orig;
 
     if (g_loader_debug > 0)
         return;
@@ -1374,7 +1374,7 @@ static void loader_debug_init(void)
     g_loader_debug = 0;
 
     /* parse comma-separated debug options */
-    env = getenv("VK_LOADER_DEBUG");
+    orig = env = loader_getenv("VK_LOADER_DEBUG");
     while (env) {
         const char *p = strchr(env, ',');
         size_t len;
@@ -1411,6 +1411,8 @@ static void loader_debug_init(void)
 
         env = p + 1;
     }
+
+    loader_free_getenv(orig);
 }
 
 void loader_initialize(void)
@@ -1939,10 +1941,11 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
     out_files->count = 0;
     out_files->filename_list = NULL;
 
-    if (env_override != NULL && (override = getenv(env_override))) {
+    if (env_override != NULL && (override = loader_getenv(env_override))) {
 #if !defined(_WIN32)
         if (geteuid() != getuid()) {
             /* Don't allow setuid apps to use the env var: */
+            loader_free_getenv(override);
             override = NULL;
         }
 #endif
@@ -1984,6 +1987,7 @@ static void loader_get_manifest_files(const struct loader_instance *inst,
             return;
         }
         strcpy(loc, override);
+        loader_free_getenv(override);
     }
 
     // Print out the paths being searched if debugging is enabled
@@ -2674,17 +2678,19 @@ static void loader_add_layer_implicit(
             if (prop->enable_env_var.name[0] == 0) {
                 enable = true;
             } else {
-                env_value = getenv(prop->enable_env_var.name);
+                env_value = loader_getenv(prop->enable_env_var.name);
                 if (env_value && !strcmp(prop->enable_env_var.value, env_value))
                     enable = true;
+                loader_free_getenv(env_value);
             }
 
             // disable_environment has priority, i.e. if both enable and disable
             // environment variables are set, the layer is disabled. Implicit layers
             // are required to have a disable_environment variables
-            env_value = getenv(prop->disable_env_var.name);
+            env_value = loader_getenv(prop->disable_env_var.name);
             if (env_value)
                 enable = false;
+            loader_free_getenv(env_value);
 
             if (enable)
                 loader_add_to_layer_list(inst, list, 1, prop);
@@ -2708,7 +2714,7 @@ static void loader_add_layer_env(
     char *layerEnv;
     char *next, *name;
 
-    layerEnv = getenv(env_name);
+    layerEnv = loader_getenv(env_name);
     if (layerEnv == NULL) {
         return;
     }
@@ -2717,6 +2723,8 @@ static void loader_add_layer_env(
         return;
     }
     strcpy(name, layerEnv);
+
+    loader_free_getenv(layerEnv);
 
     while (name && *name ) {
         next = loader_get_next_path(name);

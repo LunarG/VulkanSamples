@@ -588,7 +588,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
     if (!screenshotEnvQueried)
     {
-        const char *_vk_screenshot = getenv("_VK_SCREENSHOT");
+        const char *_vk_screenshot = loader_getenv("_VK_SCREENSHOT");
         if (_vk_screenshot && *_vk_screenshot)
         {
             string spec(_vk_screenshot), word;
@@ -614,6 +614,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
                 start = comma + 1;
             }
         }
+        loader_free_getenv(_vk_screenshot);
         screenshotEnvQueried = true;
     }
     
