@@ -167,7 +167,7 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
         VkResult r;
 
         /* timeout in nano seconds */
-        ns = (timeout <= (uint64_t) INT64_MAX) ? ns : -1;
+        ns = (timeout <= (uint64_t) INT64_MAX) ? timeout : -1;
         r = intel_fence_wait(fence, ns);
 
         if (!waitAll && r == VK_SUCCESS)
