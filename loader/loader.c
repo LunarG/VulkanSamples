@@ -1131,8 +1131,7 @@ static void loader_destroy_logical_device(const struct loader_instance *inst,
                                           struct loader_device *dev)
 {
     loader_heap_free(inst, dev->app_extension_props);
-    if (dev->activated_layer_list.count)
-        loader_destroy_layer_list(inst, &dev->activated_layer_list);
+    loader_destroy_layer_list(inst, &dev->activated_layer_list);
     loader_heap_free(inst, dev);
 }
 
@@ -2730,10 +2729,6 @@ static void loader_add_layer_env(
 
 void loader_deactivate_instance_layers(struct loader_instance *instance)
 {
-    if (!instance->activated_layer_list.count) {
-        return;
-    }
-
     /* Create instance chain of enabled layers */
     for (uint32_t i = 0; i < instance->activated_layer_list.count; i++) {
         struct loader_layer_properties *layer_prop = &instance->activated_layer_list.list[i];
