@@ -96,7 +96,7 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
         pPhysicalDevice->pDevice = &my_device_data->deviceMap[device];
     } else {
         log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                (uint64_t)physicalDevice , 0, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
+                (uint64_t)physicalDevice , __LINE__, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
                 "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
     }
     my_device_data->deviceMap[device].device = device;
@@ -708,7 +708,7 @@ static VkBool32 validateCreateSwapchainKHR(VkDevice device, const VkSwapchainCre
             skipCall |= debug_report_log_msg(my_data->report_data,
                                              VK_DEBUG_REPORT_ERROR_BIT_EXT,
                                              VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                             (uint64_t) device, 0,
+                                             (uint64_t) device, __LINE__,
                                              SWAPCHAIN_CREATE_SWAP_BAD_PRE_TRANSFORM,
                                              LAYER_NAME,
                                              errorString.c_str());
