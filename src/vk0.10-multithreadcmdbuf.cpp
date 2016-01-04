@@ -411,14 +411,14 @@ static void * per_thread_code(void *arg)
     viewport.maxDepth = (float) 1.0f;
     viewport.x = 0;
     viewport.y = 0;
-    vkCmdSetViewport(threadCmdBufs[threadNum], NUM_VIEWPORTS, &viewport);
+    vkCmdSetViewport(threadCmdBufs[threadNum], 0, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(threadCmdBufs[threadNum], NUM_SCISSORS, &scissor);
+    vkCmdSetScissor(threadCmdBufs[threadNum], 0, NUM_SCISSORS, &scissor);
 
     vkCmdDraw(threadCmdBufs[threadNum], 3, 1, 0, 0);
     vkCmdEndRenderPass(threadCmdBufs[threadNum]);

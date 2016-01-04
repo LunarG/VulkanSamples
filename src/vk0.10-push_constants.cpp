@@ -136,7 +136,7 @@ int main(int argc, char **argv)
     resource_layout_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     resource_layout_info[0].pNext = NULL;
     resource_layout_info[0].bindingCount = resource_count;
-    resource_layout_info[0].pBinding = resource_binding;
+    resource_layout_info[0].pBindings = resource_binding;
 
     VkDescriptorSetLayout descriptor_layouts[1] = {};
     res = vkCreateDescriptorSetLayout(info.device, resource_layout_info, NULL, &descriptor_layouts[0]);

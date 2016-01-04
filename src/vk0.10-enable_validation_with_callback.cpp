@@ -85,12 +85,12 @@ int main(int argc, char **argv)
      * though order doesn't really matter for these validation
      * layers.
      */
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_Threading");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_Image");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
-    info.instance_layer_names.push_back("VK_LAYER_LUNARG_ParamChecker");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_threading");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_image");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+    info.instance_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
 
     if (!demo_check_layers(info.instance_layer_properties, info.instance_layer_names)) {
         exit(1);
@@ -133,12 +133,12 @@ int main(int argc, char **argv)
      * Instance layers and Device layers are independent so
      * must enable validation layers for both to see everything.
      */
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_Threading");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_DrawState");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_Image");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_MemTracker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_ObjectTracker");
-    info.device_layer_names.push_back("VK_LAYER_LUNARG_ParamChecker");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_threading");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_draw_state");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_image");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_mem_tracker");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_object_tracker");
+    info.device_layer_names.push_back("VK_LAYER_LUNARG_param_checker");
 
     if (!demo_check_layers(info.device_layer_properties, info.device_layer_names)) {
         exit(1);

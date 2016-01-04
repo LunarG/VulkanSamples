@@ -74,11 +74,20 @@ int main(int argc, char **argv)
 
     // Construct the surface description:
 #ifdef _WIN32
-    res = vkCreateWin32SurfaceKHR(info.inst, info.connection, info.window,
+    VkWin32SurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.hinstance = info.connection;
+    createInfo.hwnd = info.window;
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
-
 #else  // _WIN32
-    res = vkCreateXcbSurfaceKHR(info.inst, info.connection, info.window,
+    VkXcbSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.connection = info.connection;
+    createInfo.window = info.window;
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
                                 NULL, &info.surface);
 #endif // _WIN32
     assert(res == VK_SUCCESS);
@@ -215,8 +224,8 @@ int main(int argc, char **argv)
     }
 
     VkSurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }

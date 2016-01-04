@@ -253,9 +253,9 @@ int main(int argc, char **argv)
         
         viewport.x = 25.0f + 250.0f*(i%2);
         viewport.y = 25.0f + 250.0f*(i/2);
-        vkCmdSetViewport(secondary_cmds[i], NUM_VIEWPORTS, &viewport);
+        vkCmdSetViewport(secondary_cmds[i], 0, NUM_VIEWPORTS, &viewport);
 
-        vkCmdSetScissor(secondary_cmds[i], NUM_SCISSORS, &scissor);
+        vkCmdSetScissor(secondary_cmds[i], 0, NUM_SCISSORS, &scissor);
 
         vkCmdDraw(secondary_cmds[i], 12 * 3, 1, 0, 0);
         

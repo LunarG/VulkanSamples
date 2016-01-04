@@ -688,11 +688,20 @@ void init_swapchain_extension(struct sample_info &info)
 
     // Construct the surface description:
 #ifdef _WIN32
-    res = vkCreateWin32SurfaceKHR(info.inst, info.connection, info.window,
+    VkWin32SurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.hinstance = info.connection;
+    createInfo.hwnd = info.window;
+    res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
-
 #else  // _WIN32
-    res = vkCreateXcbSurfaceKHR(info.inst, info.connection, info.window,
+    VkXcbSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    createInfo.pNext = NULL;
+    createInfo.connection = info.connection;
+    createInfo.window = info.window;
+    res = vkCreateXcbSurfaceKHR(info.inst, &createInfo,
                                 NULL, &info.surface);
 #endif // _WIN32
     assert(res == VK_SUCCESS);
@@ -935,8 +944,8 @@ void init_swap_chain(struct sample_info &info)
     }
 
     VkSurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_NONE_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
@@ -1095,7 +1104,7 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = use_texture?2:1;
-    descriptor_layout.pBinding = layout_bindings;
+    descriptor_layout.pBindings = layout_bindings;
 
     VkResult U_ASSERT_ONLY res;
 
@@ -1936,7 +1945,7 @@ void init_viewports(struct sample_info &info)
     info.viewport.maxDepth = (float) 1.0f;
     info.viewport.x = 0;
     info.viewport.y = 0;
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &info.viewport);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
 }
 
 void init_scissors(struct sample_info &info)
@@ -1945,7 +1954,7 @@ void init_scissors(struct sample_info &info)
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
     info.scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
 }
 
 void init_fence(struct sample_info &info, VkFence &fence)

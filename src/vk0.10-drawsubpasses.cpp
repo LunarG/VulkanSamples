@@ -428,14 +428,14 @@ int main(int argc, char **argv)
     viewport.maxDepth = (float) 1.0f;
     viewport.x = 0;
     viewport.y = 0;
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
 
     VkRect2D scissor;
     scissor.extent.width = info.width / 2;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
 
     /* Draw the cube into stencil */
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
@@ -447,8 +447,8 @@ int main(int argc, char **argv)
     vkCmdBindPipeline(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                  stencil_fullscreen_pipe);
 
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
 
     /* Draw the fullscreen pass */
     vkCmdDraw(info.cmd, 4, 1, 0, 0);
@@ -565,8 +565,8 @@ int main(int argc, char **argv)
     vkCmdBindDescriptorSets(info.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline_layout,
             0, NUM_DESCRIPTOR_SETS, info.desc_set.data(), 0, NULL);
     vkCmdBindVertexBuffers(info.cmd, 0, 1, &info.vertex_buffer.buf, offsets);
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
   
     /* Draw the cube blending */
     vkCmdDraw(info.cmd, 12 * 3, 1, 0, 0);
@@ -585,8 +585,8 @@ int main(int argc, char **argv)
     viewport.width -= 50.0f;
     viewport.height -= 300.0f;
 
-    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &viewport);
-    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &scissor);
+    vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &viewport);
+    vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &scissor);
     
     vkCmdDraw(info.cmd, 4, 1, 0, 0);
 
