@@ -181,6 +181,30 @@ struct _SwpInstance {
     bool surfaceExtensionEnabled;
 
     // TODO: Add additional booleans for platform-specific extensions:
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+    // Set to true if VK_KHR_ANDROID_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool androidSurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_ANDROID_KHR
+#ifdef VK_USE_PLATFORM_MIR_KHR
+    // Set to true if VK_KHR_MIR_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool mirSurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_MIR_KHR
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+    // Set to true if VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool waylandSurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+    // Set to true if VK_KHR_WIN32_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool win32SurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_XCB_KHR
+    // Set to true if VK_KHR_XCB_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool xcbSurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_XCB_KHR
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+    // Set to true if VK_KHR_XLIB_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
+    bool xlibSurfaceExtensionEnabled;
+#endif // VK_USE_PLATFORM_XLIB_KHR
 };
 
 // Create one of these for each VkSurfaceKHR:
