@@ -79,7 +79,7 @@ void init_texture(struct sample_info &info,  const char* textureName = nullptr);
 void init_viewports(struct sample_info &info);
 void init_scissors(struct sample_info &info);
 void init_fence(struct sample_info &info, VkFence &fence);
-void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info);
+void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPipelineStageFlags &pipe_stage_flags);
 void init_present_info(struct sample_info &info, VkPresentInfoKHR &present);
 void init_clear_color_and_depth(struct sample_info &info, VkClearValue* clear_values);
 void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin);

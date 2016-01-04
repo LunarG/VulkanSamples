@@ -813,6 +813,7 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_b
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info[0].pWaitDstStageMask = NULL;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -850,7 +851,7 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &prePresentBarrier;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 }
 
@@ -1289,11 +1290,13 @@ void execute_queue_command_buffer(struct sample_info &info)
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -1872,6 +1875,7 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info[0].waitSemaphoreCount = 0;
         submit_info[0].pWaitSemaphores = NULL;
+        submit_info[0].pWaitDstStageMask = NULL;
         submit_info[0].commandBufferCount = 1;
         submit_info[0].pCommandBuffers = cmd_bufs;
         submit_info[0].signalSemaphoreCount = 0;
@@ -1966,12 +1970,13 @@ void init_fence(struct sample_info &info, VkFence &fence)
     vkCreateFence(info.device, &fenceInfo, NULL, &fence);
 }
 
-void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info)
+void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPipelineStageFlags &pipe_stage_flags)
 {
     submit_info.pNext = NULL;
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &info.presentCompleteSemaphore;
+    submit_info.pWaitDstStageMask = &pipe_stage_flags;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &info.cmd;
     submit_info.signalSemaphoreCount = 0;
