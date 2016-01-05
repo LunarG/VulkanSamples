@@ -1001,11 +1001,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
                  pSurfaceFormatCount) {
             // Compare the preliminary value of *pSurfaceFormatCount with the
             // value this time:
-            if (*pSurfaceFormatCount != pPhysicalDevice->surfaceFormatCount) {
+            if (*pSurfaceFormatCount > pPhysicalDevice->surfaceFormatCount) {
                 LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                         physicalDevice,
                                         "pSurfaceFormatCount",
                                         "pSurfaceFormats",
+                                        *pSurfaceFormatCount,
                                         pPhysicalDevice->surfaceFormatCount);
             }
             else if (*pSurfaceFormatCount > 0) {
@@ -1069,11 +1070,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
                  pPresentModeCount) {
             // Compare the preliminary value of *pPresentModeCount with the
             // value this time:
-            if (*pPresentModeCount != pPhysicalDevice->presentModeCount) {
+            if (*pPresentModeCount > pPhysicalDevice->presentModeCount) {
                 LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                                         physicalDevice,
                                         "pPresentModeCount",
                                         "pPresentModes",
+                                        *pPresentModeCount,
                                         pPhysicalDevice->presentModeCount);
             }
             else if (*pPresentModeCount > 0) {
@@ -1579,11 +1581,12 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
                  pSwapchainImageCount) {
             // Compare the preliminary value of *pSwapchainImageCount with the
             // value this time:
-            if (*pSwapchainImageCount != pSwapchain->imageCount) {
+            if (*pSwapchainImageCount > pSwapchain->imageCount) {
                 LOG_ERROR_INVALID_COUNT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                         device,
                                         "pSwapchainImageCount",
                                         "pSwapchainImages",
+                                        *pSwapchainImageCount,
                                         pSwapchain->imageCount);
             }
             else if (*pSwapchainImageCount > 0) {

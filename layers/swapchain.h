@@ -105,13 +105,14 @@ typedef enum _SWAPCHAIN_ERROR
                 (uint64_t) (obj), 0, SWAPCHAIN_NULL_POINTER, LAYER_NAME, \
                 "%s() called with NULL pointer %s.", __FUNCTION__, (obj)) \
     : VK_FALSE
-#define LOG_ERROR_INVALID_COUNT(objType, type, obj, obj2, val)          \
+#define LOG_ERROR_INVALID_COUNT(objType, type, obj, obj2, val, val2)    \
     (my_data) ?                                                         \
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
                 (uint64_t) (obj), 0, SWAPCHAIN_INVALID_COUNT, LAYER_NAME, \
-                "%s() called with non-NULL %s, and with %s not matching " \
-                "the value (%d) that was returned when %s was NULL.",   \
-                __FUNCTION__, (obj2), (obj), (val), (obj2))             \
+                "%s() called with non-NULL %s, and with %s set to a "   \
+                "value (%d) that is greater than the value (%d) that "  \
+                "was returned when %s was NULL.",                      \
+                __FUNCTION__, (obj2), (obj), (val), (val2), (obj2))    \
     : VK_FALSE
 #define LOG_ERROR_WRONG_STYPE(objType, type, obj, val)          \
     (my_data) ?                                                         \
