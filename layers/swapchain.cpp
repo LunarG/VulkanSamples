@@ -1713,16 +1713,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                                              device,
                                              "pPresentInfo");
         }
-        if (!pPresentInfo->waitSemaphoreCount) {
-            skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                             device,
-                                             "pPresentInfo->waitSemaphoreCount");
-        }
-        if (!pPresentInfo->pWaitSemaphores) {
-            skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                               device,
-                                               "pPresentInfo->pWaitSemaphores");
-        }
         if (!pPresentInfo->swapchainCount) {
             skipCall |= LOG_ERROR_ZERO_VALUE(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
