@@ -553,7 +553,7 @@ void VkRenderTest::VKTriangleTest(const char *vertShaderText, const char *fragSh
 TEST_F(VkRenderTest, VKTriangle_FragColor)
 {
     static const char *vertShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -564,6 +564,9 @@ TEST_F(VkRenderTest, VKTriangle_FragColor)
         "} ubuf;\n"
         "\n"
         "layout (location = 0) out vec4 outColor;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
         "\n"
         "void main() \n"
         "{\n"
@@ -572,7 +575,7 @@ TEST_F(VkRenderTest, VKTriangle_FragColor)
         "}\n";
 
     static const char *fragShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -591,7 +594,7 @@ TEST_F(VkRenderTest, VKTriangle_FragColor)
 TEST_F(VkRenderTest, VKTriangle_OutputLocation)
 {
     static const char *vertShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -602,6 +605,9 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
         "} ubuf;\n"
         "\n"
         "layout (location = 0) out vec4 outColor;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
         "\n"
         "void main() \n"
         "{\n"
@@ -610,7 +616,7 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
         "}\n";
 
     static const char *fragShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -630,7 +636,7 @@ TEST_F(VkRenderTest, VKTriangle_OutputLocation)
 TEST_F(VkRenderTest, SPV_VKTriangle)
 {
     static const char *vertShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -641,6 +647,9 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
         "} ubuf;\n"
         "\n"
         "layout (location = 0) out vec4 outColor;\n"
+        "out gl_PerVertex {\n"
+        "    vec4 gl_Position;\n"
+        "};\n"
         "\n"
         "void main() \n"
         "{\n"
@@ -649,7 +658,7 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
         "}\n";
 
     static const char *fragShaderText =
-        "#version 140\n"
+        "#version 400\n"
         "#extension GL_ARB_separate_shader_objects : enable\n"
         "#extension GL_ARB_shading_language_420pack : enable\n"
         "\n"
@@ -669,8 +678,13 @@ TEST_F(VkRenderTest, SPV_VKTriangle)
 TEST_F(VkRenderTest, SPV_GreenTriangle)
 {
     static const char *vertShaderText =
-            "#version 130\n"
+            "#version 400\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
             "vec2 vertices[3];\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "      vertices[0] = vec2(-1.0, -1.0);\n"
             "      vertices[1] = vec2( 1.0, -1.0);\n"
@@ -679,7 +693,7 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
             "}\n";
 
     static const char *fragShaderText =
-       "#version 140\n"
+       "#version 400\n"
        "#extension GL_ARB_separate_shader_objects : enable\n"
        "#extension GL_ARB_shading_language_420pack : enable\n"
        "layout (location = 0) out vec4 outColor;\n"
@@ -695,7 +709,12 @@ TEST_F(VkRenderTest, SPV_GreenTriangle)
 TEST_F(VkRenderTest, YellowTriangle)
 {
     static const char *vertShaderText =
-            "#version 130\n"
+            "#version 400\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -709,7 +728,7 @@ TEST_F(VkRenderTest, YellowTriangle)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 outColor;\n"
@@ -723,7 +742,7 @@ TEST_F(VkRenderTest, YellowTriangle)
 TEST_F(VkRenderTest, QuadWithVertexFetch)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //XYZ1( -1, -1, -1 )
@@ -731,6 +750,9 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
             //XYZ1( 0.f, 0.f, 0.f )
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = pos;\n"
@@ -738,7 +760,7 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -806,16 +828,19 @@ TEST_F(VkRenderTest, QuadWithVertexFetch)
 TEST_F(VkRenderTest, TriangleMRT)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 pos;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   gl_Position = pos;\n"
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 uFragData0;\n"
@@ -892,12 +917,15 @@ TEST_F(VkRenderTest, TriangleMRT)
 TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout(location = 0) in vec4 pos;\n"
             "layout(location = 1) in vec4 inColor;\n"
             "layout(location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = pos;\n"
@@ -905,7 +933,7 @@ TEST_F(VkRenderTest, QuadWithIndexedVertexFetch)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout(location = 0) in vec4 color;\n"
@@ -1001,12 +1029,15 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
     // This tests gl_FragCoord
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "layout (location = 1) out vec4 outColor2;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   gl_Position = pos;\n"
             "   outColor = vec4(0.9, 0.9, 0.9, 1.0);\n"
@@ -1014,7 +1045,7 @@ TEST_F(VkRenderTest, GreyandRedCirclesonBlue)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //"#extension GL_ARB_fragment_coord_conventions : enable\n"
@@ -1089,12 +1120,15 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
     // This tests that we correctly handle unread fragment inputs
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "layout (location = 1) out vec4 outColor2;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   gl_Position = pos;\n"
             "   outColor = vec4(0.9, 0.9, 0.9, 1.0);\n"
@@ -1102,7 +1136,7 @@ TEST_F(VkRenderTest, RedCirclesonBlue)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //"#extension GL_ARB_fragment_coord_conventions : enable\n"
@@ -1175,8 +1209,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
     // This tests reading gl_ClipDistance from FS
 
     static const char *vertShaderText =
-            //"#version 140\n"
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "out gl_PerVertex {\n"
@@ -1199,8 +1232,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
-            //"#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //"#extension GL_ARB_fragment_coord_conventions : enable\n"
@@ -1273,12 +1305,15 @@ TEST_F(VkRenderTest, GreyCirclesonBlueFade)
 TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "layout (location = 1) out vec4 outColor2;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   gl_Position = pos;\n"
             "   outColor = vec4(0.9, 0.9, 0.9, 1.0);\n"
@@ -1287,7 +1322,7 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 
 
     static const char *fragShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //"#extension GL_ARB_fragment_coord_conventions : enable\n"
@@ -1363,13 +1398,16 @@ TEST_F(VkRenderTest, GreyCirclesonBlueDiscard)
 TEST_F(VkRenderTest, TriangleVSUniform)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "\n"
             "layout(binding = 0) uniform buf {\n"
             "        mat4 MVP;\n"
             "} ubuf;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -1379,7 +1417,7 @@ TEST_F(VkRenderTest, TriangleVSUniform)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 outColor;\n"
@@ -1443,12 +1481,15 @@ TEST_F(VkRenderTest, MixTriangle)
     // and bar in the FS. The triangle should be blended with red, green and blue
     // corners.
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location=0) out vec4 bar;\n"
             "layout (location=1) out vec4 foo;\n"
             "layout (location=2) out float scale;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "vec2 vertices[3];\n"
             "void main() {\n"
             "      vertices[0] = vec2(-1.0, -1.0);\n"
@@ -1465,7 +1506,7 @@ TEST_F(VkRenderTest, MixTriangle)
             "}\n";
 
     static const char *fragShaderText =
-           "#version 140\n"
+           "#version 400\n"
            "#extension GL_ARB_separate_shader_objects : enable\n"
            "#extension GL_ARB_shading_language_420pack : enable\n"
            "layout (location = 1) in vec4 bar;\n"
@@ -1516,7 +1557,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
     // This tests that attributes work in the presence of gl_VertexID
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //XYZ1( -1, -1, -1 )
@@ -1524,6 +1565,9 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
             //XYZ1( 0.f, 0.f, 0.f )
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   vec4 vertices[3];"
@@ -1533,7 +1577,7 @@ TEST_F(VkRenderTest, QuadVertFetchAndVertID)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -1605,7 +1649,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
     // This tests that attributes work in the presence of gl_VertexID
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //XYZ1( -1, -1, -1 )
@@ -1613,6 +1657,9 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
             "layout (location = 4) in vec4 inColor;\n"
             //XYZ1( 0.f, 0.f, 0.f )
             "layout (location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = pos;\n"
@@ -1620,7 +1667,7 @@ TEST_F(VkRenderTest, QuadSparseVertFetch)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -1710,7 +1757,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
     // red and green corners, starting at top and going clockwise.
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             //XYZ1( -1, -1, -1 )
@@ -1718,6 +1765,9 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
             //XYZ1( 0.f, 0.f, 0.f )
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   vec2 vertices[3];"
@@ -1729,7 +1779,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -1799,7 +1849,7 @@ TEST_F(VkRenderTest, TriVertFetchDeadAttr)
 TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform bufferVals {\n"
@@ -1808,6 +1858,9 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -1816,7 +1869,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVP)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -1918,11 +1971,14 @@ TEST_F(VkRenderTest, VSTexture)
     // The expected result from this test is a green and red triangle;
     // one red vertex on the left, two green vertices on the right.
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 texColor;\n"
             "uniform sampler2D surface;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -1938,7 +1994,7 @@ TEST_F(VkRenderTest, VSTexture)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 texColor;\n"
@@ -1989,10 +2045,13 @@ TEST_F(VkRenderTest, TexturedTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec2 samplePos;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2007,7 +2066,7 @@ TEST_F(VkRenderTest, TexturedTriangle)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec2 samplePos;\n"
@@ -2056,7 +2115,7 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec2 samplePos;\n"
@@ -2083,7 +2142,7 @@ TEST_F(VkRenderTest, TexturedTriangleClip)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec2 samplePos;\n"
@@ -2135,10 +2194,13 @@ TEST_F(VkRenderTest, FSTriangle)
 {
     // The expected result from this test is a red and green checkered triangle
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec2 samplePos;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2153,7 +2215,7 @@ TEST_F(VkRenderTest, FSTriangle)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec2 samplePos;\n"
@@ -2208,10 +2270,13 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
     // number set up by the application.
     // This test will result in a blue triangle
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 samplePos;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2226,7 +2291,7 @@ TEST_F(VkRenderTest, SamplerBindingsTriangle)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 samplePos;\n"
@@ -2291,7 +2356,7 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
     // The expected result from this test is a blue triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 outColor;\n"
@@ -2301,6 +2366,9 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
             "    vec4 blue;\n"
             "    vec4 white;\n"
             "} myBufferVals;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2311,7 +2379,7 @@ TEST_F(VkRenderTest, TriangleVSUniformBlock)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 inColor;\n"
@@ -2377,9 +2445,12 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
     // The expected result from this test is a purple triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2389,7 +2460,7 @@ TEST_F(VkRenderTest, TriangleFSUniformBlockBinding)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform redVal   { vec4 color; } myRedVal\n;"
@@ -2472,9 +2543,12 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBinding)
     // The expected result from this test is a purple triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2566,9 +2640,12 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
     // The expected result from this test is a purple triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2680,7 +2757,7 @@ TEST_F(VkRenderTest, TriangleFSAnonymousUniformBlockBindingWithStruct)
 TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
 {
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding=0) uniform bufferVals {\n"
@@ -2689,6 +2766,9 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
             "layout (location=0) in vec4 pos;\n"
             "layout (location=1) in vec2 input_uv;\n"
             "layout (location=0) out vec2 UV;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   UV = input_uv;\n"
             "   gl_Position = myBufferVals.mvp * pos;\n"
@@ -2697,7 +2777,7 @@ TEST_F(VkRenderTest, CubeWithVertexFetchAndMVPAndTexture)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding=1) uniform sampler2D surface;\n"
@@ -2813,9 +2893,12 @@ TEST_F(VkRenderTest, TriangleMixedSamplerUniformBlockBinding)
     // you can modify it to move the desired result around.
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -2925,9 +3008,12 @@ TEST_F(VkRenderTest, TriangleMatchingSamplerUniformBlockBinding)
     // you can modify it to move the desired result around.
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -3030,7 +3116,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
     // The expected result from this test is a green triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform mixedBuffer {\n"
@@ -3067,6 +3153,9 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
             "    vec4 uvOffsets[4];\n"
             "};\n"
             "layout (location = 0) out vec4 color;"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
 
             "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
@@ -3100,7 +3189,7 @@ TEST_F(VkRenderTest, TriangleUniformBufferLayout)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform mixedBuffer {\n"
@@ -3286,9 +3375,12 @@ TEST_F(VkRenderTest, TextureGather)
     }
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
             "   vec2 vertices[3];"
             "      vertices[0] = vec2(-0.5, -0.5);\n"
@@ -3385,10 +3477,13 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
     // changes the color of each vertex to red, green, blue
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) out vec4 color;"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
 
             // VS writes out red
@@ -3410,13 +3505,16 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
             "}\n";
 
     static const char *geomShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout( triangles ) in;\n"
             "layout( triangle_strip, max_vertices = 3 ) out;\n"
             "layout( location = 0 ) in vec4 inColor[3];\n"
             "layout( location = 0 ) out vec4 outColor;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main()\n"
             "{\n"
 
@@ -3441,7 +3539,7 @@ TEST_F(VkRenderTest, GeometryShaderHelloWorld)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (location = 0) in vec4 color;\n"
@@ -3490,7 +3588,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
     // The expected result from this test is a green triangle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform mixedBuffer {\n"
@@ -3527,6 +3625,9 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "    vec4 uvOffsets[4];\n"
             "};\n"
             "layout (location = 0) out vec4 color;"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main() {\n"
 
             "   vec4 right = vec4(0.0, 1.0, 0.0, 1.0);\n"
@@ -3560,7 +3661,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "}\n";
 
     static const char *geomShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
 
@@ -3605,7 +3706,9 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "    vec3 fOneZeroZero;\n"
             "    vec4 uvOffsets[4];\n"
             "};\n"
-
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
             "void main()\n"
             "{\n"
 
@@ -3662,7 +3765,7 @@ TEST_F(VkRenderTest, GSUniformBufferLayout)
             "}\n";
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform mixedBuffer {\n"
@@ -3840,13 +3943,16 @@ TEST_F(VkRenderTest, GSPositions)
     // Expected result is white triangle with weird positions
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
 
             "layout(location = 0) out vec3 out_a;\n"
             "layout(location = 1) out vec3 out_b;\n"
             "layout(location = 2) out vec3 out_c;\n"
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
 
             "void main() {\n"
 
@@ -3871,7 +3977,7 @@ TEST_F(VkRenderTest, GSPositions)
             "}\n";
 
     static const char *geomShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout( triangles ) in;\n"
@@ -3884,6 +3990,10 @@ TEST_F(VkRenderTest, GSPositions)
             "layout(location = 0) out vec3 out_a;\n"
             "layout(location = 1) out vec3 out_b;\n"
             "layout(location = 2) out vec3 out_c;\n"
+
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
 
             "void main()\n"
             "{\n"
@@ -3914,7 +4024,7 @@ TEST_F(VkRenderTest, GSPositions)
 
 
     static const char *fragShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
 
@@ -3965,9 +4075,13 @@ TEST_F(VkRenderTest, GSTriStrip)
     // Correct result is an multicolor circle
 
     static const char *vertShaderText =
-            "#version 140\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
 
             "void main() {\n"
 
@@ -3987,13 +4101,17 @@ TEST_F(VkRenderTest, GSTriStrip)
             "}\n";
 
     static const char *geomShaderText =
-            "#version 330\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout( triangles ) in;\n"
             "layout( triangle_strip, max_vertices = 18 ) out;\n"
 
             "layout(location = 0) out vec4 outColor;\n"
+
+            "out gl_PerVertex {\n"
+            "    vec4 gl_Position;\n"
+            "};\n"
 
             "void main()\n"
             "{\n"
@@ -4032,7 +4150,7 @@ TEST_F(VkRenderTest, GSTriStrip)
 
 
     static const char *fragShaderText =
-            "#version 150\n"
+            "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
 
