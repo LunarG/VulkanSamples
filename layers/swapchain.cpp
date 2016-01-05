@@ -1396,7 +1396,7 @@ static VkBool32 validateCreateSwapchainKHR(
 
     // Validate pCreateInfo->imageSharingMode and related values:
     if (pCreateInfo->imageSharingMode == VK_SHARING_MODE_CONCURRENT) {
-        if ((pCreateInfo->queueFamilyIndexCount <= 1) ||
+        if ((pCreateInfo->queueFamilyIndexCount < 1) ||
             !pCreateInfo->pQueueFamilyIndices) {
             skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                                   SWAPCHAIN_CREATE_SWAP_BAD_SHARING_VALUES,
