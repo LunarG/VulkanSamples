@@ -95,6 +95,8 @@ static void createDeviceRegisterExtensions(VkPhysicalDevice physicalDevice, cons
         my_device_data->deviceMap[device].pPhysicalDevice = pPhysicalDevice;
         pPhysicalDevice->pDevice = &my_device_data->deviceMap[device];
     } else {
+        // TBD: Should we leave error in (since Swapchain really needs this
+        // link)?
         log_msg(my_instance_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
                 (uint64_t)physicalDevice , __LINE__, SWAPCHAIN_INVALID_HANDLE, "Swapchain",
                 "vkCreateDevice() called with a non-valid VkPhysicalDevice.");
@@ -332,8 +334,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
 
             // Free memory that was allocated for/by this SwpPhysicalDevice:
             SwpPhysicalDevice *pPhysicalDevice = it->second;
-            free(pPhysicalDevice->pSurfaceFormats);
-            free(pPhysicalDevice->pPresentModes);
+            if (pPhysicalDevice) {
+                free(pPhysicalDevice->pSurfaceFormats);
+                free(pPhysicalDevice->pPresentModes);
+            }
 
             // Erase the SwpPhysicalDevice's from the my_data->physicalDeviceMap (which
             // are simply pointed to by the SwpInstance):
@@ -430,15 +434,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceMirPresentatio
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the platform
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->mirSurfaceExtensionEnabled) {
+
+    // Validate that the platform extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->mirSurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -507,15 +507,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWaylandPresent
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the platform
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->waylandSurfaceExtensionEnabled) {
+
+    // Validate that the platform extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->waylandSurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -583,15 +579,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceWin32Presentat
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the platform
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->win32SurfaceExtensionEnabled) {
+
+    // Validate that the platform extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->win32SurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -661,15 +653,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentatio
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the platform
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->xcbSurfaceExtensionEnabled) {
+
+    // Validate that the platform extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->xcbSurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -739,15 +727,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXlibPresentati
     VkBool32 result = VK_FALSE;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the platform
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->xlibSurfaceExtensionEnabled) {
+
+    // Validate that the platform extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->xlibSurfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -828,25 +812,17 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDevice(VkPhysicalDevice p
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
 
-    // Validate that a valid VkPhysicalDevice was used:
-    SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice, "VkPhysicalDevice");
-    }
-
-    if (VK_TRUE == skipCall)
-        return VK_ERROR_VALIDATION_FAILED_EXT;
-
-    layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-    // Call down the call chain:
-    result = my_device_data->device_dispatch_table->CreateDevice(
-            physicalDevice, pCreateInfo, pAllocator, pDevice);
-    if (result == VK_SUCCESS) {
-        // Since it succeeded, do layer-specific work:
-        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
-        createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
+    if (VK_FALSE == skipCall) {
+        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
+        // Call down the call chain:
+        result = my_device_data->device_dispatch_table->CreateDevice(
+                physicalDevice, pCreateInfo, pAllocator, pDevice);
+        if (result == VK_SUCCESS) {
+            // Since it succeeded, do layer-specific work:
+            layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
+            my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
+            createDeviceRegisterExtensions(physicalDevice, pCreateInfo, *pDevice);
+        }
     }
     return result;
 }
@@ -909,15 +885,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceSupport
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the instance
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
+
+    // Validate that the surface extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -959,15 +931,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceCapabil
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the instance
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
+
+    // Validate that the surface extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -1007,15 +975,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfaceFormats
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the instance
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
+
+    // Validate that the surface extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
@@ -1079,15 +1043,11 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresent
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(physicalDevice), layer_data_map);
-
-    // Validate that a valid VkPhysicalDevice was used, and that the instance
-    // extension was enabled:
     SwpPhysicalDevice *pPhysicalDevice = &my_data->physicalDeviceMap[physicalDevice];
-    if (!pPhysicalDevice || !pPhysicalDevice->pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,
-                                            physicalDevice,
-                                            "VkPhysicalDevice");
-    } else if (!pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
+
+    // Validate that the surface extension was enabled:
+    if (pPhysicalDevice && pPhysicalDevice->pInstance &&
+        !pPhysicalDevice->pInstance->surfaceExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
                               pPhysicalDevice->pInstance,
                               "VkInstance",
