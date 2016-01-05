@@ -31,8 +31,17 @@ samples utility functions
 #include <stdio.h>
 #include <assert.h>
 #include <cstdlib>
+#include <iomanip>
+#include <iostream>
 #include "util.hpp"
 #include "SPIRV/GlslangToSpv.h"
+
+// For timestamp code (get_milliseconds)
+#ifdef WIN32
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 using namespace std;
 
@@ -415,4 +424,35 @@ void wait_seconds(int seconds)
 #else
     sleep(seconds);
 #endif
+}
+
+timestamp_t get_milliseconds()
+{
+#ifdef WIN32
+    LARGE_INTEGER frequency;
+    bool useQPC = QueryPerformanceFrequency(&frequency);
+    if (useQPC) {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        return (1000LL * now.QuadPart) / frequency.QuadPart;
+    } else {
+        return GetTickCount();
+    }
+#else
+    struct timeval now;
+    gettimeofday (&now, NULL);
+    return  (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
+#endif
+}
+
+void print_UUID(uint8_t* pipelineCacheUUID)
+{
+    for(int j = 0; j < VK_UUID_SIZE; ++j)
+    {
+        std::cout << std::setw(2) << (uint32_t)pipelineCacheUUID[j];
+        if(j == 3 || j == 5 || j == 7 || j == 9)
+        {
+            std::cout << '-';
+        }
+    }
 }
