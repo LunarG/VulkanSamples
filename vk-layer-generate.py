@@ -104,6 +104,61 @@ def ucc_to_U_C_C(CamelCase):
     temp = re.sub('(.)([A-Z][a-z]+)',  r'\1_\2', CamelCase)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', temp).upper()
 
+# Parse complete struct chain and add any new ndo_uses to the dict
+def gather_object_uses_in_struct(obj_list, struct_type):
+    struct_uses = {}
+    if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
+        struct_type = vk_helper.typedef_rev_dict[struct_type]
+        # Parse elements of this struct param to identify objects and/or arrays of objects
+        for m in sorted(vk_helper.struct_dict[struct_type]):
+            array_len = "%s" % (str(vk_helper.struct_dict[struct_type][m]['array_size']))
+            base_type = vk_helper.struct_dict[struct_type][m]['type']
+            mem_name = vk_helper.struct_dict[struct_type][m]['name']
+            if array_len != '0':
+                mem_name = "%s[%s]" % (mem_name, array_len)
+            if base_type in obj_list:
+                #if array_len not in ndo_uses:
+                #    struct_uses[array_len] = []
+                #struct_uses[array_len].append("%s%s,%s" % (name_prefix, struct_name, base_type))
+                struct_uses[mem_name] = base_type
+            elif vk_helper.is_type(base_type, 'struct'):
+                sub_uses = gather_object_uses_in_struct(obj_list, base_type)
+                if len(sub_uses) > 0:
+                    struct_uses[mem_name] = sub_uses
+    return struct_uses
+
+# For the given list of object types, Parse the given list of params
+#  and return dict of params that use one of the obj_list types
+# Format of the dict is that terminal elements have <name>,<type>
+#  non-terminal elements will have <name>[<array_size>]
+# TODO : This analysis could be done up-front at vk_helper time
+def get_object_uses(obj_list, params):
+    obj_uses = {}
+    param_count = 'NONE' # track params that give array sizes
+    for p in params:
+        base_type = p.ty.replace('const ', '').strip('*')
+        array_len = ''
+        is_ptr = False
+        if 'count' in p.name.lower():
+            param_count = p.name
+        if '*' in p.ty:
+            is_ptr = True
+        if base_type in obj_list:
+            if is_ptr and 'const' in p.ty and param_count != 'NONE':
+                array_len = "[%s]" % param_count
+            #if array_len not in obj_uses:
+            #    obj_uses[array_len] = {}
+            # obj_uses[array_len][p.name] = base_type
+            obj_uses["%s%s" % (p.name, array_len)] = base_type
+        elif vk_helper.is_type(base_type, 'struct'):
+            struct_name = p.name
+            if 'NONE' != param_count:
+                struct_name = "%s[%s]" % (struct_name, param_count)
+            struct_uses = gather_object_uses_in_struct(obj_list, base_type)
+            if len(struct_uses) > 0:
+                obj_uses[struct_name] = struct_uses
+    return obj_uses
+
 class Subcommand(object):
     def __init__(self, argv):
         self.argv = argv
@@ -1895,48 +1950,89 @@ class UniqueObjectsSubcommand(Subcommand):
         header_txt.append('static LOADER_PLATFORM_THREAD_ONCE_DECLARATION(initOnce);')
         return "\n".join(header_txt)
 
-    # Parse complete struct chain and add any new ndo_uses to the dict
-    def _gather_struct_ndos(self, name_prefix, struct_type, ndo_uses):
-        if vk_helper.typedef_rev_dict[struct_type] in vk_helper.struct_dict:
-            struct_type = vk_helper.typedef_rev_dict[struct_type]
-        # Parse elements of this struct param to identify objects and/or arrays of objects
-        for m in sorted(vk_helper.struct_dict[struct_type]):
-            array_len = "%s" % (str(vk_helper.struct_dict[struct_type][m]['array_size']))
-            base_type = vk_helper.struct_dict[struct_type][m]['type']
-            struct_name = vk_helper.struct_dict[struct_type][m]['name']
-            if base_type in vulkan.object_non_dispatch_list:
-                if array_len not in ndo_uses:
-                    ndo_uses[array_len] = []
-                ndo_uses[array_len].append("%s%s,%s" % (name_prefix, struct_name, base_type))
-            elif vk_helper.is_type(base_type, 'struct'):
-                ndo_uses = self._gather_struct_ndos("%s%s[%s]->" % (name_prefix, struct_name, array_len), base_type, ndo_uses)
-        return ndo_uses
-
-    # Parse the given list of params and return true if any ndos
-    # TODO : This analysis could be done up-front at vk_helper time
-    def _get_ndo_uses(self, params):
-        ndo_uses = {}
-        param_count = 'NONE' # track params that give array sizes
-        for p in params:
-            base_type = p.ty.replace('const ', '').strip('*')
-            array_len = '0'
-            is_ptr = False
-            if 'count' in p.name.lower():
-                param_count = p.name
-            if '*' in p.ty:
-                is_ptr = True
-            if base_type in vulkan.object_non_dispatch_list:
-                if is_ptr and 'const' in p.ty and param_count != 'NONE':
-                    array_len = param_count
-                if array_len not in ndo_uses:
-                    ndo_uses[array_len] = []
-                ndo_uses[array_len].append("%s,%s" % (p.name, base_type))
-            elif vk_helper.is_type(base_type, 'struct'):
-                struct_name = p.name
-                if 'NONE' != param_count:
-                    struct_name = "%s[%s]" % (struct_name, param_count)
-                ndo_uses = self._gather_struct_ndos("%s->" % struct_name, base_type, ndo_uses)
-        return ndo_uses
+    # Generate UniqueObjects code for given struct_uses dict of objects that need to be unwrapped
+    # TODO : Comment this code
+    def _gen_obj_code(self, struct_uses, indent, prefix, array_index, unique_count):
+        decls = ''
+        pre_code = ''
+        post_code = ''
+        for obj in struct_uses:
+            unique_count += 1
+            name = obj
+            array = ''
+            if '[' in obj:
+                (name, array) = obj.split('[')
+                array = array.strip(']')
+            if isinstance(struct_uses[obj], dict):
+                local_prefix = ''
+                name = '%s%s' % (prefix, name)
+                ptr_type = False
+                if 'p' == obj[0]:
+                    ptr_type = True
+                    pre_code += '%sif (%s) {\n' % (indent, name)
+                    post_code += '%sif (%s) {\n' % (indent, name)
+                    indent += '    '
+                if array != '':
+                    idx = 'idx%s' % str(array_index)
+                    array_index += 1
+                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                    post_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                    indent += '    '
+                    local_prefix = '%s[%s].' % (name, idx)
+                elif ptr_type:
+                    local_prefix = '%s->' % (name)
+                else:
+                    local_prefix = '%s.' % (name)
+                assert isinstance(decls, object)
+                (tmp_decl, tmp_pre, tmp_post) = self._gen_obj_code(struct_uses[obj], indent, local_prefix, array_index, unique_count+1)
+                decls += tmp_decl
+                pre_code += tmp_pre
+                post_code += tmp_post
+                if array != '':
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+                    post_code += '%s}\n' % (indent)
+                if ptr_type:
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+                    post_code += '%s}\n' % (indent)
+            else:
+                if (array_index > 0):
+                    pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
+                    post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
+                    indent += '    '
+                    # Append unique_count to make sure name is unique (some aliasing for "buffer" and "image" names
+                    vec_name = 'original_%s%s' % (name, unique_count)
+                    if array != '':
+                        idx = 'idx%s' % str(array_index)
+                        array_index += 1
+                        pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                        post_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                        indent += '    '
+                        name = '%s[%s]' % (name, idx)
+                    pName = 'p%s' % (struct_uses[obj][2:])
+                    pre_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
+                    post_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
+                    decls += '    std::vector<%s> %s = {};\n' % (struct_uses[obj], vec_name)
+                    pre_code += '%s%s.push_back(%s%s);\n' % (indent, vec_name, prefix, name)
+                    pre_code += '%s*(%s) = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, pName, struct_uses[obj], prefix, name)
+                    post_code += '%s*(%s) = %s.front();\n' % (indent, pName, vec_name)
+                    post_code += '%s%s.erase(%s.begin());\n' % (indent, vec_name, vec_name)
+                    if array != '':
+                        indent = indent[4:]
+                        pre_code += '%s}\n' % (indent)
+                        post_code += '%s}\n' % (indent)
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+                    post_code += '%s}\n' % (indent)
+                else:
+                    pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
+                    indent += '    '
+                    pre_code += '%s%s* p%s = (%s*)%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], prefix, name)
+                    pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+        return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
         create_func = False
@@ -1947,15 +2043,8 @@ class UniqueObjectsSubcommand(Subcommand):
         funcs = []
         indent = '    ' # indent level for generated code
         decl = proto.c_func(prefix="vk", attr="VKAPI")
-        # TODO : A few API cases that will be manual code initially, could potentially move
-        #  them to generated code
-        # Also, here's generated functions that could be improved: vkAllocateDescriptorSets, vkCmdBeginRenderPass
-        explicit_object_tracker_functions = ['QueueSubmit',
-                                             'QueueBindSparse',
-                                             'CreateComputePipelines',
-                                             'CreateGraphicsPipelines',
-                                             'UpdateDescriptorSets',
-                                             'GetSwapchainImagesKHR',
+        # A few API cases that are manual code
+        explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
                                              'CreateInstance',
                                              'CreateDevice',]
         # Give special treatment to create functions that return multiple new objects
@@ -1975,88 +2064,17 @@ class UniqueObjectsSubcommand(Subcommand):
             if destroy_obj_type in vulkan.object_non_dispatch_list:
                 destroy_func = True
 
-        # First thing we need to do is update any uses for non-dispatchable-objects (ndos)
-        ndo_uses = self._get_ndo_uses(proto.params[1:last_param_index])
-        if len(ndo_uses) > 0:
-            pre_call_txt  = '// UNWRAP USES:\n'
-            for ndo in ndo_uses:
-                pre_call_txt += '//  %s : %s\n' % (ndo, ', '.join(ndo_uses[ndo]))
-                for member in ndo_uses[ndo]:
-                    # pairs of (m)ember (n)ames and (t)ypes
-                    mnt_array = member.split(',')
-                    has_ptr = False
-                    pname = mnt_array[0]
-                    if '->' in pname:
-                        has_ptr = True
-                        pname = mnt_array[0].split('->')[-1]
-                    if not has_ptr and '0' == ndo:
-                        if destroy_func:
-                            pre_call_txt += '%s%s local_%s = %s;\n' % (indent, mnt_array[1], pname, pname)
-                        pre_call_txt += '%s\n' % (self.lineinfo.get())
-                        pre_call_txt += '%sif (VK_NULL_HANDLE != %s) {\n' % (indent, mnt_array[0])
-                        indent += '    '
-                        pre_call_txt += '%s%s = (%s)((VkUniqueObject*)%s)->actualObject;\n' % (indent, pname, mnt_array[1], pname)
-                        indent = indent [4:]
-                        pre_call_txt += '%s}\n' % (indent)
-                    else: # ptr and/or loop case
-                        name_hier = mnt_array[0].split('->')
-                        last_seg = False # is this last seg of the name?
-                        prev_seg = ''
-                        loop_indicies = ['0'] # track all the loop indices
-                        loop_idx_num = 0
-                        loop_count = '' # Upper limit of current loop
-                        orig_indent = indent # store this so we can close out blocks at the end
-                        # Declare vector of ndos in order to restore them after call
-                        pre_call_txt += '%s\n' % (self.lineinfo.get())
-                        pre_call_txt += '%sstd::vector<%s> original_%s = {};\n' % (indent, mnt_array[1], name_hier[-1])
-                        for seg in name_hier:
-                            array = False
-                            if seg == name_hier[-1]:
-                                last_seg = True
-                            if '[' in seg or (last_seg and '0' != ndo): # array access, so store off array counter and update name
-                                array = True
-                                loop_indicies.append('index%s' % str(loop_idx_num))
-                                loop_idx_num += 1
-                                if '[' in seg: # explicit array case is not ndo
-                                    (seg, loop_count) = seg.split('[')
-                                    loop_count = loop_count.strip(']')
-                                else: # ndo case the loop_count is key
-                                    loop_count = ndo
-                            pre_call_txt += '%sif (%s%s) {\n' % (indent, prev_seg, seg)
-                            # We replicate the ndo update code after the call to restore original handle
-                            post_call_txt += '%sif (%s%s) {\n' % (indent, prev_seg, seg)
-                            indent += '    '
-                            if array:
-                                pre_call_txt += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, loop_indicies[-1], loop_indicies[-1], prev_seg, loop_count, loop_indicies[-1])
-                                post_call_txt += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, loop_indicies[-1], loop_indicies[-1], prev_seg, loop_count, loop_indicies[-1])
-                                indent += '    '
-                            if last_seg:
-                                p_name = 'p%s' % mnt_array[1][2:] # Used to allow overwriting of ndo object in const ptr chain
-                                # TODO - need type of element ABOVE NDO in this case, this is BROKEN right now
-                                ndo_ref_name = prev_seg.strip('->').strip('.')
-                                ndo_name = '%s%s' % (prev_seg, seg)
-                                if array:
-                                    ndo_ref_name = '%s%s' % (prev_seg, seg)
-                                    ndo_name = '%s[%s]' % (ndo_ref_name, loop_indicies[-1])
-                                pre_call_txt += '%s%s* %s = (%s*)&(%s);\n' % (indent, mnt_array[1], p_name, mnt_array[1], ndo_name)
-                                post_call_txt += '%s%s* %s = (%s*)&(%s);\n' % (indent, mnt_array[1], p_name, mnt_array[1], ndo_name)
-                                # Save off this object to restore it after the call
-                                pre_call_txt += '%soriginal_%s.push_back(%s);\n' % (indent, seg, ndo_name)
-                                pre_call_txt += '%s*(%s) = (%s)((VkUniqueObject*)%s)->actualObject;\n' % (indent, p_name, mnt_array[1], ndo_name)
-                                post_call_txt += '%s*(%s) = original_%s[%s];\n' % (indent, p_name, seg, loop_indicies[-1])
-                                indent = indent[4:]
-                            # Update prev segment to be used in next loop iteration
-                            if not array:
-                                prev_seg = '%s%s->' % (prev_seg, seg)
-                            else:
-                                prev_seg = '%s%s[%s].' % (prev_seg, seg, loop_indicies[-1])
-                        if indent != orig_indent:
-                            while indent != '    ': # close previous code blocks
-                                pre_call_txt += '%s}\n' % (indent)
-                                post_call_txt += '%s}\n' % (indent)
-                                indent = indent[4:]
-                            pre_call_txt += '%s}\n' % (indent)
-                            post_call_txt += '%s}\n' % (indent)
+        # First thing we need to do is gather uses of non-dispatchable-objects (ndos)
+        struct_uses = get_object_uses(vulkan.object_non_dispatch_list, proto.params[1:last_param_index])
+
+        if len(struct_uses) > 0:
+            pre_call_txt += '// STRUCT USES:%s\n' % struct_uses
+            if destroy_func: # only one object
+                for del_obj in struct_uses:
+                    pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
+            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, '    ', '', 0, 0)
+            pre_call_txt += '%s%s' % (pre_decl, pre_code)
+            post_call_txt += post_code
         elif create_func:
             base_type = proto.params[-1].ty.replace('const ', '').strip('*')
             if base_type not in vulkan.object_non_dispatch_list:
