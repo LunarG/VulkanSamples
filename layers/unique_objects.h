@@ -23,7 +23,6 @@
  * Author: Tobin Ehlis <tobine@google.com>
  */
 
-// CODEGEN : file vk-layer-generate.py line #1757
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,26 +36,27 @@
 
 #include "vulkan/vk_layer.h"
 #include "vk_layer_config.h"
-//#include "vulkan/vk_lunarg_debug_report.h"
 #include "vk_layer_table.h"
 #include "vk_layer_data.h"
 #include "vk_layer_logging.h"
 #include "vk_layer_extension_utils.h"
 
 struct layer_data {
-    debug_report_data *report_data;
-    VkDebugReportCallbackEXT   logging_callback;
     bool wsi_enabled;
 
     layer_data() :
-        report_data(nullptr),
-        logging_callback(VK_NULL_HANDLE),
         wsi_enabled(false)
     {};
 };
 
 struct instExts {
     bool wsi_enabled;
+    bool xlib_enabled;
+    bool xcb_enabled;
+    bool wayland_enabled;
+    bool mir_enabled;
+    bool android_enabled;
+    bool win32_enabled;
 };
 
 static std::unordered_map<void*, struct instExts> instanceExtMap;
@@ -70,33 +70,6 @@ struct VkUniqueObject
     uint64_t actualObject;
 };
 
-static void
-initUniqueObjects(
-    layer_data *my_data,
-    const VkAllocationCallbacks *pAllocator)
-{
-    uint32_t report_flags = 0;
-    uint32_t debug_action = 0;
-    FILE *log_output = NULL;
-    const char *option_str;
-    // initialize UniqueObjects options
-    report_flags = getLayerOptionFlags("UniqueObjectsReportFlags", 0);
-    getLayerOptionEnum("UniqueObjectsDebugAction", (uint32_t *) &debug_action);
-
-    if (debug_action & VK_DBG_LAYER_ACTION_LOG_MSG)
-    {
-        option_str = getLayerOption("UniqueObjectsLogFilename");
-        log_output = getLayerLogOutput(option_str, "UniqueObjects");
-        VkDebugReportCallbackCreateInfoEXT dbgInfo;
-        memset(&dbgInfo, 0, sizeof(dbgInfo));
-        dbgInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-        dbgInfo.pfnCallback = log_callback;
-        dbgInfo.pUserData = log_output;
-        dbgInfo.flags = report_flags;
-        layer_create_msg_callback(my_data->report_data, &dbgInfo, pAllocator, &my_data->logging_callback);
-    }
-}
-
 // Handle CreateInstance
 static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreateInfo, VkInstance instance)
 {
@@ -107,7 +80,7 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     pDisp->GetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
     pDisp->GetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR) gpa(instance, "vkGetPhysicalDeviceSurfaceFormatsKHR");
     pDisp->GetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR) gpa(instance, "vkGetPhysicalDeviceSurfacePresentModesKHR");
-#if VK_USE_PLATFORM_WIN32_KHR
+#ifdef VK_USE_PLATFORM_WIN32_KHR
     pDisp->CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR) gpa(instance, "vkCreateWin32SurfaceKHR");
     pDisp->GetPhysicalDeviceWin32PresentationSupportKHR = (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR) gpa(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
 #endif // VK_USE_PLATFORM_WIN32_KHR
@@ -131,10 +104,34 @@ static void createInstanceRegisterExtensions(const VkInstanceCreateInfo* pCreate
     pDisp->CreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR) gpa(instance, "vkCreateAndroidSurfaceKHR");
 #endif // VK_USE_PLATFORM_ANDROID_KHR
 
-    instanceExtMap[pDisp].wsi_enabled = false;
+    instanceExtMap[pDisp] = {};
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SURFACE_EXTENSION_NAME) == 0)
             instanceExtMap[pDisp].wsi_enabled = true;
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XLIB_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].xlib_enabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_XCB_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].xcb_enabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].wayland_enabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_MIR_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_MIR_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].mir_enabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_ANDROID_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].android_enabled = true;
+#endif
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_WIN32_SURFACE_EXTENSION_NAME) == 0)
+            instanceExtMap[pDisp].win32_enabled = true;
+#endif
     }
 }
 
@@ -149,15 +146,7 @@ explicit_CreateInstance(
     VkResult result = pInstanceTable->CreateInstance(pCreateInfo, pAllocator, pInstance);
 
     if (result == VK_SUCCESS) {
-        layer_data *my_data = get_my_data_ptr(get_dispatch_key(*pInstance), layer_data_map);
-        my_data->report_data = debug_report_create_instance(
-                                   pInstanceTable,
-                                   *pInstance,
-                                   pCreateInfo->enabledExtensionNameCount,
-                                   pCreateInfo->ppEnabledExtensionNames);
         createInstanceRegisterExtensions(pCreateInfo, *pInstance);
-
-        initUniqueObjects(my_data, pAllocator);
     }
     return result;
 }
@@ -190,9 +179,6 @@ explicit_CreateDevice(
     VkLayerDispatchTable *pDeviceTable = get_dispatch_table(unique_objects_device_table_map, *pDevice);
     VkResult result = pDeviceTable->CreateDevice(gpu, pCreateInfo, pAllocator, pDevice);
     if (result == VK_SUCCESS) {
-        layer_data *my_instance_data = get_my_data_ptr(get_dispatch_key(gpu), layer_data_map);
-        layer_data *my_device_data = get_my_data_ptr(get_dispatch_key(*pDevice), layer_data_map);
-        my_device_data->report_data = layer_debug_report_create_device(my_instance_data->report_data, *pDevice);
         createDeviceRegisterExtensions(pCreateInfo, *pDevice);
     }
     return result;
@@ -449,11 +435,11 @@ VkResult explicit_CreateComputePipelines(VkDevice device, VkPipelineCache pipeli
         }
     }
     if (VK_SUCCESS == result) {
-        std::vector<VkUniqueObject*> uniquePipelines = {};
+        VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {
-            uniquePipelines.push_back(new VkUniqueObject());
-            uniquePipelines[i]->actualObject = (uint64_t)pPipelines[i];
-            pPipelines[i] = (VkPipeline)uniquePipelines[i];
+            pUO = new VkUniqueObject();
+            pUO->actualObject = (uint64_t)pPipelines[i];
+            pPipelines[i] = (VkPipeline)pUO;
         }
     }
     return result;
@@ -524,128 +510,14 @@ VkResult explicit_CreateGraphicsPipelines(VkDevice device, VkPipelineCache pipel
         }
     }
     if (VK_SUCCESS == result) {
-        std::vector<VkUniqueObject*> uniquePipelines = {};
+        VkUniqueObject* pUO = NULL;
         for (uint32_t i=0; i<createInfoCount; ++i) {
-            uniquePipelines.push_back(new VkUniqueObject());
-            uniquePipelines[i]->actualObject = (uint64_t)pPipelines[i];
-            pPipelines[i] = (VkPipeline)uniquePipelines[i];
+            pUO = new VkUniqueObject();
+            pUO->actualObject = (uint64_t)pPipelines[i];
+            pPipelines[i] = (VkPipeline)pUO;
         }
     }
     return result;
-}
-
-void explicit_UpdateDescriptorSets(VkDevice device, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t descriptorCopyCount, const VkCopyDescriptorSet* pDescriptorCopies)
-{
-// UNWRAP USES:
-//  0 : pDescriptorWrites[descriptorWriteCount]->dstSet,VkDescriptorSet, pDescriptorWrites[descriptorWriteCount]->pImageInfo[descriptorCount]->sampler,VkSampler, pDescriptorWrites[descriptorWriteCount]->pImageInfo[descriptorCount]->imageView,VkImageView, pDescriptorWrites[descriptorWriteCount]->pBufferInfo[descriptorCount]->buffer,VkBuffer, pDescriptorCopies[descriptorCopyCount]->srcSet,VkDescriptorSet, pDescriptorCopies[descriptorCopyCount]->dstSet,VkDescriptorSet
-    std::vector<VkDescriptorSet> original_dstSet1 = {};
-    std::vector<VkSampler> original_sampler = {};
-    std::vector<VkImageView> original_imageView = {};
-    std::vector<VkBuffer> original_buffer = {};
-    std::vector<VkDescriptorSet> original_srcSet = {};
-    std::vector<VkDescriptorSet> original_dstSet2 = {};
-//  descriptorCount : pDescriptorWrites[descriptorWriteCount]->pTexelBufferView,VkBufferView
-    std::vector<VkBufferView> original_pTexelBufferView = {};
-    if (pDescriptorWrites) {
-        for (uint32_t index0=0; index0<descriptorWriteCount; ++index0) {
-            if (pDescriptorWrites[index0].dstSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorWrites[index0].dstSet);
-                original_dstSet1.push_back(pDescriptorWrites[index0].dstSet);
-                *(pDescriptorSet) = (VkDescriptorSet)((VkUniqueObject*)pDescriptorWrites[index0].dstSet)->actualObject;
-            }
-            if (pDescriptorWrites[index0].pImageInfo) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    if (pDescriptorWrites[index0].pImageInfo[index1].sampler) {
-                        VkSampler* pSampler = (VkSampler*)&(pDescriptorWrites[index0].pImageInfo[index1].sampler);
-                        original_sampler.push_back(pDescriptorWrites[index0].pImageInfo[index1].sampler);
-                        *(pSampler) = (VkSampler)((VkUniqueObject*)pDescriptorWrites[index0].pImageInfo[index1].sampler)->actualObject;
-                    }
-                    if (pDescriptorWrites[index0].pImageInfo[index1].imageView) {
-                        VkImageView* pImageView = (VkImageView*)&(pDescriptorWrites[index0].pImageInfo[index1].imageView);
-                        original_imageView.push_back(pDescriptorWrites[index0].pImageInfo[index1].imageView);
-                        *(pImageView) = (VkImageView)((VkUniqueObject*)pDescriptorWrites[index0].pImageInfo[index1].imageView)->actualObject;
-                    }
-                }
-            }
-            if (pDescriptorWrites[index0].pBufferInfo) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    if (pDescriptorWrites[index0].pBufferInfo[index1].buffer) {
-                        VkBuffer* pBuffer = (VkBuffer*)&(pDescriptorWrites[index0].pBufferInfo[index1].buffer);
-                        original_buffer.push_back(pDescriptorWrites[index0].pBufferInfo[index1].buffer);
-                        *(pBuffer) = (VkBuffer)((VkUniqueObject*)pDescriptorWrites[index0].pBufferInfo[index1].buffer)->actualObject;
-                    }
-                }
-            }
-            if (pDescriptorWrites[index0].pTexelBufferView) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    VkBufferView** ppBufferView = (VkBufferView**)&(pDescriptorWrites[index0].pTexelBufferView);
-                    original_pTexelBufferView.push_back(pDescriptorWrites[index0].pTexelBufferView[index1]);
-                    *(ppBufferView[index1]) = (VkBufferView)((VkUniqueObject*)pDescriptorWrites[index0].pTexelBufferView[index1])->actualObject;
-                }
-            }
-        }
-    }
-    if (pDescriptorCopies) {
-        for (uint32_t index0=0; index0<descriptorCopyCount; ++index0) {
-            if (pDescriptorCopies[index0].srcSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorCopies[index0].srcSet);
-                original_srcSet.push_back(pDescriptorCopies[index0].srcSet);
-                *(pDescriptorSet) = (VkDescriptorSet)((VkUniqueObject*)pDescriptorCopies[index0].srcSet)->actualObject;
-            }
-            if (pDescriptorCopies[index0].dstSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorCopies[index0].dstSet);
-                original_dstSet2.push_back(pDescriptorCopies[index0].dstSet);
-                *(pDescriptorSet) = (VkDescriptorSet)((VkUniqueObject*)pDescriptorCopies[index0].dstSet)->actualObject;
-            }
-        }
-    }
-    get_dispatch_table(unique_objects_device_table_map, device)->UpdateDescriptorSets(device, descriptorWriteCount, pDescriptorWrites, descriptorCopyCount, pDescriptorCopies);
-    if (pDescriptorWrites) {
-        for (uint32_t index0=0; index0<descriptorWriteCount; ++index0) {
-            if (pDescriptorWrites[index0].dstSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorWrites[index0].dstSet);
-                *(pDescriptorSet) = original_dstSet1[index0];
-            }
-            if (pDescriptorWrites[index0].pImageInfo) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    if (pDescriptorWrites[index0].pImageInfo[index1].sampler) {
-                        VkSampler* pSampler = (VkSampler*)&(pDescriptorWrites[index0].pImageInfo[index1].sampler);
-                        *(pSampler) = original_sampler[index1];
-                    }
-                    if (pDescriptorWrites[index0].pImageInfo[index1].imageView) {
-                        VkImageView* pImageView = (VkImageView*)&(pDescriptorWrites[index0].pImageInfo[index1].imageView);
-                        *(pImageView) = original_imageView[index1];
-                    }
-                }
-            }
-            if (pDescriptorWrites[index0].pBufferInfo) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    if (pDescriptorWrites[index0].pBufferInfo[index1].buffer) {
-                        VkBuffer* pBuffer = (VkBuffer*)&(pDescriptorWrites[index0].pBufferInfo[index1].buffer);
-                        *(pBuffer) = original_buffer[index1];
-                    }
-                }
-            }
-            if (pDescriptorWrites[index0].pTexelBufferView) {
-                for (uint32_t index1=0; index1<pDescriptorWrites[index0].descriptorCount; ++index1) {
-                    VkBufferView** ppBufferView = (VkBufferView**)&(pDescriptorWrites[index0].pTexelBufferView);
-                    *(ppBufferView[index1]) = original_pTexelBufferView[index1];
-                }
-            }
-        }
-    }
-    if (pDescriptorCopies) {
-        for (uint32_t index0=0; index0<descriptorCopyCount; ++index0) {
-            if (pDescriptorCopies[index0].srcSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorCopies[index0].srcSet);
-                *(pDescriptorSet) = original_srcSet[index0];
-            }
-            if (pDescriptorCopies[index0].dstSet) {
-                VkDescriptorSet* pDescriptorSet = (VkDescriptorSet*)&(pDescriptorCopies[index0].dstSet);
-                *(pDescriptorSet) = original_dstSet2[index0];
-            }
-        }
-    }
 }
 
 VkResult explicit_GetSwapchainImagesKHR(VkDevice device, VkSwapchainKHR swapchain, uint32_t* pSwapchainImageCount, VkImage* pSwapchainImages)

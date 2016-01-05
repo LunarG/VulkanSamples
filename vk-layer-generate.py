@@ -1951,24 +1951,26 @@ class UniqueObjectsSubcommand(Subcommand):
         return "\n".join(header_txt)
 
     # Generate UniqueObjects code for given struct_uses dict of objects that need to be unwrapped
+    # vector_name_set is used to make sure we don't replicate vector names
+    # first_level_param indicates if elements are passed directly into the function else they're below a ptr/struct
     # TODO : Comment this code
-    def _gen_obj_code(self, struct_uses, indent, prefix, array_index, unique_count):
+    def _gen_obj_code(self, struct_uses, indent, prefix, array_index, vector_name_set, first_level_param):
         decls = ''
         pre_code = ''
         post_code = ''
-        for obj in struct_uses:
-            unique_count += 1
+        for obj in sorted(struct_uses):
             name = obj
             array = ''
             if '[' in obj:
                 (name, array) = obj.split('[')
                 array = array.strip(']')
+            ptr_type = False
+            if 'p' == obj[0]: # TODO : Not idea way to determine ptr
+                ptr_type = True
             if isinstance(struct_uses[obj], dict):
                 local_prefix = ''
                 name = '%s%s' % (prefix, name)
-                ptr_type = False
-                if 'p' == obj[0]:
-                    ptr_type = True
+                if ptr_type:
                     pre_code += '%sif (%s) {\n' % (indent, name)
                     post_code += '%sif (%s) {\n' % (indent, name)
                     indent += '    '
@@ -1984,7 +1986,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 else:
                     local_prefix = '%s.' % (name)
                 assert isinstance(decls, object)
-                (tmp_decl, tmp_pre, tmp_post) = self._gen_obj_code(struct_uses[obj], indent, local_prefix, array_index, unique_count+1)
+                (tmp_decl, tmp_pre, tmp_post) = self._gen_obj_code(struct_uses[obj], indent, local_prefix, array_index, vector_name_set, False)
                 decls += tmp_decl
                 pre_code += tmp_pre
                 post_code += tmp_post
@@ -1997,12 +1999,12 @@ class UniqueObjectsSubcommand(Subcommand):
                     pre_code += '%s}\n' % (indent)
                     post_code += '%s}\n' % (indent)
             else:
-                if (array_index > 0):
+                if (array_index > 0) or array != '': # TODO : This is not ideal, really want to know if we're anywhere under an array
                     pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     indent += '    '
                     # Append unique_count to make sure name is unique (some aliasing for "buffer" and "image" names
-                    vec_name = 'original_%s%s' % (name, unique_count)
+                    vec_name = 'original_%s' % (name)
                     if array != '':
                         idx = 'idx%s' % str(array_index)
                         array_index += 1
@@ -2013,7 +2015,9 @@ class UniqueObjectsSubcommand(Subcommand):
                     pName = 'p%s' % (struct_uses[obj][2:])
                     pre_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
                     post_code += '%s%s* %s = (%s*)&(%s%s);\n' % (indent, struct_uses[obj], pName, struct_uses[obj], prefix, name)
-                    decls += '    std::vector<%s> %s = {};\n' % (struct_uses[obj], vec_name)
+                    if name not in vector_name_set:
+                        vector_name_set.add(name)
+                        decls += '    std::vector<%s> %s = {};\n' % (struct_uses[obj], vec_name)
                     pre_code += '%s%s.push_back(%s%s);\n' % (indent, vec_name, prefix, name)
                     pre_code += '%s*(%s) = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, pName, struct_uses[obj], prefix, name)
                     post_code += '%s*(%s) = %s.front();\n' % (indent, pName, vec_name)
@@ -2028,10 +2032,19 @@ class UniqueObjectsSubcommand(Subcommand):
                 else:
                     pre_code += '%sif (%s%s) {\n' %(indent, prefix, name)
                     indent += '    '
-                    pre_code += '%s%s* p%s = (%s*)%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], prefix, name)
+                    deref_txt = '&'
+                    if ptr_type:
+                        deref_txt = ''
+                    pre_code += '%s%s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
                     pre_code += '%s*p%s = (%s)((VkUniqueObject*)%s%s)->actualObject;\n' % (indent, name, struct_uses[obj], prefix, name)
                     indent = indent[4:]
                     pre_code += '%s}\n' % (indent)
+                    if not first_level_param: # embedded in a ptr/struct so need to undo the update
+                        decls += '    %s local_%s = %s%s;\n' % (struct_uses[obj], name, prefix, name)
+                        post_code += '%sif (%s%s) {\n' %(indent, prefix, name)
+                        post_code += '%s    %s* p%s = (%s*)%s%s%s;\n' % (indent, struct_uses[obj], name, struct_uses[obj], deref_txt, prefix, name)
+                        post_code += '%s    *p%s = local_%s;\n' % (indent, name, name)
+                        post_code += '%s}\n' % (indent)
         return decls, pre_code, post_code
 
     def generate_intercept(self, proto, qual):
@@ -2044,9 +2057,12 @@ class UniqueObjectsSubcommand(Subcommand):
         indent = '    ' # indent level for generated code
         decl = proto.c_func(prefix="vk", attr="VKAPI")
         # A few API cases that are manual code
+        # TODO : Special case Create*Pipelines funcs to handle creating multiple unique objects
         explicit_object_tracker_functions = ['GetSwapchainImagesKHR',
                                              'CreateInstance',
-                                             'CreateDevice',]
+                                             'CreateDevice',
+                                             'CreateComputePipelines',
+                                             'CreateGraphicsPipelines']
         # Give special treatment to create functions that return multiple new objects
         # This dict stores array name and size of array
         custom_create_dict = {'pDescriptorSets' : 'pAllocateInfo->setLayoutCount'}
@@ -2072,7 +2088,7 @@ class UniqueObjectsSubcommand(Subcommand):
             if destroy_func: # only one object
                 for del_obj in struct_uses:
                     pre_call_txt += '%s%s local_%s = %s;\n' % (indent, struct_uses[del_obj], del_obj, del_obj)
-            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, '    ', '', 0, 0)
+            (pre_decl, pre_code, post_code) = self._gen_obj_code(struct_uses, '    ', '', 0, set(), True)
             pre_call_txt += '%s%s' % (pre_decl, pre_code)
             post_call_txt += post_code
         elif create_func:
