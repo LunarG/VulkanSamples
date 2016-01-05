@@ -1453,6 +1453,7 @@ static VkBool32 validateCreateSwapchainKHR(
                                       fn);
             }
         } else {
+            // TBD: Leave this in (not sure object_track will check this)?
             skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
                                                 pCreateInfo->oldSwapchain,
                                                 "VkSwapchainKHR");
@@ -1531,10 +1532,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
             pSwapchain->images.clear();
         }
         my_data->swapchainMap.erase(swapchain);
-    } else {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                            swapchain,
-                                            "VkSwapchainKHR");
     }
 
     if (VK_FALSE == skipCall) {
@@ -1562,11 +1559,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
                               __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
-    if (!pSwapchain) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                            swapchain.handle,
-                                            "VkSwapchainKHR");
-    }
     if (!pSwapchainImageCount) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -1638,13 +1630,8 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
                               __FUNCTION__, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     }
-    // Validate that a valid VkSwapchainKHR was used:
     SwpSwapchain *pSwapchain = &my_data->swapchainMap[swapchain];
-    if (!pSwapchain) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                            swapchain,
-                                            "VkSwapchainKHR");
-    } else {
+    if (pSwapchain) {
         // Look to see if the application is trying to own too many images at
         // the same time (i.e. not leave any to display):
         uint32_t imagesOwnedByApp = 0;
@@ -1788,10 +1775,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                                           __FUNCTION__, index);
                 }
             }
-        } else {
-            skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,
-                                                pPresentInfo->pSwapchains[i],
-                                                "VkSwapchainKHR");
         }
     }
 
