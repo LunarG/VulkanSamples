@@ -308,13 +308,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyInstance(VkInstance instance
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(instance);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -362,13 +356,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -408,13 +395,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -492,13 +472,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -576,13 +549,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -659,13 +625,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -744,13 +703,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
     if (!pCreateInfo) {
         skipCall |= LOG_ERROR_NULL_POINTER(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                            device,
@@ -823,14 +775,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySurfaceKHR(VkInstance  insta
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
 
-    // Validate that a valid VkInstance was used:
-    SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
-
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
         my_data->instance_dispatch_table->DestroySurfaceKHR(
@@ -845,14 +789,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(instance), layer_data_map);
-
-    // Validate that a valid VkInstance was used:
     SwpInstance *pInstance = &(my_data->instanceMap[instance]);
-    if (!pInstance) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                                            instance,
-                                            "VkInstance");
-    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -862,7 +799,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
         if ((result == VK_SUCCESS) && pInstance && pPhysicalDevices &&
             (*pPhysicalDeviceCount > 0)) {
             // Record the VkPhysicalDevices returned by the ICD:
-            SwpInstance *pInstance = &(my_data->instanceMap[instance]);
             for (uint32_t i = 0; i < *pPhysicalDeviceCount; i++) {
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].physicalDevice =
                     pPhysicalDevices[i];
@@ -874,8 +810,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInst
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].presentModeCount = 0;
                 my_data->physicalDeviceMap[pPhysicalDevices[i]].pPresentModes = NULL;
                 // Point to the associated SwpInstance:
-                pInstance->physicalDevices[pPhysicalDevices[i]] =
-                    &my_data->physicalDeviceMap[pPhysicalDevices[i]];
+                if (pInstance) {
+                    pInstance->physicalDevices[pPhysicalDevices[i]] =
+                        &my_data->physicalDeviceMap[pPhysicalDevices[i]];
+                }
             }
         }
 
