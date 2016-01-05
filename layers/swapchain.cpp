@@ -832,13 +832,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyDevice(VkDevice device, cons
     VkBool32 skipCall = VK_FALSE;
     dispatch_key key = get_dispatch_key(device);
     layer_data *my_data = get_my_data_ptr(key, layer_data_map);
-    // Validate that a valid VkDevice was used:
     SwpDevice *pDevice = &my_data->deviceMap[device];
-    if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                            device,
-                                            "VkDevice");
-    }
 
     if (VK_FALSE == skipCall) {
         // Call down the call chain:
@@ -1116,17 +1110,10 @@ static VkBool32 validateCreateSwapchainKHR(
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     char fn[] = "vkCreateSwapchainKHR";
-
-    // Validate that a valid VkDevice was used, and that the device
-    // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
-    if (!pDevice) {
-        return LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
-                         SWAPCHAIN_INVALID_HANDLE,
-                         "%s() called with a non-valid %s.",
-                         fn, "VkDevice");
 
-    } else if (!pDevice->swapchainExtensionEnabled) {
+    // Validate that the swapchain extension was enabled:
+    if (pDevice && !pDevice->swapchainExtensionEnabled) {
         return LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                          SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                          "%s() called even though the %s extension was not enabled for this VkDevice.",
@@ -1516,15 +1503,10 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySwapchainKHR(
 {
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    // Validate that a valid VkDevice was used, and that the device
-    // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
-    if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                            device,
-                                            "VkDevice");
-    } else if (!pDevice->swapchainExtensionEnabled) {
+
+    // Validate that the swapchain extension was enabled:
+    if (pDevice && !pDevice->swapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
@@ -1570,15 +1552,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkGetSwapchainImagesKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    // Validate that a valid VkDevice was used, and that the device
-    // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
-    if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                            device,
-                                            "VkDevice");
-    } else if (!pDevice->swapchainExtensionEnabled) {
+
+    // Validate that the swapchain extension was enabled:
+    if (pDevice && !pDevice->swapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
@@ -1652,15 +1629,10 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     VkResult result = VK_SUCCESS;
     VkBool32 skipCall = VK_FALSE;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-
-    // Validate that a valid VkDevice was used, and that the device
-    // extension was enabled:
     SwpDevice *pDevice = &my_data->deviceMap[device];
-    if (!pDevice) {
-        skipCall |= LOG_ERROR_NON_VALID_OBJ(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
-                                            device,
-                                            "VkDevice");
-    } else if (!pDevice->swapchainExtensionEnabled) {
+
+    // Validate that the swapchain extension was enabled:
+    if (pDevice && !pDevice->swapchainExtensionEnabled) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, device, "VkDevice",
                               SWAPCHAIN_EXT_NOT_ENABLED_BUT_USED,
                               "%s() called even though the %s extension was not enabled for this VkDevice.",
