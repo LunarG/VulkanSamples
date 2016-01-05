@@ -632,7 +632,7 @@ TEST_F(VkLayerTest, MapMemWithoutHostVisibleBit)
 
     // Map memory as if to initialize the image
     void *mappedAddress = NULL;
-    err = vkMapMemory(m_device->device(), mem, 0, 0, 0, &mappedAddress);
+    err = vkMapMemory(m_device->device(), mem, 0, VK_WHOLE_SIZE, 0, &mappedAddress);
 
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive Error 'Error received did not match expected error message from vkMapMemory in MemTracker'";

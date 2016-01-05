@@ -441,7 +441,7 @@ void DeviceMemory::init(const Device &dev, const VkMemoryAllocateInfo &info)
 const void *DeviceMemory::map(VkFlags flags) const
 {
     void *data;
-    if (!EXPECT(vkMapMemory(device(), handle(), 0 ,0, flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(device(), handle(), 0 , VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
@@ -450,7 +450,7 @@ const void *DeviceMemory::map(VkFlags flags) const
 void *DeviceMemory::map(VkFlags flags)
 {
     void *data;
-    if (!EXPECT(vkMapMemory(device(), handle(), 0, 0, flags, &data) == VK_SUCCESS))
+    if (!EXPECT(vkMapMemory(device(), handle(), 0,  VK_WHOLE_SIZE, flags, &data) == VK_SUCCESS))
         data = NULL;
 
     return data;
