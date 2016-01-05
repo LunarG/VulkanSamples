@@ -1725,7 +1725,7 @@ class ObjectTrackerSubcommand(Subcommand):
                      '}' % (qual, decl, proto.c_call()))
             return "".join(funcs)
         # Temporarily prevent  DestroySurface call from being generated until WSI layer support is fleshed out
-        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name: # LUGMAL or 'SurfaceKHR' in proto.name:
+        elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
             return ""
         else:
             if 'Create' in proto.name or 'Alloc' in proto.name:
