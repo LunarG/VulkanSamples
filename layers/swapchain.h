@@ -122,13 +122,6 @@ typedef enum _SWAPCHAIN_ERROR
                 "(expected %s).",                                       \
                 __FUNCTION__, (obj), (val))                             \
     : VK_FALSE
-#define LOG_ERROR_WRONG_NEXT(objType, type, obj)          \
-    (my_data) ?                                                         \
-        log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
-                (uint64_t) (obj), 0, SWAPCHAIN_WRONG_NEXT, LAYER_NAME, \
-                "%s() called with non-NULL value for %s->pNext.",       \
-                __FUNCTION__, (obj))                                    \
-    : VK_FALSE
 #define LOG_ERROR_ZERO_VALUE(objType, type, obj)                        \
     (my_data) ?                                                         \
         log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (objType), \
@@ -145,6 +138,13 @@ typedef enum _SWAPCHAIN_ERROR
     (my_data) ?                                                         \
         log_msg(my_data->report_data, VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, (objType), \
                 (uint64_t) (obj), __LINE__, (enm), LAYER_NAME, (fmt), __VA_ARGS__) \
+    : VK_FALSE
+#define LOG_INFO_WRONG_NEXT(objType, type, obj)                         \
+    (my_data) ?                                                         \
+        log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, (objType), \
+                (uint64_t) (obj), 0, SWAPCHAIN_WRONG_NEXT, LAYER_NAME, \
+                "%s() called with non-NULL value for %s->pNext.",       \
+                __FUNCTION__, (obj))                                    \
     : VK_FALSE
 
 

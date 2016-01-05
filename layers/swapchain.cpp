@@ -372,7 +372,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
                                               "VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -411,7 +411,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
                                               "VK_STRUCTURE_TYPE_MIR_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -484,7 +484,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
                                               "VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -557,7 +557,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
                                               "VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -629,7 +629,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
                                               "VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -703,7 +703,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
                                               "VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -1133,7 +1133,7 @@ static VkBool32 validateCreateSwapchainKHR(
                                               "VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR");
         }
         if (pCreateInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pCreateInfo");
         }
@@ -1709,7 +1709,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
                                               "VK_STRUCTURE_TYPE_PRESENT_INFO_KHR");
         }
         if (pPresentInfo->pNext != NULL) {
-            skipCall |= LOG_ERROR_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
+            skipCall |= LOG_INFO_WRONG_NEXT(VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,
                                              device,
                                              "pPresentInfo");
         }
