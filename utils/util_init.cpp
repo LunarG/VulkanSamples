@@ -1663,6 +1663,7 @@ void init_sampler(struct sample_info &info, VkSampler &sampler)
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE,
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
