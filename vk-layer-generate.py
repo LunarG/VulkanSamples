@@ -1402,14 +1402,41 @@ class ObjectTrackerSubcommand(Subcommand):
 
     def generate_maps(self):
         maps_txt = []
-        for o in vulkan.core.objects:
+        for o in vulkan.object_type_list:
             maps_txt.append('unordered_map<uint64_t, OBJTRACK_NODE*> %sMap;' % (o))
-        maps_txt.append('unordered_map<uint64_t, OBJTRACK_NODE*> VkSwapchainKHRMap;')
         return "\n".join(maps_txt)
+
+    def _gather_object_uses(self, obj_list, struct_type, obj_set):
+    # for each member of struct_type
+    #     add objs in obj_list to obj_set
+    #     call self for structs
+        for m in vk_helper.struct_dict[struct_type]:
+            if vk_helper.struct_dict[struct_type][m]['type'] in obj_list:
+                obj_set.add(vk_helper.struct_dict[struct_type][m]['type'])
+            elif vk_helper.is_type(vk_helper.struct_dict[struct_type][m]['type'], 'struct'):
+                obj_set = obj_set.union(self._gather_object_uses(obj_list, vk_helper.struct_dict[struct_type][m]['type'], obj_set))
+        return obj_set
 
     def generate_procs(self):
         procs_txt = []
-        for o in vulkan.core.objects:
+        # First parse through funcs and gather dict of all objects seen by each call
+        obj_use_dict = {}
+        proto_list = vulkan.core.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_surface.protos + vulkan.ext_khr_win32_surface.protos + vulkan.ext_khr_device_swapchain.protos
+        for proto in proto_list:
+            disp_obj = proto.params[0].ty.strip('*').replace('const ', '')
+            if disp_obj in vulkan.object_dispatch_list:
+                if disp_obj not in obj_use_dict:
+                    obj_use_dict[disp_obj] = set()
+                for p in proto.params[1:]:
+                    base_type = p.ty.strip('*').replace('const ', '')
+                    if base_type in vulkan.object_type_list:
+                        obj_use_dict[disp_obj].add(base_type)
+                    if vk_helper.is_type(base_type, 'struct'):
+                        obj_use_dict[disp_obj] = self._gather_object_uses(vulkan.object_type_list, base_type, obj_use_dict[disp_obj])
+        #for do in obj_use_dict:
+        #    print "Disp obj %s has uses for objs: %s" % (do, ', '.join(obj_use_dict[do]))
+
+        for o in vulkan.object_type_list:# vulkan.core.objects:
             procs_txt.append('%s' % self.lineinfo.get())
             name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
             name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
@@ -1431,40 +1458,6 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    numObjs[objIndex]++;')
             procs_txt.append('    numTotalObjs++;')
             procs_txt.append('}')
-            procs_txt.append('')
-            procs_txt.append('%s' % self.lineinfo.get())
-            # TODO : This is not complete and currently requires some hand-coded function in the header
-            #  Really we want to capture the set of all objects and their associated dispatchable objects
-            #  that are bound by the API calls:
-            #    foreach API Call
-            #        foreach object type seen by call
-            #            create validate_object(disp_obj, object)
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object)' % (name, o, o))
-            else:
-                procs_txt.append('static VkBool32 validate_%s(VkDevice dispatchable_object, %s object)' % (name, o))
-            procs_txt.append('{')
-            if o in vulkan.object_dispatch_list:
-                procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % o)
-            else:
-                if o == "VkPipelineCache":
-                    procs_txt.append('    // VkPipelineCache object can be NULL if not caching')
-                    procs_txt.append('    if (object == VK_NULL_HANDLE) return VK_TRUE;')
-                    procs_txt.append('')
-                if o == "VkImage":
-                    procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
-                    procs_txt.append('    if ((%sMap.find((uint64_t)object)        == %sMap.end()) &&' % (o, o))
-                    procs_txt.append('        (swapchainImageMap.find((uint64_t)object) == swapchainImageMap.end())) {')
-                else:
-                    procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
-                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, (uint64_t) object, __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
-            procs_txt.append('    }')
-            procs_txt.append('    return VK_FALSE;')
-            procs_txt.append('}')
-            procs_txt.append('')
             procs_txt.append('')
             procs_txt.append('%s' % self.lineinfo.get())
             if o in vulkan.object_dispatch_list:
@@ -1568,6 +1561,51 @@ class ObjectTrackerSubcommand(Subcommand):
             procs_txt.append('    return VK_FALSE;')
             procs_txt.append('}')
             procs_txt.append('')
+        procs_txt.append('%s' % self.lineinfo.get())
+        # Generate the permutations of validate_* functions where for each
+        #  dispatchable object type, we have a corresponding validate_* function
+        #  for that object and all non-dispatchable objects that are used in API
+        #  calls with that dispatchable object.
+        procs_txt.append('//%s' % str(obj_use_dict))
+        for do in obj_use_dict:
+            name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', do)
+            name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
+            # First create validate_* func for disp obj
+            procs_txt.append('%s' % self.lineinfo.get())
+            procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, do))
+            procs_txt.append('{')
+            procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
+            procs_txt.append('        return VK_FALSE;')
+            procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (do, do))
+            procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+            procs_txt.append('            "Invalid %s Object 0x%%" PRIx64 ,reinterpret_cast<uint64_t>(object));' % do)
+            procs_txt.append('    }')
+            procs_txt.append('    return VK_FALSE;')
+            procs_txt.append('}')
+            procs_txt.append('')
+            for o in obj_use_dict[do]:
+                if o == do: # We already generated this case above so skip here
+                    continue
+                name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
+                name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
+                procs_txt.append('%s' % self.lineinfo.get())
+                procs_txt.append('static VkBool32 validate_%s(%s dispatchable_object, %s object, VkDebugReportObjectTypeEXT objType, bool null_allowed)' % (name, do, o))
+                procs_txt.append('{')
+                procs_txt.append('    if (null_allowed && (object == VK_NULL_HANDLE))')
+                procs_txt.append('        return VK_FALSE;')
+                if o == "VkImage":
+                    procs_txt.append('    // We need to validate normal image objects and those from the swapchain')
+                    procs_txt.append('    if ((%sMap.find((uint64_t)object) == %sMap.end()) &&' % (o, o))
+                    procs_txt.append('        (swapchainImageMap.find((uint64_t)object) == swapchainImageMap.end())) {')
+                else:
+                    procs_txt.append('    if (%sMap.find((uint64_t)object) == %sMap.end()) {' % (o, o))
+                procs_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, objType, reinterpret_cast<uint64_t>(object), __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
+                procs_txt.append('            "Invalid %s Object 0x%%" PRIx64, reinterpret_cast<uint64_t>(object));' % o)
+                procs_txt.append('    }')
+                procs_txt.append('    return VK_FALSE;')
+                procs_txt.append('}')
+            procs_txt.append('')
+        procs_txt.append('')
         return "\n".join(procs_txt)
 
     def generate_destroy_instance(self):
@@ -1578,7 +1616,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedi_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedi_txt.append('{')
         gedi_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
-        gedi_txt.append('    validate_instance(instance, instance);')
+        gedi_txt.append('    validate_instance(instance, instance, VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT, false);')
         gedi_txt.append('')
         gedi_txt.append('    destroy_instance(instance, instance);')
         gedi_txt.append('    // Report any remaining objects in LL')
@@ -1627,7 +1665,7 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('const VkAllocationCallbacks* pAllocator)')
         gedd_txt.append('{')
         gedd_txt.append('    loader_platform_thread_lock_mutex(&objLock);')
-        gedd_txt.append('    validate_device(device, device);')
+        gedd_txt.append('    validate_device(device, device, VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT, false);')
         gedd_txt.append('')
         gedd_txt.append('    destroy_device(device, device);')
         gedd_txt.append('    // Report any remaining objects in LL')
@@ -1658,24 +1696,71 @@ class ObjectTrackerSubcommand(Subcommand):
         gedd_txt.append('')
         return "\n".join(gedd_txt)
 
-    def generate_command_buffer_validates(self):
-        cbv_txt = []
-        cbv_txt.append('%s' % self.lineinfo.get())
-        for o in ['VkPipeline',
-                  'VkPipelineLayout', 'VkBuffer', 'VkEvent', 'VkQueryPool', 'VkRenderPass', 'VkFramebuffer']:
-            name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', o)
-            name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
-            cbv_txt.append('static VkBool32 validate_%s(VkCommandBuffer dispatchable_object, %s object)' % (name, o))
-            cbv_txt.append('{')
-            cbv_txt.append('    uint64_t object_handle = reinterpret_cast<uint64_t>(object);')
-            cbv_txt.append('    if (%sMap.find(object_handle) == %sMap.end()) {' % (o, o))
-            cbv_txt.append('        return log_msg(mdd(dispatchable_object), VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT ) 0, object_handle, __LINE__, OBJTRACK_INVALID_OBJECT, "OBJTRACK",')
-            cbv_txt.append('            "Invalid %s Object 0x%%" PRIx64, object_handle);' % (o))
-            cbv_txt.append('    }')
-            cbv_txt.append('    return VK_FALSE;')
-            cbv_txt.append('}')
-            cbv_txt.append('')
-        return "\n".join(cbv_txt)
+    def _gen_obj_validate_code(self, struct_uses, obj_type_mapping, func_name, valid_null_dict, param0_name, indent, prefix, array_index):
+        pre_code = ''
+        for obj in sorted(struct_uses):
+            name = obj
+            array = ''
+            if '[' in obj:
+                (name, array) = obj.split('[')
+                array = array.strip(']')
+            if isinstance(struct_uses[obj], dict):
+                local_prefix = ''
+                name = '%s%s' % (prefix, name)
+                ptr_type = False
+                if 'p' == obj[0]:
+                    ptr_type = True
+                    pre_code += '%sif (%s) {\n' % (indent, name)
+                    indent += '    '
+                if array != '':
+                    idx = 'idx%s' % str(array_index)
+                    array_index += 1
+                    pre_code += '%s\n' % self.lineinfo.get()
+                    pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                    indent += '    '
+                    local_prefix = '%s[%s].' % (name, idx)
+                elif ptr_type:
+                    local_prefix = '%s->' % (name)
+                else:
+                    local_prefix = '%s.' % (name)
+                tmp_pre = self._gen_obj_validate_code(struct_uses[obj], obj_type_mapping, func_name, valid_null_dict, param0_name, indent, local_prefix, array_index)
+                pre_code += tmp_pre
+                if array != '':
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+                if ptr_type:
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+            else:
+                ptype = struct_uses[obj]
+                dbg_obj_type = obj_type_mapping[ptype]
+                fname = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', ptype)
+                fname = re.sub('([a-z0-9])([A-Z])', r'\1_\2', fname).lower()[3:]
+                full_name = '%s%s' % (prefix, name)
+                null_obj_ok = 'false'
+                # If a valid null param is defined for this func and we have a match, allow NULL
+                if func_name in valid_null_dict and True in [name in pn for pn in valid_null_dict[func_name]]:
+                    null_obj_ok = 'true'
+                if (array_index > 0) or '' != array:
+                    pre_code += '%sif (%s) {\n' %(indent, full_name)
+                    indent += '    '
+                    if array != '':
+                        idx = 'idx%s' % str(array_index)
+                        array_index += 1
+                        pre_code += '%sfor (uint32_t %s=0; %s<%s%s; ++%s) {\n' % (indent, idx, idx, prefix, array, idx)
+                        indent += '    '
+                        full_name = '%s[%s]' % (full_name, idx)
+                    pre_code += '%s\n' % self.lineinfo.get()
+                    pre_code += '%sskipCall |= validate_%s(%s, %s, %s, %s);\n' %(indent, fname, param0_name, full_name, dbg_obj_type, null_obj_ok)
+                    if array != '':
+                        indent = indent[4:]
+                        pre_code += '%s}\n' % (indent)
+                    indent = indent[4:]
+                    pre_code += '%s}\n' % (indent)
+                else:
+                    pre_code += '%s\n' % self.lineinfo.get()
+                    pre_code += '%sskipCall |= validate_%s(%s, %s, %s, %s);\n' %(indent, fname, param0_name, full_name, dbg_obj_type, null_obj_ok)
+        return pre_code
 
     def generate_intercept(self, proto, qual):
         if proto.name in [ 'CreateDebugReportCallbackEXT', 'EnumerateInstanceLayerProperties', 'EnumerateInstanceExtensionProperties','EnumerateDeviceLayerProperties', 'EnumerateDeviceExtensionProperties' ]:
@@ -1727,7 +1812,9 @@ class ObjectTrackerSubcommand(Subcommand):
                                    'CreateComputePipelines' : ['basePipelineHandle'],
                                    'BeginCommandBuffer' : ['renderPass', 'framebuffer'],
                                    'QueueSubmit' : ['fence'],
+                                   'AcquireNextImageKHR' : ['fence'],
                                    'UpdateDescriptorSets' : ['pTexelBufferView'],
+                                   'CreateSwapchainKHR' : ['oldSwapchain'],
                                   }
         param_count = 'NONE' # keep track of arrays passed directly into API functions
         for p in proto.params:
@@ -1778,6 +1865,12 @@ class ObjectTrackerSubcommand(Subcommand):
                                 else:
                                     loop_params[0].append(param_name)
                                     loop_types[0].append('%s' % (vk_helper.struct_dict[struct_type][m]['type']))
+        last_param_index = None
+        create_func = False
+        if True in [create_txt in proto.name for create_txt in ['Create', 'Allocate']]:
+            create_func = True
+            last_param_index = -1 # For create funcs don't validate last object
+        struct_uses = get_object_uses(vulkan.object_type_list, proto.params[:last_param_index])
         funcs = []
         mutex_unlock = False
         funcs.append('%s\n' % self.lineinfo.get())
@@ -1791,7 +1884,7 @@ class ObjectTrackerSubcommand(Subcommand):
         elif 'DestroyInstance' in proto.name or 'DestroyDevice' in proto.name:
             return ""
         else:
-            if 'Create' in proto.name or 'Alloc' in proto.name:
+            if create_func:
                 typ = proto.params[-1].ty.strip('*').replace('const ', '');
                 name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
@@ -1816,53 +1909,19 @@ class ObjectTrackerSubcommand(Subcommand):
                 name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
                 funcs.append('%s\n' % self.lineinfo.get())
                 destroy_line =  '    loader_platform_thread_lock_mutex(&objLock);\n'
-#                destroy_line += '    if (result == VK_SUCCESS) {\n'
                 destroy_line += '    destroy_%s(%s, %s);\n' % (name, param0_name, proto.params[-2].name)
-#                destroy_line += '    }\n'
                 destroy_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-            if len(loop_params) > 0:
-                using_line += '    VkBool32 skipCall = VK_FALSE;\n'
+            indent = '    '
+            if len(struct_uses) > 0:
+                using_line += '%sVkBool32 skipCall = VK_FALSE;\n' % (indent)
                 if not mutex_unlock:
-                    using_line += '    loader_platform_thread_lock_mutex(&objLock);\n'
+                    using_line += '%sloader_platform_thread_lock_mutex(&objLock);\n' % (indent)
                     mutex_unlock = True
-                for lc,lt in zip(loop_params,loop_types):
-                    if 0 == lc: # No looping required for these params
-                        for opn,typ in zip(loop_params[lc],loop_types[lt]):
-                            name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
-                            name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
-                            if '->' in opn:
-                                using_line += '    if (%s)\n' % (opn.split('-')[0])
-                                using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
-                            else:
-                                if 'AcquireNext' in proto.name and 'fence' == name:
-                                    using_line += '    if (fence != VK_NULL_HANDLE) {\n'
-                                    using_line += '        skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
-                                    using_line += '    }\n'
-                                else:
-                                    using_line += '    skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
-                    else:
-                        base_param = loop_params[lc][0].split('-')[0].split('[')[0]
-                        using_line += '    if (%s) {\n' % base_param
-                        using_line += '        for (uint32_t i=0; i<%s; i++) {\n' % lc
-                        for opn,typ in zip(loop_params[lc],loop_types[lt]):
-                            name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', typ)
-                            name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()[3:]
-                            if ',' in opn: # double-embedded loop
-                                (inner_lc, inner_param) = opn.split(',')
-                                using_line += '            if (%s) {\n' % inner_param
-                                using_line += '                for (uint32_t j=0; j<%s; j++) {\n' % inner_lc
-                                using_line += '                    skipCall |= validate_%s(%s, %s[j]);\n' % (name, param0_name, inner_param)
-                                using_line += '                }\n'
-                                using_line += '            }\n'
-                            elif '[' in opn: # API func param is array
-                                using_line += '            skipCall |= validate_%s(%s, %s);\n' % (name, param0_name, opn)
-                            else: # struct element is array
-                                using_line += '            skipCall |= validate_%s(%s, %s[i]);\n' % (name, param0_name, opn)
-                        using_line += '        }\n'
-                        using_line += '    }\n'
+                using_line += '// objects to validate: %s\n' % str(struct_uses)
+                using_line += self._gen_obj_validate_code(struct_uses, obj_type_mapping, proto.name, valid_null_object_names, param0_name, '    ', '', 0)
             if mutex_unlock:
-                using_line += '    loader_platform_thread_unlock_mutex(&objLock);\n'
-            if len(loop_params) > 0:
+                using_line += '%sloader_platform_thread_unlock_mutex(&objLock);\n' % (indent)
+            if len(struct_uses) > 0:
                 using_line += '    if (skipCall)\n'
                 if proto.ret != "void":
                     using_line += '        return VK_ERROR_VALIDATION_FAILED_EXT;\n'
@@ -1934,7 +1993,6 @@ class ObjectTrackerSubcommand(Subcommand):
                 self.generate_procs(),
                 self.generate_destroy_instance(),
                 self.generate_destroy_device(),
-                self.generate_command_buffer_validates(),
                 self._generate_dispatch_entrypoints("VK_LAYER_EXPORT"),
                 self._generate_extensions(),
                 self._generate_layer_gpa_function(extensions,
