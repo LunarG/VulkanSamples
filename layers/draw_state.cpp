@@ -4568,11 +4568,15 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(), optional_bits,
                                   string_VkAccessFlags(optional_bits).c_str(), string_VkImageLayout(layout));
         } else {
+            std::string opt_bits;
+            if (optional_bits != 0) {
+                opt_bits = "and may have optional bits " + std::to_string(optional_bits) + ' ' + string_VkAccessFlags(optional_bits);
+            }
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                                 "%s AccessMask %d %s must have required access bit %d %s and may have optional bits %d %s when layout is %s.",
+                                 "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(),
                                   required_bit, string_VkAccessFlags(required_bit).c_str(),
-                                  optional_bits, string_VkAccessFlags(optional_bits).c_str(), string_VkImageLayout(layout));
+                                  opt_bits.c_str(), string_VkImageLayout(layout));
         }
     }
     return skip_call;
