@@ -152,14 +152,12 @@ typedef enum _SWAPCHAIN_ERROR
 
 // Forward declarations:
 struct _SwpInstance;
-struct _SwpSurface;
 struct _SwpPhysicalDevice;
 struct _SwpDevice;
 struct _SwpSwapchain;
 struct _SwpImage;
 
 typedef _SwpInstance SwpInstance;
-typedef _SwpSurface SwpSurface;
 typedef _SwpPhysicalDevice SwpPhysicalDevice;
 typedef _SwpDevice SwpDevice;
 typedef _SwpSwapchain SwpSwapchain;
@@ -169,9 +167,6 @@ typedef _SwpImage SwpImage;
 struct _SwpInstance {
     // The actual handle for this VkInstance:
     VkInstance instance;
-
-    // Remember the VkSurfaceKHR's that are created for this VkInstance:
-    unordered_map<const void*, SwpSurface*> surfaces;
 
     // When vkEnumeratePhysicalDevices is called, the VkPhysicalDevice's are
     // remembered:
@@ -205,17 +200,6 @@ struct _SwpInstance {
     // Set to true if VK_KHR_XLIB_SURFACE_EXTENSION_NAME was enabled for this VkInstance:
     bool xlibSurfaceExtensionEnabled;
 #endif // VK_USE_PLATFORM_XLIB_KHR
-};
-
-// Create one of these for each VkSurfaceKHR:
-struct _SwpSurface {
-    // The actual handle for this VkSurfaceKHR:
-    VkSurfaceKHR surface;
-
-    // VkInstance that this VkSurfaceKHR is associated with:
-    SwpInstance *pInstance;
-
-    // TODO: Add additional platform-specific info:
 };
 
 // Create one of these for each VkPhysicalDevice within a VkInstance:
@@ -305,7 +289,6 @@ struct layer_data {
     // NOTE: The following are for keeping track of info that is used for
     // validating the WSI extensions.
     std::unordered_map<void *, SwpInstance>       instanceMap;
-    std::unordered_map<void *, SwpSurface>        surfaceMap;
     std::unordered_map<void *, SwpPhysicalDevice> physicalDeviceMap;
     std::unordered_map<void *, SwpDevice>         deviceMap;
     std::unordered_map<VkSwapchainKHR, SwpSwapchain>    swapchainMap;
