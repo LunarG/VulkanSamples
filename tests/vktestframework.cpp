@@ -632,8 +632,8 @@ void  TestFrameworkVkPresent::Display()
     VkImageMemoryBarrier memoryBarrier = {};
     memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memoryBarrier.pNext = NULL;
-    memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    memoryBarrier.dstAccessMask = 0;
+    memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    memoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -645,7 +645,7 @@ void  TestFrameworkVkPresent::Display()
     memoryBarrier.subresourceRange.layerCount = 1;
     memoryBarrier.image = m_buffers[m_current_buffer].image;
     VkImageMemoryBarrier *pmemory_barrier = &memoryBarrier;
-    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
 
     VkBufferImageCopy region = {};
@@ -664,7 +664,9 @@ void  TestFrameworkVkPresent::Display()
 
     memoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     memoryBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+    memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    vkCmdPipelineBarrier(m_cmdbuf.handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          0, 1, (const void * const*)&pmemory_barrier);
     m_cmdbuf.end();
 
