@@ -79,24 +79,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateInstanceLayerPropertie
 static VkBool32 validateSurface(layer_data *my_data, VkSurfaceKHR surface, char *fn)
 {
     VkBool32 skipCall = VK_FALSE;
-    bool found_error = false;
-
     SwpSurface *pSurface = &my_data->surfaceMap[surface];
+
     if ((pSurface == NULL) || (pSurface->surface != surface)) {
-        found_error = true;
-    } else {
-#if !defined(__ANDROID__)
-        VkIcdSurfaceBase *pIcdSurface = (VkIcdSurfaceBase *) surface;
-        if (pSurface->platform != pIcdSurface->platform) {
-            found_error = true;
-        }
-#else  // !defined(__ANDROID__)
-        if (pSurface->platform != VK_ICD_WSI_PLATFORM_ANDROID) {
-            found_error = true;
-        }
-#endif // !defined(__ANDROID__)
-    }
-    if (found_error) {
         skipCall |= LOG_ERROR(VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT, surface, "VkSurfaceKHR",
                               SWAPCHAIN_INVALID_HANDLE,
                               "%s() called with an invalid surface object.",
@@ -426,7 +411,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateAndroidSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_ANDROID;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
@@ -482,7 +466,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateMirSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_MIR;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
@@ -576,7 +559,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWaylandSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_WAYLAND;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
@@ -670,7 +652,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateWin32SurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_WIN32;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
@@ -763,7 +744,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXcbSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_XCB;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);
@@ -858,7 +838,6 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateXlibSurfaceKHR(
             // Record the VkSurfaceKHR returned by the ICD:
             my_data->surfaceMap[*pSurface].surface = *pSurface;
             my_data->surfaceMap[*pSurface].pInstance = pInstance;
-            my_data->surfaceMap[*pSurface].platform = VK_ICD_WSI_PLATFORM_XLIB;
             // Point to the associated SwpInstance:
             pInstance->surfaces[*pSurface] = &my_data->surfaceMap[*pSurface];
             skipCall |= validateSurface(my_data, *pSurface, (char *) __FUNCTION__);

@@ -215,9 +215,6 @@ struct _SwpSurface {
     // VkInstance that this VkSurfaceKHR is associated with:
     SwpInstance *pInstance;
 
-    // Which platform this VkSurfaceKHR is associated with:
-    VkIcdWsiPlatform platform;
-
     // TODO: Add additional platform-specific info:
 };
 
