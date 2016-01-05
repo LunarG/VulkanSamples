@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  *
  * Author: Ian Elliott <ian@lunarg.com>
- *
+ * Author: Ian Elliott <ianelliott@google.com>
  */
 
 #ifndef SWAPCHAIN_H
