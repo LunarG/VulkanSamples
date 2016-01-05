@@ -5617,7 +5617,7 @@ TEST_F(VkLayerTest, CopyImageTypeMismatch)
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
         image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
 
@@ -5822,7 +5822,7 @@ TEST_F(VkLayerTest, ResolveImageLowSampleCount)
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
         image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         image_create_info.flags = 0;
 
@@ -5925,7 +5925,7 @@ TEST_F(VkLayerTest, ResolveImageHighSampleCount)
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
         image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
@@ -6030,7 +6030,7 @@ TEST_F(VkLayerTest, ResolveImageFormatMismatch)
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
         image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
@@ -6137,7 +6137,7 @@ TEST_F(VkLayerTest, ResolveImageTypeMismatch)
         image_create_info.mipLevels = 1;
         image_create_info.arrayLayers = 1;
         image_create_info.samples = VK_SAMPLE_COUNT_2_BIT;
-        image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         // Note: Some implementations expect color attachment usage for any multisample surface
         image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         image_create_info.flags = 0;
