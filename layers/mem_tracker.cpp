@@ -1886,6 +1886,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFence(
         MT_FENCE_INFO* pFI = &my_data->fenceMap[*pFence];
         memset(pFI, 0, sizeof(MT_FENCE_INFO));
         memcpy(&(pFI->createInfo), pCreateInfo, sizeof(VkFenceCreateInfo));
+        if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
+            pFI->firstTimeFlag = VK_TRUE;
+        }
         loader_platform_thread_unlock_mutex(&globalLock);
     }
     return result;
@@ -1934,16 +1937,17 @@ verifyFenceStatus(
     VkBool32 skipCall = VK_FALSE;
     auto pFenceInfo = my_data->fenceMap.find(fence);
     if (pFenceInfo != my_data->fenceMap.end()) {
-        if (pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) {
-            // TODO: Possibly move this to a lower-level warning if we ever add, say, a VERBOSE warning option. There are too many
-            //       cases where ISVs want to be able to do this to make it a normal warning or perf-warning.
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
-        }
-        if (!pFenceInfo->second.queue) { // Checking status of unsubmitted fence
-            // TODO: I don't see a Valid Usage section for ResetFences. This behavior should be documented there.
-            skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
-                "%s called for fence %#" PRIxLEAST64 " which has not been submitted on a Queue.", apiCall, (uint64_t) fence);
+        if (pFenceInfo->second.firstTimeFlag != VK_TRUE) {
+            if ((pFenceInfo->second.createInfo.flags & VK_FENCE_CREATE_SIGNALED_BIT) & pFenceInfo->second.firstTimeFlag!= VK_TRUE) {
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_INFO_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                    "%s specified fence %#" PRIxLEAST64 " already in SIGNALED state.", apiCall, (uint64_t) fence);
+            }
+            if (!pFenceInfo->second.queue) { // Checking status of unsubmitted fence
+                skipCall |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT, (uint64_t) fence, __LINE__, MEMTRACK_INVALID_FENCE_STATE, "MEM",
+                    "%s called for fence %#" PRIxLEAST64 " which has not been submitted on a Queue.", apiCall, (uint64_t) fence);
+            }
+        } else {
+            pFenceInfo->second.firstTimeFlag = VK_FALSE;
         }
     }
     return skipCall;
