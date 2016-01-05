@@ -173,6 +173,10 @@ ICD_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(
         if (!waitAll && r == VK_SUCCESS)
             return VK_SUCCESS;
 
+        /* Translate return value according to spec */
+        if (r == VK_NOT_READY)
+            r = VK_TIMEOUT;
+
         if (r != VK_SUCCESS)
             ret = r;
     }
