@@ -2644,12 +2644,8 @@ static void demo_init(struct demo *demo, int argc, char **argv)
 
 
 #ifdef _WIN32
-extern int __getmainargs(
-        int * _Argc,
-        char *** _Argv,
-        char *** _Env,
-        int _DoWildCard,
-        int * new_mode);
+// Include header required for parsing the command line options.
+#include <shellapi.h>
 
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
@@ -2657,15 +2653,61 @@ int WINAPI WinMain(HINSTANCE hInstance,
                    int nCmdShow)
 {
     MSG msg;         // message
-    bool done;        // flag saying when app is complete
+    bool done;       // flag saying when app is complete
     int argc;
     char** argv;
-    char** env;
-    int new_mode = 0;
 
-    __getmainargs(&argc,&argv,&env,0,&new_mode);
+    // Use the CommandLine functions to get the command line arguments.  Unfortunately, Microsoft outputs
+    // this information as wide characters for Unicode, and we simply want the Ascii version to be compatible
+    // with the non-Windows side.  So, we have to convert the information to Ascii character strings.
+    LPWSTR* commandLineArgs = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (NULL == commandLineArgs)
+    {
+        argc = 0;
+    }
+
+    if (argc > 0)
+    {
+        argv = (char**)malloc(sizeof(char*) * argc);
+        if (argv == NULL)
+        {
+            argc = 0;
+        }
+        else
+        {
+            for (int iii = 0; iii < argc; iii++)
+            {
+                size_t wideCharLen  = wcslen(commandLineArgs[iii]);
+                size_t numConverted = 0;
+
+                argv[iii] = (char*)malloc(sizeof(char) * (wideCharLen + 1));
+                if (argv[iii] != NULL)
+                {
+                    wcstombs_s(&numConverted, argv[iii], wideCharLen + 1, commandLineArgs[iii], wideCharLen + 1);
+                }
+            }
+        }
+    }
+    else
+    {
+        argv = NULL;
+    }
 
     demo_init(&demo, argc, argv);
+
+    // Free up the items we had to allocate for the command line arguments.
+    if (argc > 0 && argv != NULL)
+    {
+        for (int iii = 0; iii < argc; iii++)
+        {
+            if (argv[iii] != NULL)
+            {
+                free(argv[iii]);
+            }
+        }
+        free(argv);
+    }
+
     demo.connection = hInstance;
     strncpy(demo.name, "cube", APP_NAME_STR_LEN);
     demo_create_window(&demo);
@@ -2674,7 +2716,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
     demo_prepare(&demo);
 
     done = false; //initialize loop condition variable
-    /* main message loop*/
+
+    // main message loop
     while(!done)
     {
         PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);

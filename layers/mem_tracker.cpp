@@ -466,7 +466,7 @@ add_mem_obj_info(
     my_data->memObjMap[mem].valid           = false;
 }
 
-static bool validate_memory_is_valid(layer_data *my_data, VkDeviceMemory mem, VkImage image = VK_NULL_HANDLE) {
+static VkBool32 validate_memory_is_valid(layer_data *my_data, VkDeviceMemory mem, VkImage image = VK_NULL_HANDLE) {
     if (mem == MEMTRACKER_SWAP_CHAIN_IMAGE_KEY) {
         MT_OBJ_BINDING_INFO* pBindInfo = get_object_binding_info(my_data, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT);
         if (pBindInfo && !pBindInfo->valid) {
@@ -2325,8 +2325,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     const VkDeviceSize *pOffsets)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
-    bool skip_call = false;
-    for (int i = 0; i < bindingCount; ++i) {
+    VkBool32 skip_call = false;
+    for (uint32_t i = 0; i < bindingCount; ++i) {
         VkDeviceMemory mem;
         skip_call |= get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(pBuffers[i]),
             VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
@@ -2345,7 +2345,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(commandBuffer), layer_data_map);
     VkDeviceMemory mem;
-    bool skip_call = get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
+    VkBool32 skip_call = get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     skip_call |= validate_memory_is_valid(my_data, mem);
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
     if (!skip_call)
@@ -2875,9 +2875,9 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(
 {
     VkResult result = VK_ERROR_VALIDATION_FAILED_EXT;
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skip_call = false;
     VkDeviceMemory mem;
-    for (int i = 0; i < pPresentInfo->swapchainCount; ++i) {
+    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
         MT_SWAP_CHAIN_INFO *pInfo = my_data->swapchainMap[pPresentInfo->pSwapchains[i]];
         VkImage image = pInfo->images[pPresentInfo->pImageIndices[i]];
         skip_call |= get_mem_binding_from_object(my_data, queue, reinterpret_cast<uint64_t>(image), VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
@@ -2928,7 +2928,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateFramebuffer(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateFramebuffer(device, pCreateInfo, pAllocator, pFramebuffer);
-    for (int i = 0; i < pCreateInfo->attachmentCount; ++i) {
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         VkImageView view = pCreateInfo->pAttachments[i];
         loader_platform_thread_lock_mutex(&globalLock);
         auto view_data = my_data->imageViewMap.find(view);
@@ -2970,7 +2970,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateRenderPass(
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = my_data->device_dispatch_table->CreateRenderPass(device, pCreateInfo, pAllocator, pRenderPass);
-    for (int i = 0; i < pCreateInfo->attachmentCount; ++i) {
+    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; ++i) {
         VkAttachmentDescription desc = pCreateInfo->pAttachments[i];
         MT_PASS_ATTACHMENT_INFO pass_info;
         pass_info.load_op = desc.loadOp;
@@ -3016,7 +3016,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
     VkSubpassContents contents)
 {
     layer_data *my_data = get_my_data_ptr(get_dispatch_key(cmdBuffer), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skip_call = false;
     if (pRenderPassBegin) {
         loader_platform_thread_lock_mutex(&globalLock);
         auto pass_data = my_data->passMap.find(pRenderPassBegin->renderPass);

@@ -35,12 +35,16 @@
 #    define inline __inline
 #  endif // __cplusplus
 
+#if (defined(_MSC_VER) && _MSC_VER < 1900 /*vs2015*/)
 // C99:
 // Microsoft didn't implement C99 in Visual Studio; but started adding it with
 // VS2013.  However, VS2013 still didn't have snprintf().  The following is a
 // work-around (Note: The _CRT_SECURE_NO_WARNINGS macro must be set in the
 // "CMakeLists.txt" file).
+// NOTE: This is fixed in Visual Studio 2015.
 #define snprintf _snprintf
+#endif 
+
 #define strdup _strdup
 
 #endif // _WIN32

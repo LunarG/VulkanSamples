@@ -974,7 +974,7 @@ TEST_F(VkLayerTest, PipelineNotBound)
     err = vkCreatePipelineLayout(m_device->device(), &pipeline_layout_ci, NULL, &pipeline_layout);
     ASSERT_VK_SUCCESS(err);
 
-    VkPipeline badPipeline = (VkPipeline)0xbaadb1be;
+    VkPipeline badPipeline = (VkPipeline)((size_t)0xbaadb1be);
 
     BeginCommandBuffer();
     vkCmdBindPipeline(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, badPipeline);
@@ -1736,7 +1736,7 @@ TEST_F(VkLayerTest, InvalidBufferViewObject)
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkBufferView view = (VkBufferView) 0xbaadbeef; // invalid bufferView object
+    VkBufferView view = (VkBufferView)((size_t)0xbaadbeef); // invalid bufferView object
     VkWriteDescriptorSet descriptor_write;
     memset(&descriptor_write, 0, sizeof(descriptor_write));
     descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2175,7 +2175,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     // verify_set_layout_compatibility fail cases:
     // 1. invalid VkPipelineLayout (layout) passed into vkCmdBindDescriptorSets
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " due to: invalid VkPipelineLayout ");
-    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)0xbaadb1be, 0, 1, &descriptorSet[0], 0, NULL);
+    vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)((size_t)0xbaadb1be), 0, 1, &descriptorSet[0], 0, NULL);
     if (!m_errorMonitor->DesiredMsgFound()) {
         FAIL() << "Did not receive correct error msg when attempting to bind descriptorSets with invalid VkPipelineLayout.";
         m_errorMonitor->DumpFailureMsgs();
@@ -2294,8 +2294,8 @@ TEST_F(VkLayerTest, PrimaryCommandBufferFramebufferAndRenderpass)
     cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_buf_info.pNext = NULL;
     cmd_buf_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    cmd_buf_info.renderPass = (VkRenderPass)0xcadecade;
-    cmd_buf_info.framebuffer = (VkFramebuffer)0xcadecade;
+    cmd_buf_info.renderPass = (VkRenderPass)((size_t)0xcadecade);
+    cmd_buf_info.framebuffer = (VkFramebuffer)((size_t)0xcadecade);
 
 
     // The error should be caught by validation of the BeginCommandBuffer call
@@ -3868,7 +3868,7 @@ TEST_F(VkLayerTest, SampleDescriptorUpdateError)
     err = vkAllocateDescriptorSets(m_device->device(), &alloc_info, &descriptorSet);
     ASSERT_VK_SUCCESS(err);
 
-    VkSampler sampler = (VkSampler) 0xbaadbeef; // Sampler with invalid handle
+    VkSampler sampler = (VkSampler)((size_t)0xbaadbeef); // Sampler with invalid handle
 
     VkDescriptorImageInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));
@@ -3966,7 +3966,7 @@ TEST_F(VkLayerTest, ImageViewDescriptorUpdateError)
     err = vkCreateSampler(m_device->device(), &sampler_ci, NULL, &sampler);
     ASSERT_VK_SUCCESS(err);
 
-    VkImageView view = (VkImageView) 0xbaadbeef; // invalid imageView object
+    VkImageView view = (VkImageView)((size_t)0xbaadbeef); // invalid imageView object
 
     VkDescriptorImageInfo descriptor_info;
     memset(&descriptor_info, 0, sizeof(VkDescriptorImageInfo));
