@@ -108,9 +108,9 @@ struct layer_data {
     unordered_map<VkDescriptorSetLayout, LAYOUT_NODE*>                       descriptorSetLayoutMap;
     unordered_map<VkPipelineLayout,      PIPELINE_LAYOUT_NODE>               pipelineLayoutMap;
     unordered_map<VkDeviceMemory,        VkImage>                            memImageMap;
-    unordered_map<VkFence,               FENCE_NODE>                         fenceMap; 
-    unordered_map<VkQueue,               QUEUE_NODE>                         queueMap; 
-    unordered_map<VkDevice,              DEVICE_NODE>                        deviceMap; 
+    unordered_map<VkFence,               FENCE_NODE>                         fenceMap;
+    unordered_map<VkQueue,               QUEUE_NODE>                         queueMap;
+    unordered_map<VkDevice,              DEVICE_NODE>                        deviceMap;
     // Map for layout chains
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
     unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
@@ -1024,7 +1024,6 @@ static uint64_t g_drawCount[NUM_DRAW_TYPES] = {0, 0, 0, 0};
 //   to that same cmd buffer by separate thread are not changing state from underneath us
 // Track the last cmd buffer touched by this thread
 
-#define MAX_BINDING 0xFFFFFFFF // Default vtxBinding value in CB Node to identify if no vtxBinding set
 // prototype
 static GLOBAL_CB_NODE* getCBNode(layer_data*, const VkCommandBuffer);
 
@@ -2818,7 +2817,7 @@ static void createDeviceRegisterExtensions(const VkDeviceCreateInfo* pCreateInfo
     pDisp->DestroySwapchainKHR       = (PFN_vkDestroySwapchainKHR) gpa(device, "vkDestroySwapchainKHR");
     pDisp->GetSwapchainImagesKHR     = (PFN_vkGetSwapchainImagesKHR) gpa(device, "vkGetSwapchainImagesKHR");
     pDisp->AcquireNextImageKHR       = (PFN_vkAcquireNextImageKHR) gpa(device, "vkAcquireNextImageKHR");
-    pDisp->QueuePresentKHR           = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");    
+    pDisp->QueuePresentKHR           = (PFN_vkQueuePresentKHR) gpa(device, "vkQueuePresentKHR");
 
     for (i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
@@ -3013,13 +3012,14 @@ void decrementResources(layer_data* my_data, uint32_t fenceCount, const VkFence*
         }
     }
 }
- 
+
 void decrementResources(layer_data* my_data, VkQueue queue) {
     auto queue_data = my_data->queueMap.find(queue);
     if (queue_data != my_data->queueMap.end()) {
         for (auto cmdBuffer : queue_data->second.untrackedCmdBuffers) {
             decrementResources(my_data, cmdBuffer);
         }
+        queue_data->second.untrackedCmdBuffers.clear();
         decrementResources(my_data, 1, &queue_data->second.priorFence);
     }
 }
@@ -4229,13 +4229,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(VkCommandBuffer 
         dev_data->device_dispatch_table->CmdBindIndexBuffer(commandBuffer, buffer, offset, indexType);
 }
 
-void updateResourceTracking(GLOBAL_CB_NODE* pCB, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers) {
-    uint32_t end = startBinding + bindingCount;
+void updateResourceTracking(GLOBAL_CB_NODE* pCB, uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* pBuffers) {
+    uint32_t end = firstBinding + bindingCount;
     if (pCB->currentDrawData.buffers.size() < end) {
         pCB->currentDrawData.buffers.resize(end);
     }
     for (uint32_t i = 0; i < bindingCount; ++i) {
-        pCB->currentDrawData.buffers[i + startBinding] = pBuffers[i];
+        pCB->currentDrawData.buffers[i + firstBinding] = pBuffers[i];
     }
 }
 
@@ -4255,8 +4255,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         addCmd(dev_data, pCB, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        pCB->lastVtxBinding = startBinding + bindingCount -1;
-        updateResourceTracking(pCB, startBinding, bindingCount, pBuffers);
+        pCB->lastVtxBinding = firstBinding + bindingCount - 1;
+        updateResourceTracking(pCB, firstBinding, bindingCount, pBuffers);
     } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
     }
@@ -5776,6 +5776,10 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkWaitForFences;
     if (!strcmp(funcName, "vkGetFenceStatus"))
         return (PFN_vkVoidFunction) vkGetFenceStatus;
+    if (!strcmp(funcName, "vkQueueWaitIdle"))
+        return (PFN_vkVoidFunction) vkQueueWaitIdle;
+    if (!strcmp(funcName, "vkDeviceWaitIdle"))
+        return (PFN_vkVoidFunction) vkDeviceWaitIdle;
     if (!strcmp(funcName, "vkGetDeviceQueue"))
         return (PFN_vkVoidFunction) vkGetDeviceQueue;
     if (!strcmp(funcName, "vkDestroyInstance"))
