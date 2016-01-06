@@ -59,8 +59,6 @@ bool   vk_format_is_float(VkFormat format);
 bool   vk_format_is_srgb(VkFormat format);
 bool   vk_format_is_compressed(VkFormat format);
 size_t vk_format_get_size(VkFormat format);
-std::string string_VkAccessFlags(VkAccessFlags accessMask);
-
 
 static inline int u_ffs(int val)
 {

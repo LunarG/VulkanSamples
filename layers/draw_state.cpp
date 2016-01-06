@@ -4548,6 +4548,27 @@ VkBool32 TransitionImageLayouts(VkCommandBuffer cmdBuffer, uint32_t memBarrierCo
     return skip;
 }
 
+// Print readable FlagBits in FlagMask
+std::string string_VkAccessFlags(VkAccessFlags accessMask)
+{
+    std::string result;
+    std::string separator;
+
+    if (accessMask == 0) {
+        result = "[None]";
+    } else {
+        result = "[";
+        for (auto i = 0; i < 32; i++) {
+            if (accessMask & (1 << i)) {
+                result = result + separator + string_VkAccessFlagBits((VkAccessFlagBits)(1 << i));
+                separator = " | ";
+            }
+        }
+        result = result + "]";
+    }
+    return result;
+}
+
 // AccessFlags MUST have 'required_bit' set, and may have one or more of 'optional_bits' set.
 // If required_bit is zero, accessMask must have at least one of 'optional_bits' set
 VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout,

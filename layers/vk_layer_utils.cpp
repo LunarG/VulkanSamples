@@ -577,24 +577,3 @@ unsigned int vk_format_get_channel_count(VkFormat format)
 {
     return vk_format_table[format].channel_count;
 }
-
-// Print readable FlagBits in FlagMask
-std::string string_VkAccessFlags(VkAccessFlags accessMask)
-{
-    std::string result;
-    std::string separator;
-
-    if (accessMask == 0) {
-        result = "[None]";
-    } else {
-        result = "[";
-        for (auto i = 0; i < 32; i++) {
-            if (accessMask & (1 << i)) {
-                result = result + separator + string_VkAccessFlagBits((VkAccessFlagBits)(1 << i));
-                separator = " | ";
-            }
-        }
-        result = result + "]";
-    }
-    return result;
-}
