@@ -36,6 +36,9 @@
 #!define VERSION_PATCH "1"
 !define PRODUCTVERSION "${VERSION_API_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
 
+# Includes
+!include LogicLib.nsh
+
 # This number is determined by doing an install, and then from Windows Explorer,
 # doing a "Properties" on the install directory. Add to this the size of the
 # files installed to C:\Windows\System32. And then add a little bit more.
@@ -54,13 +57,111 @@ OutFile "VulkanRT-${PRODUCTVERSION}-Installer.exe"
 # Define default installation directory
 InstallDir "C:\Program Files (x86)\${PRODUCTNAME}\${PRODUCTVERSION}"
 
-# Includes
-!include StrRep.nsh
-!include x64.nsh
-!include LogicLib.nsh
+# Variable that holds version string used in file names
+Var FileVersion
 
-# Declar var that holds version string used in file names
-Var FV
+
+#############################################
+# StrRep - string replace
+
+!define StrRep "!insertmacro StrRep"
+!macro StrRep output string old new
+    Push `${string}`
+    Push `${old}`
+    Push `${new}`
+    !ifdef __UNINSTALL__
+        Call un.StrRep
+    !else
+        Call StrRep
+    !endif
+    Pop ${output}
+!macroend
+
+!macro Func_StrRep un
+    Function ${un}StrRep
+        Exch $R2 ;new
+        Exch 1
+        Exch $R1 ;old
+        Exch 2
+        Exch $R0 ;string
+        Push $R3
+        Push $R4
+        Push $R5
+        Push $R6
+        Push $R7
+        Push $R8
+        Push $R9
+
+        StrCpy $R3 0
+        StrLen $R4 $R1
+        StrLen $R6 $R0
+        StrLen $R9 $R2
+        loop:
+            StrCpy $R5 $R0 $R4 $R3
+            StrCmp $R5 $R1 found
+            StrCmp $R3 $R6 done
+            IntOp $R3 $R3 + 1 ;move offset by 1 to check the next character
+            Goto loop
+        found:
+            StrCpy $R5 $R0 $R3
+            IntOp $R8 $R3 + $R4
+            StrCpy $R7 $R0 "" $R8
+            StrCpy $R0 $R5$R2$R7
+            StrLen $R6 $R0
+            IntOp $R3 $R3 + $R9 ;move offset by length of the replacement string
+            Goto loop
+        done:
+
+        Pop $R9
+        Pop $R8
+        Pop $R7
+        Pop $R6
+        Pop $R5
+        Pop $R4
+        Pop $R3
+        Push $R0
+        Push $R1
+        Pop $R0
+        Pop $R1
+        Pop $R0
+        Pop $R2
+        Exch $R1
+    FunctionEnd
+!macroend
+!insertmacro Func_StrRep ""
+!insertmacro Func_StrRep "un."
+
+#############################################
+# x64 macros
+
+!define IsWow64 `"" IsWow64 ""`
+!macro _IsWow64 _a _b _t _f
+  !insertmacro _LOGICLIB_TEMP
+  System::Call kernel32::GetCurrentProcess()p.s
+  System::Call kernel32::IsWow64Process(ps,*i0s)
+  Pop $_LOGICLIB_TEMP
+  !insertmacro _!= $_LOGICLIB_TEMP 0 `${_t}` `${_f}`
+!macroend
+
+!define RunningX64 `"" RunningX64 ""`
+!macro _RunningX64 _a _b _t _f
+  !if ${NSIS_PTR_SIZE} > 4
+    !insertmacro LogicLib_JumpToBranch `${_t}` `${_f}`
+  !else
+    !insertmacro _IsWow64 `${_a}` `${_b}` `${_t}` `${_f}`
+  !endif
+!macroend
+
+!define DisableX64FSRedirection "!insertmacro DisableX64FSRedirection"
+!macro DisableX64FSRedirection
+  System::Call kernel32::Wow64EnableWow64FsRedirection(i0)
+!macroend
+
+!define EnableX64FSRedirection "!insertmacro EnableX64FSRedirection"
+!macro EnableX64FSRedirection
+  System::Call kernel32::Wow64EnableWow64FsRedirection(i1)
+!macroend
+
 
 Function .onInit
 
@@ -95,15 +196,15 @@ Section
 
     # Set up version number for file names
     ${StrRep} $0 ${VERSION_PATCH} "." "-"
-    StrCpy $FV ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
+    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
 
     # Libraries
     SetOutPath $WINDIR\System32
-    File /oname=vulkan-$FV.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
+    File /oname=vulkan-$FileVersion.dll ..\build\loader\Release\vulkan-${VERSION_ABI_MAJOR}.dll
 
     # vulkaninfo.exe
     SetOutPath $WINDIR\System32
-    File /oname=vulkaninfo-$FV.exe ..\build\demos\Release\vulkaninfo.exe
+    File /oname=vulkaninfo-$FileVersion.exe ..\build\demos\Release\vulkaninfo.exe
     SetOutPath "$INSTDIR"
     File ..\build\demos\Release\vulkaninfo.exe
     SetShellVarContext all
@@ -167,7 +268,7 @@ Section "uninstall"
 
     # Set up version number for file names
     ${StrRep} $0 ${VERSION_PATCH} "." "-"
-    StrCpy $FV ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
+    StrCpy $FileVersion ${VERSION_ABI_MAJOR}-${VERSION_API_MAJOR}-${VERSION_MINOR}-$0
 
     # Decrement the number of times we have been installed.
     ReadRegDword $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}${PRODUCTVERSION}" "IC"
@@ -183,12 +284,12 @@ Section "uninstall"
 
         # Delete vulkaninfo.exe in C:\Windows\System32
         Delete /REBOOTOK $WINDIR\System32\vulkaninfo.exe
-        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FV.exe"
+        Delete /REBOOTOK "$WINDIR\System32\vulkaninfo-$FileVersion.exe"
 
         # Delete vullkan dll files: vulkan-<majorabi>.dll and vulkan-<majorabi>-<major>-<minor>-<patch>.dll
         Delete /REBOOTOK $WINDIR\System32\vulkan-${VERSION_ABI_MAJOR}.dll
         ${StrRep} $0 ${VERSION_PATCH} "." "-"
-        Delete /REBOOTOK $WINDIR\System32\vulkan-$FV.dll
+        Delete /REBOOTOK $WINDIR\System32\vulkan-$FileVersion.dll
 
         # Run the ConfigLayersAndVulkanDLL.ps1 script to:
         #   Copy the most recent version of vulkan-<abimajor>-*.dll to vulkan-<abimajor>.dll
