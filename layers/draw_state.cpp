@@ -4571,6 +4571,7 @@ std::string string_VkAccessFlags(VkAccessFlags accessMask)
 
 // AccessFlags MUST have 'required_bit' set, and may have one or more of 'optional_bits' set.
 // If required_bit is zero, accessMask must have at least one of 'optional_bits' set
+// TODO: Add tracking to ensure that at least one barrier has been set for these layout transitions
 VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, const VkAccessFlags& accessMask, const VkImageLayout& layout,
                           VkAccessFlags required_bit, VkAccessFlags optional_bits, const char* type) {
     VkBool32 skip_call = false;
@@ -4585,7 +4586,7 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
     } else {
         if (!required_bit) {
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                                 "%s AccessMask %d %s must contain at least one of access bits %d %s when layout is %s.",
+                                 "%s AccessMask %d %s must contain at least one of access bits %d %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(), optional_bits,
                                   string_VkAccessFlags(optional_bits).c_str(), string_VkImageLayout(layout));
         } else {
@@ -4594,7 +4595,7 @@ VkBool32 ValidateMaskBits(const layer_data* my_data, VkCommandBuffer cmdBuffer, 
                 opt_bits = "and may have optional bits " + std::to_string(optional_bits) + ' ' + string_VkAccessFlags(optional_bits);
             }
             skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_WARN_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_BARRIER, "DS",
-                                 "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s.",
+                                 "%s AccessMask %d %s must have required access bit %d %s %s when layout is %s, unless the app has previously added a barrier for this transition.",
                                   type, accessMask, string_VkAccessFlags(accessMask).c_str(),
                                   required_bit, string_VkAccessFlags(required_bit).c_str(),
                                   opt_bits.c_str(), string_VkImageLayout(layout));
