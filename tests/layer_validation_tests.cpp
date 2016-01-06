@@ -2108,11 +2108,15 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     VkImageView view;
     err = vkCreateImageView(m_device->device(), &image_view_create_info, NULL, &view);
     ASSERT_VK_SUCCESS(err);
-    VkDescriptorImageInfo imageInfo[2] = {};
+    VkDescriptorImageInfo imageInfo[4] = {};
     imageInfo[0].imageView = view;
     imageInfo[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo[1].imageView = view;
     imageInfo[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[2].imageView = view;
+    imageInfo[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo[3].imageView = view;
+    imageInfo[3].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     static const uint32_t NUM_SET_UPDATES = 3;
     VkWriteDescriptorSet descriptor_write[NUM_SET_UPDATES] = {};
@@ -2133,7 +2137,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     descriptor_write[2].dstBinding = 1;
     descriptor_write[2].descriptorCount = 2;
     descriptor_write[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    descriptor_write[2].pImageInfo = imageInfo;
+    descriptor_write[2].pImageInfo = &imageInfo[2];
 
     vkUpdateDescriptorSets(m_device->device(), 3, descriptor_write, 0, NULL);
 
@@ -2225,7 +2229,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
         FAIL() << "Did not receive correct info msg when binding Set1 w/ pipelineLayout that should disturb Set0.";
         m_errorMonitor->DumpFailureMsgs();
     }
-    vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
     // 2. Disturb set after last bound set
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_PERF_WARN_BIT_EXT, " newly bound as set #0 so set #1 and any subsequent sets were disturbed ");
@@ -2234,7 +2237,6 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
         FAIL() << "Did not receive correct info msg when re-binding Set0 w/ pipelineLayout that should disturb Set1.";
         m_errorMonitor->DumpFailureMsgs();
     }
-
     // Cause draw-time errors due to PSO incompatibilities
     // 1. Error due to not binding required set (we actually use same code as above to disturb set0)
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
@@ -2245,6 +2247,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
         FAIL() << "Did not receive correct error msg when attempting draw requiring Set0 but Set0 is not bound.";
         m_errorMonitor->DumpFailureMsgs();
     }
+    vkDestroyPipelineLayout(m_device->device(), pipe_layout_bad_set0, NULL);
     // 2. Error due to bound set not being compatible with PSO's VkPipelineLayout (diff stageFlags in this case)
     vkCmdBindDescriptorSets(m_commandBuffer->GetBufferHandle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 2, &descriptorSet[0], 0, NULL);
     m_errorMonitor->SetDesiredFailureMsg(VK_DEBUG_REPORT_ERROR_BIT_EXT, " bound as set #0 is not compatible with ");

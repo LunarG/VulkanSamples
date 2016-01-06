@@ -1965,7 +1965,7 @@ class UniqueObjectsSubcommand(Subcommand):
                 (name, array) = obj.split('[')
                 array = array.strip(']')
             ptr_type = False
-            if 'p' == obj[0]: # TODO : Not idea way to determine ptr
+            if 'p' == obj[0] and obj[1] != obj[1].lower(): # TODO : Not idea way to determine ptr
                 ptr_type = True
             if isinstance(struct_uses[obj], dict):
                 local_prefix = ''
