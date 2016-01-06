@@ -144,11 +144,20 @@ int main(int argc, char **argv)
            printf("Frontend compile %s\n", argv[1]);
            fflush(stdout);
 
-           void *shaderCode;
+           void *shaderCode = 0;
            size_t size = 0;
            VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
 
-           if (checkFileExt(argv[1], ".spv")) {
+           if (checkFileExt(argv[1], "vert.spv")) {
+               shaderCode = load_spv_file(argv[1], &size);
+               stage = VK_SHADER_STAGE_VERTEX_BIT;
+           } else if (checkFileExt(argv[1], "frag.spv")) {
+               shaderCode = load_spv_file(argv[1], &size);
+               stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+           } else if (checkFileExt(argv[1], "geom.spv")) {
+               shaderCode = load_spv_file(argv[1], &size);
+               stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+           } else if (checkFileExt(argv[1], ".spv")) {
                shaderCode = load_spv_file(argv[1], &size);
            } else if (checkFileExt(argv[1], ".vert")) {
                stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -160,7 +169,9 @@ int main(int argc, char **argv)
                return EXIT_FAILURE;
            }
 
-           shaderCode = load_glsl_file(argv[1], &size, stage);
+           if (!shaderCode)
+               shaderCode = load_glsl_file(argv[1], &size, stage);
+
            assert(shaderCode);
 
            struct intel_ir *shader_program = shader_create_ir(NULL, shaderCode, size, stage);
