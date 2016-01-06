@@ -1700,7 +1700,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyImage(
     }
 }
 
-bool print_memory_range_error(layer_data *my_data, const uint64_t object_handle, const uint64_t other_handle, VkDebugReportObjectTypeEXT object_type) {
+VkBool32 print_memory_range_error(layer_data *my_data, const uint64_t object_handle, const uint64_t other_handle, VkDebugReportObjectTypeEXT object_type) {
     if (object_type == VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT) {
         return log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, object_type, object_handle, 0, MEMTRACK_INVALID_ALIASING, "MEM",
                        "Buffer %" PRIx64 " is alised with image %" PRIx64, object_handle, other_handle);
@@ -1710,8 +1710,8 @@ bool print_memory_range_error(layer_data *my_data, const uint64_t object_handle,
     }
 }
 
-bool validate_memory_range(layer_data *my_data, const unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>& memory, const MEMORY_RANGE& new_range, VkDebugReportObjectTypeEXT object_type) {
-    bool skip_call = false;
+VkBool32 validate_memory_range(layer_data *my_data, const unordered_map<VkDeviceMemory, vector<MEMORY_RANGE>>& memory, const MEMORY_RANGE& new_range, VkDebugReportObjectTypeEXT object_type) {
+    VkBool32 skip_call = false;
     if (!memory.count(new_range.memory)) return false;
     const vector<MEMORY_RANGE>& ranges = memory.at(new_range.memory);
     for (auto range : ranges) {
@@ -1722,7 +1722,7 @@ bool validate_memory_range(layer_data *my_data, const unordered_map<VkDeviceMemo
     return skip_call;
 }
 
-bool validate_buffer_image_aliasing(
+VkBool32 validate_buffer_image_aliasing(
     layer_data *my_data,
     uint64_t handle,
     VkDeviceMemory mem,
