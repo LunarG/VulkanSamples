@@ -114,15 +114,15 @@ struct layer_data {
     unordered_map<VkDevice,              DEVICE_NODE>                        deviceMap;
     unordered_map<VkEvent,               EVENT_NODE>                         eventMap;
     unordered_map<QueryObject,           bool>                               queryToStateMap;
-    // Map for layout chains
+    unordered_map<VkSemaphore,           uint32_t>                           semaphoreSignaledMap;
     unordered_map<void*,                 GLOBAL_CB_NODE*>                    commandBufferMap;
     unordered_map<VkFramebuffer,         VkFramebufferCreateInfo*>           frameBufferMap;
     unordered_map<VkImage,               IMAGE_NODE*>                        imageLayoutMap;
     unordered_map<VkRenderPass,          RENDER_PASS_NODE*>                  renderPassMap;
-    unordered_map<VkShaderModule, shader_module*>                            shaderModuleMap;
+    unordered_map<VkShaderModule,        shader_module*>                     shaderModuleMap;
     // Current render pass
-    VkRenderPassBeginInfo renderPassBeginInfo;
-    uint32_t currentSubpass;
+    VkRenderPassBeginInfo                renderPassBeginInfo;
+    uint32_t                             currentSubpass;
 
     layer_data() :
         report_data(nullptr),
@@ -131,6 +131,7 @@ struct layer_data {
         device_extensions()
     {};
 };
+
 // Code imported from ShaderChecker
 static void
 build_type_def_index(std::vector<unsigned> const &words, std::unordered_map<unsigned, unsigned> &type_def_index);
@@ -3065,6 +3066,18 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(VkQueue queue, uint
     //    Same goes for any secondary CBs under the primary CB
     for (uint32_t submit_idx = 0; submit_idx < submitCount; submit_idx++) {
         const VkSubmitInfo *submit = &pSubmits[submit_idx];
+        for (uint32_t i=0; i < submit->waitSemaphoreCount; ++i) {
+            if (dev_data->semaphoreSignaledMap[submit->pWaitSemaphores[i]]) {
+                dev_data->semaphoreSignaledMap[submit->pWaitSemaphores[i]] = 0;
+            } else {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
+                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(submit->pWaitSemaphores[i]));
+            }
+        }
+        for (uint32_t i=0; i < submit->signalSemaphoreCount; ++i) {
+            dev_data->semaphoreSignaledMap[submit->pSignalSemaphores[i]] = 1;
+        }
         for (uint32_t i=0; i < submit->commandBufferCount; i++) {
 
 #ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
@@ -3189,7 +3202,9 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyFence(VkDevice device, VkFen
 
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator)
 {
-    get_my_data_ptr(get_dispatch_key(device), layer_data_map)->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    dev_data->device_dispatch_table->DestroySemaphore(device, semaphore, pAllocator);
+    dev_data->semaphoreSignaledMap.erase(semaphore);
     // TODO : Clean up any internal data structures using this obj.
 }
 
@@ -5736,6 +5751,48 @@ VKAPI_ATTR VkResult VKAPI_CALL vkSetEvent(VkDevice device, VkEvent event) {
     return result;
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
+    VkQueue                                     queue,
+    uint32_t                                    bindInfoCount,
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(queue), layer_data_map);
+    bool skip_call = false;
+
+    for (uint32_t bindIdx=0; bindIdx < bindInfoCount; ++bindIdx) {
+        const VkBindSparseInfo& bindInfo = pBindInfo[bindIdx];
+        for (uint32_t i=0; i < bindInfo.waitSemaphoreCount; ++i) {
+            if (dev_data->semaphoreSignaledMap[bindInfo.pWaitSemaphores[i]]) {
+                dev_data->semaphoreSignaledMap[bindInfo.pWaitSemaphores[i]] = 0;
+            } else {
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
+                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(bindInfo.pWaitSemaphores[i]));
+            }
+        }
+        for (uint32_t i=0; i < bindInfo.signalSemaphoreCount; ++i) {
+            dev_data->semaphoreSignaledMap[bindInfo.pSignalSemaphores[i]] = 1;
+        }
+    }
+
+    if (!skip_call)
+        return dev_data->device_dispatch_table->QueueBindSparse(queue, bindInfoCount, pBindInfo, fence);
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
+    VkDevice                                    device,
+    const VkSemaphoreCreateInfo*                pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSemaphore*                                pSemaphore)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->CreateSemaphore(device, pCreateInfo, pAllocator, pSemaphore);
+    if (result == VK_SUCCESS) {
+        dev_data->semaphoreSignaledMap[*pSemaphore] = 0;
+    }
+}
+
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
     VkDevice                        device,
     const VkSwapchainCreateInfoKHR *pCreateInfo,
@@ -5810,6 +5867,15 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
 
 #ifndef DISABLE_IMAGE_LAYOUT_VALIDATION
     if (pPresentInfo) {
+        for (uint32_t i=0; i < pPresentInfo->waitSemaphoreCount; ++i) {
+            if (dev_data->semaphoreSignaledMap[pPresentInfo->pWaitSemaphores[i]]) {
+                dev_data->semaphoreSignaledMap[pPresentInfo->pWaitSemaphores[i]] = 0;
+            } else {
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, __LINE__, DRAWSTATE_QUEUE_FORWARD_PROGRESS, "DS",
+                        "Queue %#" PRIx64 " is waiting on semaphore %#" PRIx64 " that has no way to be signaled.",
+                        reinterpret_cast<uint64_t>(queue), reinterpret_cast<uint64_t>(pPresentInfo->pWaitSemaphores[i]));
+            }
+        }
         for (uint32_t i = 0; i < pPresentInfo->swapchainCount; ++i) {
             auto swapchain_data = dev_data->device_extensions.swapchainMap.find(pPresentInfo->pSwapchains[i]);
             if (swapchain_data != dev_data->device_extensions.swapchainMap.end() && pPresentInfo->pImageIndices[i] < swapchain_data->second->images.size()) {
@@ -5829,6 +5895,19 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkQueuePresentKHR(VkQueue queue, 
     if (VK_FALSE == skip_call)
         return dev_data->device_dispatch_table->QueuePresentKHR(queue, pPresentInfo);
     return VK_ERROR_VALIDATION_FAILED_EXT;
+}
+
+VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint64_t                                    timeout,
+    VkSemaphore                                 semaphore,
+    VkFence                                     fence,
+    uint32_t*                                   pImageIndex)
+{
+    layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
+    VkResult result = dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+    dev_data->semaphoreSignaledMap[semaphore] = 1;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
@@ -6116,6 +6195,12 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
         return (PFN_vkVoidFunction) vkMapMemory;
     if (!strcmp(funcName, "vkGetQueryPoolResults"))
         return (PFN_vkVoidFunction) vkGetQueryPoolResults;
+    if (!strcmp(funcName, "vkBindImageMemory"))
+        return (PFN_vkVoidFunction) vkBindImageMemory;
+    if (!strcmp(funcName, "vkQueueBindSparse"))
+        return (PFN_vkVoidFunction) vkQueueBindSparse;
+    if (!strcmp(funcName, "vkCreateSemaphore"))
+        return (PFN_vkVoidFunction) vkCreateSemaphore;
 
     if (dev_data->device_extensions.wsi_enabled)
     {
@@ -6125,6 +6210,8 @@ VK_LAYER_EXPORT VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetDeviceProcAddr(VkD
             return (PFN_vkVoidFunction) vkDestroySwapchainKHR;
         if (!strcmp(funcName, "vkGetSwapchainImagesKHR"))
             return (PFN_vkVoidFunction) vkGetSwapchainImagesKHR;
+        if (!strcmp(funcName, "vkAcquireNextImageKHR"))
+            return (PFN_vkVoidFunction) vkAcquireNextImageKHR;
         if (!strcmp(funcName, "vkQueuePresentKHR"))
             return (PFN_vkVoidFunction) vkQueuePresentKHR;
     }

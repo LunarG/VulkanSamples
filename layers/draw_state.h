@@ -98,6 +98,7 @@ typedef enum _DRAW_STATE_ERROR
     DRAWSTATE_DYNAMIC_OFFSET_OVERFLOW,          // At draw time the dynamic offset combined with buffer offset and range oversteps size of buffer
     DRAWSTATE_DOUBLE_DESTROY,                   // Destroying an object twice
     DRAWSTATE_OBJECT_INUSE,                     // Destroying an object in use by a command buffer
+    DRAWSTATE_QUEUE_FORWARD_PROGRESS,           // Queue cannot guarantee forward progress
 } DRAW_STATE_ERROR;
 
 typedef enum _SHADER_CHECKER_ERROR {
