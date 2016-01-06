@@ -82,7 +82,7 @@ if(NOT WIN32)
     find_package(XCB REQUIRED)
 endif()
 
-find_library(VULKAN_LOADER NAMES vulkan-0 vulkan
+find_library(VULKAN_LOADER NAMES vulkan-1 vulkan
              HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Release"
                    "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
@@ -177,7 +177,7 @@ if (WIN32)
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
     find_library(SPIRV_DLIB NAMES SPIRV
                  HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(LOADER_DLIB NAMES vulkan-0
+    find_library(LOADER_DLIB NAMES vulkan-1
                  HINTS "${CMAKE_SOURCE_DIR}/../LoaderAndTools/build/loader/Debug"
                        "${PROJECT_SOURCE_DIR}\\..\\Bin\\Debug" )
 
