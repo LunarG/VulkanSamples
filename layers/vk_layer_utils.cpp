@@ -28,7 +28,6 @@
 #include <string>
 #include "vulkan/vulkan.h"
 #include "vk_layer_utils.h"
-#include "vk_enum_string_helper.h"
 
 typedef struct _VULKAN_FORMAT_INFO {
     size_t size;
