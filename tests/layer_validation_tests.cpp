@@ -1938,7 +1938,7 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     VkDescriptorPoolCreateInfo ds_pool_ci = {};
         ds_pool_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         ds_pool_ci.pNext = NULL;
-        ds_pool_ci.maxSets = 1;
+        ds_pool_ci.maxSets = 5;
         ds_pool_ci.poolSizeCount = NUM_DESCRIPTOR_TYPES;
         ds_pool_ci.pPoolSizes = ds_type_count;
 
@@ -1978,9 +1978,11 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     dsl_binding[0].binding = 0;
     dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     dsl_binding[0].descriptorCount = 2;
-    dsl_binding[0].binding = 1;
-    dsl_binding[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    dsl_binding[0].descriptorCount = 2;
+    dsl_binding[1].binding = 1;
+    dsl_binding[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    dsl_binding[1].descriptorCount = 2;
+    dsl_binding[1].stageFlags = VK_SHADER_STAGE_ALL;
+    dsl_binding[1].pImmutableSamplers = NULL;
     ds_layout_ci.pBindings = dsl_binding;
     ds_layout_ci.bindingCount = 2;
     err = vkCreateDescriptorSetLayout(m_device->device(), &ds_layout_ci, NULL, &ds_layout[1]);
@@ -2091,8 +2093,25 @@ TEST_F(VkLayerTest, DescriptorSetCompatibility)
     err = vkCreateImage(m_device->device(), &image_create_info, NULL, &image);
     ASSERT_VK_SUCCESS(err);
 
+    VkMemoryRequirements  memReqs;
+    VkDeviceMemory        imageMem;
+    bool                  pass;
+    VkMemoryAllocateInfo memAlloc = {};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memAlloc.pNext = NULL;
+        memAlloc.allocationSize = 0;
+        memAlloc.memoryTypeIndex = 0;
+    vkGetImageMemoryRequirements(m_device->device(), image, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    pass = m_device->phy().set_memory_type(memReqs.memoryTypeBits, &memAlloc, 0);
+    ASSERT_TRUE(pass);
+    err = vkAllocateMemory(m_device->device(), &memAlloc, NULL, &imageMem);
+    ASSERT_VK_SUCCESS(err);
+    err = vkBindImageMemory(m_device->device(), image, imageMem, 0);
+    ASSERT_VK_SUCCESS(err);
+
     VkImageViewCreateInfo image_view_create_info = {};
-        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         image_view_create_info.image = image;
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         image_view_create_info.format = tex_format;
