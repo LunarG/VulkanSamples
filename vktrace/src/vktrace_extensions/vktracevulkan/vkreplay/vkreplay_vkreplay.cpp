@@ -65,7 +65,7 @@ int vkReplay::init(vktrace_replay::Display & disp)
 #if defined PLATFORM_LINUX
     void * handle = dlopen("libvulkan.so", RTLD_LAZY);
 #else
-    HMODULE handle = LoadLibrary("vulkan-0.dll" );
+    HMODULE handle = LoadLibrary("vulkan-1.dll" );
 #endif
 
     if (handle == NULL) {

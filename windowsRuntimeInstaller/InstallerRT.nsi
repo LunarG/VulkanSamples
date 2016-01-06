@@ -29,7 +29,7 @@
 #    x.pre.y for prereleases
 #    a single number for releases
 !define PRODUCTNAME "VulkanRT"
-!define VERSION_ABI_MAJOR "0"
+!define VERSION_ABI_MAJOR "1"
 !define VERSION_API_MAJOR "0"
 !define VERSION_MINOR "10"
 !define VERSION_PATCH "3.pre.1"

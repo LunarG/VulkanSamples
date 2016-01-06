@@ -9,7 +9,7 @@ project (VULKAN)
 
 # The MAJOR number of the version we're building, used in naming
 # vulkan-<major>.dll (and other files).
-set(MAJOR "0")
+set(MAJOR "1")
 
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
