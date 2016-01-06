@@ -70,6 +70,7 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | TBD | None |
 | Verify Memory Buffer Not In Use | Validate that memory buffer being freed is not in use | OBJECT_INUSE | vkDestroyBuffer | TBD | None |
 | Verify Get Queries| Validate that that queries are properly initialized and synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle | TBD | None |
+| Live Semaphore  | When waiting on a semaphore, need to make sure that the semaphore is live and therefore can be signalled, otherwise queue is stalled and cannot make forward progress. | QUEUE_FORWARD_PROGRESS | vkQueueSubmit vkQueueBindSparse vkQueuePresentKHR vkAcquireNextImageKHR | TODO | Create test |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |

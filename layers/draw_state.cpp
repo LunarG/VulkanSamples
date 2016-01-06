@@ -5791,6 +5791,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateSemaphore(
     if (result == VK_SUCCESS) {
         dev_data->semaphoreSignaledMap[*pSemaphore] = 0;
     }
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(
@@ -5908,6 +5909,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkAcquireNextImageKHR(
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     VkResult result = dev_data->device_dispatch_table->AcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
     dev_data->semaphoreSignaledMap[semaphore] = 1;
+    return result;
 }
 
 VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateDebugReportCallbackEXT(
