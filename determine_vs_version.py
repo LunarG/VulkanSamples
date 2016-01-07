@@ -116,10 +116,12 @@ if __name__ == '__main__':
 		# Determine the year associated with that version
 		year = determine_year(version)
 		
-		# Now deteremine the OS target
-		osTarget = 'Win32'
-		if os.environ.get('PROCESSOR_ARCHITECTURE', '') == 'AMD64':
-			osTarget = 'Win64'
-		
+		# TODO: Add detect to deteremine the OS target of current system.
+        #       Hard-code to Win64 for now since it's all we officially support.
+		#osTarget = 'Win32'
+		#if os.environ.get('PROCESSOR_ARCHITECTURE', '') == 'AMD64':
+		#	osTarget = 'Win64'
+		osTarget = 'Win64'
+        
 		# Output the string we need for Cmake to properly build for this version
 		print(str(version) + ' ' + str(year) + ' ' + osTarget)
