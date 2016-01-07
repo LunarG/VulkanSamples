@@ -1,8 +1,8 @@
 # Loader Description 
 
 ## Overview
-The Loader implements the main VK library (e.g. "vulkan.dll" on Windows and
-"libvulkan.so" on Linux).  It handles layer management and driver management.  The
+The Loader implements the main VK library (e.g. "vulkan-1.dll" on Windows and
+"libvulkan-1.so" on Linux).  It handles layer management and driver management.  The
 loader fully supports multi-gpu operation.  As part of this, it dispatches API
 calls to the correct driver, and to the correct layers, based on the GPU object
 selected by the application.
@@ -24,10 +24,17 @@ See file LinuxICDs.txt  and WindowsICDs.txt for description of how the loader
 finds ICD driver libraries.
 
 ## Interface to driver (ICD)
-- vkCreateInstance exported
-- vkEnumerateInstanceExtensionProperties exported
-- vkGetDeviceProcAddr exported and returns valid function pointers for all the VK API entrypoints
-- vkGetInstanceProcAddr exported and returns valid function pointers for all the VK API entrypoints
+Currently two supported methods of the loader finding ICD entry points are supported:
+1) Recommended
+- vk_icdGetInstanceProcAddr exported in the ICD library and returns valid function pointers for all the VK API entrypoints
+  both core entry points and any instance or device entrypoints
+- all other Vulkan entrypoints either NOT exported from the ICD library or else will not use the official Vulkan function names
+ if they are exported. (NOTE: this requirement is for ICD libraries that include other functionality (such as OpenGL library)
+ and thus could be loaded prior to when the Vulkan loader library is loaded by the app.  Thus the ICD library exported Vulkan symbols must not
+ clash with the loader's exported Vulkan symbols).
+ 2) Deprecated
+ - vkGetInstanceProcAddr exported in the ICD library and returns valid function pointers for all the VK API entrypoints
+ 
 - WSI surface extensions (vk_KHR_*surface) handling:
   1. Loader handles the vkCreate*SurfaceKHR() and vkDestroySurfaceKHR()  functions including creating/destroying the VkSurfaceKHR object
   2. VkSurfaceKHR objects have the underlying structure (VKIcdSurface*) as defined in include/vulkan/vk_icd.h
@@ -63,7 +70,12 @@ finds ICD driver libraries.
 ```
 
 Additional Notes:
-
+- loader will filter out extensions requested in vkCreateInstance  and vkCreateDevice
+  before calling into the ICD;
+  Filtering will be of extensions advertised by entities (eg layers) different from the ICD in question
+- loader will not call ICD for vkEnumerate*LayerProperties() as layer properties are obtained from
+  the layer libraries and ICD files.
+- loader will not call ICD for vkEnumerate*ExtensionProperties(pLayerName != NULL) 
 - The ICD may or may not implement a dispatch table.
 - ICD entrypoints can be named anything including the offcial vk name such as vkCreateDevice().  However, beware of interposing by dynamic OS library loaders if the offical names are used.  On Linux, if offical names are used, the ICD library must be linked with -Bsymbolic.
 

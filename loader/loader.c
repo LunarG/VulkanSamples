@@ -1262,7 +1262,7 @@ static void loader_scanned_icd_add(
 {
     loader_platform_dl_handle handle;
     PFN_vkCreateInstance fp_create_inst;
-    PFN_vkEnumerateInstanceExtensionProperties fp_get_global_ext_props;
+    PFN_vkEnumerateInstanceExtensionProperties fp_get_inst_ext_props;
     PFN_vkGetInstanceProcAddr fp_get_proc_addr;
     struct loader_scanned_icds *new_node;
 
@@ -1275,19 +1275,26 @@ static void loader_scanned_icd_add(
         return;
     }
 
-#define LOOKUP_LD(func_ptr, func) do {                            \
-    func_ptr = (PFN_vk ##func) loader_platform_get_proc_address(handle, "vk" #func); \
-    if (!func_ptr) {                                           \
-        loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0, loader_platform_get_proc_address_error("vk" #func)); \
-        return;                                                \
-    }                                                          \
-} while (0)
-
-    LOOKUP_LD(fp_get_proc_addr, GetInstanceProcAddr);
-    LOOKUP_LD(fp_create_inst, CreateInstance);
-    LOOKUP_LD(fp_get_global_ext_props, EnumerateInstanceExtensionProperties);
-
-#undef LOOKUP_LD
+    fp_get_proc_addr = loader_platform_get_proc_address(handle, "vk_icdGetInstanceProcAddr");
+    if (!fp_get_proc_addr) {
+        fp_get_proc_addr = loader_platform_get_proc_address(handle, "vkGetInstanceProcAddr");
+        if (!fp_get_proc_addr) {
+            loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, loader_platform_get_proc_address_error("vk_icdGetInstanceProcAddr"));
+            return;
+        } else {
+            loader_log(inst, VK_DEBUG_REPORT_WARN_BIT_EXT, 0, "Using deprecated ICD interface of vkGetInstanceProcAddr instead of vk_icdGetInstanceProcAddr");
+        }
+    }
+    fp_create_inst = (PFN_vkCreateInstance) fp_get_proc_addr(NULL, "vkCreateInstance");
+    if (!fp_create_inst) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkCreateInstance via vkGetInstanceProcAddr from ICD");
+        return;
+    }
+    fp_get_inst_ext_props = (PFN_vkEnumerateInstanceExtensionProperties) fp_get_proc_addr(NULL, "vkEnumerateInstanceExtensionProperties");
+    if (!fp_get_inst_ext_props) {
+        loader_log(inst, VK_DEBUG_REPORT_ERROR_BIT_EXT, 0, "Couldn't get vkEnumerateInstanceExtensionProperties via vkGetInstanceProcAddr from ICD");
+        return;
+    }
 
     // check for enough capacity
     if ((icd_libs->count * sizeof(struct loader_scanned_icds)) >= icd_libs->capacity) {
@@ -1305,8 +1312,8 @@ static void loader_scanned_icd_add(
     new_node->handle = handle;
     new_node->api_version = api_version;
     new_node->GetInstanceProcAddr = fp_get_proc_addr;
+    new_node->EnumerateInstanceExtensionProperties = fp_get_inst_ext_props;
     new_node->CreateInstance = fp_create_inst;
-    new_node->EnumerateInstanceExtensionProperties = fp_get_global_ext_props;
 
     new_node->lib_name = (char *) loader_heap_alloc(inst,
                                             strlen(filename) + 1,
