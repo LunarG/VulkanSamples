@@ -48,16 +48,16 @@ def proto_is_global(proto):
         "EnumerateDeviceLayerProperties",
         "EnumerateDeviceExtensionProperties",
         "CreateXcbSurfaceKHR",
-        "vkGetPhysicalDeviceXcbPresentationSupportKHR",
+        "GetPhysicalDeviceXcbPresentationSupportKHR",
         "CreateXlibSurfaceKHR",
-        "vkGetPhysicalDeviceXlibPresentationSupportKHR",
+        "GetPhysicalDeviceXlibPresentationSupportKHR",
         "CreateWaylandSurfaceKHR",
-        "vkGetPhysicalDeviceWaylandPresentationSupportKHR",
+        "GetPhysicalDeviceWaylandPresentationSupportKHR",
         "CreateMirSurfaceKHR",
-        "vkGetPhysicalDeviceMirPresentationSupportKHR",
+        "GetPhysicalDeviceMirPresentationSupportKHR",
         "CreateAndroidSurfaceKHR",
         "CreateWin32SurfaceKHR",
-        "vkGetPhysicalDeviceWin32PresentationSupportKHR"
+        "GetPhysicalDeviceWin32PresentationSupportKHR"
     ]
     if proto.params[0].ty == "VkInstance" or proto.params[0].ty == "VkPhysicalDevice" or proto.name in global_function_names:
        return True
@@ -2230,16 +2230,16 @@ class UniqueObjectsSubcommand(Subcommand):
                                    'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                                    'vkGetPhysicalDeviceSurfaceFormatsKHR',
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
-                                   'vkCreateWin32SurfaceKHR',
-                                   'vkGetPhysicalDeviceWin32PresentationSupportKHR'])]
+                                   'vkCreateWin32SurfaceKHR'
+                                   ])]
         elif sys.platform.startswith('linux'):
             instance_extensions=[('wsi_enabled',
                                   ['vkGetPhysicalDeviceSurfaceSupportKHR',
                                    'vkGetPhysicalDeviceSurfaceCapabilitiesKHR',
                                    'vkGetPhysicalDeviceSurfaceFormatsKHR',
                                    'vkGetPhysicalDeviceSurfacePresentModesKHR',
-                                   'vkCreateXcbSurfaceKHR',
-                                   'vkGetPhysicalDeviceXcbPresentationSupportKHR'])]
+                                   'vkCreateXcbSurfaceKHR'
+                                   ])]
         # TODO: Add cases for Mir, Wayland and Xlib
         else: # android
             instance_extensions=[('wsi_enabled',
