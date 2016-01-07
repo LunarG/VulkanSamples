@@ -64,7 +64,7 @@ static inline int u_ffs(int val)
 {
 #ifdef WIN32
     unsigned long bit_pos = 0;
-    if (_BitScanReverse(&bit_pos, val) != 0) {
+    if (_BitScanForward(&bit_pos, val) != 0) {
         bit_pos += 1;
     }
     return bit_pos;
