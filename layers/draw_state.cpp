@@ -2972,8 +2972,8 @@ VkBool32 ValidateCmdBufImageLayouts(VkCommandBuffer cmdBuffer) {
     return skip_call;
 }
 
-bool validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
-    bool skip_call = false;
+VkBool32 validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
+    VkBool32 skip_call = false;
     for (auto drawDataElement : pCB->drawData) {
         for (auto buffer : drawDataElement.buffers) {
             auto buffer_data = my_data->bufferMap.find(buffer);
@@ -3165,8 +3165,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(VkDevice device, V
     // TODO : Clean up any internal data structures using this obj.
 }
 
-bool validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
-    bool skip_call = false;
+VkBool32 validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
+    VkBool32 skip_call = false;
     auto buffer_data = my_data->bufferMap.find(buffer);
     if (buffer_data == my_data->bufferMap.end()) {
         skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, 0, 0, DRAWSTATE_DOUBLE_DESTROY, "DS",
@@ -3184,7 +3184,7 @@ bool validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
 VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyBuffer(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator)
 {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
-    bool skip_call = false;
+    VkBool32 skip_call = false;
     if (!validateIdleBuffer(dev_data, buffer)) {
         dev_data->device_dispatch_table->DestroyBuffer(device, buffer, pAllocator);
     }
