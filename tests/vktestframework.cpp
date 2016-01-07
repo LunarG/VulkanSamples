@@ -103,7 +103,6 @@ public:
 
     void Run();
     void InitPresentFramework(std::list<VkTestImageRecord> &imagesIn, VkInstance inst);
-    void CreateMyWindow();
     VkFormat GetPresentFormat();
     void DestroyMyWindow();
     void CreateSwapchain();
@@ -112,6 +111,9 @@ public:
     void TearDown();
 #ifdef _WIN32
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void CreateMyWindow(bool register_class = true);
+#else
+    void CreateMyWindow();
 #endif
 
 
@@ -1177,39 +1179,42 @@ void  TestFrameworkVkPresent::InitPresentFramework(std::list<VkTestImageRecord> 
 }
 
 #ifdef _WIN32
-void  TestFrameworkVkPresent::CreateMyWindow()
+void  TestFrameworkVkPresent::CreateMyWindow(bool register_class)
 {
-   WNDCLASSEX  win_class;
-   // const ::testing::TestInfo* const test_info =
-   // 	::testing::UnitTest::GetInstance()->current_test_info();
-   m_connection = GetModuleHandle(NULL);	
+    WNDCLASSEX  win_class;
+    // const ::testing::TestInfo* const test_info =
+    // 	::testing::UnitTest::GetInstance()->current_test_info();
+    m_connection = GetModuleHandle(NULL);
 
-	for (std::list<VkTestImageRecord>::const_iterator it = m_images.begin();
-    	it != m_images.end(); it++) {
-		if (m_width < it->m_width)
-			m_width = it->m_width;
+    for (std::list<VkTestImageRecord>::const_iterator it = m_images.begin();
+        it != m_images.end(); it++) {
+        if (m_width < it->m_width)
+            m_width = it->m_width;
         if (m_height < it->m_height)
-			m_height = it->m_height;
-	}
-    // Initialize the window class structure:
-   win_class.cbSize = sizeof(WNDCLASSEX);
-   win_class.style = CS_HREDRAW | CS_VREDRAW;
-   win_class.lpfnWndProc = (WNDPROC) &TestFrameworkVkPresent::WndProc;
-   win_class.cbClsExtra = 0;
-   win_class.cbWndExtra = 0;
-   win_class.hInstance = m_connection; // hInstance
-   win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-   win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
-   win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-   win_class.lpszMenuName = NULL;
-   win_class.lpszClassName = "Test";
-   win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
-   // Register window class:
-    if (!RegisterClassEx(&win_class)) {
-        // It didn't work, so try to give a useful error:
+            m_height = it->m_height;
+    }
+
+    if (register_class) {
+        // Initialize the window class structure:
+        win_class.cbSize = sizeof(WNDCLASSEX);
+        win_class.style = CS_HREDRAW | CS_VREDRAW;
+        win_class.lpfnWndProc = (WNDPROC) &TestFrameworkVkPresent::WndProc;
+        win_class.cbClsExtra = 0;
+        win_class.cbWndExtra = 0;
+        win_class.hInstance = m_connection; // hInstance
+        win_class.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+        win_class.hCursor = LoadCursor(NULL, IDC_ARROW);
+        win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        win_class.lpszMenuName = NULL;
+        win_class.lpszClassName = "Test";
+        win_class.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
+        // Register window class:
+        if (!RegisterClassEx(&win_class)) {
+            // It didn't work, so try to give a useful error:
             printf("Unexpected error trying to start the application!\n");
-        fflush(stdout);
-        exit(1);
+            fflush(stdout);
+            exit(1);
+        }
     }
    // Create window with the registered class:
     RECT wr = { 0, 0, m_width, m_height };
@@ -1330,7 +1335,11 @@ void VkTestFramework::Finish()
         TestFrameworkVkPresent vkPresent(env.default_device());
 
         vkPresent.InitPresentFramework(m_images, env.get_instance());
+#ifdef _WIN32
+        vkPresent.CreateMyWindow(false);
+#else
         vkPresent.CreateMyWindow();
+#endif
         vkPresent.CreateSwapchain();
         vkPresent.Run();
         vkPresent.TearDown();
