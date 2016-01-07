@@ -367,12 +367,16 @@ EShLanguage FindLanguage(const VkShaderStageFlagBits shader_type)
 
 void init_glslang()
 {
+#ifndef __ANDROID__
     glslang::InitializeProcess();
+#endif
 }
 
 void finalize_glslang()
 {
+#ifndef __ANDROID__
     glslang::FinalizeProcess();
+#endif
 }
 
 //
@@ -383,6 +387,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
                const char *pshader,
                std::vector<unsigned int> &spirv)
 {
+#ifndef __ANDROID__
     glslang::TProgram& program = *new glslang::TProgram;
     const char *shaderStrings[1];
     TBuiltInResource Resources;
@@ -416,7 +421,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type,
     }
 
     glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
-
+#endif
     return true;
 }
 void wait_seconds(int seconds)

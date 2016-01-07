@@ -86,8 +86,11 @@ void init_clear_color_and_depth(struct sample_info &info, VkClearValue* clear_va
 void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin);
 void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height);
 
+// TODO: Debug reporter
+#if 0
 VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc);
 void destroy_debug_report_callback(struct sample_info &info);
+#endif
 void destroy_pipeline(struct sample_info &info);
 void destroy_pipeline_cache(struct sample_info &info);
 void destroy_descriptor_pool(struct sample_info &info);

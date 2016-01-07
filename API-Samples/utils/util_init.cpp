@@ -34,6 +34,10 @@ samples "init" utility functions
 #include "util_init.hpp"
 #include "cube_data.h"
 
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+#endif
+
 using namespace std;
 
 /*
@@ -234,6 +238,7 @@ void init_instance_extension_names(struct sample_info &info)
     info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
     info.instance_extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__ANDROID__)
 #else
     info.instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
@@ -326,33 +331,8 @@ VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count)
     return res;
 }
 
-void init_queue_family_index(struct sample_info &info)
-{
-    /* This routine simply finds a graphics queue for a later vkCreateDevice, without consideration  */
-    /* for which queue family can present an image.  Do not use this if your intent is to present    */
-    /* later in your sample, instead use the init_connection, init_window, init_swapchain_extension, */
-    /* init_device call sequence to get a graphics and present compatible queue family               */
-
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, NULL);
-    assert(info.queue_count >= 1);
-
-    info.queue_props.resize(info.queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_count, info.queue_props.data());
-    assert(info.queue_count >= 1);
-
-    bool found = false;
-    for (unsigned int i = 0; i < info.queue_count; i++)
-    {
-        if (info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            info.graphics_queue_family_index = i;
-            found = true;
-            break;
-        }
-    }
-    assert(found);
-}
-
+//TODO: DebugReporter implementation on Android?
+#if 0
 VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc)
 {
     VkResult res;
@@ -408,10 +388,12 @@ void destroy_debug_report_callback(struct sample_info &info)
         info.debug_report_callbacks.pop_back();
     }
 }
+#endif
 
 void init_connection(struct sample_info &info)
 {
 #ifndef _WIN32
+#elif defined(__ANDROID__)
     const xcb_setup_t *setup;
     xcb_screen_iterator_t iter;
     int scr;
@@ -522,6 +504,8 @@ void destroy_window(struct sample_info &info)
     vkDestroySurfaceKHR(info.inst, info.surface, NULL);
     DestroyWindow(info.window);
 }
+#elif defined(__ANDROID__)
+// Android implementation.
 #else
 void init_window(struct sample_info &info)
 {
@@ -713,6 +697,7 @@ void init_swapchain_extension(struct sample_info &info)
     createInfo.hwnd = info.window;
     res = vkCreateWin32SurfaceKHR(info.inst, &createInfo,
                                   NULL, &info.surface);
+#elif defined(__ANDROID__)
 #else  // _WIN32
     VkXcbSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -798,7 +783,7 @@ void init_presentable_image(struct sample_info &info)
     res = vkAcquireNextImageKHR(info.device, info.swap_chain,
                                       UINT64_MAX,
                                       info.presentCompleteSemaphore,
-                                      NULL,
+                                     VK_NULL_HANDLE,
                                       &info.current_buffer);
     // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
     // return codes
@@ -815,7 +800,9 @@ void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_b
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 1;
     submit_info[0].pWaitSemaphores = &info.presentCompleteSemaphore;
+#ifndef TARGET_V210
     submit_info[0].pWaitDstStageMask = NULL;
+#endif
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -852,8 +839,13 @@ void execute_pre_present_barrier(struct sample_info &info)
     prePresentBarrier.subresourceRange.baseArrayLayer = 0;
     prePresentBarrier.subresourceRange.layerCount = 1;
     prePresentBarrier.image = info.buffers[info.current_buffer].image;
-    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+#ifdef TARGET_V210
+    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         0, 1, &prePresentBarrier);
+#else
+  vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                       0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+#endif
 }
 
 void execute_present_image(struct sample_info &info)
@@ -946,11 +938,19 @@ void init_swap_chain(struct sample_info &info)
     }
 
     VkSurfaceTransformFlagBitsKHR preTransform;
+#ifdef TARGET_V210
+    if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR) {
+        preTransform = VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR;
+    } else {
+        preTransform = surfCapabilities.currentTransform;
+    }
+#else
     if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     } else {
         preTransform = surfCapabilities.currentTransform;
     }
+#endif
 
     VkSwapchainCreateInfoKHR swap_chain = {};
     swap_chain.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -1111,7 +1111,11 @@ void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_tex
     descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout.pNext = NULL;
     descriptor_layout.bindingCount = use_texture?2:1;
+#ifdef TARGET_V210
+    descriptor_layout.pBinding = layout_bindings;
+#else
     descriptor_layout.pBindings = layout_bindings;
+#endif
 
     VkResult U_ASSERT_ONLY res;
 
@@ -1293,13 +1297,17 @@ void execute_queue_command_buffer(struct sample_info &info)
     fenceInfo.flags = 0;
     vkCreateFence(info.device, &fenceInfo, NULL, &drawFence);
 
+#ifndef TARGET_V210
     VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+#endif
     VkSubmitInfo submit_info[1] = {};
     submit_info[0].pNext = NULL;
     submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info[0].waitSemaphoreCount = 0;
     submit_info[0].pWaitSemaphores = NULL;
+#ifndef TARGET_V210
     submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+#endif
     submit_info[0].commandBufferCount = 1;
     submit_info[0].pCommandBuffers = cmd_bufs;
     submit_info[0].signalSemaphoreCount = 0;
@@ -1675,7 +1683,9 @@ void init_sampler(struct sample_info &info, VkSampler &sampler)
     samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.mipLodBias = 0.0;
+#ifndef TARGET_V210
     samplerCreateInfo.anisotropyEnable = VK_FALSE,
+#endif
     samplerCreateInfo.maxAnisotropy = 0;
     samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerCreateInfo.minLod = 0.0;
@@ -1883,7 +1893,9 @@ void init_image(struct sample_info &info, texture_object &texObj, const char* te
         submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info[0].waitSemaphoreCount = 0;
         submit_info[0].pWaitSemaphores = NULL;
+#ifndef TARGET_V210
         submit_info[0].pWaitDstStageMask = NULL;
+#endif
         submit_info[0].commandBufferCount = 1;
         submit_info[0].pCommandBuffers = cmd_bufs;
         submit_info[0].signalSemaphoreCount = 0;
@@ -1957,7 +1969,11 @@ void init_viewports(struct sample_info &info)
     info.viewport.maxDepth = (float) 1.0f;
     info.viewport.x = 0;
     info.viewport.y = 0;
+#ifdef TARGET_V210
+    vkCmdSetViewport(info.cmd, NUM_VIEWPORTS, &info.viewport);
+#else
     vkCmdSetViewport(info.cmd, 0, NUM_VIEWPORTS, &info.viewport);
+#endif
 }
 
 void init_scissors(struct sample_info &info)
@@ -1966,7 +1982,11 @@ void init_scissors(struct sample_info &info)
     info.scissor.extent.height = info.height;
     info.scissor.offset.x = 0;
     info.scissor.offset.y = 0;
+#ifdef TARGET_V210
+    vkCmdSetScissor(info.cmd, NUM_SCISSORS, &info.scissor);
+#else
     vkCmdSetScissor(info.cmd, 0, NUM_SCISSORS, &info.scissor);
+#endif
 }
 
 void init_fence(struct sample_info &info, VkFence &fence)
@@ -1984,7 +2004,9 @@ void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPip
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &info.presentCompleteSemaphore;
+#ifndef TARGET_V210
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
+#endif
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &info.cmd;
     submit_info.signalSemaphoreCount = 0;
@@ -2127,3 +2149,18 @@ void destroy_textures(struct sample_info &info)
         vkFreeMemory(info.device, info.textures[i].mem, NULL);
     }
 }
+
+// Main entry point of samples
+int sample_main();
+#ifdef __ANDROID__
+void android_main( struct android_app* app ) {
+    // Magic call, please ignore it (Android specific).
+    app_dummy();
+    sample_main();
+    return;
+}
+#else
+int main(int argc, char **argv) {
+    return sample_main();
+}
+#endif
