@@ -2343,7 +2343,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
             VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
         auto cb_data = my_data->cbMap.find(commandBuffer);
         if (cb_data != my_data->cbMap.end()) {
-            std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBindVertexBuffers()"); };
+            std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBindVertexBuffers()"); };
             cb_data->second.validate_functions.push_back(function);
         }
     }
@@ -2363,7 +2363,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindIndexBuffer(
     VkBool32 skip_call = get_mem_binding_from_object(my_data, commandBuffer, reinterpret_cast<uint64_t>(buffer), VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     auto cb_data = my_data->cbMap.find(commandBuffer);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBindIndexBuffer()"); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBindIndexBuffer()"); };
         cb_data->second.validate_functions.push_back(function);
     }
     // TODO : Somewhere need to verify that IBs have correct usage state flagged
@@ -2437,13 +2437,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyBuffer()"); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyBuffer()"); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyBuffer");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true);return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyBuffer");
@@ -2473,7 +2473,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyQueryPoolResults");
@@ -2502,13 +2502,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     // Validate that src & dst images have correct usage flags set
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyImage()", srcImage); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyImage()", srcImage); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyImage");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyImage");
@@ -2539,13 +2539,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     // Validate that src & dst images have correct usage flags set
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBlitImage()", srcImage); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdBlitImage()", srcImage); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdBlitImage");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);\
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdBlitImage");
@@ -2573,13 +2573,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyBufferToImage");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyBufferToImage()"); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyBufferToImage()"); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyBufferToImage");
@@ -2608,13 +2608,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyImageToBuffer()", srcImage); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdCopyImageToBuffer()", srcImage); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyImageToBuffer");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdCopyImageToBuffer");
@@ -2642,7 +2642,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdUpdateBuffer");
@@ -2668,7 +2668,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdFillBuffer");
@@ -2696,7 +2696,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, image); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, image); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdClearColorImage");
@@ -2722,7 +2722,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     loader_platform_thread_lock_mutex(&globalLock);
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, image); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, image); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdClearDepthStencilImage");
@@ -2749,13 +2749,13 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkDeviceMemory mem;
     skipCall  = get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)srcImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdResolveImage()", srcImage); };
+        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, mem, "vkCmdResolveImage()", srcImage); };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdResolveImage");
     skipCall |= get_mem_binding_from_object(my_data, commandBuffer, (uint64_t)dstImage, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, &mem);
     if (cb_data != my_data->cbMap.end()) {
-        std::function<bool()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return false; };
+        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, mem, true, dstImage); return VK_FALSE; };
         cb_data->second.validate_functions.push_back(function);
     }
     skipCall |= update_cmd_buf_and_mem_references(my_data, commandBuffer, mem, "vkCmdResolveImage");
@@ -3109,7 +3109,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { set_memory_valid(my_data, fb_info.mem, true, fb_info.image); return false; };
+                        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, fb_info.mem, true, fb_info.image); return VK_FALSE; };
                         cb_data->second.validate_functions.push_back(function);
                     }
                     VkImageLayout& attachment_layout = pass_info.attachment_first_layout[pass_info.attachments[i].attachment];
@@ -3121,18 +3121,18 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBeginRenderPass(
                     }
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_DONT_CARE) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { set_memory_valid(my_data, fb_info.mem, false, fb_info.image); return false; };
+                        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, fb_info.mem, false, fb_info.image); return VK_FALSE; };
                         cb_data->second.validate_functions.push_back(function);
                     }
                 } else if (pass_info.attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image); };
+                        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image); };
                         cb_data->second.validate_functions.push_back(function);
                     }
                 }
                 if (pass_info.attachment_first_read[pass_info.attachments[i].attachment]) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { return validate_memory_is_valid(my_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image); };
+                        std::function<VkBool32()> function = [=]() { return validate_memory_is_valid(my_data, fb_info.mem, "vkCmdBeginRenderPass()", fb_info.image); };
                         cb_data->second.validate_functions.push_back(function);
                     }
                 }
@@ -3160,12 +3160,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
                 MT_FB_ATTACHMENT_INFO& fb_info = my_data->fbMap[pass_info.fb].attachments[i];
                 if (pass_info.attachments[i].store_op == VK_ATTACHMENT_STORE_OP_STORE) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { set_memory_valid(my_data, fb_info.mem, true, fb_info.image); return false; };
+                        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, fb_info.mem, true, fb_info.image); return VK_FALSE; };
                         cb_data->second.validate_functions.push_back(function);
                     }
                 } else if (pass_info.attachments[i].store_op == VK_ATTACHMENT_STORE_OP_DONT_CARE) {
                     if (cb_data != my_data->cbMap.end()) {
-                        std::function<bool()> function = [=]() { set_memory_valid(my_data, fb_info.mem, false, fb_info.image); return false; };
+                        std::function<VkBool32()> function = [=]() { set_memory_valid(my_data, fb_info.mem, false, fb_info.image); return VK_FALSE; };
                         cb_data->second.validate_functions.push_back(function);
                     }
                 }

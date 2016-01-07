@@ -138,7 +138,7 @@ typedef struct _MT_CB_INFO {
     VkFence                     lastSubmittedFence;
     VkQueue                     lastSubmittedQueue;
     VkRenderPass                pass;
-    vector<std::function<bool()> > validate_functions;
+    vector<std::function<VkBool32()> > validate_functions;
     // Order dependent, stl containers must be at end of struct
     list<VkDeviceMemory>        pMemObjList; // List container of Mem objs referenced by this CB
     // Constructor
