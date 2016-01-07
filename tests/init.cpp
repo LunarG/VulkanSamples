@@ -206,69 +206,6 @@ TEST_F(VkTest, Event) {
     vkDestroyEvent(device(), event, NULL);
 }
 
-#define MAX_QUERY_SLOTS 10
-
-TEST_F(VkTest, Query) {
-    VkQueryPoolCreateInfo query_info;
-    VkQueryPool query_pool;
-    size_t query_result_size;
-    uint8_t *query_result_data;
-    VkResult err;
-
-    //        typedef enum VkQueryType_
-    //        {
-    //            VK_QUERY_TYPE_OCCLUSION                                     = 0x00000000,
-    //            VK_QUERY_TYPE_PIPELINE_STATISTICS                           = 0x00000001,
-
-    //            VK_QUERY_TYPE_BEGIN_RANGE                              = VK_QUERY_TYPE_OCCLUSION,
-    //            VK_QUERY_TYPE_END_RANGE                                = VK_QUERY_TYPE_PIPELINE_STATISTICS,
-    //            VK_NUM_QUERY_TYPE                                      = (VK_QUERY_TYPE_END_RANGE - VK_QUERY_TYPE_BEGIN_RANGE + 1),
-    //            VK_MAX_ENUM(VkQueryType_)
-    //        } VkQueryType;
-
-    //        typedef struct VkQueryPoolCreateInfo_
-    //        {
-    //            VkStructureType                      sType;      // Must be VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO
-    //            const void*                             pNext;      // Pointer to next structure
-    //            VkQueryType                          queryType;
-    //            uint32_t                                slots;
-    //        } VkQueryPoolCreateInfo;
-
-    memset(&query_info, 0, sizeof(query_info));
-    query_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    query_info.queryType = VK_QUERY_TYPE_OCCLUSION;
-    query_info.entryCount = MAX_QUERY_SLOTS;
-
-    //        VKAPI_ATTR VkResult VKAPI_CALL vkCreateQueryPool(
-    //            VkDevice                                  device,
-    //            const VkQueryPoolCreateInfo*           pCreateInfo,
-    //            VkQueryPool*                             pQueryPool);
-
-    err = vkCreateQueryPool(device(), &query_info, NULL, &query_pool);
-    ASSERT_VK_SUCCESS(err);
-
-    // TODO: Test actual synchronization with command buffer event.
-    // TODO: Create command buffer
-    // TODO: vkCmdResetQueryPool
-    // TODO: vkCmdBeginQuery
-    // TODO: commands
-    // TOOD: vkCmdEndQuery
-
-    query_result_size = MAX_QUERY_SLOTS * sizeof(uint64_t);
-    if (query_result_size > 0) {
-        query_result_data = new uint8_t [query_result_size];
-        err = vkGetQueryPoolResults(device(), query_pool, 0, MAX_QUERY_SLOTS,
-                                     query_result_size, query_result_data,
-                                     sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
-        //ASSERT_VK_SUCCESS(err); TODO fix once actually submit queries
-
-        // TODO: Test Query result data.
-
-    }
-
-    vkDestroyQueryPool(device(), query_pool, NULL);
-}
-
 void getQueue(vk_testing::Device *device, uint32_t queue_node_index, const char *qname)
 {
     uint32_t que_idx;

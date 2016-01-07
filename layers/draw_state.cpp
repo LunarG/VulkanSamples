@@ -2526,7 +2526,6 @@ static void resetCB(layer_data* my_data, const VkCommandBuffer cb)
         pCB->drawData.clear();
         pCB->currentDrawData.buffers.clear();
         pCB->imageLayoutMap.clear();
-        pCB->lastVtxBinding = MAX_BINDING;
         pCB->waitedEvents.clear();
         pCB->waitedEventsBeforeQueryReset.clear();
         pCB->queryToStateMap.clear();
@@ -3114,8 +3113,8 @@ bool cleanInFlightCmdBuffer(layer_data* my_data, VkCommandBuffer cmdBuffer) {
     for (auto queryEventsPair : pCB->waitedEventsBeforeQueryReset) {
         for (auto event : queryEventsPair.second) {
             if (my_data->eventMap[event].needsSignaled) {
-                skip_call |= log_msg(my_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUERY_POOL, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                 "Cannot get query results on queryPool %" PRIu64 " with index %d which was guarded by unsigned event %" PRIu64 ".",
+                skip_call |= log_msg(my_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
+                                 "Cannot get query results on queryPool %" PRIu64 " with index %d which was guarded by unsignaled event %" PRIu64 ".",
                                  reinterpret_cast<uint64_t>(queryEventsPair.first.pool), queryEventsPair.first.index, reinterpret_cast<uint64_t>(event));
             }
         }
@@ -3138,7 +3137,7 @@ VK_LAYER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkWaitForFences(VkDevice device, 
         decrementResources(dev_data, fenceCount, pFences);
     }
     if (skip_call)
-        return VK_ERROR_VALIDATION_FAILED;
+        return VK_ERROR_VALIDATION_FAILED_EXT;
     return result;
 }
 
@@ -3216,7 +3215,7 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkDestroyQueryPool(VkDevice device, V
     // TODO : Clean up any internal data structures using this obj.
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount,
+VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount,
                                                      size_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags) {
     layer_data* dev_data = get_my_data_ptr(get_dispatch_key(device), layer_data_map);
     unordered_map<QueryObject, vector<VkCommandBuffer>> queriesInFlight;
@@ -3229,7 +3228,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
     }
     bool skip_call = false;
     for (uint32_t i = 0; i < queryCount; ++i) {
-        QueryObject query = {queryPool, startQuery + i};
+        QueryObject query = {queryPool, firstQuery + i};
         auto queryElement = queriesInFlight.find(query);
         auto queryToStateElement = dev_data->queryToStateMap.find(query);
         if (queryToStateElement != dev_data->queryToStateMap.end()) {
@@ -3240,9 +3239,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
                 pCB = getCBNode(dev_data, cmdBuffer);
                 auto queryEventElement = pCB->waitedEventsBeforeQueryReset.find(query);
                 if (queryEventElement == pCB->waitedEventsBeforeQueryReset.end()) {
-                    skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUERY_POOL, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
-                                         "Cannot get query results on queryPool %" PRIu64 " with index %d which is in flight.",
-                                         reinterpret_cast<uint64_t>(queryPool), startQuery + i);
+                    skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__,
+                                         DRAWSTATE_INVALID_QUERY, "DS", "Cannot get query results on queryPool %" PRIu64 " with index %d which is in flight.",
+                                         reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
                 } else {
                     for (auto event : queryEventElement->second) {
                         dev_data->eventMap[event].needsSignaled = true;
@@ -3258,25 +3257,25 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(VkDevice device, VkQueryPoo
                 make_available |= pCB->queryToStateMap[query];
             }
             if (!(((flags & VK_QUERY_RESULT_PARTIAL_BIT) || (flags & VK_QUERY_RESULT_WAIT_BIT)) && make_available)) {
-                skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUERY_POOL, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                      "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
-                                     reinterpret_cast<uint64_t>(queryPool), startQuery + i);
+                                     reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
             }
         // Unavailable
         } else if (queryToStateElement != dev_data->queryToStateMap.end() && !queryToStateElement->second) {
-            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUERY_POOL, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                  "Cannot get query results on queryPool %" PRIu64 " with index %d which is unavailable.",
-                                 reinterpret_cast<uint64_t>(queryPool), startQuery + i);
+                                 reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
         // Unitialized
         } else if (queryToStateElement == dev_data->queryToStateMap.end()) {
-            skip_call |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, VK_OBJECT_TYPE_QUERY_POOL, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+            skip_call |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
                                  "Cannot get query results on queryPool %" PRIu64 " with index %d which is uninitialized.",
-                                 reinterpret_cast<uint64_t>(queryPool), startQuery + i);
+                                 reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
         }
     }
     if (skip_call)
-        return VK_ERROR_VALIDATION_FAILED;
-    return dev_data->device_dispatch_table->GetQueryPoolResults(device, queryPool, startQuery, queryCount, dataSize, pData, stride, flags);
+        return VK_ERROR_VALIDATION_FAILED_EXT;
+    return dev_data->device_dispatch_table->GetQueryPoolResults(device, queryPool, firstQuery, queryCount, dataSize, pData, stride, flags);
 }
 
 VkBool32 validateIdleBuffer(const layer_data* my_data, VkBuffer buffer) {
@@ -4370,7 +4369,6 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdBindVertexBuffers(
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         addCmd(dev_data, pCB, CMD_BINDVERTEXBUFFER, "vkCmdBindVertexBuffer()");
-        pCB->lastVtxBinding = firstBinding + bindingCount - 1;
         updateResourceTracking(pCB, firstBinding, bindingCount, pBuffers);
     } else {
         skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdBindVertexBuffer()");
@@ -4982,8 +4980,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWaitEvents(VkCommandBuffer comma
         for (uint32_t i = 0; i < eventCount; ++i) {
             pCB->waitedEvents.push_back(pEvents[i]);
         }
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS);
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_WAITEVENTS, "vkCmdWaitEvents()");
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWaitEvents()");
         }
@@ -5028,8 +5026,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(VkCommandBuffer command
     if (pCB) {
         QueryObject query = {queryPool, slot};
         pCB->queryToStateMap[query] = 1;
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            skipCall |= addCmd(dev_data, pCB, CMD_ENDQUERY);
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_ENDQUERY, "VkCmdEndQuery()");
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdEndQuery()");
         }
@@ -5045,12 +5043,12 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(VkCommandBuffer c
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         for (uint32_t i = 0; i < queryCount; i++) {
-            QueryObject query = {queryPool, startQuery + i};
+            QueryObject query = {queryPool, firstQuery + i};
             pCB->waitedEventsBeforeQueryReset[query] = pCB->waitedEvents;
             pCB->queryToStateMap[query] = 0;
         }
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            skipCall |= addCmd(dev_data, pCB, CMD_RESETQUERYPOOL);
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_RESETQUERYPOOL, "VkCmdResetQueryPool()");
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdResetQueryPool()");
         }
@@ -5069,14 +5067,14 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(VkCommandBu
     GLOBAL_CB_NODE* pCB = getCBNode(dev_data, commandBuffer);
     if (pCB) {
         for (uint32_t i = 0; i < queryCount; i++) {
-            QueryObject query = {queryPool, startQuery + i};
+            QueryObject query = {queryPool, firstQuery + i};
             if(!pCB->queryToStateMap[query]) {
-                skipCall |= log_msg(dev_data->report_data, VK_DBG_REPORT_ERROR_BIT, (VkDbgObjectType)0, 0, 0, DRAWSTATE_INVALID_QUERY, "DS",
-                                    "Requesting a copy from query to buffer with invalid query: queryPool %" PRIu64 ", index %d", reinterpret_cast<uint64_t>(queryPool), startQuery + i);
+                skipCall |= log_msg(dev_data->report_data, VK_DEBUG_REPORT_ERROR_BIT_EXT, (VkDebugReportObjectTypeEXT)0, 0, __LINE__, DRAWSTATE_INVALID_QUERY, "DS",
+                                    "Requesting a copy from query to buffer with invalid query: queryPool %" PRIu64 ", index %d", reinterpret_cast<uint64_t>(queryPool), firstQuery + i);
             }
         }
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            skipCall |= addCmd(dev_data, pCB, CMD_COPYQUERYPOOLRESULTS);
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_COPYQUERYPOOLRESULTS, "vkCmdCopyQueryPoolResults()");
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdCopyQueryPoolResults()");
         }
@@ -5095,8 +5093,8 @@ VK_LAYER_EXPORT VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(VkCommandBuffer c
     if (pCB) {
         QueryObject query = {queryPool, slot};
         pCB->queryToStateMap[query] = 1;
-        if (pCB->state == CB_UPDATE_ACTIVE) {
-            skipCall |= addCmd(dev_data, pCB, CMD_WRITETIMESTAMP);
+        if (pCB->state == CB_RECORDING) {
+            skipCall |= addCmd(dev_data, pCB, CMD_WRITETIMESTAMP, "vkCmdWriteTimestamp()");
         } else {
             skipCall |= report_error_no_cb_begin(dev_data, commandBuffer, "vkCmdWriteTimestamp()");
         }

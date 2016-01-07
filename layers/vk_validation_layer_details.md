@@ -69,6 +69,7 @@ The VK_LAYER_LUNARG_draw_state layer tracks state leading into Draw cmds. This i
 | Verify Memory Buffer Not Deleted | Validate Command Buffer not submitted with deleted memory buffer | INVALID_BUFFER | vkQueueSubmit | TBD | None |
 | Verify Memory Buffer Destroy | Validate memory buffers are not destroyed more than once | DOUBLE_DESTROY | vkDestroyBuffer | TBD | None |
 | Verify Memory Buffer Not In Use | Validate that memory buffer being freed is not in use | OBJECT_INUSE | vkDestroyBuffer | TBD | None |
+| Verify Get Queries| Validate that that queries are properly initialized and synchronized | INVALID_QUERY | vkGetFenceStatus vkQueueWaitIdle vkWaitForFences vkDeviceWaitIdle | TBD | None |
 | NA | Enum used for informational messages | NONE | | NA | None |
 | NA | Enum used for errors in the layer itself. This does not indicate an app issue, but instead a bug in the layer. | INTERNAL_ERROR | | NA | None |
 | NA | Enum used when VK_LAYER_LUNARG_draw_state attempts to allocate memory for its own internal use and is unable to. | OUT_OF_MEMORY | | NA | None |
@@ -81,13 +82,13 @@ Additional checks to be added to VK_LAYER_LUNARG_draw_state
 	 8. XGL_DESCRIPTOR_SET
 		 9. Cannot be deleted until no longer in use on GPU, or referenced in any pending command.
                  10. Sets in XGL_DESCRIPTOR_REGION_USAGE_NON_FREE regions can never be deleted. Instead the xglClearDescriptorRegion() deletes all sets.
-		 11. Sets in XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC regions can be deleted. 
+		 11. Sets in XGL_DESCRIPTOR_REGION_USAGE_DYNAMIC regions can be deleted.
 	 12. XGL_DESCRIPTOR_SET_LAYOUT
 		 13. What do IHVs want here?
-		 14. Option 1 (assuming this one): Must not be deleted until all sets and layout chains referencing the set layout are deleted. 
-		 15. Option 2: Can be freely deleted after usage. 
+		 14. Option 1 (assuming this one): Must not be deleted until all sets and layout chains referencing the set layout are deleted.
+		 15. Option 2: Can be freely deleted after usage.
 	 19. XGL_DESCRIPTOR_REGION
-		 20. Cannot be deleted until no longer in use on the GPU, or referenced in any pending command. 
+		 20. Cannot be deleted until no longer in use on the GPU, or referenced in any pending command.
 	 21. XGL_BUFFER_VIEW, XGL_IMAGE_VIEW, etc
 		 22. Cannot be deleted until the descriptors referencing the objects are deleted.
 	 23. For ClearAttachments function, verify that the index of referenced attachment actually exists
