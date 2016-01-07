@@ -2985,6 +2985,7 @@ bool validateAndIncrementResources(layer_data* my_data, GLOBAL_CB_NODE* pCB) {
             }
         }
     }
+	return skip_call;
 }
 
 void decrementResources(layer_data* my_data, VkCommandBuffer cmdBuffer) {
