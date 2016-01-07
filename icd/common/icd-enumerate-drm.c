@@ -123,7 +123,7 @@ static struct icd_drm_device *probe_syspath(const struct icd_instance *instance,
 
         return devices;
     } else {
-        dev = icd_instance_alloc(instance, sizeof(*dev), 0,
+        dev = icd_instance_alloc(instance, sizeof(*dev), sizeof(int),
                 VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
         if (!dev)
             return devices;

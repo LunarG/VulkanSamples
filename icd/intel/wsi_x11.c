@@ -137,7 +137,7 @@ static VkResult x11_xcb_surface_create(struct intel_instance *instance,
 {
     VkIcdSurfaceXcb *surface;
 
-    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    surface = intel_alloc(instance, sizeof(*surface), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!surface)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -165,7 +165,7 @@ static VkResult x11_xlib_surface_create(struct intel_instance *instance,
 {
     VkIcdSurfaceXlib *surface;
 
-    surface = intel_alloc(instance, sizeof(*surface), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    surface = intel_alloc(instance, sizeof(*surface), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!surface)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -561,12 +561,12 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     uint32_t i;
 
     images = intel_alloc(sc, sizeof(*images) * info->minImageCount,
-            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!images)
         return false;
     image_state = intel_alloc(
             sc, sizeof(intel_x11_swap_chain_image_state) * info->minImageCount,
-            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!image_state) {
         for (i = 0; i < info->minImageCount; i++) {
             intel_img_destroy(images[i]);
@@ -576,7 +576,7 @@ static bool x11_swap_chain_create_persistent_images(struct intel_x11_swap_chain 
     }
     present_queue = intel_alloc(
             sc, sizeof(uint32_t) * info->minImageCount,
-            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!present_queue) {
         for (i = 0; i < info->minImageCount; i++) {
             intel_img_destroy(images[i]);
@@ -906,7 +906,7 @@ static VkResult x11_swap_chain_create(struct intel_dev *dev,
 
     close(fd);
 
-    sc = intel_alloc(dev, sizeof(*sc), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    sc = intel_alloc(dev, sizeof(*sc), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!sc)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -963,7 +963,7 @@ VkResult intel_wsi_img_init(struct intel_img *img)
 {
     struct intel_x11_img_data *data;
 
-    data = intel_alloc(img, sizeof(*data), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    data = intel_alloc(img, sizeof(*data), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!data)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -992,7 +992,7 @@ VkResult intel_wsi_fence_init(struct intel_fence *fence)
 {
     struct intel_x11_fence_data *data;
 
-    data = intel_alloc(fence, sizeof(*data), 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    data = intel_alloc(fence, sizeof(*data), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!data)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 

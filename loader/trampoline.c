@@ -53,7 +53,7 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
         ptr_instance = (struct loader_instance *) pAllocator->pfnAllocation(
                            pAllocator->pUserData,
                            sizeof(struct loader_instance),
-                           sizeof(VkInstance),
+                           sizeof(int *),
                            VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     } else {
         ptr_instance = (struct loader_instance *) malloc(sizeof(struct loader_instance));

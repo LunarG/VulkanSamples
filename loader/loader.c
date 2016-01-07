@@ -152,7 +152,7 @@ void* loader_heap_alloc(
 {
     if (instance && instance->alloc_callbacks.pfnAllocation) {
         /* TODO: What should default alignment be? 1, 4, 8, other? */
-        return instance->alloc_callbacks.pfnAllocation(instance->alloc_callbacks.pUserData, size, 4, alloc_scope);
+        return instance->alloc_callbacks.pfnAllocation(instance->alloc_callbacks.pUserData, size, sizeof(int), alloc_scope);
     }
     return malloc(size);
 }
@@ -182,12 +182,14 @@ void* loader_heap_realloc(
         loader_heap_free(instance, pMemory);
         return NULL;
     }
+    //TODO use the callback realloc function
     if (instance && instance->alloc_callbacks.pfnAllocation) {
         if (size <= orig_size) {
             memset(((uint8_t *)pMemory) + size,  0, orig_size - size);
             return pMemory;
         }
-        void *new_ptr = instance->alloc_callbacks.pfnAllocation(instance->alloc_callbacks.pUserData, size, 4, alloc_scope);
+        /* TODO: What should default alignment be? 1, 4, 8, other? */
+        void *new_ptr = instance->alloc_callbacks.pfnAllocation(instance->alloc_callbacks.pUserData, size, sizeof(int), alloc_scope);
         if (!new_ptr)
             return NULL;
         memcpy(new_ptr, pMemory, orig_size);

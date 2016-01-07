@@ -93,7 +93,7 @@ VkResult intel_img_create(struct intel_dev *dev,
     if (layout->separate_stencil) {
         VkImageCreateInfo s8_info;
 
-        img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), 0,
+        img->s8_layout = intel_alloc(img, sizeof(*img->s8_layout), sizeof(int),
                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!img->s8_layout) {
             intel_img_destroy(img);

@@ -133,7 +133,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
     }
 
     if (shallow_copy) {
-        dbg->create_info = intel_alloc(handle, shallow_copy, 0,
+        dbg->create_info = intel_alloc(handle, shallow_copy, sizeof(int),
                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dbg->create_info)
             return false;
@@ -149,7 +149,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
         size = sizeof(*src);
 
         dbg->create_info_size = size;
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+        dst = intel_alloc(handle, size, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dst)
             return false;
         memcpy(dst, src, sizeof(*src));
@@ -179,7 +179,7 @@ static bool base_dbg_copy_create_info(const struct intel_handle *handle,
             size += strlen(src->ppEnabledExtensionNames[i]) + 1;
         }
 
-        dst = intel_alloc(handle, size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+        dst = intel_alloc(handle, size, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!dst)
             return false;
 
@@ -236,7 +236,7 @@ struct intel_base_dbg *intel_base_dbg_create(const struct intel_handle *handle,
 
     assert(dbg_size >= sizeof(*dbg));
 
-    dbg = intel_alloc(handle, dbg_size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    dbg = intel_alloc(handle, dbg_size, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!dbg)
         return NULL;
 
@@ -281,7 +281,7 @@ struct intel_base *intel_base_create(const struct intel_handle *handle,
 
     assert(obj_size >= sizeof(*base));
 
-    base = intel_alloc(handle, obj_size, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+    base = intel_alloc(handle, obj_size, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!base)
         return NULL;
 

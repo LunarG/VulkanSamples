@@ -78,7 +78,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
     if (!alloc_cb)
         alloc_cb = &default_alloc_cb;
 
-    instance = alloc_cb->pfnAllocation(alloc_cb->pUserData, sizeof(*instance), 0,
+    instance = alloc_cb->pfnAllocation(alloc_cb->pUserData, sizeof(*instance), sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance)
         return NULL;
@@ -87,7 +87,7 @@ struct icd_instance *icd_instance_create(const VkApplicationInfo *app_info,
 
     name = (app_info && app_info->pApplicationName) ? app_info->pApplicationName : "unnamed";
     len = strlen(name);
-    instance->name = alloc_cb->pfnAllocation(alloc_cb->pUserData, len + 1, 0,
+    instance->name = alloc_cb->pfnAllocation(alloc_cb->pUserData, len + 1, sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     if (!instance->name) {
         alloc_cb->pfnFree(alloc_cb->pUserData, instance);
@@ -130,7 +130,7 @@ VkResult icd_instance_create_logger(
 //        return VK_ERROR_INVALID_POINTER;
 //    }
 
-    logger = icd_instance_alloc(instance, sizeof(*logger), 0,
+    logger = icd_instance_alloc(instance, sizeof(*logger), sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!logger)
         return VK_ERROR_OUT_OF_HOST_MEMORY;

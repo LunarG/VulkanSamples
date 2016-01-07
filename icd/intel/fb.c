@@ -54,7 +54,7 @@ VkResult intel_fb_create(struct intel_dev *dev,
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
     fb->view_count = info->attachmentCount;
-    fb->views = intel_alloc(fb, sizeof(fb->views[0]) * fb->view_count, 0,
+    fb->views = intel_alloc(fb, sizeof(fb->views[0]) * fb->view_count, sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!fb->views) {
         intel_fb_destroy(fb);
@@ -121,7 +121,7 @@ VkResult intel_render_pass_create(struct intel_dev *dev,
 
     rp->attachments = intel_alloc(rp,
             sizeof(rp->attachments[0]) * rp->attachment_count +
-            sizeof(rp->subpasses[0]) * rp->subpass_count, 0,
+            sizeof(rp->subpasses[0]) * rp->subpass_count, sizeof(int),
             VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!rp->attachments) {
         intel_render_pass_destroy(rp);

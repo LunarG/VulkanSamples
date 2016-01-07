@@ -225,7 +225,7 @@ struct intel_pipeline_shader *intel_pipeline_shader_create_meta(struct intel_dev
     struct intel_pipeline_shader *sh;
     VkResult ret;
 
-    sh = intel_alloc(dev, sizeof(*sh), 0, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+    sh = intel_alloc(dev, sizeof(*sh), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!sh)
         return NULL;
     memset(sh, 0, sizeof(*sh));

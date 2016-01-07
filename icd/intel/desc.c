@@ -129,7 +129,7 @@ VkResult intel_desc_region_create(struct intel_dev *dev,
     const uint32_t sampler_count = 1024*1024;
     struct intel_desc_region *region;
 
-    region = intel_alloc(dev, sizeof(*region), 0, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+    region = intel_alloc(dev, sizeof(*region), sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!region)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -571,7 +571,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
 
     /* allocate bindings */
     layout->bindings = intel_alloc(layout, sizeof(layout->bindings[0]) *
-            info->bindingCount, 0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            info->bindingCount, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!layout->bindings)
         return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -628,7 +628,7 @@ static VkResult desc_layout_init_bindings(struct intel_desc_layout *layout,
             } else {
                 binding->immutable_samplers = intel_alloc(layout,
                         sizeof(binding->immutable_samplers[0]) * lb->descriptorCount,
-                        0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                        sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
                 if (!binding->immutable_samplers)
                     return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -715,7 +715,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->layouts = intel_alloc(pipeline_layout,
                                            sizeof(pipeline_layout->layouts[0]) * count,
-                                           0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                                           sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pipeline_layout->layouts) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -723,7 +723,7 @@ VkResult intel_pipeline_layout_create(struct intel_dev                   *dev,
 
     pipeline_layout->dynamic_desc_indices = intel_alloc(pipeline_layout,
             sizeof(pipeline_layout->dynamic_desc_indices[0]) * count,
-            0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     if (!pipeline_layout->dynamic_desc_indices) {
         intel_pipeline_layout_destroy(pipeline_layout);
         return VK_ERROR_OUT_OF_HOST_MEMORY;

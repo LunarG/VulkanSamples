@@ -194,7 +194,7 @@ void cmd_writer_record(struct intel_cmd *cmd,
         struct intel_cmd_item *items;
 
         items = intel_alloc(cmd, sizeof(writer->items[0]) * new_alloc,
-                0, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!items) {
             writer->item_used = 0;
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);

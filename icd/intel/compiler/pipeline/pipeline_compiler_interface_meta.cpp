@@ -621,7 +621,7 @@ void *intel_meta_compiler::codegen(uint32_t *code_size)
 
     prog = get_program(&prog_size, stderr);
 
-    code = intel_alloc(gpu, prog_size, 0, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+    code = intel_alloc(gpu, prog_size, sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!code)
         return NULL;
 

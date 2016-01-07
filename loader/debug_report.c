@@ -74,7 +74,7 @@ VkResult util_CreateDebugReportCallback(
 {
     VkLayerDbgFunctionNode *pNewDbgFuncNode;
     if (pAllocator != NULL) {
-        pNewDbgFuncNode = (VkLayerDbgFunctionNode *) pAllocator->pfnAllocation(pAllocator->pUserData, sizeof(VkLayerDbgFunctionNode), sizeof(uint32_t), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+        pNewDbgFuncNode = (VkLayerDbgFunctionNode *) pAllocator->pfnAllocation(pAllocator->pUserData, sizeof(VkLayerDbgFunctionNode), sizeof(int *), VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
     } else {
         pNewDbgFuncNode = (VkLayerDbgFunctionNode *) loader_heap_alloc(inst, sizeof(VkLayerDbgFunctionNode), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
     }

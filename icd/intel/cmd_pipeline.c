@@ -2099,7 +2099,7 @@ static uint32_t emit_shader(struct intel_cmd *cmd,
         const uint32_t count = cache->count + 16;
         void *entries;
 
-        entries = intel_alloc(cmd, sizeof(cache->entries[0]) * count, 0,
+        entries = intel_alloc(cmd, sizeof(cache->entries[0]) * count, sizeof(int),
                 VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (entries) {
             if (cache->entries) {
@@ -3303,7 +3303,7 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->set_offsets = intel_alloc(cmd,
                 sizeof(data->set_offsets[0]) * pipeline_layout->layout_count,
-                sizeof(data->set_offsets[0]), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!data->set_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->set_offset_count = 0;
@@ -3319,7 +3319,7 @@ static bool cmd_alloc_dset_data(struct intel_cmd *cmd,
 
         data->dynamic_offsets = intel_alloc(cmd,
                 sizeof(data->dynamic_offsets[0]) * pipeline_layout->total_dynamic_desc_count,
-                sizeof(data->dynamic_offsets[0]), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                sizeof(int), VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
         if (!data->dynamic_offsets) {
             cmd_fail(cmd, VK_ERROR_OUT_OF_HOST_MEMORY);
             data->dynamic_offset_count = 0;
