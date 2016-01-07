@@ -1,0 +1,2 @@
+include ':app', ':nativeactivity'
+project(':nativeactivity').projectDir = new File(settingsDir, '../external/nativeactivity')
