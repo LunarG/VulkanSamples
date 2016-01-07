@@ -362,6 +362,7 @@ static VkResult x11_get_surface_capabilities(
     pSurfaceProperties->maxImageArrayLayers = 1;
     pSurfaceProperties->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     pSurfaceProperties->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    pSurfaceProperties->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     pSurfaceProperties->supportedUsageFlags =
         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
