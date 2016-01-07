@@ -6,47 +6,22 @@
 #include "Game.h"
 #include "ShellWin32.h"
 
-namespace {
-
-class Win32Timer {
-public:
-    Win32Timer()
-    {
-        LARGE_INTEGER freq;
-        QueryPerformanceFrequency(&freq);
-        freq_ = static_cast<double>(freq.QuadPart);
-
-        reset();
-    }
-
-    void reset()
-    {
-        QueryPerformanceCounter(&start_);
-    }
-
-    double get() const
-    {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-
-        return static_cast<double>(now.QuadPart - start_.QuadPart) / freq_;
-    }
-
-private:
-    double freq_;
-    LARGE_INTEGER start_;
-};
-
-} // namespace
-
 ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr)
 {
+    QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER *>(&perf_counter_freq_));
+
+    init_window();
+
     global_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
+
+    game_.attach_shell(*this);
 }
 
 ShellWin32::~ShellWin32()
 {
+    game_.detach_shell();
+
     cleanup_vk();
     FreeLibrary(hmodule_);
 }
@@ -137,55 +112,36 @@ VkSurfaceKHR ShellWin32::create_surface(VkInstance instance)
 LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam)
 {
     switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
     case WM_SIZE:
         {
             UINT w = LOWORD(lparam);
             UINT h = HIWORD(lparam);
             resize_swapchain(w, h);
         }
-        break;
-    case WM_KEYDOWN:
-        {
-            Game::Key key;
-
-            switch (wparam) {
-            case VK_ESCAPE:
-                key = Game::KEY_ESC;
-                break;
-            case VK_UP:
-                key = Game::KEY_UP;
-                break;
-            case VK_DOWN:
-                key = Game::KEY_DOWN;
-                break;
-            case VK_SPACE:
-                key = Game::KEY_SPACE;
-                break;
-            default:
-                key = Game::KEY_UNKNOWN;
-                break;
-            }
-
-            game_.on_key(key);
+        return 0;
+    case WM_KEYUP:
+        switch (wparam) {
+        case VK_ESCAPE:
+            SendMessage(hwnd_, WM_CLOSE, 0, 0);
+            break;
+        default:
+            break;
         }
-        break;
-    case WM_CLOSE:
-        game_.on_key(Game::KEY_SHUTDOWN);
-        break;
-    case WM_DESTROY:
-        quit();
-        break;
+        return 0;
     default:
         return DefWindowProc(hwnd_, msg, wparam, lparam);
-        break;
     }
-
-    return 0;
 }
 
-void ShellWin32::quit()
+float ShellWin32::get_time()
 {
-    PostQuitMessage(0);
+    UINT64 count;
+    QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER *>(&count));
+
+    return (float) count / perf_counter_freq_;
 }
 
 void ShellWin32::run()
@@ -195,8 +151,7 @@ void ShellWin32::run()
     create_context();
     resize_swapchain(settings_.initial_width, settings_.initial_height);
 
-    Win32Timer timer;
-    double current_time = timer.get();
+    float game_time_base = get_time();
 
     while (true) {
         bool quit = false;
@@ -218,17 +173,8 @@ void ShellWin32::run()
         if (quit)
             break;
 
-        acquire_back_buffer();
-
-        double t = timer.get();
-        add_game_time(static_cast<float>(t - current_time));
-
-        present_back_buffer();
-
-        current_time = t;
+        present(get_time() - game_time_base);
     }
 
-    destroy_context();
-
-    DestroyWindow(hwnd_);
+    game_.detach_swapchain();
 }

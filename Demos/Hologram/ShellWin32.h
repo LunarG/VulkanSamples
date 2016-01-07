@@ -10,7 +10,6 @@ public:
     ~ShellWin32();
 
     void run();
-    void quit();
 
 private:
 
@@ -31,6 +30,10 @@ private:
         return shell->handle_message(uMsg, wParam, lParam);
     }
     LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
+
+    float get_time();
+
+    UINT64 perf_counter_freq_;
 
     HINSTANCE hinstance_;
     HWND hwnd_;

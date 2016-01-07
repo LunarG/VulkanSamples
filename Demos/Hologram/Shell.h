@@ -13,6 +13,7 @@ class Shell {
 public:
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
+    virtual ~Shell() {}
 
     struct Context {
         VkInstance instance;
