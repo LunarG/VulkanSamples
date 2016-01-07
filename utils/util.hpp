@@ -37,15 +37,19 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define NOMINMAX              /* Don't let Windows define min() or max() */
 #define APP_NAME_STR_LEN 80
-#else  // _WIN32
+#elif defined(__ANDROID__)
+#include <unistd.h>
+#else //__ANDROID__
 #define VK_USE_PLATFORM_XCB_KHR
 #include <unistd.h>
 #endif // _WIN32
 
 #include <vulkan/vulkan.h>
-#include <vulkan/vk_ext_debug_report.h>
+//TODO:Missing file?
+//#include <vulkan/vk_ext_debug_report.h>
 
-#include "vulkan/vk_sdk_platform.h"
+//TODO:Missing file?
+//#include <vulkan/vk_sdk_platform.h>
 
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
@@ -132,6 +136,7 @@ struct sample_info {
     HINSTANCE connection;        // hInstance - Windows Instance
     char name[APP_NAME_STR_LEN]; // Name to put on the window/icon
     HWND        window;          // hWnd - window handle
+#elif defined(__ANDROID__)
 #else  // _WIN32
     xcb_connection_t *connection;
     xcb_screen_t *screen;
@@ -226,11 +231,13 @@ struct sample_info {
     VkDescriptorPool desc_pool;
     std::vector<VkDescriptorSet> desc_set;
 
+    // TODO: Debug reporter
+#if 0
     PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
     PFN_vkDebugReportMessageEXT dbgBreakCallback;
     std::vector<VkDebugReportCallbackEXT> debug_report_callbacks;
-
+#endif
     uint32_t current_buffer;
     uint32_t queue_count;
 
